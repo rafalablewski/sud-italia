@@ -163,26 +163,12 @@ export function getActiveChallenges(): Challenge[] {
 }
 
 // --- Social Proof / Live Activity ---
-
-export interface LiveActivity {
-  ordersInLastHour: number;
-  currentlyPreparing: number;
-  popularItemNow: string;
-  avgPrepTimeMinutes: number;
-}
-
-export function simulateLiveActivity(locationSlug: string): LiveActivity {
-  const hour = new Date().getHours();
-  const isPeak = hour >= 12 && hour <= 14 || hour >= 18 && hour <= 21;
-  const base = isPeak ? 8 : 3;
-
-  return {
-    ordersInLastHour: base + Math.floor(Math.random() * 5),
-    currentlyPreparing: Math.floor(Math.random() * (isPeak ? 6 : 3)) + 1,
-    popularItemNow: isPeak ? "Margherita" : "Spaghetti Carbonara",
-    avgPrepTimeMinutes: isPeak ? 14 : 9,
-  };
-}
+// Removed: the `simulateLiveActivity` helper and its `LiveActivity` type
+// fabricated customer-facing numbers (Math.random order counts + hardcoded
+// "popular item" / prep-time literals) — a Rule #1 violation. The storefront
+// live-ticker / FOMO strips it fed were deleted with it. If real social proof
+// is wanted later, derive it from actual orders (orders-in-last-hour per
+// location) + the real top item, not invented values.
 
 // Speed-guarantee values live on `LoyaltySettings.speedGuarantee`
 // — maxMinutes, guaranteeText, active. The previous SPEED_GUARANTEE

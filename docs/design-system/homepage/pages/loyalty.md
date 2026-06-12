@@ -65,7 +65,7 @@ The visual centrepiece + permanent header across all four tabs.
 - **Espresso paper card** (`#3D2817` background with parchment text +
   ochre accents + ochre/terracotta radial washes via the `::before`
   and `::after` pseudo-elements). The **one** dark surface on the
-  storefront besides the LiveTicker — used here to mark the "card"
+  storefront — used here to mark the "card"
   metaphor as something the customer carries.
 - **Top row** (`.v8-rewards-tier-top`): 44px round avatar circle
   (rgba parchment fill, ochre-light user glyph) + italic Cormorant

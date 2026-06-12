@@ -108,7 +108,6 @@ export interface PublicSettings {
     showNpsSurvey: boolean;
     showPostOrderUpsell: boolean;
     showChatWidget: boolean;
-    showLiveTicker: boolean;
   };
   /** Live NPS-style Pulse surveys (active only) the storefront may
    *  surface. The client trigger engine reads these and matches one to a

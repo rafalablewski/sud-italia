@@ -19,7 +19,7 @@ import { NotifyMeForm } from "./NotifyMeForm";
 // & Order · vedi il menù & ordina →".
 //
 // Status comes from `isLocationOpenNow()`; on mount-gated state so SSR
-// matches the client first render (same pattern as Hero + LiveTicker).
+// matches the client first render (same pattern as Hero).
 
 export function LocationsGrid() {
   const [mounted, setMounted] = useState(false);

@@ -15,10 +15,6 @@ import { LayoutGate } from "@/components/layout/LayoutGate";
 // (#menu, #bundles, #locations, #famiglia, #soci) so the nav anchors land
 // even from a deep route — the homepage renders matching IDs in the
 // section ports that follow.
-//
-// Live activity (orders/hour, currently preparing, trending, avg prep)
-// lives in <LiveTicker /> below the header — same espresso bar V8 places
-// directly under the nav.
 const NAV_LINKS = [
   { href: "/#menu", en: "Menu", pl: "Menu", it: "Menù" },
   { href: "/#bundles", en: "Bundles", pl: "Zestawy", it: "Menù del giorno" },

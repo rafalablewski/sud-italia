@@ -3130,11 +3130,6 @@ export interface LayoutSettings {
   showPostOrderUpsell: boolean;
   /** Show the floating chat widget across the public site. */
   showChatWidget: boolean;
-  /** Show the V8 live activity ticker (espresso-bg strip with orders/hour,
-   *  currently preparing, trending item, avg prep) directly under the top
-   *  nav on every storefront route. The location-page <LiveActivityBar />
-   *  has its own widget-CRUD path in /admin/growth and is independent. */
-  showLiveTicker: boolean;
 }
 
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
@@ -3150,7 +3145,6 @@ export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   showNpsSurvey: true,
   showPostOrderUpsell: true,
   showChatWidget: true,
-  showLiveTicker: true,
 };
 
 export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {

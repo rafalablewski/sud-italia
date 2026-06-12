@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Fingerprint, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
+import { Fingerprint, FlaskConical, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
 import { Badge, Button, Card, CardBody, CardHead, SkeletonPage, Switch } from "./ui";
 
 interface Layout {
   showCurrencySwitcher: boolean; showLanguageSwitcher: boolean; showBundlesShowcase: boolean; showLoyaltySection: boolean;
   showSeasonalSpecials: boolean; showCartUpsell: boolean; showDeliveryProgress: boolean; showPushOptIn: boolean;
-  showFeedbackSurvey: boolean; showNpsSurvey: boolean; showPostOrderUpsell: boolean; showChatWidget: boolean; showLiveTicker: boolean;
+  showFeedbackSurvey: boolean; showNpsSurvey: boolean; showPostOrderUpsell: boolean; showChatWidget: boolean;
 }
 interface Settings {
   deliveryFee?: number; minOrderAmount?: number; businessPhone?: string; businessEmail?: string;
@@ -40,20 +40,22 @@ const LAYOUT_KEYS: { key: keyof Layout; label: string }[] = [
   { key: "showNpsSurvey", label: "Pulse / NPS survey" },
   { key: "showPostOrderUpsell", label: "Post-order upsell" },
   { key: "showChatWidget", label: "Chat widget" },
-  { key: "showLiveTicker", label: "Live ticker" },
 ];
-const FLAG_KEYS: { key: keyof Settings; label: string }[] = [
-  { key: "simulationEnabled", label: "Calculator / simulation" },
-  { key: "kdsSimulatorEnabled", label: "KDS simulator" },
-  { key: "whatsappSimulatorEnabled", label: "WhatsApp simulator" },
-  { key: "cohortSimulationEnabled", label: "Cohort sandbox" },
-  { key: "ltvCacSimulationEnabled", label: "LTV/CAC sandbox" },
-  { key: "menuEngineeringSimulationEnabled", label: "Menu-engineering sandbox" },
+// Every simulation in the app, declared in one place. The toggle gates the
+// real feature behind it (each key is read server-side / by the hook that
+// powers the surface — none are cosmetic). Toggles save instantly.
+const SIMULATIONS: { key: keyof Settings; label: string; href?: string; desc: string }[] = [
+  { key: "simulationEnabled", label: "Calculator", href: "/admin/simulation", desc: "The financial what-if modeller — P&L scenarios, tornado sensitivity, ROI/payback, fleet & channel economics — all computed on your real numbers." },
+  { key: "kdsSimulatorEnabled", label: "KDS ticket simulator", href: "/admin/kds", desc: "Spawns synthetic kitchen tickets on the KDS board to rehearse the flow. Tagged simulated and excluded from real analytics." },
+  { key: "whatsappSimulatorEnabled", label: "WhatsApp inbound simulator", href: "/admin/whatsapp", desc: "Generates sandbox inbound messages on a reserved +48 999 number range to test the ordering / agent flow without real traffic." },
+  { key: "cohortSimulationEnabled", label: "Cohort sandbox", href: "/admin/simulation", desc: "Retention cohort what-if inside the Calculator — repeat-rate and lifetime-value levers." },
+  { key: "ltvCacSimulationEnabled", label: "LTV / CAC sandbox", href: "/admin/simulation", desc: "Unit-economics what-if inside the Calculator — acquisition cost versus lifetime value." },
+  { key: "menuEngineeringSimulationEnabled", label: "Menu-engineering sandbox", href: "/admin/simulation", desc: "Kasavana-Smith star / plowhorse / puzzle / dog what-if inside the Calculator." },
 ];
 const THRESHOLD_KEYS: { key: keyof NonNullable<Settings["deliveryThresholds"]>; label: string }[] = [
   { key: "firstTime", label: "First-time" }, { key: "growing", label: "Growing" }, { key: "regular", label: "Regular" }, { key: "vip", label: "VIP" },
 ];
-type Tab = "general" | "storefront" | "security" | "themes" | "advanced";
+type Tab = "general" | "storefront" | "simulations" | "security" | "themes" | "advanced";
 const zl = (g?: number) => (typeof g === "number" ? (g / 100).toFixed(2) : "");
 
 export function SettingsV3() {
@@ -117,7 +119,7 @@ export function SettingsV3() {
     setSeeded(res.ok ? "Demo data seeded." : "Could not seed (no-op in production).");
   };
 
-  const layout: Layout = { showCurrencySwitcher: true, showLanguageSwitcher: true, showBundlesShowcase: true, showLoyaltySection: true, showSeasonalSpecials: true, showCartUpsell: true, showDeliveryProgress: true, showPushOptIn: true, showFeedbackSurvey: true, showNpsSurvey: true, showPostOrderUpsell: true, showChatWidget: true, showLiveTicker: true, ...(s.layout ?? {}) };
+  const layout: Layout = { showCurrencySwitcher: true, showLanguageSwitcher: true, showBundlesShowcase: true, showLoyaltySection: true, showSeasonalSpecials: true, showCartUpsell: true, showDeliveryProgress: true, showPushOptIn: true, showFeedbackSurvey: true, showNpsSurvey: true, showPostOrderUpsell: true, showChatWidget: true, ...(s.layout ?? {}) };
   const toggleLayout = (k: keyof Layout) => put({ layout: { ...layout, [k]: !layout[k] } });
 
   if (loading) return <SkeletonPage />;
@@ -125,6 +127,7 @@ export function SettingsV3() {
   const tabs: { id: Tab; label: string; icon: typeof Truck }[] = [
     { id: "general", label: "General", icon: Truck },
     { id: "storefront", label: "Storefront", icon: LayoutGrid },
+    { id: "simulations", label: "Simulations", icon: FlaskConical },
     { id: "security", label: "Security", icon: ShieldCheck },
     { id: "themes", label: "Themes", icon: Palette },
     { id: "advanced", label: "Advanced", icon: Sprout },
@@ -167,30 +170,44 @@ export function SettingsV3() {
       )}
 
       {tab === "storefront" && (
-        <div className="av3-grid-2">
-          <Card>
-            <CardHead title="Storefront layout" description="Show / hide blocks on the guest site" actions={<Badge tone="neutral">{LAYOUT_KEYS.filter((k) => layout[k.key]).length}/{LAYOUT_KEYS.length} on</Badge>} />
-            <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
-              {LAYOUT_KEYS.map((k) => (
-                <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <span style={{ flex: 1, fontSize: 12.5 }}>{k.label}</span>
-                  <Switch aria-label={k.label} checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
+        <Card>
+          <CardHead title="Storefront layout" description="Show / hide blocks on the guest site" actions={<Badge tone="neutral">{LAYOUT_KEYS.filter((k) => layout[k.key]).length}/{LAYOUT_KEYS.length} on</Badge>} />
+          <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
+            {LAYOUT_KEYS.map((k) => (
+              <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                <span style={{ flex: 1, fontSize: 12.5 }}>{k.label}</span>
+                <Switch aria-label={k.label} checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+      )}
+
+      {tab === "simulations" && (
+        <Card>
+          <CardHead
+            title="Simulations"
+            description="Every simulator in the app, in one place — what-if models, sandboxes and test harnesses. Toggles save instantly."
+            actions={<Badge tone="neutral">{SIMULATIONS.filter((f) => !!s[f.key]).length}/{SIMULATIONS.length} on</Badge>}
+          />
+          <CardBody style={{ paddingTop: 4 }}>
+            {SIMULATIONS.map((f) => (
+              <div key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{f.label}</span>
+                    {f.href && <a href={f.href} className="av3-cell-muted" style={{ fontSize: 11, fontFamily: "var(--av3-mono)", textDecoration: "none" }}>{f.href} →</a>}
+                  </div>
+                  <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.5, marginTop: 2 }}>{f.desc}</div>
                 </div>
-              ))}
-            </CardBody>
-          </Card>
-          <Card>
-            <CardHead title="Feature flags" description="Enable optional admin tools" />
-            <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
-              {FLAG_KEYS.map((f) => (
-                <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <span style={{ flex: 1, fontSize: 12.5 }}>{f.label}</span>
-                  <Switch aria-label={f.label} checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
-                </div>
-              ))}
-            </CardBody>
-          </Card>
-        </div>
+                <Switch aria-label={f.label} checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
+              </div>
+            ))}
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 10 }}>
+              The Floor Twin and Demand Exchange are always-on operational models computed live from real tables, slots and orders — not toggled sandboxes, so they aren&apos;t listed here.
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       {tab === "security" && (
