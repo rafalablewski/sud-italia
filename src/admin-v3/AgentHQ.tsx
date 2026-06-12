@@ -194,7 +194,7 @@ function CommandCenter({ cmd, configById, onOpenAgent }: { cmd: CommandPayload; 
       {sales.length > 0 && (<><SecLabel>Sales &amp; growth</SecLabel><div style={RAIL}>{sales.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
       {cost.length > 0 && (<><SecLabel>Cost &amp; quality</SecLabel><div style={RAIL}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 22, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))", gap: 12, marginTop: 22, alignItems: "start" }}>
         <OrgCard configs={cmd.configs} statusById={new Map(cmd.agents.map((a) => [a.id, a]))} onOpenAgent={onOpenAgent} />
         <ActivityCard runsByDay7d={s.runsByDay7d} />
         <RecentActivityCard events={cmd.recentActivity} configById={configById} />
@@ -383,9 +383,9 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
   const TAB_LABEL: Record<ConsoleTab, string> = { overview: "Overview", goals: "Goals", logs: "Logs" };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 268px) minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
+    <div className="av3-ahq-split">
       {/* Left — agent list */}
-      <Card style={{ position: "sticky", top: 14 }}>
+      <Card className="av3-ahq-aside" style={{ position: "sticky", top: 14 }}>
         <CardHead title="Agents" description="Pick one to open" />
         <CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {cmd.configs.map((c) => (
@@ -446,7 +446,7 @@ function SuccessRow({ sr }: { sr: number | null }) {
 }
 function statRail(sc: ScData | undefined) {
   return (
-    <div style={{ ...RAIL, gridTemplateColumns: "repeat(4, 1fr)" }}>
+    <div className="av3-ahq-rail4">
       <StatTile label="Runs 7d" value={`${sc?.stats.runs7d ?? 0}`} accent="--av3-c3" />
       <StatTile label="Cost 7d" value={zl(sc?.stats.cost7dGrosze ?? 0)} accent="--av3-c5" />
       <StatTile label="Last run" value={timeAgo(sc?.stats.lastRunAt ?? null)} accent="--av3-c2" />
@@ -536,7 +536,7 @@ function Scorecards() {
   if (cards === null) return <Card padding="default"><SkeletonRows rows={8} /></Card>;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 14, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(380px, 100%), 1fr))", gap: 14, alignItems: "start" }}>
       {cards.map((c) => {
         const pct = c.stats.successRate7d;
         return (
@@ -680,7 +680,7 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
       <Card>
         <CardHead title="Assign work" description="Create a task and drag it onto an agent — or pick one here. It runs on the agent's live config." />
         <CardBody>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="av3-ahq-pair">
             <input className="av3-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} style={{ fontFamily: "var(--av3-ui)" }} />
             <select className="av3-select" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
               <option value="">Leave unassigned (drag later)</option>
@@ -704,7 +704,7 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginTop: 18, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14, marginTop: 18, alignItems: "start" }}>
         <div onDragOver={(e) => { if (dragId) e.preventDefault(); }} onDrop={() => { if (dragId) { assign(dragId, null); setDragId(null); } }}>
           <SecLabel first>Unassigned ({unassigned.length})</SecLabel>
           {unassigned.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>Drop here to unassign.</div> : unassigned.map((w) => card(w))}
@@ -805,8 +805,8 @@ function Inbox({ configs, gatewayConfigured, selectedId, onSelect, seed, onSeedC
           </CardBody>
         </Card>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 240px) 1fr", gap: 12, alignItems: "start" }}>
-        <Card><CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <div className="av3-ahq-split">
+        <Card className="av3-ahq-aside"><CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {configs.map((c) => (
             <button key={c.id} type="button" className={`av3-conv-row ${effectiveId === c.id ? "is-active" : ""}`} onClick={() => onSelect(c.id)}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
@@ -968,7 +968,7 @@ function SettingsSection() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 14, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))", gap: 14, alignItems: "start" }}>
       <Card>
         <CardHead title="AI model" description="The model the whole fleet runs on. Per-agent overrides inherit this when set to “Global model”." />
         <CardBody><AiModelControl /></CardBody>

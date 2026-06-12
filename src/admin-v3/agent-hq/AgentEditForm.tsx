@@ -223,22 +223,22 @@ export function AgentEditForm({ agentId, configs, toolCatalog, onSaved, onClose 
       {tab === "configure" && (
         <div>
           <SectionTitle>Identity</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Name"><TextInput value={form.name} onChange={(v) => patch("name", v)} /></Field>
             <Field label="Initials" hint="Two or three letters for the avatar."><TextInput value={form.initials} onChange={(v) => patch("initials", v.slice(0, 3).toUpperCase())} /></Field>
           </div>
           <Field label="Role / title"><TextInput value={form.title} onChange={(v) => patch("title", v)} /></Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Status" hint={STATUS_OPTIONS.find((o) => o.value === form.status)?.hint}><Select value={form.status} onChange={(v) => patch("status", v)} options={STATUS_OPTIONS} /></Field>
             <Field label="Reports to · blank = the human admin"><Select value={form.reportsTo ?? ""} onChange={(v) => patch("reportsTo", (v || null) as AgentConfig["reportsTo"])} options={reportsToOptions} /></Field>
           </div>
 
           <SectionTitle>Runtime</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Model"><Select value={form.modelId ?? ""} onChange={(v) => patch("modelId", (v || null))} options={modelOptions} /></Field>
             <Field label="Effort · thinking depth / token spend" hint={EFFORT_OPTIONS.find((o) => o.value === form.effort)?.hint}><Select value={form.effort} onChange={(v) => patch("effort", v)} options={EFFORT_OPTIONS} /></Field>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Authority level" hint={AUTHORITY_OPTIONS.find((o) => o.value === form.authority)?.hint}><Select value={form.authority} onChange={(v) => patch("authority", v)} options={AUTHORITY_OPTIONS} /></Field>
             <Field label="Runtime · managed = durable memory across runs">
               <div style={{ paddingTop: 4 }}><Switch checked={form.runtimeManaged} onChange={(v) => patch("runtimeManaged", v)} label={form.runtimeManaged ? "Managed — retains memory" : "Stateless — fresh each run"} /></div>
@@ -272,13 +272,13 @@ export function AgentEditForm({ agentId, configs, toolCatalog, onSaved, onClose 
           </Field>
 
           <SectionTitle>Spend controls</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Daily cap (PLN)" hint="Blank = no per-agent cap (shared budget only)."><CurrencyInput valueGrosze={form.spend.dailyCapGrosze} onChange={(v) => patch("spend", { ...form.spend, dailyCapGrosze: v })} placeholder="e.g. 50" /></Field>
             <Field label="Per-run cap (PLN)" hint="Blank = no per-run cap."><CurrencyInput valueGrosze={form.spend.perRunCapGrosze} onChange={(v) => patch("spend", { ...form.spend, perRunCapGrosze: v })} placeholder="e.g. 5" /></Field>
           </div>
 
           <SectionTitle>Schedule</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="av3-ahq-pair">
             <Field label="Cadence" hint={CADENCE_OPTIONS.find((o) => o.value === form.schedule.cadence)?.hint}><Select value={form.schedule.cadence} onChange={(v) => patch("schedule", { ...form.schedule, cadence: v })} options={CADENCE_OPTIONS} /></Field>
             <Field label="Time (HH:MM)"><input type="time" className="av3-input" value={form.schedule.time} onChange={(e) => patch("schedule", { ...form.schedule, time: e.target.value })} style={{ width: "100%" }} /></Field>
           </div>
