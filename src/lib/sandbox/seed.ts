@@ -12,7 +12,7 @@
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 import {
-  isSandboxActive,
+  getActiveDataMode,
   createOrder,
   saveTable,
   createSlot,
@@ -157,7 +157,7 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 ];
 
 export async function seedSandbox(): Promise<void> {
-  if (!(await isSandboxActive())) {
+  if ((await getActiveDataMode()) !== "sandbox") {
     throw new Error("seedSandbox refused: sandbox mode is not active");
   }
   const locations = await getActiveLocationsAsync();

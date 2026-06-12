@@ -23,15 +23,17 @@ export const POST = withAdmin({ roles: ["owner"] }, async (req: NextRequest) => 
   const body = (await req.json().catch(() => ({}))) as { enabled?: boolean; action?: string };
 
   // Reset: wipe the sandbox dataset and re-seed a clean demo (mode stays on).
+  // Sandbox + simulation are mutually exclusive, so enabling sandbox forces
+  // simulation off (one namespace prefix can be live at a time).
   if (body.action === "reset") {
-    await updateSettings({ sandboxModeEnabled: true });
+    await updateSettings({ sandboxModeEnabled: true, simulationModeEnabled: false });
     await wipeSandboxData();
     await seedSandbox();
     return NextResponse.json({ ok: true, enabled: true, reset: true });
   }
 
   const enabled = body.enabled === true;
-  await updateSettings({ sandboxModeEnabled: enabled });
+  await updateSettings({ sandboxModeEnabled: enabled, ...(enabled ? { simulationModeEnabled: false } : {}) });
 
   if (enabled) {
     // Seed on first enable only (persist across off→on). Reads are now
