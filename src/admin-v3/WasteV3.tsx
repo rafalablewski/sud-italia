@@ -107,7 +107,7 @@ export function WasteV3() {
 
   const load = useCallback(async () => {
     const qs = new URLSearchParams({ location: loc, from: startOfTodayIso() });
-    const res = await fetch(`/api/admin/waste?${qs}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    const res = await fetch(`/api/admin/waste?${qs}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
     setLogs(Array.isArray(res) ? res : []);
   }, [loc]);
   useEffect(() => { load(); }, [load]);
@@ -152,7 +152,14 @@ export function WasteV3() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locationSlug: loc, item: item.trim(), quantity: qtyNum, unit: unit.trim(), reason, estimatedCostGrosze: Number.isFinite(costGrosze as number) ? costGrosze : undefined }),
       });
-      if (res.ok) { setItem(""); setQuantity(""); setCostStr(""); await load(); }
+      if (res.ok) {
+        // Show the new row instantly from the POST response, then reconcile
+        // with the server in the background — no waiting on a refetch.
+        const created = (await res.json().catch(() => null)) as WasteEntry | null;
+        if (created?.id) setLogs((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
+        setItem(""); setQuantity(""); setCostStr("");
+        load();
+      }
     } finally {
       setSaving(false);
     }
