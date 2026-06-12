@@ -1,17 +1,22 @@
+import "../../themes/admin-v3/index.css";
 import "./welcome.css";
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 
 /**
  * Welcome / Morning Brief — a full-bleed CEO catch-up surface that lives under
  * /admin but renders OUTSIDE the AdminShell (no sidebar, no nav), like the
- * admin login door. This layout pulls the three brief typefaces directly onto
- * `.wb-root`; the brief's own warm-dark aesthetic lives in `welcome.css`
- * (self-contained, `wb-`-prefixed — it does not touch the av3 theme).
+ * admin login door. It runs on the live admin design system (av3 "Operator
+ * Terminal"): this layout pulls the av3 stylesheet + the three admin typefaces
+ * onto `#admin-portal-root.av3-root`, so the brief shares every `--av3-*` token
+ * and component (Monogram, MetricExplainer, Dialog) with the rest of admin —
+ * no parallel palette. `#admin-portal-root` is also the trap-free portal mount
+ * (Rule #4). Dark canonical, no boot script (pre-shell, so no hydration
+ * mismatch). The brief's page-specific layout lives in `welcome.css`.
  */
-const sans = Inter({ subsets: ["latin"], variable: "--wb-sans", display: "swap" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--wb-mono", display: "swap" });
-const serif = Instrument_Serif({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--wb-serif", display: "swap" });
+const body = Inter({ subsets: ["latin"], variable: "--font-admin-body", display: "swap" });
+const displayFont = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Morning Brief | Sud Italia",
@@ -19,5 +24,9 @@ export const metadata: Metadata = {
 };
 
 export default function WelcomeLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${sans.variable} ${mono.variable} ${serif.variable} wb-root`}>{children}</div>;
+  return (
+    <div id="admin-portal-root" className={`${body.variable} ${displayFont.variable} ${mono.variable} av3-root flex flex-col flex-1`}>
+      {children}
+    </div>
+  );
 }

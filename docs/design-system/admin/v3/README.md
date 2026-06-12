@@ -485,10 +485,16 @@ auth canvas's signature lighting and the sign-in lockup:
   landing** (`landingPathForRole("owner")`) and a full-bleed CEO catch-up
   surface that lives under `/admin` but renders **outside the AdminShell** (no
   sidebar, no nav — like the admin login door). Its own route group:
-  `src/app/admin/welcome/{layout,page}.tsx` + a self-contained, `wb-`-prefixed
-  `welcome.css` (warm-dark editorial — **Instrument Serif** greeting, Inter
-  body, JetBrains Mono meta, a single ember accent; it does **not** use the av3
-  theme). Live code: `src/admin-v3/WelcomeBrief.tsx` (design direction #5 from
+  `src/app/admin/welcome/{layout,page}.tsx`. Built on the **shared av3 design
+  system** — the layout pulls the av3 stylesheet + the three admin typefaces
+  onto `#admin-portal-root.av3-root`, and `welcome.css` (page-specific layout
+  only — the stage, hero canvas, feed) references **`--av3-*` tokens
+  throughout**, no parallel palette. Reuses the shared **`Monogram`** avatar,
+  the shared **`formatPricePLN` / `formatPricePLNCompact`** formatters, and the
+  five-section **`InfoButton`** (Rule #12) on the pacing, constraint,
+  repeat-rate and Pulse metrics. The header's truck count + open-now status come
+  from **`getActiveLocations` + `isLocationOpenNow`** (server-passed, never
+  hardcoded). Live code: `src/admin-v3/WelcomeBrief.tsx` (design direction #5 from
   `tests/sketches/welcome-brief/`). Built as a **command brief** (the Cook/Musk
   lens), not a recap: it leads with **yesterday's close + delta** and **monthly
   goal-pacing** (MTD vs target with a run-rate **projection** + ahead/behind

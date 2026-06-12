@@ -20,6 +20,13 @@ export function formatPricePLN(priceInGrosze: number): string {
   return formatPriceInCurrency(priceInGrosze, "PLN");
 }
 
+/** Compact PLN — whole złoty, no grosze, with pl-PL thousands grouping
+ *  ("20 950 zł"). For glanceable hero / KPI figures where the 2-decimal
+ *  `formatPricePLN` reads as noise. Back-office (PLN) only. */
+export function formatPricePLNCompact(priceInGrosze: number): string {
+  return `${Math.round(priceInGrosze / 100).toLocaleString("pl-PL")} zł`;
+}
+
 export function generateOrderId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 7);
