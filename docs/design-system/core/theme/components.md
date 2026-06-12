@@ -201,7 +201,7 @@ this one chrome, so each surface's controls sit in the same place:
   `subRight`) — **`.subbar-left`** (an `.eyebrow` label + the surface's
   `.viewnav` sub-tabs: GuestViewNav, ServiceViewNav, the KDS Fleet/Floor/Chef
   switch) · **`.subbar-right`** (the surface's own controls — POS channel +
-  steer, the Slots date picker, the KDS stage filter + Sandbox badge).
+  steer, the Slots date picker, the KDS stage filter).
 - **`.core-body`** — each surface owns its scroll/layout. `bleed` drops the
   padding so the dark KDS wall (`.kds-core.in-shell`) can fill it.
 

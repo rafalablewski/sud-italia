@@ -20,8 +20,7 @@ export async function GET() {
   const { error, session } = await requireKitchenSession();
   if (error) return error;
 
-  // Real orders only — simulated demo tickets never reach the kitchen station
-  // screens. They live solely in the admin KDS-simulator tab.
+  // Real orders only — getOrders() strips any simulated records by default.
   const orders = await getOrders(session!.slug);
   orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

@@ -4,15 +4,12 @@
 
 The location's menu surface. Each location has its own page rendered
 from `src/app/(public)/locations/[slug]/page.tsx`. The page composes
-six blocks under the public layout. The chain-wide `<LiveTicker />`
-also mounts here — it used to ship globally in the public layout,
-but V8 polish scoped it to the order-flow context so the homepage
-and other non-order surfaces don't open under a dark espresso strip.
+six blocks under the public layout.
 
 | Block            | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
-| Live ticker      | `src/components/layout/LiveTicker.tsx` (chain-wide, location-page only) |
 | Location hero    | `src/components/location/LocationHero.tsx`                 |
+| Live activity    | `src/components/location/LiveActivityBar.tsx` (real social proof, self-hides when empty) |
 | Menu sections    | `src/components/location/MenuSection.tsx` (per category)   |
 | Location info    | `src/components/location/LocationInfo.tsx`                 |
 | Loyalty pitch    | `src/components/location/LoyaltySection.tsx`               |
@@ -97,7 +94,7 @@ keeps V8's hospitality voice.
 ### Menu section — `<MenuSection />`
 
 V8 Trattoria treatment — the entire menu surface (header, search,
-live activity, category tabs, guarantee banner, combo cards,
+category tabs, guarantee banner, combo cards,
 surprise button, item grid) sits inside a single soft paper card
 (`.v8-menu-card`). The previous per-category section pattern is
 gone; the V8 design uses a single card with category tabs that
@@ -126,17 +123,6 @@ filter the grid in place.
   filters across `name`, `description`, and `tags` (case-insensitive)
   in the existing data wiring. A small clear-X button surfaces when
   the field is non-empty.
-- **Per-location live activity strip** (`.v8-live-act`) — italic
-  Cormorant line with a pulsing basil pip, "X orders in the last
-  hour · X ordini nell'ultima ora", a separator dot, and
-  "Trending · in tendenza <item>" with the trending item in
-  italic oxblood. Reads from `simulateLiveActivity(locationSlug)`,
-  refreshes every 30s, mount-gated to avoid the SSR/client
-  Math.random() mismatch.
-  - This is the V8 location of the live-activity surface — Step 8
-    removed it from rendering above the menu to fix a duplicate-
-    ticker-band finding; Step 9 re-introduces it here, inside the
-    menu card, where V8's mockup places it.
 - **Category tabs** (`.v8-cat-tabs`) — terracotta-bordered pill row
   with an "All" tab + one per active category (Pizza / Pasta /
   Antipasti / Panini / Drinks / Desserts). Active tab fills with

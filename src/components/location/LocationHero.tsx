@@ -70,7 +70,7 @@ function defaultCopy(location: Location): LocCopy {
 export function LocationHero({ location }: LocationHeroProps) {
   // Time-of-day dependent — mount-gate so SSR/client render the same
   // placeholder ("Closed now") and we swap in the real slot on the
-  // client. Same pattern as the homepage Hero + LiveTicker.
+  // client. Same pattern as the homepage Hero.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const slot = mounted ? getCurrentHourSlot(location) : null;

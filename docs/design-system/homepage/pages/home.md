@@ -4,11 +4,7 @@
 
 The storefront landing — the first impression at `/`. Five stacked
 sections under the public layout's `<Header />` (the V8 Trattoria nav)
-+ `<Footer />`, rendered in `src/app/(public)/page.tsx`. **No
-`<LiveTicker />` here** — V8 polish scoped the chain-wide live
-activity strip to the location pages where it's meaningful in the
-order-flow context; the landing opens on a clean parchment band
-under the nav.
++ `<Footer />`, rendered in `src/app/(public)/page.tsx`.
 
 | Section          | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |

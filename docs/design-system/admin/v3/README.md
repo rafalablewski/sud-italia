@@ -104,9 +104,11 @@ role-default manager is bounced from `/manager/reports` too.
 ## Responsive & touch
 
 v3 is **desktop-dense first**, but every surface stays usable down to a phone
-through a single responsive cascade in `themes/admin-v3/index.css` §9 — keep new
-responsive rules there, not as one-off media queries scattered through the file.
-Four breakpoints, narrowing in:
+through a single responsive cascade in `themes/admin-v3/index.css` §9 (plus a few
+component-scoped sections that own their own reflow — e.g. Agent HQ §24
+`.av3-ahq-*`) — keep new responsive rules in §9 or the owning component section,
+not as one-off media queries scattered through the file. Four breakpoints,
+narrowing in:
 
 | Width   | What changes |
 | ------- | ------------ |
@@ -140,6 +142,13 @@ so reach for a class:
 - `.av3-formgrid` — 2-up dialog field grid that **bottom-aligns** (`align-items:
   end`) so a label-above-input field lines up with a single-row toggle; collapses
   to 1-up at ≤560.
+- `.av3-ahq-split` (+ `.av3-ahq-aside`) — Agent HQ's master/detail shell (§24): a
+  `268px + 1fr` grid that stacks at ≤860 and drops the agent list's desktop
+  `position: sticky` once stacked. Used by the Agents console and the Inbox.
+- `.av3-ahq-rail4` — Agent HQ's 4-up per-agent stat rail (runs / cost / last-run /
+  success); 2-up at ≤680 (§24).
+- `.av3-ahq-pair` — a 2-up field-row grid (gap 12) for the agent editor + the
+  Assign-work form; 1-up at ≤560 (§24).
 - `.av3-togglerow` (+ `.av3-togglerow-label`) — a label-left / `Switch`-right
   bordered row, height-matched to inputs/selects. Use this for a labelled boolean
   inside a form **instead of** stacking an `.av3-field-label` above a bare
@@ -472,6 +481,43 @@ auth canvas's signature lighting and the sign-in lockup:
   network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
   from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
   (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
+- [x] Welcome / **Morning Brief** (`/admin/welcome`) — the owner's **post-login
+  landing** (`landingPathForRole("owner")`) and a full-bleed CEO catch-up
+  surface that lives under `/admin` but renders **outside the AdminShell** (no
+  sidebar, no nav — like the admin login door). Its own route group:
+  `src/app/admin/welcome/{layout,page}.tsx`. Built on the **shared av3 design
+  system** — the layout pulls the av3 stylesheet + the three admin typefaces
+  onto `#admin-portal-root.av3-root`, and `welcome.css` (page-specific layout
+  only — the stage, hero canvas, feed) references **`--av3-*` tokens
+  throughout**, no parallel palette. Reuses the shared **`Monogram`** avatar,
+  the shared **`formatPricePLN` / `formatPricePLNCompact`** formatters, and the
+  five-section **`InfoButton`** (Rule #12) on the pacing, constraint,
+  repeat-rate and Pulse metrics. The header's truck count + open-now status come
+  from **`getActiveLocations` + `isLocationOpenNow`** (server-passed, never
+  hardcoded). Live code: `src/admin-v3/WelcomeBrief.tsx` (design direction #5 from
+  `tests/sketches/welcome-brief/`). Built as a **command brief** (the Cook/Musk
+  lens), not a recap: it leads with **yesterday's close + delta** and **monthly
+  goal-pacing** (MTD vs target with a run-rate **projection** + ahead/behind
+  bar), then **decisions awaiting you** (the AI boardroom approval queue, owners
+  named from the agents roster), **what needs you** (unread notifications), **the
+  constraint** (your busiest hour / throughput ceiling), **leading indicators**
+  (30-day repeat rate, new customers/mo, the 14-day bookings pipeline, and the
+  **Pulse/NPS** score + 30-day trend), an **anomaly to copy** (the location whose
+  avg ticket most beats the chain), the **per-location** split, **today's
+  goal/forecast + profit-per-order**, and a demoted **yesterday recap**. The
+  analytics half is computed **server-side in one pass** at
+  `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` / `getOpsGoals` /
+  `computeLaborEfficiencyDaily` / `computeHourlyThroughput` /
+  `computeCohortSnapshot` / `getTruckEvents` + `pulseBreakdown` over
+  `getSurveyResponses`) so it can't drift from Dashboard / Reports / Calculator /
+  Surveys; decisions + alerts stay on `…/ai/boardroom/{approvals,agents}` +
+  `…/notifications`. Every module is live data and **degrades to nothing** when
+  its source 403s/empties — never a placeholder (pacing omits with no revenue
+  goal set; Pulse omits below 3 recent answers). The constraint is the real
+  busiest-hour load signal, **not** a fabricated capacity %; margin shows as
+  profit-per-order, **not** a per-ingredient decomposition. Re-roots its links
+  with `withAdminV3Base`. Nav: still listed first in Overview (clicking it leaves
+  the shell). A one-tap **Enter the dashboard** returns to the `/admin` HQ.
 - [x] Ops Agent (`/admin/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
   (`AgentV3`). Claude with role-gated read+write tools over
   `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,
@@ -502,12 +548,13 @@ auth canvas's signature lighting and the sign-in lockup:
   org/reporting chart (click an agent → Agents console), a 7-day activity bar chart,
   recent activity, upcoming work, daily digest and month-to-date cost; **Agents**
   — a master-detail **console**: left the agent list, right a working panel with
-  Overview / Charter / Scorecard / Timeline / Chat sub-tabs and an inline **Edit**
-  toggle that swaps in the full `AgentEditForm`. Overview = run/cost/last-run/success
-  `StatTile`s + owned KPIs + recent activity; Charter = the read view of every
-  prompt field + the generated live system prompt; Scorecard = success bar + tiles
-  + KPI target-vs-actual logging; Timeline = the agent's events; Chat = the
-  per-agent `ChatPanel`. **Scorecards** — a per-agent
+  three sub-tabs — Overview / Goals / Logs. Overview = run/cost/last-run/success
+  `StatTile`s + owned KPIs + recent activity; **Goals** = the full inline
+  `AgentEditForm` (where everything is set — prompts, tools, schedule, spend, KPIs;
+  it carries its own Configure / Live-prompt / Timeline tabs and save/reset);
+  Logs = the agent's events (the `TimelineList`). Per-agent KPI target-vs-actual
+  logging and the per-agent chat live in the standalone **Scorecards** and
+  **Inbox** sections respectively. **Scorecards** — a per-agent
   scorecard card (status + model + authority badge, a 7d success-rate bar,
   runs 7d / cost 7d / last-run `StatTile`s, and the agent's KPIs as
   **target-vs-actual** where operators log an actual value per KPI), over
@@ -554,7 +601,13 @@ auth canvas's signature lighting and the sign-in lockup:
   stored Anthropic blocks). Same human-in-the-loop tool-approval card flow + CSS
   (§17 `.av3-chat-*`, `.av3-tool-*`). Degrades to live-KPIs-only when
   `ANTHROPIC_API_KEY` is unset — the read-only notice sits at the very bottom of
-  the page (below the section), not above the fold. Nav: Intelligence section (icon `Bot`).
+  the page (below the section), not above the fold. **Responsive:** Agent HQ and
+  every sub-section reflow on a phone via the §24 `.av3-ahq-*` helpers — the
+  Agents/Inbox master-detail (`.av3-ahq-split` + `.av3-ahq-aside`) stacks and
+  unpins at ≤860, the per-agent stat rail (`.av3-ahq-rail4`) goes 2-up at ≤680,
+  the editor + Assign-work field rows (`.av3-ahq-pair`) go 1-up at ≤560, and the
+  card grids use `minmax(min(Npx, 100%), 1fr)` so they never force horizontal
+  scroll. Nav: Intelligence section (icon `Bot`).
 - [x] Alerts (`/admin/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/
@@ -973,9 +1026,14 @@ auth canvas's signature lighting and the sign-in lockup:
   consistency fix applied to Currency + Languages (enable/default persist
   immediately; FX rates save on blur). **Visual upgrade:** a summary **KPI rail**
   (sites / default pack / zones in use / disclosures active).
-- [x] Settings (`/admin/settings`, owner-only): five tabs — **General**
+- [x] Settings (`/admin/settings`, owner-only): six tabs — **General**
   (business details + delivery fee / min order + social links, Save),
-  **Storefront** (layout visibility toggles + feature flags, toggle = saved),
+  **Storefront** (layout visibility toggles, toggle = saved), **Simulations**
+  (every simulation in one explicit place — the **Calculator** toggle, plus the
+  owner-only **Sandbox mode** switch + "Reset sandbox" that flips the whole app
+  onto an isolated `sandbox:`-namespaced demo dataset via `/api/admin/sandbox`;
+  a footnote names Floor Twin + Demand Exchange as always-on operational
+  models, not toggled sandboxes),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
   `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**

@@ -23,7 +23,6 @@ import {
 import { CoreShell } from "@/core/shell/CoreShell";
 import { Skeleton, SkeletonList } from "@/core/shared/Skeleton";
 import { useToast } from "@/ui/Toast";
-import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
 import { formatPrice } from "@/lib/utils";
 import { loyaltyTier } from "@/lib/loyalty-tier";
@@ -78,7 +77,7 @@ interface ConversationRow {
   lastBody: string;
   /** True when an active session row contributes to this conversation. */
   hasActiveSession: boolean;
-  /** True for sandbox conversations staged by the chat simulator. */
+  /** True for synthetic / sandbox conversations (reserved; never set by the live bot). */
   simulated: boolean;
 }
 
@@ -349,10 +348,6 @@ function AdminWhatsAppDesktop() {
 
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
-
-  // Chat simulator (owner toggle in Settings). When on, the console flags
-  // itself with a Sandbox tag next to the wordmark.
-  const { enabled: simEnabled } = useWhatsappSimulator();
 
   // ---- data loaders -----------------------------------------------------
 
@@ -747,12 +742,6 @@ function AdminWhatsAppDesktop() {
       viewnav={<GuestViewNav current="inbox" counts={{ inbox: counts.inbox }} />}
       right={
         <>
-          {simEnabled && (
-            <span className="badge platinum">
-              <span className="d" />
-              Sandbox
-            </span>
-          )}
           <button
             type="button"
             className={`badge ${settings?.enabled ? "success" : "neutral"}`}

@@ -1735,3 +1735,32 @@
 .av3-auth-keypad + .av3-auth-error { margin-top: 18px; }
 
 @media (max-width: 420px) { .av3-auth-frame { padding: 32px 18px 28px; } }
+
+/* ==========================================================================
+   24. Agent HQ — responsive layout helpers (/admin/agent-hq)
+   Agent HQ builds its grids with inline styles, which a media query can't
+   reach. These few classes carry the fixed multi-column shapes so the console
+   reflows on a phone: the master/detail split stacks, the 4-up stat rail and
+   the 2-up field rows collapse. Used by AgentHQ.tsx and AgentEditForm.tsx.
+   (Auto-fit card grids stay inline — they already reflow via
+   `minmax(min(Npx, 100%), 1fr)`.)
+   ========================================================================== */
+.av3-ahq-split { display: grid; grid-template-columns: minmax(0, 268px) minmax(0, 1fr); gap: var(--av3-gap-3); align-items: start; }
+.av3-ahq-split > * { min-width: 0; }
+.av3-ahq-rail4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--av3-gap-3); }
+.av3-ahq-rail4 > * { min-width: 0; }
+.av3-ahq-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--av3-gap-3); }
+.av3-ahq-pair > * { min-width: 0; }
+
+@media (max-width: 860px) {
+  /* Once the panel is full-width the agent list stacks above the detail and
+     must scroll with the page, not pin (its desktop `position: sticky`). */
+  .av3-ahq-split { grid-template-columns: 1fr; }
+  .av3-ahq-aside { position: static !important; top: auto !important; }
+}
+@media (max-width: 680px) {
+  .av3-ahq-rail4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .av3-ahq-pair { grid-template-columns: 1fr; }
+}

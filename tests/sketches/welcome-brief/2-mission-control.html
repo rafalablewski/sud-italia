@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Morning Brief · 2 · Mission Control</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#0a0c10; --bg2:#0e1117; --card:#141821; --card2:#181d28; --line:rgba(255,255,255,.08);
+    --line2:rgba(255,255,255,.14); --fg:#eef1f6; --muted:#9aa3b2; --sub:#646e7e;
+    --red:#e23149; --red-soft:rgba(226,49,73,.14); --green:#26c281; --amber:#f0b429; --blue:#5b9dff; --violet:#a78bfa;
+  }
+  body{background:radial-gradient(1200px 700px at 80% -10%, #15202e 0%, var(--bg) 55%); color:var(--fg); font-family:Inter,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; padding:22px 26px 30px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .top{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .live{display:flex; align-items:center; gap:9px; font-size:12px; color:var(--muted);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green); box-shadow:0 0 0 0 rgba(38,194,129,.5); animation:p 2s infinite;}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(38,194,129,.45);}70%{box-shadow:0 0 0 8px rgba(38,194,129,0);}100%{box-shadow:0 0 0 0 rgba(38,194,129,0);}}
+  .enter{color:var(--muted); text-decoration:none; font-size:12px; border:1px solid var(--line2); padding:7px 13px; border-radius:9px;}
+  .enter:hover{color:var(--fg); border-color:var(--sub);}
+  .hello{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:16px;}
+  .hello h1{font-size:30px; font-weight:700; letter-spacing:-.02em;}
+  .hello h1 b{color:var(--red);}
+  .hello .date{font-size:12.5px; color:var(--muted);}
+
+  .grid{display:grid; grid-template-columns: 2fr 1.15fr 1.15fr; grid-auto-rows:min-content; gap:14px;}
+  .card{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:16px; padding:16px 17px;}
+  .card .lab{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--sub); font-weight:600; display:flex; align-items:center; gap:7px;}
+  .card .lab .pin{width:6px;height:6px;border-radius:2px;}
+  .hero{grid-row:span 2;}
+  .hero .big{font-size:52px; font-weight:800; letter-spacing:-.03em; margin-top:6px;}
+  .hero .delta{color:var(--green); font-weight:600; font-size:14px; margin-left:10px;}
+  .spark{height:74px; margin:14px 0 6px; display:flex; align-items:flex-end; gap:5px;}
+  .spark i{flex:1; background:linear-gradient(180deg,var(--red),rgba(226,49,73,.25)); border-radius:4px 4px 0 0; display:block;}
+  .statrow{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:12px;}
+  .stat{background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:10px;}
+  .stat .v{font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600;}
+  .stat .k{font-size:10.5px; color:var(--muted); margin-top:2px;}
+  .loc{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line);}
+  .loc:last-child{border-bottom:none;}
+  .loc .nm{font-weight:600; font-size:13.5px;} .loc .mt{font-size:11px; color:var(--sub);}
+  .loc .val{font-family:'JetBrains Mono',monospace; font-weight:600;} .loc .up{color:var(--green); font-size:11px;}
+  .dec{display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .dec:last-child{border-bottom:none;}
+  .ava{width:26px;height:26px;border-radius:8px; display:grid;place-items:center; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; flex-shrink:0;}
+  .dec .t{font-size:13px; font-weight:600; line-height:1.3;} .dec .m{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .alert{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line);}
+  .alert:last-child{border-bottom:none;}
+  .ad{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .alert .t{font-size:12.5px;} .alert .m{font-size:11px;color:var(--sub);}
+  .chip{font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:2px 7px; border-radius:6px; text-transform:uppercase; letter-spacing:.04em;}
+  .agentbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
+  .ag{display:flex; align-items:center; gap:7px; background:var(--bg2); border:1px solid var(--line); border-radius:9px; padding:6px 9px; font-size:11.5px;}
+  .today{display:flex; flex-direction:column; gap:9px;}
+  .trow{display:flex; justify-content:space-between; font-size:12.5px; padding:7px 0; border-bottom:1px solid var(--line);}
+  .trow:last-child{border-bottom:none;} .trow b{font-family:'JetBrains Mono',monospace;}
+  @media(max-width:960px){ .grid{grid-template-columns:1fr 1fr;} .hero{grid-column:span 2; grid-row:auto;} }
+  @media(max-width:620px){ .grid{grid-template-columns:1fr;} .hero{grid-column:auto;} .statrow{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="live"><span class="dot"></span> SUD ITALIA · MORNING BRIEFING <span class="mono" style="color:var(--sub);">v · 06:42 CET</span></div>
+    <a class="enter" href="#">Skip to dashboard →</a>
+  </div>
+
+  <div class="hello">
+    <h1>Good morning, <b>Rafal.</b> Here’s the overnight.</h1>
+    <div class="date mono">FRI 12 JUN 2026 · KRAKÓW + WARSZAWA</div>
+  </div>
+
+  <div class="grid">
+    <!-- HERO -->
+    <div class="card hero">
+      <div class="lab"><span class="pin" style="background:var(--red);"></span> Revenue · yesterday (Thu)</div>
+      <div><span class="big">48 250 zł</span><span class="delta">▲ 12.4%</span></div>
+      <div class="spark">
+        <i style="height:38%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:61%"></i><i style="height:55%"></i><i style="height:73%"></i><i style="height:100%"></i>
+      </div>
+      <div class="mono" style="font-size:10.5px;color:var(--sub);">Mon → Thu · best weekday since the spring relaunch</div>
+      <div class="statrow">
+        <div class="stat"><div class="v">612</div><div class="k">orders</div></div>
+        <div class="stat"><div class="v">78.8</div><div class="k">avg ticket zł</div></div>
+        <div class="stat"><div class="v">23.1%</div><div class="k">margin</div></div>
+        <div class="stat"><div class="v">9.2m</div><div class="k">prep time</div></div>
+      </div>
+    </div>
+
+    <!-- LOCATIONS -->
+    <div class="card">
+      <div class="lab"><span class="pin" style="background:var(--blue);"></span> By location</div>
+      <div style="margin-top:8px;">
+        <div class="loc"><div><div class="nm">Kraków</div><div class="mt">312 orders · 78 avg</div></div><div style="text-align:right;"><div class="val">27 400 zł</div><div class="up">▲ 9%</div></div></div>
+        <div class="loc"><div><div class="nm">Warszawa</div><div class="mt">300 orders · 79 avg</div></div><div style="text-align:right;"><div class="val">20 850 zł</div><div class="up">▲ 17%</div></div></div>
+      </div>
+    </div>
+
+    <!-- NEEDS YOU -->
+    <div class="card">
+      <div class="lab"><span class="pin" style="background:var(--amber);"></span> Needs you · 7 unread</div>
+      <div style="margin-top:8px;">
+        <div class="alert"><span class="ad" style="background:var(--red);"></span><div><div class="t">Cash variance −85 zł · Kraków</div><div class="m">over the 50 zł threshold</div></div></div>
+        <div class="alert"><span class="ad" style="background:var(--amber);"></span><div><div class="t">Stock: San Marzano low</div><div class="m">Warszawa · 1.2 days cover</div></div></div>
+        <div class="alert"><span class="ad" style="background:var(--violet);"></span><div><div class="t">1★ review — “25-min wait”</div><div class="m">+ two 5★ · reply suggested</div></div></div>
+        <div class="alert"><span class="ad" style="background:var(--blue);"></span><div><div class="t">HACCP log gap 14–16h</div><div class="m">backfill before inspection</div></div></div>
+      </div>
+    </div>
+
+    <!-- BOARDROOM (wide) -->
+    <div class="card" style="grid-column:span 2;">
+      <div class="lab"><span class="pin" style="background:var(--red);"></span> AI Boardroom · overnight decisions <span class="chip" style="background:var(--red-soft);color:var(--red);margin-left:auto;">3 await approval</span></div>
+      <div style="margin-top:8px;">
+        <div class="dec"><span class="ava" style="background:rgba(91,157,255,.16);color:var(--blue);">SO</span><div><div class="t">Trim Warszawa Saturday AM shift</div><div class="m">Sofia (CFO) — labour ran 31%, 3pts over target · recovers ~620 zł/wk</div></div></div>
+        <div class="dec"><span class="ava" style="background:rgba(167,139,250,.16);color:var(--violet);">MA</span><div><div class="t">“We miss you” SMS to 320 lapsed guests</div><div class="m">Marco (CMO) — repeat rate slipped to 41% · ~9% reactivation</div></div></div>
+        <div class="dec"><span class="ava" style="background:rgba(38,194,129,.16);color:var(--green);">LU</span><div><div class="t">Re-quote the dairy supplier</div><div class="m">Luca (COO) — Margherita food cost +28% on a 6% cheese rise</div></div></div>
+      </div>
+      <div class="agentbar">
+        <div class="ag"><span class="dot" style="width:6px;height:6px;background:var(--green);animation:none;"></span> 8/9 agents active</div>
+        <div class="ag mono" style="color:var(--muted);">runs today · 24</div>
+        <div class="ag mono" style="color:var(--muted);">spend · 18.40 zł</div>
+        <div class="ag" style="color:var(--red);">Open Agent HQ →</div>
+      </div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="card">
+      <div class="lab"><span class="pin" style="background:var(--green);"></span> Today’s outlook</div>
+      <div class="today" style="margin-top:8px;">
+        <div class="trow"><span>Revenue forecast</span><b>51 200 zł</b></div>
+        <div class="trow"><span>Staffed</span><b>9</b></div>
+        <div class="trow"><span>Booked · corp lunch</span><b>40 pax 12:30</b></div>
+        <div class="trow"><span>Kraków / Warszawa</span><b>☀24° / ☁19°</b></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

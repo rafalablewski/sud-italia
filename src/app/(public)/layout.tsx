@@ -13,6 +13,7 @@ import { LayoutGate } from "@/components/layout/LayoutGate";
 import { SurveyPrompt } from "@/components/survey/SurveyPrompt";
 import { SurveyTriggerEngine } from "@/components/survey/SurveyTriggerEngine";
 import { CustomerProvider } from "@/store/customer";
+import { SandboxBanner } from "@/components/system/SandboxBanner";
 
 // Homepage fonts — owned by the Homepage theme. Loaded here (not in the
 // root layout) so a weight / subset change can't drift into Admin or
@@ -68,6 +69,7 @@ export default function PublicLayout({
     <CustomerProvider>
       <style dangerouslySetInnerHTML={{ __html: fontVarsOnRoot }} />
       <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
+        <SandboxBanner />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

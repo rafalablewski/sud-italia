@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Morning Brief — 5 directions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0b0d; color:#eef1f6; font-family:Inter,sans-serif; padding:34px;}
+  h1{font-size:26px; font-weight:700;}
+  p{color:#98a0ad; margin-top:8px; max-width:70ch; line-height:1.6; font-size:14.5px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr)); gap:18px; margin-top:26px;}
+  a.card{display:block; text-decoration:none; color:inherit; border:1px solid rgba(255,255,255,.1); border-radius:16px; overflow:hidden; background:#121419; transition:border-color .15s, transform .15s;}
+  a.card:hover{border-color:#d92841; transform:translateY(-3px);}
+  .thumb{height:150px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:600; color:#fff;}
+  .meta{padding:14px 16px;}
+  .meta .n{font-size:15px; font-weight:600;} .meta .d{font-size:12.5px; color:#98a0ad; margin-top:4px; line-height:1.45;}
+  .num{font-family:'JetBrains Mono',monospace; font-size:11px; color:#636b78; letter-spacing:.1em;}
+</style>
+</head>
+<body>
+  <h1>Morning Brief — 5 directions</h1>
+  <p>Full-screen CEO catch-up landing for Sud Italia. No sidebar, no nav — the first thing you open in the morning: yesterday’s numbers, the AI boardroom’s overnight decisions, what needs you, reports + today’s outlook. Same sample data across all five so you’re comparing the <em>shape</em>, not the content.</p>
+  <div class="grid">
+    <a class="card" href="./1-front-page.html"><div class="thumb" style="background:linear-gradient(135deg,#b3122a,#5a0a16);">01</div><div class="meta"><div class="num">01 · EDITORIAL</div><div class="n">The Front Page</div><div class="d">A printed-newspaper morning edition — masthead, lead story, op-ed columns from each AI exec. Serif, paper, calm authority.</div></div></a>
+    <a class="card" href="./2-mission-control.html"><div class="thumb" style="background:linear-gradient(135deg,#15202e,#0a0c10);">02</div><div class="meta"><div class="num">02 · TERMINAL</div><div class="n">Mission Control</div><div class="d">Dark bento dashboard — hero number + sparkline, KPI tiles, board decisions, live alerts. Bloomberg-meets-Apple.</div></div></a>
+    <a class="card" href="./3-chief-of-staff.html"><div class="thumb" style="background:linear-gradient(135deg,#c8102e,#7a0a1c);">03</div><div class="meta"><div class="num">03 · NARRATIVE</div><div class="n">Chief of Staff</div><div class="d">Your AI chief of staff briefs you in plain English — a single calm column, metrics woven into sentences, then a to-do.</div></div></a>
+    <a class="card" href="./4-bento.html"><div class="thumb" style="background:linear-gradient(135deg,#1a0c10,#070708);">04</div><div class="meta"><div class="num">04 · MODULAR</div><div class="n">Executive Bento</div><div class="d">A wall of distinctly-sized, accent-coloured modules — revenue, locations, board, alerts, today, weather. Linear/Notion energy.</div></div></a>
+    <a class="card" href="./5-split-hero.html"><div class="thumb" style="background:linear-gradient(135deg,#1c1014,#0c0d10);">05</div><div class="meta"><div class="num">05 · SPLIT</div><div class="n">Split Hero</div><div class="d">Fixed left hero (greeting · the one number · enter button) + a scrollable right feed grouped Yesterday / Boardroom / Needs you / Today.</div></div></a>
+  </div>
+</body>
+</html>

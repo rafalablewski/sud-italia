@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Morning Brief · 4 · Executive Bento</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#070708; --fg:#f4f4f5; --muted:#a1a1aa; --sub:#6b6b75; --line:rgba(255,255,255,.07);
+    --red:#e0263d; --green:#2bd07a; --amber:#fbbf24; --blue:#56a8ff; --violet:#b18cff; --teal:#3ad1c8;
+  }
+  body{background:var(--bg); color:var(--fg); font-family:Inter,sans-serif; -webkit-font-smoothing:antialiased; padding:20px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .top{display:flex; justify-content:space-between; align-items:center; max-width:1160px; margin:6px auto 16px;}
+  .top h1{font-size:24px; font-weight:700; letter-spacing:-.02em;}
+  .top h1 span{color:var(--sub); font-weight:500;}
+  .top .r{display:flex; gap:14px; align-items:center; font-size:12px; color:var(--muted);}
+  .enter{color:var(--fg); text-decoration:none; background:rgba(255,255,255,.06); border:1px solid var(--line); padding:8px 14px; border-radius:10px;}
+
+  .bento{max-width:1160px; margin:0 auto; display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:118px; gap:14px;}
+  .b{border-radius:20px; padding:18px; border:1px solid var(--line); position:relative; overflow:hidden; background:#0e0e11;}
+  .b .lab{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--sub); font-weight:600;}
+  .glow{position:absolute; inset:0; opacity:.5; pointer-events:none;}
+
+  .rev{grid-column:span 2; grid-row:span 2; background:linear-gradient(150deg,#1a0c10,#0e0e11 60%); border-color:rgba(224,38,61,.25);}
+  .rev .big{font-size:54px; font-weight:800; letter-spacing:-.03em; margin-top:8px;}
+  .rev .delta{display:inline-block; margin-top:8px; color:var(--green); font-weight:600; font-size:14px; background:rgba(43,208,122,.12); padding:3px 10px; border-radius:999px;}
+  .rev .spark{height:60px; margin-top:18px; display:flex; align-items:flex-end; gap:6px;}
+  .rev .spark i{flex:1; border-radius:5px 5px 0 0; background:linear-gradient(180deg,var(--red),rgba(224,38,61,.2));}
+  .rev .legend{position:absolute; bottom:16px; right:18px; font-size:10px; color:var(--sub);}
+
+  .kpi .v{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:600; margin-top:auto;}
+  .kpi{display:flex; flex-direction:column; justify-content:space-between;}
+  .kpi .d{font-size:11px; color:var(--green); margin-top:3px;}
+
+  .loc{grid-column:span 2; display:flex; flex-direction:column;}
+  .loc .row{display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);}
+  .loc .row:last-child{border-bottom:none;}
+  .loc .nm{font-weight:600; font-size:13px;} .loc .v{font-family:'JetBrains Mono',monospace; font-weight:600;}
+  .loc .bar{height:5px; border-radius:3px; background:rgba(255,255,255,.07); margin-top:5px; overflow:hidden;}
+  .loc .bar i{display:block; height:100%; border-radius:3px;}
+
+  .board{grid-column:span 2; grid-row:span 2; background:linear-gradient(160deg,#120b1c,#0e0e11 55%); border-color:rgba(177,140,255,.22); display:flex; flex-direction:column;}
+  .dec{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line);}
+  .dec:last-child{border-bottom:none;}
+  .ava{width:25px;height:25px;border-radius:8px;display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;flex-shrink:0;}
+  .dec .t{font-size:12.5px;font-weight:600;line-height:1.25;} .dec .m{font-size:11px;color:var(--muted);margin-top:1px;}
+  .pill{margin-left:auto;font-size:9.5px;background:rgba(177,140,255,.16);color:var(--violet);padding:2px 8px;border-radius:999px;}
+
+  .alerts{grid-column:span 2; display:flex; flex-direction:column;}
+  .al{display:flex; gap:9px; align-items:center; padding:6px 0;}
+  .al .d{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .al .t{font-size:12px;} .al .m{font-size:10.5px;color:var(--sub);}
+
+  .today{display:flex; flex-direction:column; justify-content:center; gap:8px; background:linear-gradient(160deg,#0a1410,#0e0e11);}
+  .today .tr{display:flex; justify-content:space-between; font-size:12px;} .today .tr b{font-family:'JetBrains Mono',monospace;}
+  .weather{display:flex; flex-direction:column; justify-content:center; gap:6px;}
+  .weather .w{display:flex; justify-content:space-between; font-size:12.5px;}
+  @media(max-width:900px){ .bento{grid-template-columns:1fr 1fr;} .rev,.board{grid-column:span 2;} }
+  @media(max-width:560px){ .bento{grid-template-columns:1fr; grid-auto-rows:auto;} .b{min-height:120px;} .rev,.board,.loc,.alerts{grid-column:auto;} }
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Morning brief <span>· good morning, Rafal</span></h1>
+    <div class="r"><span class="mono">FRI 12 JUN · 06:42</span><a class="enter" href="#">Enter dashboard →</a></div>
+  </div>
+
+  <div class="bento">
+    <!-- REVENUE hero -->
+    <div class="b rev">
+      <div class="lab">Revenue · yesterday</div>
+      <div class="big">48 250 zł</div>
+      <div class="delta">▲ 12.4% vs prior Thu</div>
+      <div class="spark"><i style="height:40%"></i><i style="height:54%"></i><i style="height:46%"></i><i style="height:63%"></i><i style="height:57%"></i><i style="height:75%"></i><i style="height:100%"></i></div>
+      <div class="legend mono">best weekday this quarter</div>
+    </div>
+
+    <div class="b kpi"><div class="lab">Orders</div><div><div class="v">612</div><div class="d">▲ 8%</div></div></div>
+    <div class="b kpi"><div class="lab">Avg ticket</div><div><div class="v">78.8</div><div class="d">▲ 4%</div></div></div>
+
+    <!-- LOCATIONS -->
+    <div class="b loc">
+      <div class="lab">By location</div>
+      <div style="margin-top:8px;">
+        <div class="row"><span class="nm">Kraków</span><span class="v">27 400 zł <span style="color:var(--green);font-size:11px;">▲9%</span></span></div>
+        <div class="bar"><i style="width:78%;background:var(--blue);"></i></div>
+        <div class="row" style="margin-top:6px;"><span class="nm">Warszawa</span><span class="v">20 850 zł <span style="color:var(--green);font-size:11px;">▲17%</span></span></div>
+        <div class="bar"><i style="width:60%;background:var(--teal);"></i></div>
+      </div>
+    </div>
+
+    <div class="b kpi"><div class="lab">Margin</div><div><div class="v">23.1%</div><div class="d">on target</div></div></div>
+    <div class="b kpi"><div class="lab">New loyalty</div><div><div class="v">+38</div><div class="d">members</div></div></div>
+
+    <!-- BOARD -->
+    <div class="b board">
+      <div class="lab">AI Boardroom · overnight <span class="pill">3 to approve</span></div>
+      <div style="margin-top:10px;flex:1;">
+        <div class="dec"><span class="ava" style="background:rgba(86,168,255,.16);color:var(--blue);">SO</span><div><div class="t">Trim Warszawa Sat AM shift</div><div class="m">CFO · labour 31%, saves ~620 zł/wk</div></div></div>
+        <div class="dec"><span class="ava" style="background:rgba(177,140,255,.16);color:var(--violet);">MA</span><div><div class="t">“We miss you” SMS · 320 guests</div><div class="m">CMO · repeat rate down to 41%</div></div></div>
+        <div class="dec"><span class="ava" style="background:rgba(43,208,122,.16);color:var(--green);">LU</span><div><div class="t">Re-quote dairy supplier</div><div class="m">COO · Margherita cost +28%</div></div></div>
+      </div>
+      <div class="mono" style="font-size:10.5px;color:var(--sub);">8/9 agents active · 24 runs · 18.40 zł spent today →</div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="b alerts">
+      <div class="lab">Needs you · 7 unread</div>
+      <div style="margin-top:6px;">
+        <div class="al"><span class="d" style="background:var(--red);"></span><div><div class="t">Cash −85 zł · Kraków close</div></div></div>
+        <div class="al"><span class="d" style="background:var(--amber);"></span><div><div class="t">San Marzano low · Warszawa <span class="m">1.2d cover</span></div></div></div>
+        <div class="al"><span class="d" style="background:var(--violet);"></span><div><div class="t">1★ review · “25-min wait”</div></div></div>
+        <div class="al"><span class="d" style="background:var(--blue);"></span><div><div class="t">HACCP log gap 14–16h</div></div></div>
+      </div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="b today">
+      <div class="lab">Today’s outlook</div>
+      <div class="tr"><span>Forecast</span><b>51 200 zł</b></div>
+      <div class="tr"><span>Staffed</span><b>9</b></div>
+      <div class="tr"><span>Booked</span><b>40 pax · 12:30</b></div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="b weather">
+      <div class="lab">On the trucks</div>
+      <div class="w"><span>Kraków</span><b>☀ 24°</b></div>
+      <div class="w"><span>Warszawa</span><b>☁ 19°</b></div>
+      <div class="mono" style="font-size:10px;color:var(--sub);margin-top:2px;">great day to roll Kraków</div>
+    </div>
+  </div>
+</body>
+</html>

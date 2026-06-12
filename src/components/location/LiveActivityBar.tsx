@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
-import { simulateLiveActivity } from "@/lib/growth-engine";
+import { useState, useEffect, type ReactNode, type CSSProperties } from "react";
 import { getLocation } from "@/data/locations";
-import {
-  Flame,
-  Megaphone,
-  MapPin,
-  Sparkles,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react";
+import { Flame, Megaphone, MapPin, Sparkles, TrendingUp, Zap } from "lucide-react";
+
+// Real, location-scoped social proof. The stat widgets read live aggregates
+// from /api/public/live-activity (computed from actual orders — see
+// store.getLiveActivity); the content widgets (happy hour, location, free
+// text) are operator-authored in admin Growth → Live activity widgets. The
+// previous fabricated `simulateLiveActivity` helper was deleted (Rule #1).
+// Styled to the V8 storefront editorial treatment — a parchment band, italic
+// Cormorant, basil pip, espresso/oxblood accents — not a dark strip.
 
 type LiveWidgetType =
   | "ordersInLastHour"
@@ -29,21 +28,25 @@ interface LiveWidget {
   active: boolean;
   locationSlugs?: string[];
   order: number;
-  config?: {
-    text?: string;
-    endHour?: number;
-    discountPct?: number;
-    category?: string;
-  };
+  config?: { text?: string; endHour?: number; discountPct?: number; category?: string };
 }
 
-interface LiveActivityBarProps {
-  locationSlug: string;
+interface LiveActivitySnapshot {
+  ordersInLastHour: number;
+  currentlyPreparing: number;
+  popularItemNow: string | null;
+  avgPrepTimeMinutes: number | null;
 }
 
 interface RenderedWidget {
   id: string;
   content: ReactNode;
+}
+
+const ICON: CSSProperties = { width: 14, height: 14, flexShrink: 0 };
+// Value highlight — espresso, upright, inside the italic-Cormorant band.
+function Val({ children, tone = "var(--color-espresso)" }: { children: ReactNode; tone?: string }) {
+  return <strong style={{ color: tone, fontStyle: "normal", fontWeight: 600 }}>{children}</strong>;
 }
 
 function fmtHour(h: number): string {
@@ -53,56 +56,51 @@ function fmtHour(h: number): string {
 function renderWidget(
   widget: LiveWidget,
   locationSlug: string,
-  activity: ReturnType<typeof simulateLiveActivity>,
+  activity: LiveActivitySnapshot | null,
 ): ReactNode | null {
   switch (widget.type) {
+    // ── real stat widgets — hidden until live data loads, and skipped
+    //    whenever the real value is 0 / null so a quiet location never
+    //    shows a sad or invented number. ──
     case "ordersInLastHour":
+      if (!activity || activity.ordersInLastHour <= 0) return null;
       return (
         <>
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+          <span className="relative inline-flex" style={{ width: 8, height: 8 }}>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ background: "var(--color-basil)", opacity: 0.55 }} />
+            <span className="relative inline-flex rounded-full" style={{ width: 8, height: 8, background: "var(--color-basil)" }} />
           </span>
-          <Users className="h-3.5 w-3.5 text-green-400" />
-          <span className="text-white/90 whitespace-nowrap">
-            <strong>{activity.ordersInLastHour}</strong>{" "}
-            {widget.label ?? "orders in the last hour"}
-          </span>
+          <span><Val>{activity.ordersInLastHour}</Val> {widget.label ?? "orders in the last hour"}</span>
         </>
       );
     case "currentlyPreparing":
+      if (!activity || activity.currentlyPreparing <= 0) return null;
       return (
         <>
-          <Flame className="h-3.5 w-3.5 text-orange-400" />
-          <span className="text-white/80 whitespace-nowrap">
-            <strong>{activity.currentlyPreparing}</strong>{" "}
-            {widget.label ?? "orders being prepared"}
-          </span>
+          <Flame style={{ ...ICON, color: "var(--color-terracotta)" }} />
+          <span><Val>{activity.currentlyPreparing}</Val> {widget.label ?? "orders being prepared"}</span>
         </>
       );
     case "trendingItem":
+      if (!activity || !activity.popularItemNow) return null;
       return (
         <>
-          <TrendingUp className="h-3.5 w-3.5 text-italia-gold" />
-          <span className="text-white/80 whitespace-nowrap">
-            {widget.label ?? "Trending"}: <strong>{activity.popularItemNow}</strong>
-          </span>
+          <TrendingUp style={{ ...ICON, color: "var(--color-oxblood)" }} />
+          <span>{widget.label ?? "Trending"}: <Val tone="var(--color-oxblood)">{activity.popularItemNow}</Val></span>
         </>
       );
     case "avgPrepTime":
+      if (!activity || activity.avgPrepTimeMinutes == null) return null;
       return (
         <>
-          <Zap className="h-3.5 w-3.5 text-yellow-400" />
-          <span className="text-white/80 whitespace-nowrap">
-            {widget.label ?? "Avg prep"}:{" "}
-            <strong>{activity.avgPrepTimeMinutes} min</strong>
-          </span>
+          <Zap style={{ ...ICON, color: "var(--color-terracotta)" }} />
+          <span>{widget.label ?? "Avg prep"}: <Val>{activity.avgPrepTimeMinutes} min</Val></span>
         </>
       );
+    // ── operator-authored content widgets (already real) ──
     case "happyHour": {
       const pct = widget.config?.discountPct;
       const endHour = widget.config?.endHour;
-      // Auto-hide once the configured end-hour has passed.
       if (typeof endHour === "number" && new Date().getHours() >= endHour) return null;
       const body =
         widget.label ??
@@ -113,12 +111,10 @@ function renderWidget(
           : "Happy hour");
       return (
         <>
-          <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
-          <span className="text-white/85 whitespace-nowrap">
-            <strong>{body}</strong>
-            {typeof endHour === "number" && (
-              <span className="text-white/60"> · ends {fmtHour(endHour)}</span>
-            )}
+          <Sparkles style={{ ...ICON, color: "var(--color-terracotta)" }} />
+          <span>
+            <Val>{body}</Val>
+            {typeof endHour === "number" && <span style={{ opacity: 0.7 }}> · ends {fmtHour(endHour)}</span>}
           </span>
         </>
       );
@@ -128,10 +124,8 @@ function renderWidget(
       const address = loc?.address ?? loc?.city ?? locationSlug;
       return (
         <>
-          <MapPin className="h-3.5 w-3.5 text-italia-red" />
-          <span className="text-white/80 whitespace-nowrap">
-            {widget.label ?? "Find us at"}: <strong>{address}</strong>
-          </span>
+          <MapPin style={{ ...ICON, color: "var(--color-terracotta)" }} />
+          <span>{widget.label ?? "Find us at"}: <Val>{address}</Val></span>
         </>
       );
     }
@@ -140,8 +134,8 @@ function renderWidget(
       if (!text) return null;
       return (
         <>
-          <Megaphone className="h-3.5 w-3.5 text-blue-300" />
-          <span className="text-white/85 whitespace-nowrap">{text}</span>
+          <Megaphone style={{ ...ICON, color: "var(--color-muted)" }} />
+          <span>{text}</span>
         </>
       );
     }
@@ -150,31 +144,33 @@ function renderWidget(
   }
 }
 
-export function LiveActivityBar({ locationSlug }: LiveActivityBarProps) {
-  const [activity, setActivity] = useState(() => simulateLiveActivity(locationSlug));
+export function LiveActivityBar({ locationSlug }: { locationSlug: string }) {
   const [widgets, setWidgets] = useState<LiveWidget[]>([]);
+  const [activity, setActivity] = useState<LiveActivitySnapshot | null>(null);
 
-  // Fetch the location-filtered widget list from public settings.
+  // The operator's location-filtered widget list (which signals to show).
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/settings/public?location=${encodeURIComponent(locationSlug)}`)
       .then((r) => r.json())
       .then((data: { liveWidgets?: LiveWidget[] }) => {
-        if (cancelled) return;
-        if (Array.isArray(data.liveWidgets)) setWidgets(data.liveWidgets);
+        if (!cancelled && Array.isArray(data.liveWidgets)) setWidgets(data.liveWidgets);
       })
       .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [locationSlug]);
 
-  // Refresh activity data every 30 seconds
+  // Real live aggregates — fetched on mount, then polled every 30s.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActivity(simulateLiveActivity(locationSlug));
-    }, 30000);
-    return () => clearInterval(interval);
+    let cancelled = false;
+    const load = () =>
+      fetch(`/api/public/live-activity?location=${encodeURIComponent(locationSlug)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: LiveActivitySnapshot | null) => { if (!cancelled && data) setActivity(data); })
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [locationSlug]);
 
   const rendered: RenderedWidget[] = widgets
@@ -184,12 +180,15 @@ export function LiveActivityBar({ locationSlug }: LiveActivityBarProps) {
   if (rendered.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-r from-italia-dark to-[#2a1a0a] text-white py-2.5 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide text-sm">
+    <div style={{ background: "var(--color-parchment-deep)", borderTop: "1px solid var(--color-line-soft)", borderBottom: "1px solid var(--color-line-soft)" }}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 9, paddingBottom: 9 }}>
+        <div
+          className="flex items-center gap-5 overflow-x-auto scrollbar-hide"
+          style={{ fontFamily: "var(--font-heading)", fontStyle: "italic", color: "var(--color-muted)", fontSize: 14 }}
+        >
           {rendered.map((item, i) => (
-            <div key={item.id} className="flex items-center gap-1.5 flex-shrink-0">
-              {i > 0 && <div className="w-px h-4 bg-white/15 -ml-3 mr-3 flex-shrink-0" aria-hidden />}
+            <div key={item.id} className="flex items-center gap-2 flex-shrink-0" style={{ whiteSpace: "nowrap" }}>
+              {i > 0 && <span aria-hidden style={{ width: 1, height: 14, background: "var(--color-line-soft)", flexShrink: 0, marginLeft: -8, marginRight: 8 }} />}
               {item.content}
             </div>
           ))}

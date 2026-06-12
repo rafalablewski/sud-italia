@@ -38,7 +38,6 @@ import { KdsCt } from "@/core/kds/KdsCt";
 import { useFullscreen } from "@/core/kds/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, kdsShortId, type KdsTicket } from "@/lib/kds-ticket";
-import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import type { AdminRole } from "@/lib/admin-roles";
 
 /** One entry in the "Recall" tray — the last few tickets a cook bumped. */
@@ -215,10 +214,6 @@ function AdminKDSDesktop({
       ? `${locName} · floor`
       : "Floor";
 
-  // When the owner-only simulator toggle is on, the board streams marked
-  // SIMULATION tickets and flags itself with a Sandbox tag next to the wordmark.
-  const { enabled: simEnabled } = useKdsSimulator(location);
-
   // Station focus. The floor + manager boards always show every station
   // ("all"); the chef line lets the cook narrow the queue to their station
   // (Pizza / Pasta / Cold …) via the chip rail in the chef strip — real
@@ -243,7 +238,7 @@ function AdminKDSDesktop({
   // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
   // loop. We mirror the stream into a local copy so optimistic updates from
   // advance/recall feel instant; the next SSE frame reconciles either way.
-  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
+  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   // Gate the loading-pill portal on a client mount so the SSR pass (where
@@ -643,12 +638,6 @@ function AdminKDSDesktop({
           <div className="seg kds-stage-seg" role="group" aria-label="Stage focus">
             {stageNodes}
           </div>
-          {simEnabled && (
-            <span className="badge platinum">
-              <span className="d" />
-              Sandbox
-            </span>
-          )}
         </>
       }
       right={
@@ -717,12 +706,6 @@ function AdminKDSDesktop({
             {stageNodes}
           </div>
           <div className="kds-clock">{clock}</div>
-          {simEnabled && (
-            <span className="kds-badge platinum">
-              <span className="d" />
-              Sandbox
-            </span>
-          )}
           <button type="button" className="kds-ctrl" onClick={refresh} title="Refresh now">
             <RefreshCw className="h-4 w-4" />
           </button>

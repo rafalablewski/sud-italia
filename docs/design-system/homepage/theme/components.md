@@ -238,7 +238,7 @@ Settings → Layout).
 - Picking a non-current option calls `setLocale()` then full-reloads so
   every SSR string re-renders in the new locale.
 
-## Storefront chrome — Header + LiveTicker + Footer
+## Storefront chrome — Header + Footer
 
 The storefront's two persistent layout slabs sit at the top of every
 `(public)` route. Markup in `src/components/layout/`. Custom styling
@@ -290,35 +290,41 @@ The V8 Trattoria top nav.
   toggles. Each link is the same EN/IT bilingual format but inline
   instead of stacked.
 
-### `<LiveTicker />` — `src/components/layout/LiveTicker.tsx`
+### `<LiveActivityBar />` — `src/components/location/LiveActivityBar.tsx`
 
-The slim espresso strip directly under `<Header />`. **Mounted only
-on `/locations/[slug]`** (`src/app/(public)/locations/[slug]/page.tsx`)
-via the `showLiveTicker` LayoutGate — V8 polish scoped the bar
-from a global storefront mount to a location-page mount so the
-homepage / rewards / non-order surfaces open on a clean parchment
-band beneath the nav. The bar is order-flow context; surfaces that
-don't lead to an order don't need it.
+Real, location-scoped social-proof strip. Mounted on `/locations/[slug]`
+directly under `<LocationHero />` (the order-flow context). Styled to the
+V8 editorial treatment — a **parchment band** (`--color-parchment-deep`
+with `--color-line-soft` hairline top + bottom), **italic Cormorant**
+(`--font-heading`) in `--color-muted`, values upright in
+`--color-espresso`, the trending dish in `--color-oxblood`, a pulsing
+**basil pip** on the live-orders signal and small terracotta-tinted
+icons — not a dark strip. Operator-chosen "live signals", scrollable on
+overflow.
 
-- **Espresso gradient canvas** (`#2D1810 → #3D2817`, the **only** dark
-  slab on the storefront besides the `/rewards` tier card), ochre-
-  tinted hairline + inset highlight.
-- **Four widgets:** orders in the last hour (pulsing basil dot + ochre
-  people icon), currently preparing (flame icon), trending item
-  (basil trending icon), avg prep time (ochre bolt icon).
-- **Data source:** `simulateLiveActivity` from `src/lib/growth-engine.ts`
-  with a chain-wide sentinel slug (`"chain"`) — same helper that powers
-  the admin-configurable `<LiveActivityBar />` widget. Refreshed every 30s.
-  As of Step 8 the per-location `<LiveActivityBar />` is NOT rendered on
-  `/locations/[slug]` to avoid two stacked espresso ticker bands;
-  Step 9 (menu chrome) will re-mount it inside the menu's
-  `loc-card-soft` wrapper where V8's mockup places it (`.live-act`
-  row).
-- **Bilingual subtitles** (`nell'ultima ora`, `in preparazione`, `in
-  tendenza`, `tempo medio`) — italic Cormorant ochre, hidden under
-  640px to keep the strip in one row.
-- Numerals are tabular (`.num` helper) and Cormorant 600 — `12 orders
-  in the last hour` reads as editorial copy, not analytics.
+- **The operator picks which widgets show** in admin **Growth → Live
+  activity widgets** (`liveWidgets` in loyalty settings, served via
+  `/api/settings/public?location=`), location-filtered + ordered.
+- **Stat widgets are live, never fabricated** — `ordersInLastHour`,
+  `currentlyPreparing`, `trendingItem`, `avgPrepTime` read real
+  aggregates from `GET /api/public/live-activity?location=` (computed by
+  `store.getLiveActivity` from actual orders over a rolling 3h window;
+  simulated KDS demo tickets are excluded). Polled every 30s. **Each stat
+  widget hides itself when its real value is `0` / `null`** (and before
+  the first fetch resolves) so a quiet location never shows a sad or
+  invented number.
+- **Content widgets are operator-authored** — `happyHour` (auto-hides
+  past its end hour), `truckLocation` (the real address from
+  `getLocation`), `freeText`.
+- **The whole bar returns `null`** when no widget has anything to show,
+  so it never renders an empty band.
+
+> **History.** This replaces the deleted `simulateLiveActivity` helper +
+> the `<LiveTicker />` / `MenuFomoMicroLine` / in-menu `.v8-live-act` strip,
+> which fabricated their numbers with `Math.random()` + hardcoded item
+> names (a Rule #1 violation). The fabrication and its CSS
+> (`.v8-live-ticker*`, `.v8-live-act*`) + the `showLiveTicker` setting were
+> removed; this bar is the real-data successor.
 
 ### `<CartButton />` — `src/components/cart/CartButton.tsx`
 
@@ -717,12 +723,10 @@ and the items grid. Full layout spec in
   category pill row replaces the pre-V8 sort/pill split. The
   active tab fills terracotta with an ochre-light count chip.
 - **Inline V8 blocks** — `.v8-guarantee`, `.v8-combos` /
-  `.v8-combo-card` / `.v8-wax-seal`, `.v8-surprise`, `.v8-live-act`.
+  `.v8-combo-card` / `.v8-wax-seal`, `.v8-surprise`.
   These inline bespoke blocks replace the pre-V8 `<SpeedGuarantee />`,
   `<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`
-  components — all deleted in Step H. `<LiveActivityBar />` stays in
-  the repo because it's still mounted on `/locations/[slug]` (just
-  not inside MenuSection).
+  components — all deleted in Step H.
 - **Wax-seal** — a CSS-only circle: oxblood radial gradient + inset
   shadows + dashed inner ring at 6px inset + `rotate(-8deg)`. Holds
   the discount percent (`−10%`) in italic Cormorant. Adjacent to
@@ -733,12 +737,6 @@ and the items grid. Full layout spec in
   field with its name (`setSearchQuery(random.name)`), repurposing
   the existing filter logic so the picker doesn't need a separate
   selection store.
-- **Per-location live activity** — re-introduced inside the menu
-  wrapper (after Step 8 removed it from the location-page chrome
-  to fix a duplicate-ticker-band finding). Pulsing basil pip +
-  italic Cormorant copy + italic-oxblood trending item. Reads
-  `simulateLiveActivity(locationSlug)`, refreshes every 30s,
-  mount-gated.
 - **`<ReorderSection />` + `<SeasonalSpecials />`** render ABOVE
   the V8 menu card, outside the wrapper. V8's mockup doesn't ship
   them but they're valuable existing features; placing them above

@@ -4,12 +4,10 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { MenuItem } from "@/data/types";
 import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
 import { MenuItemCard } from "./MenuItem";
-import { MenuFomoMicroLine } from "./MenuFomoMicroLine";
 import { SeasonalSpecials } from "./SeasonalSpecials";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ReorderSection } from "./ReorderSection";
 import { DEFAULT_COMBO_DEALS } from "@/lib/upsell";
-import { simulateLiveActivity, type LiveActivity } from "@/lib/growth-engine";
 import { compareMenuEngineering, type UpsellConfig } from "@/lib/upsell";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 
@@ -26,17 +24,10 @@ import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 //   - upsellConfig editorial badges (used by MenuItemCard)
 //   - compareMenuEngineering sort (audit §4.4)
 //   - hot-this-week popularity overlay
-// The chrome markup (search, tabs, guarantee, combos, surprise,
-// live-act) is inline V8 — the pre-V8 SpeedGuarantee /
-// ComboDealsPreview / SurpriseMe / MenuCategoryNav components were
-// deleted in Step H. Items still render via <MenuItemCard />.
-
-const MENU_PLACEHOLDER: LiveActivity = {
-  ordersInLastHour: 0,
-  currentlyPreparing: 0,
-  popularItemNow: "—",
-  avgPrepTimeMinutes: 0,
-};
+// The chrome markup (search, tabs, guarantee, combos, surprise) is
+// inline V8 — the pre-V8 SpeedGuarantee / ComboDealsPreview /
+// SurpriseMe / MenuCategoryNav components were deleted in Step H.
+// Items still render via <MenuItemCard />.
 
 interface MenuSectionProps {
   items: MenuItem[];
@@ -133,18 +124,6 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
       })
       .catch(() => { if (!cancelled) setHotThisWeekIds(new Set()); });
     return () => { cancelled = true; };
-  }, [locationSlug]);
-
-  // Live activity for the in-menu `.v8-live-act` strip. Same
-  // mount-gated pattern as the homepage LiveTicker (the chain-wide
-  // strip under the nav) so SSR + client agree.
-  const [mounted, setMounted] = useState(false);
-  const [activity, setActivity] = useState<LiveActivity>(MENU_PLACEHOLDER);
-  useEffect(() => {
-    setMounted(true);
-    setActivity(simulateLiveActivity(locationSlug));
-    const id = setInterval(() => setActivity(simulateLiveActivity(locationSlug)), 30_000);
-    return () => clearInterval(id);
   }, [locationSlug]);
 
   const categories = useMemo(() => {
@@ -315,26 +294,6 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
           )}
         </div>
 
-        {/* Per-location live activity strip */}
-        <div className="v8-live-act" aria-label="Live menu activity">
-          <span className="v8-live-act-pip" aria-hidden />
-          <span>
-            <strong className="num">{mounted ? activity.ordersInLastHour : "—"}</strong>{" "}
-            <span>orders in the last hour</span>{" "}
-            <span className="bi-sec">
-              · {mounted ? activity.ordersInLastHour : "—"} ordini nell&apos;ultima
-              ora
-            </span>
-          </span>
-          <span className="v8-live-act-dot" aria-hidden>·</span>
-          <span>
-            Trending<span className="bi-sec"> · in tendenza</span>:{" "}
-            <span className="v8-live-act-trend">
-              {mounted ? activity.popularItemNow : "—"}
-            </span>
-          </span>
-        </div>
-
         {/* Category tabs */}
         <div className="v8-cat-tabs" role="tablist" aria-label="Menu categories">
           <button
@@ -485,11 +444,6 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
             <span className="bi-sec">· sorprendimi</span>
           </button>
         )}
-
-        {/* FOMO microline — kept for the existing live-presence pulse;
-         *  V8 has no equivalent so it sits between chrome and items
-         *  as a quiet bilingual line. */}
-        <MenuFomoMicroLine locationSlug={locationSlug} />
 
         {/* Menu items grid */}
         <div ref={menuGridRef} className="v8-menu-items">

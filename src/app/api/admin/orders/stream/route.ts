@@ -44,9 +44,8 @@ export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug: scopedLocation }) => {
     const locationSlug = scopedLocation ?? undefined;
-    // Opt-in via ?includeSimulated=1 — only the Kitchen Display board passes
-    // it, so simulated tickets stream onto the KDS (clearly marked) while the
-    // Orders list / dashboard stream stays free of demo tickets.
+    // Simulated records are stripped by default; ?includeSimulated=1 is a
+    // reserved opt-in for future simulation tooling (no current consumer).
     const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
     // Opt-in delta protocol (?delta=1): after a first {t:"snap"} frame, emit
     // {t:"delta",changed,removed} diffs so a busy board re-renders only the
