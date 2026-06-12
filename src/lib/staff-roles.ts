@@ -94,10 +94,11 @@ export function landingPathForRole(role: AdminRole): string {
       return "/franchisee";
     case "owner":
     default:
-      // The owner HQ is the canonical `/admin` back-office (the v3 rebuild is
-      // the implementation behind it, swappable to v4/v5 without changing the
-      // URL). There is no `/admin-v3` route — admin is always one.
-      return "/admin";
+      // The owner lands on the morning brief (`/admin/welcome`) — the
+      // full-bleed CEO catch-up surface — with a one-tap "Enter dashboard"
+      // into the canonical `/admin` HQ (the v3 rebuild behind it, swappable
+      // to v4/v5 without changing the URL). There is no `/admin-v3` route.
+      return "/admin/welcome";
   }
 }
 

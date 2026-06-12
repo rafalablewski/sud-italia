@@ -1737,12 +1737,12 @@
 @media (max-width: 420px) { .av3-auth-frame { padding: 32px 18px 28px; } }
 
 /* ==========================================================================
-   24. Agent HQ — responsive layout helpers (/admin/agent-hq + /admin/welcome)
+   24. Agent HQ — responsive layout helpers (/admin/agent-hq)
    Agent HQ builds its grids with inline styles, which a media query can't
    reach. These few classes carry the fixed multi-column shapes so the console
    reflows on a phone: the master/detail split stacks, the 4-up stat rail and
-   the 2-up field rows collapse. Used by AgentHQ.tsx, AgentEditForm.tsx and
-   WelcomeV3.tsx. (Auto-fit card grids stay inline — they already reflow via
+   the 2-up field rows collapse. Used by AgentHQ.tsx and AgentEditForm.tsx.
+   (Auto-fit card grids stay inline — they already reflow via
    `minmax(min(Npx, 100%), 1fr)`.)
    ========================================================================== */
 .av3-ahq-split { display: grid; grid-template-columns: minmax(0, 268px) minmax(0, 1fr); gap: var(--av3-gap-3); align-items: start; }
@@ -1764,7 +1764,3 @@
 @media (max-width: 560px) {
   .av3-ahq-pair { grid-template-columns: 1fr; }
 }
-
-/* Welcome — quick-link card: a whole-card anchor that lifts on hover. */
-.av3-card-link { transition: border-color var(--av3-t-fast) var(--av3-ease), background var(--av3-t-fast) var(--av3-ease); }
-.av3-card-link:hover { border-color: var(--av3-line-strong); background: var(--av3-s2); }

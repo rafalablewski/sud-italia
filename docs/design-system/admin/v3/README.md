@@ -481,19 +481,28 @@ auth canvas's signature lighting and the sign-in lockup:
   network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
   from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
   (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
-- [x] Welcome (`/admin/welcome`) — the friendly Overview landing **above
-  Dashboard** in the nav. Live code: `src/admin-v3/WelcomeV3.tsx`. A
-  time-of-day greeting + scope/date strip, then the AI boardroom's latest
-  **daily brief** (the same meeting Agent HQ → Reports convenes): read from
-  `/api/admin/ai/boardroom/meeting` (GET the latest `daily`; POST `{type:"daily"}`
-  to convene one inline) with each decision's owner named from
-  `/api/admin/ai/boardroom/agents` (the shared `Monogram`). Below, a responsive
-  quick-link grid (`.av3-card-link` cards, §24) into Dashboard / Orders / Alerts /
-  Agent HQ. Open to any signed-in admin (no owner gate); the brief is
-  manager-gated server-side, so a 403 degrades the card to an "available to
-  managers and owners" note and a missing gateway surfaces a clear run error.
-  Nav: Overview section (first item). Re-roots its links with
-  `withAdminV3Base` so a manager/franchisee stays in their prefix.
+- [x] Welcome / **Morning Brief** (`/admin/welcome`) — the owner's **post-login
+  landing** (`landingPathForRole("owner")`) and a full-bleed CEO catch-up
+  surface that lives under `/admin` but renders **outside the AdminShell** (no
+  sidebar, no nav — like the admin login door). Its own route group:
+  `src/app/admin/welcome/{layout,page}.tsx` + a self-contained, `wb-`-prefixed
+  `welcome.css` (warm-dark editorial — **Instrument Serif** greeting, Inter
+  body, JetBrains Mono meta, a single ember accent; it does **not** use the av3
+  theme). Live code: `src/admin-v3/WelcomeBrief.tsx` (design direction #5 from
+  `tests/sketches/welcome-brief/`). A morning brief runs before the day has
+  traded, so it leads with **yesterday's close + delta** and **today's
+  goal/forecast** (a forecast-vs-goal bar), then **decisions awaiting you** (the
+  AI boardroom approval queue, owners named from the agents roster), **what
+  needs you** (unread notifications), the **per-location** split and a demoted
+  **yesterday recap**. Every module is live data and **degrades to nothing**
+  when its source 403s/empties — never a placeholder. Reads
+  `/api/admin/{analytics (yesterday + prior),insights,ops-goals,labor-efficiency,notifications}`
+  + `…/ai/boardroom/{approvals,agents}`. Phase 1 — deferred (need new
+  computation, so omitted not faked): monthly goal-pacing, the capacity
+  "constraint", margin/pizza, NPS trend, leading indicators, anomaly detection.
+  Re-roots its links with `withAdminV3Base`. Nav: still listed first in Overview
+  (clicking it leaves the shell). A one-tap **Enter the dashboard** returns to
+  the `/admin` HQ.
 - [x] Ops Agent (`/admin/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
   (`AgentV3`). Claude with role-gated read+write tools over
   `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,

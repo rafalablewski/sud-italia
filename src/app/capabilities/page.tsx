@@ -528,14 +528,13 @@ export default async function CapabilitiesPage() {
             "Food cost %, refund rate, and SSSG are chain-wide (computed across all locations); today's sales, labour %, and satisfaction honour the location switcher. Meeting decisions are advisory until an operator approves the proposed action; 'Mark done'/'Dismiss' transition the decision so it leaves the queue. Per-agent scheduled runs require the agent-runs cron to be wired into the dispatcher (the route + runner ship here). PDF export is print-to-PDF (a print-styled window); CSV is generated client-side. /admin/boardroom redirects to /admin/agent-hq.",
         },
         {
-          name: "Welcome (Overview landing + daily brief)",
+          name: "Welcome / Morning Brief (owner landing)",
           status: "live",
-          envVars: ["ANTHROPIC_API_KEY", "GEMINI_API_KEY"],
           href: "/admin/welcome",
           summary:
-            "The friendly Overview landing that sits above Dashboard in the nav. Greets the operator by time of day and surfaces the AI boardroom's latest DAILY BRIEF — the same boardroom meeting Agent HQ → Reports convenes (transcript + decisions on the live numbers), read from /api/admin/ai/boardroom/meeting (GET the latest daily; POST to convene one on the spot) with each decision's owner named from /api/admin/ai/boardroom/agents. Below it, quick-link cards jump into Dashboard, Orders, Alerts and Agent HQ. Open to any signed-in admin (no owner gate, unlike Dashboard); the brief itself is manager-gated server-side, so for staff the card degrades to a gentle 'available to managers and owners' note. Fully responsive — header, brief and quick-link grid reflow on a phone.",
+            "The owner's post-login landing (landingPathForRole owner → /admin/welcome) — a full-bleed CEO 'morning brief' that lives under /admin but renders OUTSIDE the AdminShell (no sidebar, no nav, like the admin login door; its own route group src/app/admin/welcome/* with a self-contained warm-dark stylesheet — Instrument Serif greeting, ember accent — that doesn't touch the av3 theme). A brief runs before the day has traded, so it leads with yesterday's close + delta and today's revenue goal/forecast (a forecast-vs-goal bar), then the decisions awaiting you (the AI boardroom approval queue, owners named from the agents roster), what-needs-you (unread notifications), the per-location split and a demoted yesterday recap. Every module is LIVE data and degrades to nothing when its source 403s or is empty — no placeholders, no fake numbers (a manager sees fewer panels than an owner). Reads /api/admin/{analytics,insights,ops-goals,labor-efficiency,notifications} + /api/admin/ai/boardroom/{approvals,agents}. A one-tap 'Enter the dashboard' returns to the /admin HQ; still listed first in the Overview nav.",
           caveats:
-            "Running a fresh brief needs ANTHROPIC_API_KEY (or the selected provider's key) and is daily-budget-gated like every other AI path; without it the run button returns a clear needs-config error and the page still shows the last brief + quick links.",
+            "Phase 1. Modules that need new backend computation are deliberately omitted (never faked) until their data lands: monthly goal-pacing projection, the kitchen-capacity 'constraint', contribution-margin per pizza, NPS trend, leading indicators (repeat rate / bookings pipeline) and anomaly detection.",
         },
         {
           name: "Ops Agent (Claude / Gemini)",
