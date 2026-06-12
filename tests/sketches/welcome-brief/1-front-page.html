@@ -3,232 +3,275 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Morning Brief · 1 · The Front Page (Parchment)</title>
+<title>Morning Brief · 1 · The Operator's Brief (Parchment)</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;}
   :root{
-    --ink:#2a2015; --ink2:#3d3120; --muted:#6f5f47; --faint:#9a886a;
-    --paper1:#f3e7cd; --paper2:#ecdcbd; --paper3:#e3d0aa;
-    --rule:#cdb88c; --rule2:#bda377; --rule-ink:#5a4a31;
-    --red:#9c2a1c; --red2:#86241a; --olive:#5b6b30; --gold:#9a7b2e;
+    --paper1:#f3ecdb; --paper2:#ece2cc; --paper3:#e3d6b9;
+    --ink:#2b2720; --ink2:#473d2f; --muted:#6f6655; --faint:#9b917e;
+    --line:#dacfb4; --line2:#cabd9d; --line-strong:#b3a784;
+    --olive:#3d4a26; --olive2:#5a6a34; --olive-wash:#e7e6cf; --olive-line:#b9bd96;
+    --clay:#9a5f37; --gold:#9c8746;
   }
-  html{ background:#bca884; }
+  html{ background:#bdaa86; }
   body{
-    font-family:'Newsreader',Georgia,serif; color:var(--ink);
-    -webkit-font-smoothing:antialiased; padding:30px 24px 48px;
-    background:
-      radial-gradient(900px 500px at 50% -8%, rgba(255,250,235,.5), transparent 60%),
-      repeating-linear-gradient(135deg, rgba(120,90,50,.05) 0 2px, transparent 2px 5px),
-      #b9a37d;
+    font-family:'Hanken Grotesk',system-ui,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased;
+    padding:34px 24px 56px; font-feature-settings:"tnum" 0;
+    background:radial-gradient(1000px 560px at 50% -6%, rgba(255,252,242,.55), transparent 60%), #bcaa86;
   }
   .sheet{
-    position:relative; max-width:1140px; margin:0 auto; padding:40px 48px 34px;
-    background:
-      radial-gradient(1200px 800px at 20% 0%, var(--paper1), var(--paper2) 55%, var(--paper3) 100%);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.5) inset,
-      0 40px 90px -40px rgba(50,35,12,.65),
-      0 0 0 1px rgba(120,90,50,.18);
-    border-radius:2px;
+    position:relative; max-width:1060px; margin:0 auto; padding:54px 60px 40px;
+    background:radial-gradient(1300px 900px at 18% -4%, var(--paper1), var(--paper2) 56%, var(--paper3) 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.55) inset, 0 44px 100px -46px rgba(54,40,14,.6), 0 0 0 1px rgba(120,95,52,.16);
+    border-radius:3px;
   }
-  /* aged grain + corner vignette */
-  .sheet::before{
-    content:""; position:absolute; inset:0; pointer-events:none; border-radius:2px; mix-blend-mode:multiply; opacity:.5;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
-  }
-  .sheet::after{
-    content:""; position:absolute; inset:0; pointer-events:none; border-radius:2px;
-    background:radial-gradient(120% 120% at 50% 45%, transparent 62%, rgba(90,65,30,.16) 100%);
-  }
+  .sheet::before{ content:""; position:absolute; inset:0; pointer-events:none; border-radius:3px; mix-blend-mode:multiply; opacity:.34;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.3'/%3E%3C/svg%3E"); }
+  .sheet::after{ content:""; position:absolute; inset:0; pointer-events:none; border-radius:3px;
+    background:radial-gradient(125% 120% at 50% 42%, transparent 64%, rgba(92,68,30,.13) 100%); }
   .sheet > *{ position:relative; z-index:1; }
-  .mono{ font-family:'IBM Plex Mono',monospace; }
 
-  /* folio */
-  .folio{ display:flex; justify-content:space-between; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
-  .folio a{ color:var(--red); text-decoration:none; border-bottom:1px solid var(--rule2); padding-bottom:1px; }
-  .folio a:hover{ color:var(--red2); }
+  .eyebrow{ font-size:10.5px; font-weight:600; letter-spacing:.26em; text-transform:uppercase; color:var(--faint); }
+  .ser{ font-family:'Cormorant Garamond',Georgia,serif; }
+  .pos{ color:var(--olive2); } .neg{ color:var(--clay); }
+  .num{ font-feature-settings:"tnum" 1; font-variant-numeric:tabular-nums; }
 
-  /* masthead */
-  .mast{ text-align:center; margin:14px 0 6px; }
-  .mast .orn{ font-size:13px; color:var(--rule2); letter-spacing:.5em; }
-  .mast h1{ font-family:'Playfair Display',serif; font-weight:800; font-size:72px; line-height:.95; letter-spacing:-.01em; color:var(--ink); margin:4px 0 2px; }
-  .mast .motto{ font-style:italic; font-size:15px; color:var(--muted); }
-  .rule-d{ border-top:3px solid var(--rule-ink); border-bottom:1px solid var(--rule-ink); height:4px; margin:12px 0 0; }
-  .dateline{ display:flex; justify-content:space-between; gap:18px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:8px 2px; border-bottom:1px solid var(--rule); }
+  /* top bar */
+  .top{ display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:18px; border-bottom:1px solid var(--line2); }
+  .brand .mark{ display:flex; align-items:center; gap:9px; }
+  .brand .dot{ width:7px; height:7px; border-radius:50%; background:var(--olive); }
+  .brand .wm{ font-family:'Cormorant Garamond',serif; font-weight:600; font-size:23px; letter-spacing:.02em; line-height:1; }
+  .brand .sub{ font-size:11px; color:var(--muted); margin-top:5px; letter-spacing:.02em; }
+  .top .right{ text-align:right; }
+  .top .date{ font-size:11.5px; color:var(--muted); letter-spacing:.02em; }
+  .top a{ display:inline-block; margin-top:7px; font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--olive); text-decoration:none; border-bottom:1px solid var(--olive-line); padding-bottom:2px; }
 
-  /* lead */
-  .lead{ display:grid; grid-template-columns:1.62fr .95fr; gap:34px; padding:26px 0 24px; border-bottom:2px solid var(--rule-ink); }
-  .kicker{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--red); margin-bottom:9px; }
-  .lead h2{ font-family:'Playfair Display',serif; font-weight:700; font-size:43px; line-height:1.04; letter-spacing:-.005em; }
-  .deck{ font-size:17px; line-height:1.55; color:var(--ink2); margin-top:12px; font-style:italic; color:var(--muted); }
-  .lead-body{ font-size:15.5px; line-height:1.62; margin-top:14px; column-count:2; column-gap:26px; text-align:justify; hyphens:auto; }
-  .lead-body::first-letter{ font-family:'Playfair Display',serif; font-weight:800; font-size:60px; line-height:.72; float:left; padding:7px 9px 0 0; color:var(--red); }
-  .lead-body .sig{ display:block; column-span:all; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin-top:8px; }
+  /* TL;DR */
+  .tldr{ padding:30px 0 6px; }
+  .tldr .lab{ margin-bottom:12px; }
+  .tldr p{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:30px; line-height:1.32; letter-spacing:.005em; color:var(--ink); max-width:30ch; }
+  .tldr p b{ font-weight:600; color:var(--olive); }
+  .tldr p .u{ border-bottom:1.5px solid var(--olive-line); }
 
-  /* index box (hero figure) */
-  .index{ border:1.5px solid var(--rule-ink); padding:18px 20px 16px; background:rgba(255,250,235,.35); align-self:start; }
-  .index .lab{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-align:center; padding-bottom:9px; border-bottom:1px solid var(--rule); }
-  .index .big{ font-family:'Playfair Display',serif; font-weight:800; font-size:56px; line-height:1; text-align:center; margin-top:12px; }
-  .index .big small{ font-size:22px; font-weight:600; }
-  .index .up{ text-align:center; color:var(--olive); font-style:italic; font-size:14px; margin-top:6px; }
-  .index .grid{ margin-top:14px; border-top:1px solid var(--rule); }
-  .index .r{ display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px dotted var(--rule2); font-size:14px; }
-  .index .r:last-child{ border-bottom:none; }
-  .index .r b{ font-family:'IBM Plex Mono',monospace; font-weight:500; }
-  .index .r .pos{ color:var(--olive); font-size:11px; margin-left:5px; }
+  /* hero pacing */
+  .pace{ display:grid; grid-template-columns:1fr auto; align-items:end; gap:30px; margin-top:30px; padding:26px 0 30px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .pace .big{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:74px; line-height:.9; letter-spacing:-.005em; }
+  .pace .big small{ font-size:30px; color:var(--muted); }
+  .pace .cap{ font-size:13px; color:var(--muted); margin-top:10px; }
+  .pace .cap b{ color:var(--ink); font-weight:600; }
+  .pace .track{ height:5px; border-radius:3px; background:var(--line); overflow:hidden; margin-top:16px; position:relative; max-width:520px; }
+  .pace .track i{ display:block; height:100%; width:41%; background:linear-gradient(90deg,var(--olive),var(--olive2)); border-radius:3px; }
+  .pace .track .pin{ position:absolute; top:-3px; bottom:-3px; left:38%; width:1.5px; background:var(--ink); opacity:.45; }
+  .pace .side{ text-align:right; white-space:nowrap; }
+  .pace .side .k{ font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+  .pace .side .v{ font-family:'Cormorant Garamond',serif; font-size:34px; font-weight:500; line-height:1; margin-top:6px; }
+  .pace .side .d{ font-size:12px; color:var(--olive2); margin-top:5px; }
 
-  /* columns */
-  .cols{ display:grid; grid-template-columns:repeat(3,1fr); padding-top:20px; }
-  .col{ padding:0 24px; border-left:1px solid var(--rule); }
-  .col:first-child{ padding-left:0; border-left:none; }
-  .col:last-child{ padding-right:0; }
-  .head{ text-align:center; margin-bottom:14px; }
-  .head h3{ font-family:'Playfair Display',serif; font-weight:700; font-size:18px; letter-spacing:.02em; }
-  .head .sub{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); margin-top:3px; }
-  .head:after{ content:"❦"; display:block; color:var(--rule2); font-size:12px; margin-top:5px; }
-  .hr{ border:none; border-top:1px solid var(--rule); margin:0 0 12px; }
+  /* main grid */
+  .main{ display:grid; grid-template-columns:1.5fr .9fr; gap:46px; padding-top:34px; }
+  .block{ margin-bottom:34px; }
+  .block:last-child{ margin-bottom:0; }
+  .sec-h{ display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
+  .sec-h .t{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; }
+  .sec-h .n{ font-size:11px; color:var(--faint); }
 
-  .numrow{ display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px dotted var(--rule2); font-size:15px; }
-  .numrow b{ font-family:'IBM Plex Mono',monospace; font-weight:500; }
-  .numrow .pos{ color:var(--olive); font-size:11px; }
-  .digest{ font-size:14.5px; line-height:1.55; color:var(--ink2); margin-top:12px; }
-  .digest .by{ display:block; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--red); margin-top:6px; }
+  /* decisions */
+  .dec{ display:grid; grid-template-columns:auto 1fr auto; gap:16px; padding:16px 0; border-top:1px solid var(--line); align-items:start; }
+  .dec:first-of-type{ border-top:none; padding-top:4px; }
+  .dec .ix{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:500; color:var(--olive); line-height:1; width:24px; }
+  .dec .t{ font-size:16px; font-weight:600; line-height:1.3; }
+  .dec .meta{ font-size:12.5px; color:var(--muted); margin-top:5px; line-height:1.5; }
+  .dec .meta .who{ color:var(--ink); font-weight:600; }
+  .dec .meta .imp{ color:var(--olive2); font-weight:600; }
+  .dec .meta .due{ color:var(--clay); font-weight:600; }
+  .approve{ align-self:center; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--olive); border:1px solid var(--olive-line); border-radius:999px; padding:8px 15px; white-space:nowrap; background:rgba(255,253,246,.4); }
 
-  .story{ padding:12px 0; border-bottom:1px solid var(--rule); }
-  .story:last-child{ border-bottom:none; }
-  .story .k{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--red); }
-  .story .h{ font-family:'Playfair Display',serif; font-weight:600; font-size:18px; line-height:1.16; margin-top:3px; }
-  .story .b{ font-size:14px; line-height:1.55; color:var(--ink2); margin-top:4px; }
-  .story .by{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+  /* constraint */
+  .constraint{ background:var(--olive-wash); border:1px solid var(--olive-line); border-radius:6px; padding:18px 20px; }
+  .constraint .lab{ color:var(--olive); margin-bottom:8px; }
+  .constraint .h{ font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:600; line-height:1.2; }
+  .constraint .b{ font-size:13.5px; color:var(--ink2); line-height:1.6; margin-top:7px; }
+  .constraint .lever{ font-size:12.5px; color:var(--muted); margin-top:9px; padding-top:9px; border-top:1px solid var(--olive-line); }
+  .constraint .lever b{ color:var(--olive2); }
 
-  .alert{ display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--rule); }
-  .alert:last-of-type{ border-bottom:none; }
-  .alert .ic{ font-family:'Playfair Display',serif; font-weight:700; color:var(--red); font-size:16px; line-height:1.3; }
-  .alert .h{ font-weight:600; font-size:14.5px; }
-  .alert .b{ font-size:12.5px; color:var(--muted); font-style:italic; }
+  /* rail cards */
+  .rail .card{ border-top:1px solid var(--line); padding:18px 0; }
+  .rail .card:first-child{ border-top:none; padding-top:0; }
+  .li{ display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; }
+  .li .k{ font-size:13px; color:var(--ink2); }
+  .li .v{ text-align:right; }
+  .li .v b{ font-size:16px; font-weight:600; }
+  .li .v .d{ font-size:11px; display:block; }
+  .truth{ font-size:13.5px; color:var(--ink2); line-height:1.6; }
+  .truth b{ font-weight:600; }
+  .cashrow{ display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+  .cashrow b{ font-weight:600; }
+  .anom{ background:rgba(255,253,246,.5); border:1px solid var(--line2); border-left:3px solid var(--olive); border-radius:4px; padding:13px 15px; font-size:13.5px; line-height:1.55; color:var(--ink2); }
+  .anom b{ color:var(--olive); font-weight:600; }
 
-  .ear{ border:1.5px double var(--rule-ink); padding:13px 15px; margin-top:16px; background:rgba(255,250,235,.4); }
-  .ear .t{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:9px; }
-  .ear .w{ display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; font-size:14px; border-bottom:1px dotted var(--rule2); }
-  .ear .w:last-child{ border-bottom:none; }
-  .ear .w b{ font-family:'Newsreader',serif; }
+  /* risk strip */
+  .risk{ margin-top:30px; padding:16px 20px; border:1px solid var(--line2); border-radius:6px; background:rgba(154,95,55,.06); display:flex; gap:14px; align-items:flex-start; }
+  .risk .ic{ font-family:'Cormorant Garamond',serif; font-weight:600; color:var(--clay); font-size:22px; line-height:1.1; }
+  .risk .t{ font-size:14px; font-weight:600; }
+  .risk .b{ font-size:13px; color:var(--muted); margin-top:3px; line-height:1.55; }
 
-  .foot{ margin-top:22px; border-top:3px double var(--rule-ink); padding-top:14px; display:flex; justify-content:space-between; align-items:center; }
-  .foot .note{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-  .cta{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; text-decoration:none; color:var(--paper1); background:var(--ink); padding:11px 20px; border-radius:2px; }
-  .cta:hover{ background:var(--red2); }
+  /* footer recap */
+  .recap{ margin-top:30px; padding-top:16px; border-top:1px solid var(--line2); }
+  .recap .lab{ margin-bottom:12px; }
+  .recap .strip{ display:flex; flex-wrap:wrap; gap:0 30px; }
+  .recap .item{ padding:4px 0; }
+  .recap .item .k{ font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); }
+  .recap .item .v{ font-size:15px; font-weight:600; margin-top:2px; }
+  .recap .item .v .s{ font-size:11px; color:var(--olive2); font-weight:500; }
+  .foot{ margin-top:24px; display:flex; justify-content:space-between; align-items:center; padding-top:14px; border-top:1px solid var(--line); }
+  .foot .note{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .foot a{ font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--paper1); background:var(--olive); padding:11px 20px; border-radius:4px; text-decoration:none; }
+  .foot a:hover{ background:var(--olive2); }
 
-  @media(max-width:860px){
-    .sheet{ padding:28px 22px; }
-    .mast h1{ font-size:46px; }
-    .lead{ grid-template-columns:1fr; gap:22px; }
-    .lead-body{ column-count:1; }
-    .cols{ grid-template-columns:1fr; }
-    .col{ padding:18px 0 0; border-left:none; border-top:1px solid var(--rule); margin-top:6px; }
-    .col:first-child{ border-top:none; margin-top:0; }
-    .dateline{ flex-direction:column; gap:3px; text-align:center; }
+  @media(max-width:840px){
+    .sheet{ padding:34px 26px; }
+    .main{ grid-template-columns:1fr; gap:14px; }
+    .pace{ grid-template-columns:1fr; gap:18px; }
+    .pace .side{ text-align:left; }
+    .pace .big{ font-size:54px; }
+    .dec{ grid-template-columns:auto 1fr; }
+    .approve{ grid-column:2; justify-self:start; margin-top:4px; }
+    .top{ flex-direction:column; align-items:flex-start; gap:12px; }
+    .top .right{ text-align:left; }
   }
 </style>
 </head>
 <body>
   <div class="sheet">
-    <div class="folio">
-      <span>Vol. XII · No. 1,284</span>
-      <span>Office of the CEO — Strictly Confidential</span>
-      <a href="#">Enter dashboard →</a>
+    <div class="top">
+      <div class="brand">
+        <div class="mark"><span class="dot"></span><span class="wm">Sud Italia</span></div>
+        <div class="sub">The Morning Brief · Office of the CEO</div>
+      </div>
+      <div class="right">
+        <div class="date">Friday, 12 June 2026 · 06:42 · Kraków &amp; Warszawa</div>
+        <a href="#">Enter dashboard →</a>
+      </div>
     </div>
 
-    <div class="mast">
-      <div class="orn">✦ &nbsp; ✦ &nbsp; ✦</div>
-      <h1>The Morning Brief</h1>
-      <div class="motto">Sud Italia · Neapolitan Pizza Co. — <em>tutto fresco, ogni mattina</em></div>
-    </div>
-    <div class="rule-d"></div>
-    <div class="dateline">
-      <span>Friday, 12 June 2026 · 06:42</span>
-      <span>Edition · Kraków &amp; Warszawa</span>
-      <span>Compiled overnight by your AI boardroom</span>
+    <div class="tldr">
+      <div class="eyebrow lab">If you read one thing</div>
+      <p>On pace for a <b>record month</b>. One decision needs you today: cheese is quietly eating the Margherita margin — a two-tap re-quote <span class="u">protects ~3,200&nbsp;zł a month</span>.</p>
     </div>
 
-    <div class="lead">
+    <div class="pace">
       <div>
-        <div class="kicker">Lead · Trading report</div>
-        <h2>Warszawa surges seventeen percent as the chain books its best Thursday of the quarter</h2>
-        <div class="deck">Two trucks, 612 covers, and a margin that held its ground against a rising tide of cheese — the board convenes three moves to keep the run alive.</div>
-        <p class="lead-body">Yesterday brought <b>48,250&nbsp;zł</b> across Kraków and Warszawa, the strongest weekday since the spring relaunch and a clean 12.4&nbsp;percent above the prior Thursday. Warszawa carried the day, climbing seventeen percent, while Kraków added a steady nine. Profit margin settled at 23.1&nbsp;percent even as dairy prices crept upward — a resilience the board credits to tighter prep discipline and a kitchen that turned tickets in nine minutes flat. The desk files its dispatches at right.
-        <span class="sig">— Overnight summary · 11 June 2026</span></p>
+        <div class="eyebrow">Month to goal · day 12 of 30</div>
+        <div class="big num">1.54M<small> zł projected</small></div>
+        <div class="track"><i></i><span class="pin"></span></div>
+        <div class="cap num"><b>612,400 zł</b> booked of <b>1,500,000 zł</b> target · 41% · <span class="pos">+40k ahead of pace</span></div>
       </div>
-      <div class="index">
-        <div class="lab">Revenue · Yesterday</div>
-        <div class="big">48,250<small> zł</small></div>
-        <div class="up">▲ 12.4% against prior Thursday</div>
-        <div class="grid">
-          <div class="r"><span>Orders</span><b>612 <span class="pos">▲8%</span></b></div>
-          <div class="r"><span>Average ticket</span><b>78.80 zł <span class="pos">▲4%</span></b></div>
-          <div class="r"><span>Profit margin</span><b>23.1%</b></div>
-          <div class="r"><span>Forecast, today</span><b>51,200 zł</b></div>
+      <div class="side">
+        <div class="k">Yesterday — the engine</div>
+        <div class="v num">48,250 zł</div>
+        <div class="d num">▲ 12.4% · best weekday this quarter</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- LEFT -->
+      <div class="left">
+        <div class="block">
+          <div class="sec-h"><span class="t">Decisions awaiting you</span><span class="n">3 · priced &amp; timed</span></div>
+          <div class="dec">
+            <div class="ix">I</div>
+            <div>
+              <div class="t">Re-quote the dairy supplier</div>
+              <div class="meta"><span class="who">Luca · COO</span> &nbsp;·&nbsp; <span class="imp">protects ~3,200 zł/mo</span> &nbsp;·&nbsp; <span class="due">decide by 12:00</span> — today's reorder otherwise locks the higher price.</div>
+            </div>
+            <span class="approve">Approve</span>
+          </div>
+          <div class="dec">
+            <div class="ix">II</div>
+            <div>
+              <div class="t">Trim the Warszawa Saturday-morning shift</div>
+              <div class="meta"><span class="who">Sofia · CFO</span> &nbsp;·&nbsp; <span class="imp">saves ~620 zł/wk</span> &nbsp;·&nbsp; <span class="due">by Fri 17:00</span> — labour ran 31%, three points over target.</div>
+            </div>
+            <span class="approve">Approve</span>
+          </div>
+          <div class="dec">
+            <div class="ix">III</div>
+            <div>
+              <div class="t">“We miss you” SMS to 320 lapsed guests</div>
+              <div class="meta"><span class="who">Marco · CMO</span> &nbsp;·&nbsp; <span class="imp">~9% win-back ≈ +2,400 zł</span> &nbsp;·&nbsp; <span class="due">send 11:00</span> — repeat rate slipped to 41%.</div>
+            </div>
+            <span class="approve">Approve</span>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="sec-h"><span class="t">The constraint right now</span></div>
+          <div class="constraint">
+            <div class="eyebrow lab">Throughput limit</div>
+            <div class="h">Kraków's oven, not its staff</div>
+            <div class="b">The oven ran <b class="num">96% of capacity</b> Thursday 18:00–19:30 — roughly <b class="num">22 orders turned away (~1,700 zł)</b>. You moved 84 pizzas/hr against an 88/hr ceiling at peak.</div>
+            <div class="lever">Lever · <b>add a second pre-heat tray</b> or cap the delivery radius during the 18:00–20:00 rush.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RAIL -->
+      <div class="rail">
+        <div class="card">
+          <div class="sec-h"><span class="t">Leading indicators</span></div>
+          <div class="li"><span class="k">Repeat-customer rate</span><span class="v"><b class="num">41%</b><span class="d neg">▼ 4 pts / 3 wks</span></span></div>
+          <div class="li"><span class="k">Bookings pipeline · 14d</span><span class="v"><b class="num">142k zł</b><span class="d">9 events</span></span></div>
+          <div class="li"><span class="k">New customers / day</span><span class="v"><b class="num">38</b><span class="d pos">▲ rising</span></span></div>
+          <div class="li"><span class="k">NPS</span><span class="v"><b class="num">61</b><span class="d neg">▼ 3</span></span></div>
+        </div>
+
+        <div class="card">
+          <div class="sec-h"><span class="t">Customer truth</span></div>
+          <div class="truth"><b>NPS 61</b>, down 3 week-on-week. <b>3 of the last 5</b> one-star reviews name the same culprit — <b>“wait time”</b> — the same oven constraint, felt at the counter.</div>
+        </div>
+
+        <div class="card">
+          <div class="sec-h"><span class="t">Cash</span></div>
+          <div class="cashrow"><span>On hand</span><b class="num">184,000 zł</b></div>
+          <div class="cashrow"><span>Operating runway</span><b class="num">~11 weeks</b></div>
+          <div class="cashrow"><span>Net cash · yesterday</span><b class="num pos">+38,900 zł</b></div>
+          <div class="cashrow"><span>Drawer variance · Kraków</span><b class="num neg">−85 zł</b></div>
+        </div>
+
+        <div class="card">
+          <div class="sec-h"><span class="t">Worth copying</span></div>
+          <div class="anom">Warszawa's average ticket jumped <b>+17%</b> on combo attach — <b>38% vs the 24% chain average</b>. That's the win to roll into Kraków.</div>
         </div>
       </div>
     </div>
 
-    <div class="cols">
-      <div class="col">
-        <div class="head"><h3>By the Numbers</h3><div class="sub">Yesterday · the ledger</div></div>
-        <hr class="hr"/>
-        <div class="numrow"><span>Kraków</span><b>27,400 zł <span class="pos">▲9%</span></b></div>
-        <div class="numrow"><span>Warszawa</span><b>20,850 zł <span class="pos">▲17%</span></b></div>
-        <div class="numrow"><span>Best seller — Margherita</span><b>×148</b></div>
-        <div class="numrow"><span>Diavola</span><b>×96</b></div>
-        <div class="numrow"><span>New loyalty members</span><b>+38</b></div>
-        <div class="numrow"><span>Average prep time</span><b>9.2 min</b></div>
-        <div class="digest">The seven-day revenue trend continues up and to the right; <em>labour ratio</em> stands as the lone metric off target. The full P&amp;L, cohorts and the location-network table await in Reports.
-          <span class="by">Finance desk · /admin/reports</span></div>
-      </div>
-
-      <div class="col">
-        <div class="head"><h3>From the Boardroom</h3><div class="sub">Three decisions · awaiting your nod</div></div>
-        <hr class="hr"/>
-        <div class="story">
-          <div class="k">Decision I</div>
-          <div class="h">Trim the Warszawa Saturday morning shift</div>
-          <div class="b">Labour ran 31 percent there yesterday, three points over target. Releasing one prep hand on the slow open recovers roughly 620 zł a week without touching service.</div>
-          <div class="by">Sofia — Chief Financial Officer</div>
-        </div>
-        <div class="story">
-          <div class="k">Decision II</div>
-          <div class="h">A “we miss you” message to 320 lapsed guests</div>
-          <div class="b">Repeat-customer rate slipped to 41 percent. A targeted win-back with a complimentary coffee should reactivate near nine percent this week.</div>
-          <div class="by">Marco — Chief Marketing Officer</div>
-        </div>
-        <div class="story">
-          <div class="k">Decision III</div>
-          <div class="h">Re-quote the dairy supplier</div>
-          <div class="b">Margherita food cost crept to 28 percent on a six-percent cheese rise. Two alternate distributors already sit in the system; a switch protects the margin.</div>
-          <div class="by">Luca — Chief Operating Officer · approve in Agent HQ</div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="head"><h3>Needs Your Attention</h3><div class="sub">Seven unread · act today</div></div>
-        <hr class="hr"/>
-        <div class="alert"><span class="ic">§</span><div><div class="h">Cash drawer short 85 zł, Kraków close</div><div class="b">Above the 50 zł review threshold.</div></div></div>
-        <div class="alert"><span class="ic">★</span><div><div class="h">One one-star review — “a 25-minute wait”</div><div class="b">Two five-stars alongside it; a reply is drafted.</div></div></div>
-        <div class="alert"><span class="ic">§</span><div><div class="h">San Marzano low — 1.2 days of cover</div><div class="b">Warszawa. A purchase order stands ready.</div></div></div>
-        <div class="alert"><span class="ic">†</span><div><div class="h">HACCP temperature gap, 14:00–16:00</div><div class="b">Backfill before the inspection window.</div></div></div>
-        <div class="ear">
-          <div class="t">— Today on the Trucks —</div>
-          <div class="w"><span>Kraków</span><b>☀ 24° · a fine truck day</b></div>
-          <div class="w"><span>Warszawa</span><b>☁ 19° · cloudy</b></div>
-          <div class="w"><span>Booked</span><b>Corporate lunch · 40 pax · 12:30</b></div>
-          <div class="w"><span>Staffed today</span><b>9 across both sites</b></div>
-        </div>
+    <div class="risk">
+      <span class="ic">!</span>
+      <div>
+        <div class="t">Today's risk · the noon squeeze at Kraków</div>
+        <div class="b">A 40-pax corporate lunch lands at 12:30 with only 9 staffed and San Marzano at 1.2 days of cover. Supply + capacity collide 12:00–13:30 — the PO is ready to send, and a Warszawa hand could cover.</div>
       </div>
     </div>
 
-    <div class="foot">
-      <span class="note">7 unread notifications · 3 board decisions await approval</span>
-      <a class="cta" href="#">Read the full picture →</a>
+    <div class="recap">
+      <div class="eyebrow lab">Yesterday — for the record</div>
+      <div class="strip">
+        <div class="item"><div class="k">Revenue</div><div class="v num">48,250 zł <span class="s">▲12.4%</span></div></div>
+        <div class="item"><div class="k">Orders</div><div class="v num">612 <span class="s">▲8%</span></div></div>
+        <div class="item"><div class="k">Avg ticket</div><div class="v num">78.80 zł <span class="s">▲4%</span></div></div>
+        <div class="item"><div class="k">Margin</div><div class="v num">23.1%</div></div>
+        <div class="item"><div class="k">Prep</div><div class="v num">9.2 min</div></div>
+        <div class="item"><div class="k">Kraków</div><div class="v num">27,400 <span class="s">▲9%</span></div></div>
+        <div class="item"><div class="k">Warszawa</div><div class="v num">20,850 <span class="s">▲17%</span></div></div>
+        <div class="item"><div class="k">Top sellers</div><div class="v">Margherita ×148 · Diavola ×96</div></div>
+        <div class="item"><div class="k">New loyalty</div><div class="v num">+38</div></div>
+        <div class="item"><div class="k">Today</div><div class="v">☀ 24° Kraków · ☁ 19° Warszawa · 9 staffed</div></div>
+      </div>
+      <div class="foot">
+        <span class="note">7 unread notifications · 3 decisions await approval</span>
+        <a href="#">Read the full picture →</a>
+      </div>
     </div>
   </div>
 </body>

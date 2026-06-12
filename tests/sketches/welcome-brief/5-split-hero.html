@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Morning Brief · 5 · Split Hero</title>
+<title>Morning Brief · 5 · The Operator's Brief</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;}
@@ -16,94 +16,100 @@
   }
   html,body{height:100%;}
   body{ background:var(--bg); color:var(--fg); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
-  .mono{ font-family:'JetBrains Mono',monospace; }
-  .serif{ font-family:'Instrument Serif',Georgia,serif; }
-  .stage{ display:grid; grid-template-columns:0.86fr 1.14fr; min-height:100vh; }
+  .mono{ font-family:'JetBrains Mono',monospace; } .serif{ font-family:'Instrument Serif',Georgia,serif; }
+  .num{ font-variant-numeric:tabular-nums; }
+  .pos{ color:var(--sage); } .neg{ color:var(--ember); }
+  .stage{ display:grid; grid-template-columns:0.84fr 1.16fr; min-height:100vh; }
 
   /* ── LEFT HERO ───────────────────────────── */
-  .hero{ position:relative; padding:48px 52px; display:flex; flex-direction:column; border-right:1px solid var(--line); overflow:hidden;
-    background:
-      radial-gradient(620px 460px at 8% 6%, rgba(221,70,59,.16), transparent 62%),
-      radial-gradient(700px 500px at 100% 100%, rgba(211,160,90,.07), transparent 60%),
-      var(--panel);
-  }
-  .hero::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay;
+  .hero{ position:relative; padding:46px 50px; display:flex; flex-direction:column; border-right:1px solid var(--line); overflow:hidden;
+    background:radial-gradient(620px 460px at 8% 6%, rgba(221,70,59,.15), transparent 62%), radial-gradient(680px 480px at 100% 100%, rgba(211,160,90,.07), transparent 60%), var(--panel); }
+  .hero::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.45; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"); }
   .hero > *{ position:relative; z-index:1; }
-  .brandline{ display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
-  .mark{ width:9px; height:9px; border-radius:50%; background:var(--ember); box-shadow:0 0 14px var(--ember); }
-  .greet{ font-family:'Instrument Serif',serif; font-weight:400; font-size:66px; line-height:1.0; letter-spacing:.005em; margin-top:auto; }
+  .brandline{ display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+  .mark{ width:8px; height:8px; border-radius:50%; background:var(--ember); box-shadow:0 0 14px var(--ember); }
+  .greet{ font-family:'Instrument Serif',serif; font-weight:400; font-size:58px; line-height:1.0; margin-top:34px; }
   .greet .em{ font-style:italic; color:var(--ember); }
-  .date{ font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:.06em; color:var(--muted); margin-top:18px; text-transform:uppercase; }
+  .date{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.05em; color:var(--muted); margin-top:14px; text-transform:uppercase; }
 
-  .heronum{ margin-top:34px; padding-top:26px; border-top:1px solid var(--line); }
-  .heronum .k{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); }
-  .heronum .v{ font-size:56px; font-weight:600; letter-spacing:-.03em; line-height:1; margin-top:10px; }
-  .heronum .v .zl{ font-size:26px; color:var(--muted); font-weight:500; }
-  .heronum .sub{ margin-top:11px; font-size:14px; color:var(--sage); }
-  .heronum .sub .sep{ color:var(--faint); margin:0 8px; }
-  .heronum .sub .q{ color:var(--muted); font-style:italic; font-family:'Instrument Serif',serif; font-size:16px; }
+  .tldr{ margin-top:26px; font-family:'Instrument Serif',serif; font-size:25px; line-height:1.4; color:var(--fg); }
+  .tldr b{ font-style:normal; color:var(--gold); }
 
-  .pills{ display:flex; gap:9px; margin-top:24px; flex-wrap:wrap; }
-  .pill{ display:flex; align-items:center; gap:8px; background:rgba(244,228,205,.04); border:1px solid var(--line); border-radius:11px; padding:10px 13px; font-size:12.5px; color:var(--muted); }
-  .pill b{ color:var(--fg); font-weight:600; }
-  .actions{ margin-top:30px; display:flex; align-items:center; gap:16px; }
-  .enter{ display:inline-flex; align-items:center; gap:10px; background:var(--ember); color:#fff; text-decoration:none; padding:14px 22px; border-radius:12px; font-weight:600; font-size:14px; box-shadow:0 16px 40px -16px rgba(221,70,59,.85); }
+  .pace{ margin-top:auto; padding-top:28px; }
+  .pace .k{ font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); }
+  .pace .v{ font-size:52px; font-weight:600; letter-spacing:-.03em; line-height:1; margin-top:9px; }
+  .pace .v .u{ font-size:22px; color:var(--muted); font-weight:500; }
+  .pace .track{ height:5px; border-radius:3px; background:rgba(244,228,205,.1); overflow:hidden; margin-top:16px; position:relative; }
+  .pace .track i{ display:block; height:100%; width:41%; background:linear-gradient(90deg,var(--ember),var(--gold)); border-radius:3px; }
+  .pace .track .pin{ position:absolute; top:-3px; bottom:-3px; left:38%; width:1.5px; background:var(--fg); opacity:.4; }
+  .pace .cap{ font-size:12.5px; color:var(--muted); margin-top:11px; }
+  .pace .cap b{ color:var(--fg); font-weight:600; }
+  .pace .eng{ font-size:12px; color:var(--faint); margin-top:7px; }
+  .pace .eng b{ color:var(--sage); font-weight:600; }
+
+  .actions{ margin-top:28px; display:flex; align-items:center; gap:16px; }
+  .enter{ display:inline-flex; align-items:center; gap:10px; background:var(--ember); color:#fff; text-decoration:none; padding:13px 21px; border-radius:12px; font-weight:600; font-size:14px; box-shadow:0 16px 40px -16px rgba(221,70,59,.85); }
   .enter:hover{ filter:brightness(1.06); }
-  .skip{ font-size:13px; color:var(--faint); text-decoration:none; border-bottom:1px solid transparent; }
-  .skip:hover{ color:var(--muted); border-color:var(--line2); }
+  .skip{ font-size:13px; color:var(--faint); text-decoration:none; } .skip:hover{ color:var(--muted); }
 
   /* ── RIGHT FEED ──────────────────────────── */
-  .feed{ padding:40px 46px 48px; overflow-y:auto; max-height:100vh; }
-  .feedhead{ display:flex; justify-content:space-between; align-items:baseline; padding-bottom:18px; border-bottom:1px solid var(--line); }
-  .feedhead .ttl{ font-family:'Instrument Serif',serif; font-size:25px; }
-  .feedhead .meta{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--faint); letter-spacing:.03em; }
+  .feed{ padding:38px 44px 46px; overflow-y:auto; max-height:100vh; }
+  .feedhead{ display:flex; justify-content:space-between; align-items:baseline; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .feedhead .ttl{ font-family:'Instrument Serif',serif; font-size:24px; }
+  .feedhead .meta{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--faint); letter-spacing:.03em; }
+  .group{ margin-top:28px; }
+  .glabel{ font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); margin-bottom:14px; display:flex; gap:10px; align-items:baseline; }
+  .glabel .n{ color:var(--muted); letter-spacing:.04em; }
 
-  .group{ margin-top:30px; }
-  .glabel{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); margin-bottom:16px; }
-
-  .stats{ display:grid; grid-template-columns:repeat(3,1fr); column-gap:24px; row-gap:18px; }
-  .stat .k{ font-size:11px; color:var(--muted); }
-  .stat .v{ font-size:24px; font-weight:600; letter-spacing:-.01em; margin-top:3px; }
-  .stat .v .zl{ font-size:14px; color:var(--faint); font-weight:500; }
-  .stat .d{ font-size:11px; color:var(--sage); margin-top:3px; }
-  .stat .d.flat{ color:var(--faint); }
-
-  .reader{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
-  .reader .top{ font-size:14px; color:var(--fg); }
-  .reader .top b{ color:var(--gold); font-weight:600; }
-  .reader .digest{ font-size:13.5px; color:var(--muted); line-height:1.6; margin-top:7px; }
-  .reader .digest em{ color:var(--fg); font-style:normal; font-weight:600; }
-  .lk{ display:inline-flex; align-items:center; gap:7px; color:var(--ember); font-size:12.5px; text-decoration:none; font-weight:600; margin-top:12px; }
-  .lk:hover{ gap:10px; }
-
-  .dec{ display:flex; gap:14px; padding:15px 0; border-top:1px solid var(--line); align-items:flex-start; }
-  .dec:first-of-type{ border-top:none; }
-  .ava{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; flex-shrink:0; }
+  /* decisions */
+  .dec{ display:flex; gap:13px; padding:14px 0; border-top:1px solid var(--line); align-items:flex-start; }
+  .dec:first-of-type{ border-top:none; padding-top:2px; }
+  .ava{ width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; flex-shrink:0; }
   .dec .t{ font-size:14.5px; font-weight:600; line-height:1.3; }
-  .dec .m{ font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.45; }
-  .dec .by{ font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin-top:6px; }
-  .chip{ margin-left:auto; align-self:center; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--ember); background:var(--ember-soft); border:1px solid rgba(221,70,59,.28); padding:4px 10px; border-radius:999px; flex-shrink:0; }
+  .dec .m{ font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5; }
+  .dec .m .imp{ color:var(--sage); font-weight:600; } .dec .m .due{ color:var(--gold); font-weight:600; } .dec .m .who{ color:var(--fg); font-weight:600; }
+  .chip{ margin-left:auto; align-self:center; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--ember); background:var(--ember-soft); border:1px solid rgba(221,70,59,.3); padding:5px 11px; border-radius:999px; flex-shrink:0; }
 
-  .att{ display:flex; gap:13px; padding:13px 0; border-top:1px solid var(--line); align-items:flex-start; }
-  .att:first-of-type{ border-top:none; }
-  .ad{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; box-shadow:0 0 10px currentColor; }
-  .att .t{ font-size:14px; font-weight:500; }
-  .att .m{ font-size:12px; color:var(--faint); margin-top:2px; }
+  /* constraint */
+  .constraint{ background:var(--card); border:1px solid var(--line); border-left:2px solid var(--ember); border-radius:12px; padding:16px 18px; }
+  .constraint .h{ font-size:15px; font-weight:600; }
+  .constraint .b{ font-size:13px; color:var(--muted); line-height:1.6; margin-top:6px; }
+  .constraint .b b{ color:var(--fg); font-weight:600; }
+  .constraint .lever{ font-size:12.5px; color:var(--faint); margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
+  .constraint .lever b{ color:var(--gold); }
 
-  .today{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-  .tcell{ background:var(--card); padding:15px 14px; }
-  .tcell .k{ font-size:10.5px; color:var(--faint); text-transform:uppercase; letter-spacing:.05em; }
-  .tcell .v{ font-size:18px; font-weight:600; margin-top:5px; }
-  .tcell .d{ font-size:10.5px; color:var(--muted); margin-top:2px; }
+  /* indicators */
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .stat{ background:var(--card); padding:14px 14px; }
+  .stat .k{ font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:.04em; }
+  .stat .v{ font-size:22px; font-weight:600; margin-top:5px; }
+  .stat .d{ font-size:10.5px; margin-top:3px; }
+
+  /* two-up */
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:13px; padding:15px 16px; }
+  .panel .pl{ font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); margin-bottom:9px; }
+  .panel .truth{ font-size:13px; color:var(--muted); line-height:1.55; } .panel .truth b{ color:var(--fg); font-weight:600; }
+  .cashrow{ display:flex; justify-content:space-between; padding:4px 0; font-size:12.5px; color:var(--muted); } .cashrow b{ color:var(--fg); font-weight:600; }
+
+  .anom{ background:rgba(148,171,115,.08); border:1px solid rgba(148,171,115,.22); border-radius:12px; padding:14px 16px; font-size:13px; color:var(--muted); line-height:1.55; }
+  .anom b{ color:var(--sage); font-weight:600; }
+
+  .risk{ display:flex; gap:12px; background:rgba(211,160,90,.08); border:1px solid rgba(211,160,90,.22); border-radius:12px; padding:14px 16px; align-items:flex-start; }
+  .risk .ic{ color:var(--gold); font-size:16px; line-height:1.2; }
+  .risk .t{ font-size:14px; font-weight:600; } .risk .b{ font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.55; }
+
+  /* recap demoted */
+  .recap{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:7px 22px; }
+  .recap .it{ font-size:12px; color:var(--faint); } .recap .it b{ color:var(--muted); font-weight:600; } .recap .it .s{ color:var(--sage); }
 
   @media(max-width:880px){
     .stage{ grid-template-columns:1fr; }
-    .hero{ min-height:auto; border-right:none; border-bottom:1px solid var(--line); padding:38px 30px; }
-    .greet{ margin-top:26px; font-size:48px; }
-    .feed{ max-height:none; padding:34px 28px 44px; }
-    .stats{ grid-template-columns:1fr 1fr; }
-    .today{ grid-template-columns:1fr 1fr; }
+    .hero{ min-height:auto; border-right:none; border-bottom:1px solid var(--line); padding:36px 28px; }
+    .greet{ margin-top:22px; font-size:44px; } .pace{ margin-top:30px; }
+    .feed{ max-height:none; padding:32px 26px 42px; }
+    .stats{ grid-template-columns:1fr 1fr; } .two{ grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -114,16 +120,14 @@
       <div class="brandline"><span class="mark"></span> Sud Italia · Morning Briefing</div>
       <div class="greet">Good morning,<br><span class="em">Rafal.</span></div>
       <div class="date">Friday · 12 June 2026 · 06:42 · Kraków + Warszawa</div>
+      <div class="tldr">On pace for a <b>record month</b>. One decision needs you: cheese is quietly eating the Margherita margin — a two-tap fix protects ~3,200&nbsp;zł/mo.</div>
 
-      <div class="heronum">
-        <div class="k">Revenue · yesterday</div>
-        <div class="v">48 250<span class="zl"> zł</span></div>
-        <div class="sub">▲ 12.4%<span class="sep">·</span><span class="q">your best weekday this quarter</span></div>
-      </div>
-
-      <div class="pills">
-        <div class="pill">Forecast today · <b>51 200 zł</b></div>
-        <div class="pill">☀ Kraków <b>24°</b></div>
+      <div class="pace">
+        <div class="k">Month to goal · day 12 of 30</div>
+        <div class="v num">1.54M<span class="u"> zł projected</span></div>
+        <div class="track"><i></i><span class="pin"></span></div>
+        <div class="cap num"><b>612 400 zł</b> of <b>1 500 000 zł</b> · 41% · <span class="pos">+40k ahead of pace</span></div>
+        <div class="eng num">Yesterday <b>48 250 zł ▲12.4%</b> — your best weekday this quarter, the engine behind the pace.</div>
       </div>
 
       <div class="actions">
@@ -135,54 +139,81 @@
     <!-- RIGHT -->
     <div class="feed">
       <div class="feedhead">
-        <div class="ttl">Your overnight feed</div>
+        <div class="ttl">What needs you</div>
         <div class="meta">7 unread · 3 to approve</div>
       </div>
 
-      <!-- YESTERDAY -->
+      <!-- DECISIONS -->
       <div class="group">
-        <div class="glabel">Yesterday in numbers</div>
+        <div class="glabel">Decisions awaiting you <span class="n">· priced &amp; timed</span></div>
+        <div class="dec"><span class="ava" style="background:rgba(148,171,115,.18);color:var(--sage);">LU</span><div><div class="t">Re-quote the dairy supplier</div><div class="m"><span class="who">Luca · COO</span> · <span class="imp">protects ~3,200 zł/mo</span> · <span class="due">decide by 12:00</span> — today's reorder otherwise locks the higher price.</div></div><span class="chip">approve</span></div>
+        <div class="dec"><span class="ava" style="background:rgba(127,166,214,.16);color:var(--blue);">SO</span><div><div class="t">Trim the Warszawa Saturday-AM shift</div><div class="m"><span class="who">Sofia · CFO</span> · <span class="imp">saves ~620 zł/wk</span> · <span class="due">by Fri 17:00</span> — labour ran 31%, 3 pts over.</div></div><span class="chip">approve</span></div>
+        <div class="dec"><span class="ava" style="background:rgba(183,154,214,.16);color:var(--violet);">MA</span><div><div class="t">“We miss you” SMS to 320 lapsed guests</div><div class="m"><span class="who">Marco · CMO</span> · <span class="imp">~9% win-back ≈ +2,400 zł</span> · <span class="due">send 11:00</span> — repeat rate slipped to 41%.</div></div><span class="chip">approve</span></div>
+      </div>
+
+      <!-- CONSTRAINT -->
+      <div class="group">
+        <div class="glabel">The constraint right now</div>
+        <div class="constraint">
+          <div class="h">Kraków's oven, not its staff</div>
+          <div class="b">It ran <b>96% of capacity</b> Thu 18:00–19:30 — about <b>22 orders turned away (~1 700 zł)</b>. You moved 84 pizzas/hr against an 88/hr ceiling.</div>
+          <div class="lever">Lever · <b>add a second pre-heat tray</b>, or cap the delivery radius during the rush.</div>
+        </div>
+      </div>
+
+      <!-- LEADING INDICATORS -->
+      <div class="group">
+        <div class="glabel">Leading indicators <span class="n">· next month, today</span></div>
         <div class="stats">
-          <div class="stat"><div class="k">Orders</div><div class="v">612</div><div class="d">▲ 8%</div></div>
-          <div class="stat"><div class="k">Avg ticket</div><div class="v">78.8<span class="zl"> zł</span></div><div class="d">▲ 4%</div></div>
-          <div class="stat"><div class="k">Profit margin</div><div class="v">23.1%</div><div class="d flat">on target</div></div>
-          <div class="stat"><div class="k">Avg prep time</div><div class="v">9.2<span class="zl"> min</span></div><div class="d flat">kitchens clean</div></div>
-          <div class="stat"><div class="k">Kraków</div><div class="v">27 400</div><div class="d">▲ 9%</div></div>
-          <div class="stat"><div class="k">Warszawa</div><div class="v">20 850</div><div class="d">▲ 17%</div></div>
-        </div>
-        <div class="reader">
-          <div class="top">Top sellers · <b>+38 new loyalty members</b></div>
-          <div class="digest">Margherita ×148 · Diavola ×96. The 7-day revenue trend is up and to the right; <em>labour ratio</em> is the one metric off-target.</div>
-          <a class="lk" href="#">Open full reports →</a>
+          <div class="stat"><div class="k">Repeat rate</div><div class="v num">41%</div><div class="d neg">▼ 4 pts / 3wk</div></div>
+          <div class="stat"><div class="k">Pipeline · 14d</div><div class="v num">142k</div><div class="d" style="color:var(--muted)">9 events</div></div>
+          <div class="stat"><div class="k">New cust / day</div><div class="v num">38</div><div class="d pos">▲ rising</div></div>
+          <div class="stat"><div class="k">NPS</div><div class="v num">61</div><div class="d neg">▼ 3</div></div>
         </div>
       </div>
 
-      <!-- BOARDROOM -->
+      <!-- CUSTOMER TRUTH + CASH -->
       <div class="group">
-        <div class="glabel">AI Boardroom · decided overnight</div>
-        <div class="dec"><span class="ava" style="background:rgba(127,166,214,.16);color:var(--blue);">SO</span><div><div class="t">Trim the Warszawa Saturday AM shift</div><div class="m">Labour ran 31% — three points over target — saving ≈ 620 zł/wk.</div><div class="by">Sofia · Chief Financial Officer</div></div><span class="chip">approve</span></div>
-        <div class="dec"><span class="ava" style="background:rgba(183,154,214,.16);color:var(--violet);">MA</span><div><div class="t">“We miss you” SMS to 320 lapsed guests</div><div class="m">Repeat-customer rate slipped to 41% · ≈ 9% win-back.</div><div class="by">Marco · Chief Marketing Officer</div></div><span class="chip">approve</span></div>
-        <div class="dec"><span class="ava" style="background:rgba(148,171,115,.18);color:var(--sage);">LU</span><div><div class="t">Re-quote the dairy supplier</div><div class="m">Margherita food cost climbed to 28% on a 6% cheese rise.</div><div class="by">Luca · Chief Operating Officer</div></div><span class="chip">approve</span></div>
-        <a class="lk" href="#">Open Agent HQ →</a>
+        <div class="two">
+          <div class="panel">
+            <div class="pl">Customer truth</div>
+            <div class="truth"><b>NPS 61</b>, ▼3 wk/wk. <b>3 of 5</b> one-stars name <b>“wait time”</b> — the oven constraint, felt at the counter.</div>
+          </div>
+          <div class="panel">
+            <div class="pl">Cash</div>
+            <div class="cashrow"><span>On hand</span><b class="num">184 000 zł</b></div>
+            <div class="cashrow"><span>Runway</span><b class="num">~11 wks</b></div>
+            <div class="cashrow"><span>Net · yest.</span><b class="num" style="color:var(--sage)">+38 900</b></div>
+            <div class="cashrow"><span>Drawer · Kraków</span><b class="num" style="color:var(--ember)">−85 zł</b></div>
+          </div>
+        </div>
       </div>
 
-      <!-- NEEDS YOU -->
+      <!-- ANOMALY -->
       <div class="group">
-        <div class="glabel">Needs your attention</div>
-        <div class="att"><span class="ad" style="background:var(--ember);color:var(--ember);"></span><div><div class="t">Cash drawer short 85 zł · Kraków close</div><div class="m">over the 50 zł review threshold</div></div></div>
-        <div class="att"><span class="ad" style="background:var(--gold);color:var(--gold);"></span><div><div class="t">San Marzano tomatoes low · Warszawa</div><div class="m">1.2 days of cover · purchase order ready</div></div></div>
-        <div class="att"><span class="ad" style="background:var(--violet);color:var(--violet);"></span><div><div class="t">One 1★ review — “a 25-minute wait”</div><div class="m">plus two 5★ · a reply is drafted</div></div></div>
-        <div class="att"><span class="ad" style="background:var(--blue);color:var(--blue);"></span><div><div class="t">HACCP temperature log gap · 14:00–16:00</div><div class="m">backfill before the inspection window</div></div></div>
+        <div class="glabel">Worth copying</div>
+        <div class="anom">Warszawa's average ticket jumped <b>+17%</b> on combo attach — <b>38% vs the 24% chain average</b>. Roll that play into Kraków.</div>
       </div>
 
-      <!-- TODAY -->
+      <!-- RISK -->
       <div class="group">
-        <div class="glabel">Today</div>
-        <div class="today">
-          <div class="tcell"><div class="k">Staffed</div><div class="v">9</div><div class="d">both sites</div></div>
-          <div class="tcell"><div class="k">Corp lunch</div><div class="v">40 pax</div><div class="d">Kraków · 12:30</div></div>
-          <div class="tcell"><div class="k">Kraków</div><div class="v">☀ 24°</div><div class="d">great truck day</div></div>
-          <div class="tcell"><div class="k">Warszawa</div><div class="v">☁ 19°</div><div class="d">cloudy</div></div>
+        <div class="glabel">Today's risk</div>
+        <div class="risk"><span class="ic">▲</span><div><div class="t">The noon squeeze at Kraków</div><div class="b">A 40-pax corporate lunch at 12:30, only 9 staffed, San Marzano at 1.2 days cover — supply + capacity collide 12:00–13:30. PO is ready; a Warszawa hand could cover.</div></div></div>
+      </div>
+
+      <!-- RECAP -->
+      <div class="group">
+        <div class="glabel">Yesterday · for the record</div>
+        <div class="recap">
+          <span class="it"><b>612</b> orders <span class="s">▲8%</span></span>
+          <span class="it">avg <b>78.8 zł</b> <span class="s">▲4%</span></span>
+          <span class="it">margin <b>23.1%</b></span>
+          <span class="it">prep <b>9.2 min</b></span>
+          <span class="it">Kraków <b>27 400</b> <span class="s">▲9%</span></span>
+          <span class="it">Warszawa <b>20 850</b> <span class="s">▲17%</span></span>
+          <span class="it">Margherita <b>×148</b> · Diavola <b>×96</b></span>
+          <span class="it">loyalty <b>+38</b></span>
+          <span class="it">today <b>☀24° / ☁19°</b> · <b>9</b> staffed</span>
         </div>
       </div>
     </div>
