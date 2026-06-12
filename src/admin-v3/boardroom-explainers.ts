@@ -39,7 +39,7 @@ export const KPI_EXPLAINERS: Record<string, ExplainerProps> = {
     tips:
       "Re-roster against the demand forecast — cut the over-covered dayparts (COO). Cross-train so one fewer body covers the lull (COO). Lift average ticket so the same hours earn more (CFO/CMO).",
     methodology:
-      "Paired clock-in/out cost × hourly rate ÷ revenue over the last 7 days (getLaborCostInRange ÷ getSummary revenue). Green ≤30%, yellow ≤35%, red >35%.",
+      "Paired clock-in/out cost × gross (brutto) hourly rate ÷ revenue over the last 7 days (getLaborCostInRange ÷ getSummary revenue). Green ≤30%, yellow ≤35%, red >35%.",
   },
   "prime-cost": {
     description: "Food cost % plus labour cost % — the two biggest controllable costs combined.",

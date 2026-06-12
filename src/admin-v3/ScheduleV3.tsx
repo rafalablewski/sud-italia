@@ -20,6 +20,20 @@ const STATUS_LABEL: Record<ShiftStatus, string> = { scheduled: "Scheduled", "in-
 function isoDay(d: Date) { return d.toISOString().slice(0, 10); }
 function hhmm(iso: string) { return new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); }
 function dayLabel(d: Date) { return d.toLocaleDateString("pl-PL", { weekday: "short", day: "numeric", month: "short" }); }
+/** YYYY-MM-DD in LOCAL time (no UTC shift) — matches the `<input type="date">` value. */
+function localDay(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+/** Inclusive list of YYYY-MM-DD day strings from `startDay` to `endDay`. Falls
+ *  back to just the start day when the end is empty, invalid or before start. */
+function daysInRange(startDay: string, endDay: string): string[] {
+  const s = new Date(`${startDay}T00:00`);
+  const e = new Date(`${endDay}T00:00`);
+  if (!endDay || Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e < s) return [startDay];
+  const out: string[] = [];
+  for (const cur = new Date(s); cur <= e; cur.setDate(cur.getDate() + 1)) out.push(localDay(cur));
+  return out;
+}
 
 export function ScheduleV3() {
   const { location } = useAdminLocationV3();
@@ -95,7 +109,7 @@ export function ScheduleV3() {
       <div className="av3-kpi-rail">
         <Kpi label="Shifts" icon={CalendarRange} value={`${stats.count}`} accentVar="--av3-c3" />
         <Kpi label="Hours" icon={Clock} value={stats.hours ? `${stats.hours.toFixed(0)}h` : "—"} accentVar="--av3-c4" />
-        <Kpi label="Labour cost" icon={Coins} value={formatPrice(stats.cost)} accentVar="--av3-c2" />
+        <Kpi label="Labour cost (brutto)" icon={Coins} value={formatPrice(stats.cost)} accentVar="--av3-c2" />
         <Kpi label="On rota" icon={Users} value={`${stats.onRota}`} accentVar="--av3-c5" />
         <Kpi label="Uncovered days" icon={AlertTriangle} value={`${stats.uncovered}`} accentVar="--av3-c1" />
       </div>
@@ -189,6 +203,7 @@ export function ScheduleV3() {
           locationSlug={loc}
           staff={staff}
           onClose={() => setDialog(null)}
+          onReload={load}
           onSaved={async () => { await load(); setDialog(null); }}
         />
       )}
@@ -203,32 +218,52 @@ function roleToneOf(role: StaffRole): BadgeTone {
   return "neutral";
 }
 
-function ShiftDialog({ shift, date, locationSlug, staff, onClose, onSaved }: {
-  shift: Shift | null; date: string; locationSlug: string; staff: StaffMember[]; onClose: () => void; onSaved: () => Promise<void>;
+function ShiftDialog({ shift, date, locationSlug, staff, onClose, onReload, onSaved }: {
+  shift: Shift | null; date: string; locationSlug: string; staff: StaffMember[]; onClose: () => void; onReload: () => Promise<void>; onSaved: () => Promise<void>;
 }) {
   const [staffId, setStaffId] = useState(shift?.staffId ?? staff[0]?.id ?? "");
   const [d, setD] = useState(shift ? shift.startAt.slice(0, 10) : date);
+  const [untilDay, setUntilDay] = useState("");
   const [start, setStart] = useState(shift ? new Date(shift.startAt).toTimeString().slice(0, 5) : "10:00");
   const [end, setEnd] = useState(shift ? new Date(shift.endAt).toTimeString().slice(0, 5) : "18:00");
   const [role, setRole] = useState<StaffRole>(shift?.role ?? staff[0]?.role ?? "waiter");
   const [status, setStatus] = useState<ShiftStatus>(shift?.status ?? "scheduled");
   const [notes, setNotes] = useState(shift?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Editing touches a single shift; adding can span a date range (assign
+  // someone for several days at once) — one shift created per day.
+  const days = useMemo(() => (shift ? [d] : daysInRange(d, untilDay)), [shift, d, untilDay]);
 
   const onPickStaff = (id: string) => { setStaffId(id); const m = staff.find((x) => x.id === id); if (m && !shift) setRole(m.role); };
 
   const save = async () => {
-    if (!staffId) return;
+    if (!staffId || days.length === 0) return;
     setSaving(true);
+    setError(null);
     try {
-      const startAt = new Date(`${d}T${start}`).toISOString();
-      const endAt = new Date(`${d}T${end}`).toISOString();
-      const res = await fetch("/api/admin/shifts", {
-        method: shift ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...(shift ? { id: shift.id } : {}), staffId, startAt, endAt, role, status, notes: notes.trim() || undefined, locationSlug }),
-      });
-      if (res.ok) await onSaved();
+      let ok = 0;
+      const failedDays: string[] = [];
+      for (const day of days) {
+        const startAt = new Date(`${day}T${start}`).toISOString();
+        const endAt = new Date(`${day}T${end}`).toISOString();
+        const res = await fetch("/api/admin/shifts", {
+          method: shift ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...(shift ? { id: shift.id } : {}), staffId, startAt, endAt, role, status, notes: notes.trim() || undefined, locationSlug }),
+        });
+        if (res.ok) ok++;
+        else failedDays.push(day);
+      }
+      if (failedDays.length === 0) {
+        await onSaved();
+      } else {
+        // Some days clashed with scheduling rules (overlap / rest). Keep the
+        // dialog open, refresh what did save, and say what didn't.
+        await onReload();
+        setError(`${ok} shift${ok === 1 ? "" : "s"} created · ${failedDays.length} skipped (scheduling-rule conflict on ${failedDays.map((x) => x.slice(5)).join(", ")}).`);
+      }
     } finally {
       setSaving(false);
     }
@@ -238,18 +273,25 @@ function ShiftDialog({ shift, date, locationSlug, staff, onClose, onSaved }: {
     <Dialog
       open onClose={onClose}
       title={shift ? "Edit shift" : "Add shift"}
-      subtitle={dayLabel(new Date(`${d}T00:00`))}
+      subtitle={shift || days.length <= 1 ? dayLabel(new Date(`${d}T00:00`)) : `${days.length} days · ${dayLabel(new Date(`${days[0]}T00:00`))} → ${dayLabel(new Date(`${days[days.length - 1]}T00:00`))}`}
       width={520}
-      footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} disabled={!staffId} onClick={save}>Save shift</Button></>}
+      footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} disabled={!staffId} onClick={save}>{!shift && days.length > 1 ? `Add ${days.length} shifts` : "Save shift"}</Button></>}
     >
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Staff</span>
         <select className="av3-select" value={staffId} onChange={(e) => onPickStaff(e.target.value)}>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
       </div>
       <div className="av3-formrow" style={{ marginBottom: 10 }}>
-        <label className="av3-field"><span className="av3-field-label">Date</span><input className="av3-input" type="date" style={{ fontFamily: "var(--av3-ui)" }} value={d} onChange={(e) => setD(e.target.value)} /></label>
+        <label className="av3-field"><span className="av3-field-label">{shift ? "Date" : "Start date"}</span><input className="av3-input" type="date" style={{ fontFamily: "var(--av3-ui)" }} value={d} onChange={(e) => setD(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Start</span><input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">End</span><input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={end} onChange={(e) => setEnd(e.target.value)} /></label>
       </div>
+      {!shift && (
+        <label className="av3-field" style={{ marginBottom: 10 }}>
+          <span className="av3-field-label">Repeat through (optional) — assign for several days at once</span>
+          <input className="av3-input" type="date" style={{ fontFamily: "var(--av3-ui)" }} min={d} value={untilDay} onChange={(e) => setUntilDay(e.target.value)} />
+          {days.length > 1 && <span style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 5 }}>Creates {days.length} shifts — one per day, {start}–{end} each.</span>}
+        </label>
+      )}
       <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <label className="av3-field"><span className="av3-field-label">Role</span>
           <select className="av3-select" value={role} onChange={(e) => setRole(e.target.value as StaffRole)}>
@@ -261,6 +303,7 @@ function ShiftDialog({ shift, date, locationSlug, staff, onClose, onSaved }: {
         </label>
       </div>
       <label className="av3-field" style={{ marginTop: 10 }}><span className="av3-field-label">Notes</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Station, cover-for, training… (optional)" /></label>
+      {error && <div className="av3-edhint" data-tone="warn" style={{ marginTop: 12 }}>{error}</div>}
     </Dialog>
   );
 }

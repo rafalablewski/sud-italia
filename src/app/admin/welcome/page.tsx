@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentAdminUser } from "@/lib/admin-auth";
-import { getActiveLocations, isLocationOpenNow } from "@/data/locations";
+import { isLocationOpenNow } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { WelcomeBrief } from "@/admin-v3/WelcomeBrief";
 
 /**
@@ -15,7 +16,9 @@ export default async function WelcomePage() {
   const user = await getCurrentAdminUser();
   if (!user) redirect("/login");
   const first = (user.name || "").trim().split(/\s+/)[0] || "there";
-  const locations = getActiveLocations();
+  // Live DB-backed list (falls back to the seed when the table is empty) so the
+  // open-now count reflects edits made in /admin/locations/manage.
+  const locations = await getActiveLocationsAsync();
   const openNow = locations.filter((l) => isLocationOpenNow(l)).length;
   return <WelcomeBrief name={first} locationCount={locations.length} openNow={openNow} />;
 }

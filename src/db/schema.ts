@@ -873,6 +873,7 @@ export const locationsTable = pgTable(
     servesAlcohol: boolean("serves_alcohol").notNull().default(false),
     isActive: boolean("is_active").notNull().default(false),
     displayOrder: integer("display_order").notNull().default(0),
+    teamLead: text("team_lead").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

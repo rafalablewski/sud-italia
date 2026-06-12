@@ -14,8 +14,10 @@ export function ManageLocationsV3() {
   const [edit, setEdit] = useState<Location | "new" | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/locations").then((r) => (r.ok ? r.json() : [])).catch(() => []);
-    setList(Array.isArray(res) ? res : []);
+    const res = await fetch("/api/admin/locations").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // GET returns { locations: [...] }; tolerate a bare array too.
+    const rows = Array.isArray(res) ? res : Array.isArray(res?.locations) ? res.locations : [];
+    setList(rows);
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -36,7 +38,7 @@ export function ManageLocationsV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Manage locations</h1>
-          <div className="av3-pagehead-sub">Sites · hours · coordinates · status</div>
+          <div className="av3-pagehead-sub">Every detail per site · name · address · description · hours · coordinates · status — drives the storefront & the “trucks open” brief</div>
         </div>
         <div className="av3-pagehead-actions">
           <Button variant="ghost" size="sm" loading={reseeding} onClick={reseed}>Re-seed from code</Button>
@@ -75,6 +77,10 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
   const [lng, setLng] = useState(String(location?.coordinates.lng ?? ""));
   const [isActive, setIsActive] = useState(location?.isActive ?? false);
   const [servesAlcohol, setServesAlcohol] = useState(location?.servesAlcohol ?? false);
+  const [shortDescription, setShortDescription] = useState(location?.shortDescription ?? "");
+  const [description, setDescription] = useState(location?.description ?? "");
+  const [teamLead, setTeamLead] = useState(location?.teamLead ?? "");
+  const [heroImage, setHeroImage] = useState(location?.heroImage ?? "");
   const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(location?.hours?.length ? location.hours : [{ day: "Mon-Sun", open: "11:00", close: "21:00" }]);
   const [saving, setSaving] = useState(false);
 
@@ -99,6 +105,10 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
         hours,
         isActive,
         servesAlcohol,
+        shortDescription: shortDescription.trim(),
+        description: description.trim(),
+        teamLead: teamLead.trim(),
+        heroImage: heroImage.trim(),
         currency: "PLN",
       };
       const res = await fetch("/api/admin/locations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -117,6 +127,12 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
         <label className="av3-field"><span className="av3-field-label">Slug</span><input className="av3-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!location} placeholder="auto" /></label>
       </div>
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Address</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={address} onChange={(e) => setAddress(e.target.value)} /></label>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Short description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} placeholder="One line for cards & lists" maxLength={300} /></label>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><textarea className="av3-input" style={{ fontFamily: "var(--av3-ui)", height: "auto", minHeight: 72, padding: "8px 10px", resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Full description shown on the location page" maxLength={2000} /></label>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
+        <label className="av3-field"><span className="av3-field-label">Team lead / attribution</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={teamLead} onChange={(e) => setTeamLead(e.target.value)} placeholder="e.g. Cooked by Giuseppe and family" maxLength={200} /></label>
+        <label className="av3-field"><span className="av3-field-label">Hero image path</span><input className="av3-input" value={heroImage} onChange={(e) => setHeroImage(e.target.value)} placeholder="/images/locations/…-hero.jpg" maxLength={500} /></label>
+      </div>
       <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Lat</span><input className="av3-input" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Lng</span><input className="av3-input" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>

@@ -269,8 +269,9 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
   pages** — every `.av3-loading` spinner was replaced (full-page returns →
   `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
-  where the generic shape misled: Orders uses `SkeletonKanban` (view-aware) and
-  Cash leads with a `SkeletonKpiRail` since its loaded view does.
+  where the generic shape misled: Cash leads with a `SkeletonKpiRail` since its
+  loaded view does. (`SkeletonKanban` still ships for the CORE KDS/POS surfaces;
+  the admin Orders history is a plain `SkeletonRows` table now.)
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
   (text caps at ~300px for readability).
@@ -709,11 +710,16 @@ auth canvas's signature lighting and the sign-in lockup:
   `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
   no cross-writes — never wire one into the other. Nav: Overview section (two
   entries).
-- [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
-  the real SSE order stream (`useAdminOrdersStream`); status advances via
-  `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
-  detail dialog opens a `RefundDialogV3` (full/partial via `ChipRow`, reason
-  code, notes, Stripe-reversal vs manager-comp note) wired to
+- [x] Orders (`/admin/orders`) — **read-only order history**, not the live
+  pipeline (the operational kanban + status moves live in CORE → POS / KDS,
+  `/core/pos` + `/core/kds`). A single **table** (Order # · Placed datetime ·
+  Customer · Type · Status · Total) over the real SSE order stream
+  (`useAdminOrdersStream`), newest-first, with **status filter chips** (live
+  counts); covers **all channels** (web / QR / WhatsApp / POS). Row → a
+  **read-only detail dialog** (customer, slot, items, total, refund state).
+  No status-advance / cancel controls — only **Refund** survives as the admin
+  financial action: the detail opens a `RefundDialogV3` (full/partial via
+  `ChipRow`, reason code, notes, Stripe-reversal vs manager-comp note) wired to
   `POST /api/admin/orders/:id/refund` with a live `evaluateRefundGuard` preview
   (per-refund cap + daily comp budget → owner-approval gate); a refunded order
   shows the amount + reason in the detail.
@@ -817,7 +823,12 @@ auth canvas's signature lighting and the sign-in lockup:
   daily write-off); **search + reason filter chips**; a **Board⇄Table toggle**
   with a default board of waste cards (cost, qty, share-of-today); and a
   **row → detail popup** (qty/reason/cost/share/time + an "uncosted = invisible"
-  nudge when no cost was recorded).
+  nudge when no cost was recorded). **Item + unit pass:** the **Item** field is
+  an ingredient picker (`<datalist>` fed from `/api/admin/ingredients`) that
+  still accepts free-typed text for fast at-the-line entry; selecting a known
+  ingredient pre-fills its default **Unit**. **Unit** is a grouped `<select>`
+  (weight/mass · count & packaging · volume & capacity) instead of free text,
+  so the stored unit code stays consistent.
 - [x] Shift handover (`/admin/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
   week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /
@@ -841,13 +852,20 @@ auth canvas's signature lighting and the sign-in lockup:
   a **KPI rail** (open POs / on-order value / awaiting delivery / received).
 - [x] People — Staff (`/admin/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs, **search** (name / role / email). Schedule (`/admin/schedule`): this week's shifts with
+  active KPIs, **search** (name / role / email). The **Rate/hr** column + the
+  edit-dialog rate field are labelled **(brutto)** — the stored `hourlyRateGrosze`
+  is the gross rate, so everything derived from it (Schedule labour cost, the
+  Calculator labour lines, the boardroom labour-cost % methodology) says brutto
+  too. Schedule (`/admin/schedule`): this week's shifts with
   add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
-  (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
-  days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
+  (shifts / hours / **labour cost (brutto)** from `hourlyRateGrosze` / on-rota /
+  uncovered days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
   columns (horizontal-scroll on narrow, today highlighted) of role-coloured shift
   cards (time, name, role + status badge, hover-delete), per-column add. The shift
-  dialog gained the missing **Notes** field. CSS §20 (`.av3-week`, `.av3-shiftcard`).
+  dialog gained the missing **Notes** field and, when **adding**, a **Repeat
+  through** end-date so one person can be assigned for several days at once (one
+  shift created per day in the inclusive range; per-day scheduling-rule conflicts
+  are reported and skipped, not silently dropped). CSS §20 (`.av3-week`, `.av3-shiftcard`).
 - [x] Customers (`/admin/customers`) — phone-based directory (search,
   repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
   restored:** a **"Send today"** outreach card (today's birthdays + first-order
@@ -973,8 +991,14 @@ auth canvas's signature lighting and the sign-in lockup:
   new-site readiness checklists (toggle items, add planned site,
   `PUT /api/admin/expansion`).
 - [x] Intelligence complete — Manage locations (`/admin/locations/manage`):
-  site CRUD (hours editor, coordinates, active/alcohol) round-tripping the full
-  record + re-seed (`/api/admin/locations`). Insights (`/admin/ai`): **five
+  **full per-site detail editor** — name / city / slug / address, short +
+  long description, team-lead attribution, hero-image path, coordinates,
+  hours editor, active/alcohol — round-tripping the whole record via
+  `/api/admin/locations` (the GET returns `{ locations: [...] }`, so the list
+  reads `res.locations`). `teamLead` now persists end-to-end (DB column
+  `team_lead` + zod field), and the **welcome brief's "trucks open" count**
+  reads the same DB-backed `getActiveLocationsAsync()` so edits here move that
+  number. + re-seed. Insights (`/admin/ai`): **five
   tabs restored to v2 parity (flag #5)** — **Forecast** bars
   (`/api/admin/ai/forecast`), **Anomalies** (today vs trailing 28-day avg from
   `/api/admin/analytics`), **Reorder** (SKUs ≤ reorder point from

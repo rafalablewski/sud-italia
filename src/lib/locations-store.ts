@@ -33,9 +33,12 @@ const LOCATIONS_DDL = [
     serves_alcohol boolean NOT NULL DEFAULT false,
     is_active boolean NOT NULL DEFAULT false,
     display_order integer NOT NULL DEFAULT 0,
+    team_lead text NOT NULL DEFAULT '',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // Added after the table shipped — idempotent so existing deployments gain it.
+  `ALTER TABLE locations ADD COLUMN IF NOT EXISTS team_lead text NOT NULL DEFAULT ''`,
   `CREATE INDEX IF NOT EXISTS locations_is_active_idx ON locations (is_active)`,
   `CREATE INDEX IF NOT EXISTS locations_display_order_idx ON locations (display_order)`,
 ];
@@ -68,6 +71,7 @@ function rowToLocation(row: LocationRow): LocationWithOrder {
     isActive: row.isActive,
     currency: row.currency as "PLN",
     servesAlcohol: row.servesAlcohol,
+    teamLead: row.teamLead || undefined,
     displayOrder: row.displayOrder,
   };
 }
@@ -87,6 +91,7 @@ function locationToValues(loc: Location, displayOrder: number) {
     currency: loc.currency,
     servesAlcohol: !!loc.servesAlcohol,
     isActive: loc.isActive,
+    teamLead: loc.teamLead ?? "",
     displayOrder,
     updatedAt: new Date(),
   };

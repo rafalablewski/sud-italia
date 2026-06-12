@@ -78,7 +78,7 @@ export function StaffV3() {
     ) },
     { key: "role", header: "Role", render: (s) => <Badge tone={roleTone(s.role)}>{STAFF_ROLE_LABEL[s.role] ?? s.role}</Badge> },
     { key: "site", header: "Site", render: (s) => <span className="av3-cell-muted">{all.find((l) => l.slug === s.locationSlug)?.city ?? s.locationSlug}</span> },
-    { key: "rate", header: "Rate/hr", num: true, render: (s) => formatPrice(s.hourlyRateGrosze) },
+    { key: "rate", header: "Rate/hr (brutto)", num: true, render: (s) => formatPrice(s.hourlyRateGrosze) },
     { key: "punch", header: "", render: (s) => (
       <Button variant={onShift.has(s.id) ? "secondary" : "ghost"} size="sm" loading={punchBusy === s.id} onClick={(e) => { e.stopPropagation(); punch(s); }}>
         {onShift.has(s.id) ? "Clock out" : "Clock in"}
@@ -183,7 +183,7 @@ function StaffDialog({ member, locations, onClose, onSaved }: { member: StaffMem
             {STAFF_ROLE_OPTIONS.map((g) => <optgroup key={g.group} label={g.group}>{g.roles.map((r) => <option key={r} value={r}>{STAFF_ROLE_LABEL[r]}</option>)}</optgroup>)}
           </select>
         </label>
-        <label className="av3-field"><span className="av3-field-label">Rate / hr (zł)</span><input className="av3-input" type="number" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} /></label>
+        <label className="av3-field"><span className="av3-field-label">Rate / hr (zł brutto)</span><input className="av3-input" type="number" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} /></label>
       </div>
       <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Phone</span><input className="av3-input" value={phone} onChange={(e) => setPhone(e.target.value)} /></label>

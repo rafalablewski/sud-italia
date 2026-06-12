@@ -74,7 +74,7 @@ export function HaccpV3() {
 
   const load = useCallback(async () => {
     const qs = new URLSearchParams({ location: loc, from: startOfTodayIso() });
-    const res = await fetch(`/api/admin/haccp?${qs}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    const res = await fetch(`/api/admin/haccp?${qs}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
     setLogs(Array.isArray(res) ? res : []);
   }, [loc]);
 
@@ -93,7 +93,14 @@ export function HaccpV3() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locationSlug: loc, sensor, tempCelsius: tempTenths }),
       });
-      if (res.ok) { setTempStr(""); await load(); }
+      if (res.ok) {
+        // Show the new reading instantly from the POST response, then
+        // reconcile with the server in the background — no refetch wait.
+        const created = (await res.json().catch(() => null)) as TempReading | null;
+        if (created?.id) setLogs((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
+        setTempStr("");
+        load();
+      }
     } finally {
       setSaving(false);
     }
