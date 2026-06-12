@@ -821,8 +821,8 @@ auth canvas's signature lighting and the sign-in lockup:
   an ingredient picker (`<datalist>` fed from `/api/admin/ingredients`) that
   still accepts free-typed text for fast at-the-line entry; selecting a known
   ingredient pre-fills its default **Unit**. **Unit** is a grouped `<select>`
-  (weight/mass · count & packaging · volume & capacity · length · temperature)
-  instead of free text, so the stored unit code stays consistent.
+  (weight/mass · count & packaging · volume & capacity) instead of free text,
+  so the stored unit code stays consistent.
 - [x] Shift handover (`/admin/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
   week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /

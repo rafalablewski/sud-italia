@@ -63,18 +63,6 @@ const UNIT_GROUPS: { label: string; units: { value: string; label: string }[] }[
     { value: "tbsp", label: "Tablespoon (tbsp)" },
     { value: "tsp", label: "Teaspoon (tsp)" },
   ] },
-  { label: "Length", units: [
-    { value: "m", label: "Meter (m)" },
-    { value: "cm", label: "Centimeter (cm)" },
-    { value: "mm", label: "Millimeter (mm)" },
-    { value: "ft", label: "Foot (ft)" },
-    { value: "in", label: "Inch (in)" },
-  ] },
-  { label: "Temperature", units: [
-    { value: "°C", label: "Celsius (°C)" },
-    { value: "°F", label: "Fahrenheit (°F)" },
-    { value: "K", label: "Kelvin (K)" },
-  ] },
 ];
 const KNOWN_UNITS = new Set(UNIT_GROUPS.flatMap((g) => g.units.map((u) => u.value)));
 
