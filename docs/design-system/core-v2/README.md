@@ -37,11 +37,12 @@ core-v2 reads as "admin". (Admin's own scope hook is the separate
 
 ## Status — feature-complete (parity with `/core`)
 
-All four surfaces are wired to the real engine and at **feature parity**
-with today's `/core` (the deferred polish — POS pace-steering/park/
-recourse/kiosk, KDS kiosk/hotkeys/recall/chime/86, CRM send, Slots
-create/delete — is all closed). Only **Step 7 (the swap)** remains:
-delete `/core` and promote `/core-v2` → `/core`.
+All surfaces are wired to the real engine and at **feature parity**
+with today's `/core` — the four `/core` surfaces (POS · KDS · Guest ·
+Service) plus a new **Orders** board `/core` never had (the deferred polish —
+POS pace-steering/park/recourse/kiosk, KDS kiosk/hotkeys/recall/chime/86,
+CRM send, Slots create/delete — is all closed). Only **Step 7 (the swap)**
+remains: delete `/core` and promote `/core-v2` → `/core`.
 
 - **Theme:** `src/app/themes/core-v2/` (`tokens.css` + `index.css`)
 - **Shell + surfaces:** `src/core-v2/`

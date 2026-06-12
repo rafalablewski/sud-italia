@@ -17,9 +17,11 @@ history — so staff aren't limited to the POS's open tickets.
 - **Rows** (`.cv-order-row`): time + date · table-or-fulfillment + guest ·
   item count + id · channel chip · status chip · paid/unpaid chip · total.
 - **Detail dialog:** the full ticket (lines + notes + total), guest, channel,
-  status, and a **Mark paid** action for unpaid orders
+  status, a **Mark paid** action for unpaid orders
   (`POST /api/admin/floor/orders {action:"settle"}` → `updateOrder` sets
-  `paidAt`, fires a still-pending order to the kitchen).
+  `paidAt`, fires a still-pending order to the kitchen), and a **Print
+  receipt** action (`POST /api/admin/orders/[id]/print-receipt`) — see
+  [`receipt-printer.md`](./receipt-printer.md).
 
 Mutations reuse the floor settle endpoint; the single Order stays the source
 of truth (no duplicate ticket). Verified: 38 orders list, filter + search +

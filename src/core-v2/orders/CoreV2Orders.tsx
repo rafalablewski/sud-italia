@@ -22,11 +22,36 @@ const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pl-PL", { hou
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
 
 /**
+ * Print the simulator's plain-text receipt through the browser (popup → print
+ * dialog) — the no-hardware fallback documented in receipt-printer.md. The
+ * preview is rendered as text (never HTML) so a guest name or item note can't
+ * inject markup. Returns false if the popup was blocked.
+ */
+function browserPrintReceipt(preview: string, orderId: string): boolean {
+  const w = window.open("", "_blank", "width=360,height=640");
+  if (!w) return false;
+  w.document.title = `Receipt ${orderId}`;
+  const style = w.document.createElement("style");
+  style.textContent =
+    '@page{margin:6mm}body{margin:0}pre{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace;font-size:12px;line-height:1.4;white-space:pre-wrap;word-break:break-word}';
+  w.document.head.appendChild(style);
+  const pre = w.document.createElement("pre");
+  pre.textContent = preview;
+  w.document.body.appendChild(pre);
+  w.document.close();
+  w.focus();
+  w.print();
+  return true;
+}
+
+/**
  * Core v2 · Orders — one place for every order at the location: live (current)
  * and paid history. Scope tabs + channel filter + search (id / guest / phone /
- * table), a KPI strip, and a detail dialog with the full ticket + Mark paid.
- * Reads /api/admin/orders (all orders) + /api/admin/floor/tables (table
- * numbers); settles via /api/admin/floor/orders.
+ * table), a KPI strip, and a detail dialog with the full ticket + Mark paid +
+ * Print receipt. Reads /api/admin/orders (all orders) + /api/admin/floor/tables
+ * (table numbers); settles via /api/admin/floor/orders; prints via
+ * /api/admin/orders/[id]/print-receipt (ESC/POS, browser fallback when no
+ * RECEIPT_PRINTER_HOST).
  */
 export function CoreV2Orders() {
   const toast = useCoreToast();
@@ -39,6 +64,7 @@ export function CoreV2Orders() {
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Order | null>(null);
   const [settling, setSettling] = useState<string | null>(null);
+  const [printing, setPrinting] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
@@ -71,6 +97,26 @@ export function CoreV2Orders() {
       else toast("Could not settle order", "danger");
     } finally {
       setSettling(null);
+    }
+  };
+
+  const printRcpt = async (orderId: string) => {
+    if (printing) return;
+    setPrinting(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/print-receipt`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { toast(data?.error || "Could not print receipt", "danger"); return; }
+      if (data?.mode === "printed") {
+        toast(data?.message || "Receipt printed", "success");
+      } else {
+        const opened = typeof data?.preview === "string" ? browserPrintReceipt(data.preview, orderId) : false;
+        toast(opened ? "Receipt sent to the print dialog" : "Receipt ready — allow pop-ups to print it", opened ? "success" : "danger");
+      }
+    } catch {
+      toast("Could not print receipt", "danger");
+    } finally {
+      setPrinting(null);
     }
   };
 
@@ -158,11 +204,16 @@ export function CoreV2Orders() {
       {detail && (
         <CoreV2Dialog open onClose={() => setDetail(null)} title={`Order ${detail.id}`} width={520}
           footer={
-            !detail.paidAt ? (
-              <button type="button" className="cv-btn primary" disabled={settling === detail.id} onClick={() => void settle(detail.id)}>
-                {settling === detail.id ? "…" : "Mark paid"}
+            <>
+              <button type="button" className="cv-btn" disabled={printing === detail.id} onClick={() => void printRcpt(detail.id)}>
+                {printing === detail.id ? "…" : "Print receipt"}
               </button>
-            ) : <span className="cv-tpay paid" style={{ position: "static" }}>✓ paid</span>
+              {!detail.paidAt ? (
+                <button type="button" className="cv-btn primary" disabled={settling === detail.id} onClick={() => void settle(detail.id)}>
+                  {settling === detail.id ? "…" : "Mark paid"}
+                </button>
+              ) : <span className="cv-tpay paid" style={{ position: "static", alignSelf: "center" }}>✓ paid</span>}
+            </>
           }>
           <div className="cv-od-head">
             <div>

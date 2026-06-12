@@ -81,13 +81,6 @@ surface lives in [`../modules/`](../modules/).
   `.cv-tierseg` (gems tinted per metal). Glyphs come from
   `src/core-v2/guest/glyphs.tsx`.
 
-### Scaffold
-
-- **`.cv-scaffold`** — the honest "surface scaffolded, wiring in Step N"
-  panel (`ScaffoldSurface`) shown while a surface's chrome is live but
-  its guts are ported in a later step. `.ic` icon chip · `h2` · `p` ·
-  `.step` pill.
-
 ### POS
 
 `.cv-pos` grid (rail · menu · ticket): `.cv-rail` + `.cv-cat` category

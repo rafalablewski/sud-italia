@@ -122,17 +122,6 @@
 /* ---------- body shell ---------- */
 .cv2 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
-/* ---------- scaffold empty-state (surfaces not yet ported) ---------- */
-.cv2 .cv-scaffold { flex: 1; min-height: 0; display: grid; place-items: center; padding: 40px; background: var(--bg); }
-.cv2 .cv-scaffold .box { max-width: 460px; text-align: center; }
-.cv2 .cv-scaffold .ic { width: 60px; height: 60px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line);
-  display: grid; place-items: center; margin: 0 auto 18px; box-shadow: var(--sh-1); }
-.cv2 .cv-scaffold .ic svg { width: 28px; height: 28px; color: var(--brand); }
-.cv2 .cv-scaffold h2 { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: -.01em; }
-.cv2 .cv-scaffold p { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; margin-top: 9px; }
-.cv2 .cv-scaffold .step { display: inline-block; margin-top: 16px; font-family: var(--mono); font-size: 11.5px; font-weight: 600;
-  color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 5px 13px; }
-
 /* ============================================================
    POS surface
    ============================================================ */

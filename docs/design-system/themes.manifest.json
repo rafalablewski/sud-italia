@@ -43,7 +43,7 @@
    "files": [
     {
      "path": "src/app/themes/core-v2/index.css",
-     "description": "Theme stylesheet — scoped reset + the shell (.cv-bar/.cv-switch/.cv-sub) + global-action primitives (.cv-chip/.cv-iconbtn/.cv-clock/.cv-tabs/.cv-seg) + the scaffold panel (.cv-scaffold) + the POS surface (.cv-pos/.cv-rail/.cv-prod/.cv-ticket). @imports tokens.css."
+     "description": "Theme stylesheet — scoped reset + the shell (.cv-bar/.cv-switch/.cv-sub) + global-action primitives (.cv-chip/.cv-iconbtn/.cv-clock/.cv-tabs/.cv-seg) + the POS surface (.cv-pos/.cv-rail/.cv-prod/.cv-ticket). @imports tokens.css."
     },
     {
      "path": "src/app/themes/core-v2/tokens.css",

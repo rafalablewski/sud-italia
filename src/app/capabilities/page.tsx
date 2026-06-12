@@ -1369,10 +1369,10 @@ export default async function CapabilitiesPage() {
         {
           name: "Receipt printer (ESC/POS)",
           status: has("RECEIPT_PRINTER_HOST") ? "live" : "needs-config",
-          href: "/admin/orders",
+          href: "/core-v2/orders",
           envVars: ["RECEIPT_PRINTER_HOST", "RECEIPT_PRINTER_PORT"],
           summary:
-            "Thermal receipt printing (audit §11.2 / §12.4 #7). 'Print receipt' on any order detail POSTs /api/admin/orders/[id]/print-receipt, which builds an 80mm ESC/POS payload (src/lib/receipt/escpos.ts — header, per-line items with resolved modifiers + notes, modifier-inclusive prices, total, partial cut; unit-tested) and streams it over a raw TCP socket to RECEIPT_PRINTER_HOST:RECEIPT_PRINTER_PORT (default 9100). With no host set it runs as a SIMULATOR — returns the exact byte count + a plain-text preview and the UI falls back to a browser print, so a receipt comes out with or without hardware. Go-live for a truck-local printer: run a print-bridge on the truck or expose the printer via a reverse tunnel, then set RECEIPT_PRINTER_HOST — see docs/design-system/core/modules/receipt-printer.md. Every print is audit-logged as receipt.print.",
+            "Thermal receipt printing (audit §11.2 / §12.4 #7). 'Print receipt' on the Orders detail dialog (/core-v2/orders) POSTs /api/admin/orders/[id]/print-receipt, which builds an 80mm ESC/POS payload (src/lib/receipt/escpos.ts — header, per-line items with resolved modifiers + notes, modifier-inclusive prices, total, partial cut; unit-tested) and streams it over a raw TCP socket to RECEIPT_PRINTER_HOST:RECEIPT_PRINTER_PORT (default 9100). With no host set it runs as a SIMULATOR — returns the exact byte count + a plain-text preview and the UI falls back to a browser print, so a receipt comes out with or without hardware. Go-live for a truck-local printer: run a print-bridge on the truck or expose the printer via a reverse tunnel, then set RECEIPT_PRINTER_HOST — see docs/design-system/core-v2/modules/receipt-printer.md. Every print is audit-logged as receipt.print.",
         },
         {
           name: "Courier / driver dispatch",
