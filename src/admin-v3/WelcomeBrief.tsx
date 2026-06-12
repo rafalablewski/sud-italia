@@ -228,7 +228,6 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
                 <div className="d">vs the prior day</div>
               </div>
             </div>
-            <Link className="wb-lk" href={link("/admin/agent-hq")}>Open Agent HQ →</Link>
           </div>
         )}
 
