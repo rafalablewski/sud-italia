@@ -163,12 +163,12 @@ export function getActiveChallenges(): Challenge[] {
 }
 
 // --- Social Proof / Live Activity ---
-// Removed: the `simulateLiveActivity` helper and its `LiveActivity` type
-// fabricated customer-facing numbers (Math.random order counts + hardcoded
-// "popular item" / prep-time literals) — a Rule #1 violation. The storefront
-// live-ticker / FOMO strips it fed were deleted with it. If real social proof
-// is wanted later, derive it from actual orders (orders-in-last-hour per
-// location) + the real top item, not invented values.
+// The `simulateLiveActivity` helper that lived here fabricated customer-facing
+// numbers (Math.random order counts + hardcoded "popular item" / prep-time
+// literals) — a Rule #1 violation — and was deleted. Real, location-scoped
+// social proof now lives in `store.getLiveActivity` (computed from actual
+// orders), served via `/api/public/live-activity` and rendered by
+// `<LiveActivityBar />` on the location page.
 
 // Speed-guarantee values live on `LoyaltySettings.speedGuarantee`
 // — maxMinutes, guaranteeText, active. The previous SPEED_GUARANTEE

@@ -290,15 +290,36 @@ The V8 Trattoria top nav.
   toggles. Each link is the same EN/IT bilingual format but inline
   instead of stacked.
 
-> **Removed — live ticker / live-activity social proof.** The
-> `<LiveTicker />` strip, the per-location `<LiveActivityBar />`, the in-menu
-> `.v8-live-act` row and the `MenuFomoMicroLine` all rendered numbers
-> fabricated by `simulateLiveActivity` (`Math.random()` order counts +
-> hardcoded "popular item" / prep-time literals) — a Rule #1 violation — so
-> the whole social-proof surface was deleted along with its CSS
-> (`.v8-live-ticker*`, `.v8-live-act*`) and the `showLiveTicker` setting. If
-> real social proof is wanted later, derive it from actual orders, not
-> invented values.
+### `<LiveActivityBar />` — `src/components/location/LiveActivityBar.tsx`
+
+Real, location-scoped social-proof strip. Mounted on `/locations/[slug]`
+directly under `<LocationHero />` (the order-flow context). A slim
+espresso bar (`bg-gradient from-italia-dark to-#2a1a0a`, white text) of
+operator-chosen "live signals", scrollable on overflow.
+
+- **The operator picks which widgets show** in admin **Growth → Live
+  activity widgets** (`liveWidgets` in loyalty settings, served via
+  `/api/settings/public?location=`), location-filtered + ordered.
+- **Stat widgets are live, never fabricated** — `ordersInLastHour`,
+  `currentlyPreparing`, `trendingItem`, `avgPrepTime` read real
+  aggregates from `GET /api/public/live-activity?location=` (computed by
+  `store.getLiveActivity` from actual orders over a rolling 3h window;
+  simulated KDS demo tickets are excluded). Polled every 30s. **Each stat
+  widget hides itself when its real value is `0` / `null`** (and before
+  the first fetch resolves) so a quiet location never shows a sad or
+  invented number.
+- **Content widgets are operator-authored** — `happyHour` (auto-hides
+  past its end hour), `truckLocation` (the real address from
+  `getLocation`), `freeText`.
+- **The whole bar returns `null`** when no widget has anything to show,
+  so it never renders an empty band.
+
+> **History.** This replaces the deleted `simulateLiveActivity` helper +
+> the `<LiveTicker />` / `MenuFomoMicroLine` / in-menu `.v8-live-act` strip,
+> which fabricated their numbers with `Math.random()` + hardcoded item
+> names (a Rule #1 violation). The fabrication and its CSS
+> (`.v8-live-ticker*`, `.v8-live-act*`) + the `showLiveTicker` setting were
+> removed; this bar is the real-data successor.
 
 ### `<CartButton />` — `src/components/cart/CartButton.tsx`
 

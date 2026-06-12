@@ -4,11 +4,12 @@
 
 The location's menu surface. Each location has its own page rendered
 from `src/app/(public)/locations/[slug]/page.tsx`. The page composes
-five blocks under the public layout.
+six blocks under the public layout.
 
 | Block            | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
 | Location hero    | `src/components/location/LocationHero.tsx`                 |
+| Live activity    | `src/components/location/LiveActivityBar.tsx` (real social proof, self-hides when empty) |
 | Menu sections    | `src/components/location/MenuSection.tsx` (per category)   |
 | Location info    | `src/components/location/LocationInfo.tsx`                 |
 | Loyalty pitch    | `src/components/location/LoyaltySection.tsx`               |

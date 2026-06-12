@@ -12629,6 +12629,54 @@ export async function computeSssg(
   };
 }
 
+/** Live activity snapshot for the customer-site `<LiveActivityBar />` — every
+ *  figure is computed from REAL orders for the location (the fabricated
+ *  `simulateLiveActivity` helper this replaced was deleted). Counts are over a
+ *  rolling 3-hour window; the renderer hides any stat that comes back
+ *  0 / null so a quiet location never shows a sad or invented number. */
+export interface LiveActivitySnapshot {
+  ordersInLastHour: number;
+  currentlyPreparing: number;
+  popularItemNow: string | null;
+  avgPrepTimeMinutes: number | null;
+}
+
+export async function getLiveActivity(locationSlug: string): Promise<LiveActivitySnapshot> {
+  const now = Date.now();
+  // 3h window covers trending + any still-active ticket; getOrders strips
+  // simulated KDS demo tickets so they never inflate the public numbers.
+  const recent = (await getOrders(locationSlug, new Date(now - 3 * 60 * 60 * 1000).toISOString()))
+    .filter((o) => o.status !== "cancelled");
+
+  const hourAgo = now - 60 * 60 * 1000;
+  const ordersInLastHour = recent.filter((o) => Date.parse(o.createdAt) >= hourAgo).length;
+  const currentlyPreparing = recent.filter((o) => o.status === "confirmed" || o.status === "preparing").length;
+
+  // Trending — most-ordered dish by quantity across the window.
+  const counts = new Map<string, number>();
+  for (const o of recent) {
+    for (const line of o.items ?? []) {
+      const name = line.menuItem?.name;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + (line.quantity ?? 1));
+    }
+  }
+  let popularItemNow: string | null = null;
+  let top = 0;
+  for (const [name, n] of counts) if (n > top) { top = n; popularItemNow = name; }
+
+  // Avg prep — the kitchen's own ready estimate vs order time, over orders
+  // that carry one. Null when none do (so the widget hides rather than guess).
+  let prepSum = 0, prepN = 0;
+  for (const o of recent) {
+    if (!o.estimatedReadyAt) continue;
+    const d = Date.parse(o.estimatedReadyAt) - Date.parse(o.createdAt);
+    if (Number.isFinite(d) && d > 0) { prepSum += d; prepN += 1; }
+  }
+  const avgPrepTimeMinutes = prepN > 0 ? Math.round(prepSum / prepN / 60000) : null;
+
+  return { ordersInLastHour, currentlyPreparing, popularItemNow, avgPrepTimeMinutes };
+}
+
 /** Hourly throughput — per-hour orders / day from real data, optionally
  *  shown against the kitchenCapacity ceiling so rush-hour blow-out is
  *  visible. Returns 24 rows always (hour 0..23) — even unused hours so

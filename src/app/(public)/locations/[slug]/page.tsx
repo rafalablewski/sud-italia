@@ -9,6 +9,7 @@ import { MenuItemsRegistrar } from "@/components/cart/MenuItemsRegistrar";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ComplianceBanner } from "@/components/location/ComplianceBanner";
+import { LiveActivityBar } from "@/components/location/LiveActivityBar";
 import { SITE_NAME } from "@/lib/constants";
 import { getLoyaltySettings, getSettings, resolveLocationCompliance } from "@/lib/store";
 
@@ -117,6 +118,7 @@ export default async function LocationPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <LocationHero location={location} />
+      <LiveActivityBar locationSlug={slug} />
       <ComplianceBanner compliance={compliance} />
       <MenuSection
         items={fullMenu}

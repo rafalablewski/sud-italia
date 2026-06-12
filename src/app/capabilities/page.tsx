@@ -1126,6 +1126,12 @@ export default async function CapabilitiesPage() {
           summary: "Time-limited goals (e.g. order 3× this week for 50 pts). Configured in growth settings.",
         },
         {
+          name: "Live activity bar (social proof)",
+          status: "live",
+          href: "/admin/growth",
+          summary: "Real, location-scoped social-proof strip on /locations/[slug] (under the hero). The operator picks which signals to show in Growth → Live activity widgets (location-filtered, ordered); the stat widgets (orders in the last hour, currently preparing, trending dish, avg prep) are computed from ACTUAL orders by store.getLiveActivity and served via the public /api/public/live-activity?location= endpoint (polled every 30s, simulated KDS tickets excluded). Each stat hides itself when its real value is 0/null, and content widgets (happy hour, restaurant location, free-text announcement) are operator-authored — so the bar never shows an invented or sad number. Replaces the deleted simulateLiveActivity fabrication.",
+        },
+        {
           name: "Speed Guarantee",
           status: "live",
           href: "/admin/settings",
