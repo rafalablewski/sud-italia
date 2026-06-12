@@ -416,11 +416,16 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
             </div>
           </div>
           <CardBody>
-            {tab === "overview" ? (
+            {tab === "overview" && (
               <ConsoleOverview sc={sc} ownedKpis={ownedKpis} tl={tl} />
-            ) : tab === "goals" ? (
+            )}
+            {/* Goals (the editor) stays mounted but hidden when inactive so a
+                half-typed draft survives a hop to Overview/Logs and back.
+                `key={sel.id}` still remounts it when the agent changes. */}
+            <div style={{ display: tab === "goals" ? "block" : "none" }}>
               <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog} onSaved={onConfigSaved} />
-            ) : (
+            </div>
+            {tab === "logs" && (
               tl === null ? <SkeletonRows rows={4} /> : <TimelineList events={tl} />
             )}
           </CardBody>
