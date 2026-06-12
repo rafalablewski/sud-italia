@@ -1029,10 +1029,11 @@ auth canvas's signature lighting and the sign-in lockup:
 - [x] Settings (`/admin/settings`, owner-only): six tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles, toggle = saved), **Simulations**
-  (every simulation in the app, in one explicit place — currently just the
-  **Calculator** toggle; the former KDS / WhatsApp simulators and report
-  what-if sandboxes were removed, and a footnote names Floor Twin + Demand
-  Exchange as always-on operational models, not toggled sandboxes),
+  (every simulation in one explicit place — the **Calculator** toggle, plus the
+  owner-only **Sandbox mode** switch + "Reset sandbox" that flips the whole app
+  onto an isolated `sandbox:`-namespaced demo dataset via `/api/admin/sandbox`;
+  a footnote names Floor Twin + Demand Exchange as always-on operational
+  models, not toggled sandboxes),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
   `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**

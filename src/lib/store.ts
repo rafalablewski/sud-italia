@@ -1,4 +1,4 @@
-import { readFile, writeFile, access, mkdir } from "fs/promises";
+import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
@@ -123,7 +123,106 @@ async function ensureDataDir() {
   }
 }
 
+// --- Sandbox / Simulation mode -------------------------------------------
+// A whole-business demo dataset isolated behind a `sandbox:` key prefix. When
+// active, every non-shared store key is namespaced so real data is physically
+// untouched (un-prefixed keys are never read or written in sandbox). Driven by
+// the `sandboxModeEnabled` setting; toggled via /api/admin/sandbox; populated
+// by seedSandbox(). Distinct from the per-record `simulated` flag.
+
+const SANDBOX_PREFIX = "sandbox:";
+
+// Keys that STAY real/shared even in sandbox: the menu (prices/86s, recipes,
+// ingredients), auth, locations, and config/credentials. settings.json holds
+// the toggle itself, so it must never be namespaced (also breaks recursion).
+const SANDBOX_SHARED_KEYS = new Set<string>([
+  "settings.json",
+  "menu-overrides.json",
+  "recipes.json",
+  "ingredients.json",
+  "ingredient-products.json",
+  "admin-users.json",
+  "ai-model.json",
+  "payment-settings.json",
+  "integration-settings.json",
+  "agent-configs.json",
+  "whatsapp-settings.json",
+]);
+
+const SANDBOX_TTL_MS = 2_500;
+let sandboxCache: { on: boolean; at: number } | null = null;
+let sandboxRefreshing = false;
+
+/** Sync snapshot of the sandbox flag — drives key prefixing + sync guards. */
+function isSandboxActiveSync(): boolean {
+  return sandboxCache?.on ?? false;
+}
+
+/** Refresh the cached flag from the SHARED settings blob (never prefixed, so
+ *  it can't recurse). Primed early in getSettings(); a cold first read reads
+ *  "off" until primed, then stays accurate within SANDBOX_TTL_MS. */
+async function refreshSandboxFlag(): Promise<boolean> {
+  if (sandboxRefreshing) return sandboxCache?.on ?? false;
+  if (sandboxCache && Date.now() - sandboxCache.at < SANDBOX_TTL_MS) return sandboxCache.on;
+  sandboxRefreshing = true;
+  try {
+    const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean }>("settings.json", {});
+    sandboxCache = { on: raw.sandboxModeEnabled === true, at: Date.now() };
+    return sandboxCache.on;
+  } finally {
+    sandboxRefreshing = false;
+  }
+}
+
+/** Clear the cache so the next read reflects a just-toggled value. */
+export function bustSandboxCache(): void {
+  sandboxCache = null;
+}
+
+/** Public async guard for external side-effects (Stripe, comms, push, cron). */
+export async function isSandboxActive(): Promise<boolean> {
+  return refreshSandboxFlag();
+}
+
+/** Wipe the entire sandbox dataset (the reset action). Real/shared keys are
+ *  never touched — only `sandbox:`-prefixed keys are removed. */
+export async function wipeSandboxData(): Promise<void> {
+  if (useDB) {
+    await ensureDB();
+    const db = sql();
+    await db`DELETE FROM kv_store WHERE key LIKE ${SANDBOX_PREFIX + "%"}`;
+    return;
+  }
+  await ensureDataDir();
+  try {
+    const files = await readdir(DATA_DIR);
+    await Promise.all(
+      files
+        .filter((f) => f.startsWith(SANDBOX_PREFIX))
+        .map((f) => unlink(join(DATA_DIR, f)).catch(() => {})),
+    );
+  } catch {
+    /* nothing to wipe */
+  }
+}
+
+function resolveKey(key: string): string {
+  if (SANDBOX_SHARED_KEYS.has(key)) return key;
+  return isSandboxActiveSync() ? SANDBOX_PREFIX + key : key;
+}
+
+/** A DB handle that disappears in sandbox mode so the normalized-table
+ *  branches fall through to their kv path (which resolveKey namespaces). Used
+ *  ONLY in sandboxed-domain fns; infra keeps calling getDb() directly. */
+function getDomainDb() {
+  return isSandboxActiveSync() ? null : getDb();
+}
+
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
+  return rawReadJSON(resolveKey(key), fallback);
+}
+
+async function rawReadJSON<T>(key: string, fallback: T): Promise<T> {
   if (useDB) {
     // Breaker open → Neon is unhealthy; skip it and serve the fallback
     // immediately rather than timing out once per call (build-time prerender
@@ -153,6 +252,11 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function writeJSON<T>(key: string, data: T): Promise<void> {
+  await rawWriteJSON(resolveKey(key), data);
+  invalidateKvCache(key);
+}
+
+async function rawWriteJSON<T>(key: string, data: T): Promise<void> {
   if (useDB) {
     await ensureDB();
     const db = sql();
@@ -160,12 +264,10 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
       INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
       ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
     `;
-    invalidateKvCache(key);
     return;
   }
   await ensureDataDir();
   await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
-  invalidateKvCache(key);
 }
 
 // --- Short-TTL read cache for hot, rarely-written blobs --------------------
@@ -251,7 +353,7 @@ function slotToValues(slot: TimeSlot) {
 /** Best-effort dual-write into the normalized table. Logs but never throws —
  * the kv_store path is the durable source until Phase 1 fully drains. */
 async function dualWriteSlot(slot: TimeSlot): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureSlotsTable();
@@ -272,7 +374,7 @@ async function dualWriteSlot(slot: TimeSlot): Promise<void> {
 }
 
 async function dualDeleteSlot(id: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureSlotsTable();
@@ -287,7 +389,7 @@ async function dualDeleteSlot(id: string): Promise<void> {
 }
 
 export async function getSlots(locationSlug?: string, date?: string): Promise<TimeSlot[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureSlotsTable();
@@ -327,7 +429,7 @@ export async function getSlots(locationSlug?: string, date?: string): Promise<Ti
 }
 
 export async function getSlotById(id: string): Promise<TimeSlot | undefined> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureSlotsTable();
@@ -422,7 +524,7 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
     const deletedCount = slots.length - filtered.length;
     await writeJSON("slots.json", filtered);
     if (deletedCount > 0) {
-      const db = getDb();
+      const db = getDomainDb();
       if (db) {
         try {
           await ensureSlotsTable();
@@ -446,7 +548,7 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
   // slot and Postgres serializes them — no application lock required. The
   // distributed lock from m0_1 stays in the kv_store dual-write path as
   // belt-and-suspenders while the legacy data drains.
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureSlotsTable();
@@ -508,7 +610,7 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
 
 /** Release one slot booking (e.g. when an order is removed). */
 export async function decrementSlotOrders(id: string): Promise<boolean> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureSlotsTable();
@@ -733,13 +835,10 @@ function rowToCustomer(row: typeof customersTable.$inferSelect): CustomerRollup 
  * Non-pending orders only count toward lifetime stats — a pending checkout
  * that abandons mid-payment shouldn't pollute the customer's history.
  */
-async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
-  const db = getDb();
-  if (!db) return;
+export async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
+  const db = getDomainDb();
   const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
   try {
-    await ensureCustomersTable();
-
     // Source aggregations. getOrders already prefers the normalized table
     // (m1_2); getPointAdjustments + getLoyaltyMember stay on kv_store until
     // their own M1 entity migration ships.
@@ -788,6 +887,27 @@ async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
     const email = member?.email ?? null;
     const birthday = member?.dob ?? null;
 
+    if (!db) {
+      // Sandbox: the customers table is DB-only, so persist the rollup to the
+      // `customers.json` kv blob (namespaced to sandbox:). Preserve any
+      // consent/notes a prior sandbox row carried (recompute never owns those).
+      const all = await readJSON<CustomerRollup[]>("customers.json", []);
+      const prev = all.find((c) => c.phone === phone);
+      const rollup: CustomerRollup = {
+        phone, name, email, birthday,
+        totalSpentGrosze, orderCount,
+        firstOrderAt: firstOrderAt ? firstOrderAt.toISOString() : null,
+        lastOrderAt: lastOrderAt ? lastOrderAt.toISOString() : null,
+        loyaltyPointsBalance, manualPointsAdjust,
+        smsOptout: prev?.smsOptout ?? false,
+        emailOptout: prev?.emailOptout ?? false,
+        notes: prev?.notes ?? null,
+      };
+      await writeJSON("customers.json", [...all.filter((c) => c.phone !== phone), rollup]);
+      return;
+    }
+
+    await ensureCustomersTable();
     const values = {
       phone,
       name,
@@ -820,9 +940,12 @@ async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
 
 /** Point lookup for the customer rollup. Returns null when no row exists yet. */
 export async function getCustomer(rawPhone: string): Promise<CustomerRollup | null> {
-  const db = getDb();
-  if (!db) return null;
+  const db = getDomainDb();
   const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  if (!db) {
+    const all = await readJSON<CustomerRollup[]>("customers.json", []);
+    return all.find((c) => c.phone === phone) ?? null;
+  }
   try {
     await ensureCustomersTable();
     const rows = await db
@@ -844,8 +967,10 @@ export async function getCustomer(rawPhone: string): Promise<CustomerRollup | nu
 
 /** Bulk read for the admin customers list. */
 export async function getCustomers(): Promise<CustomerRollup[]> {
-  const db = getDb();
-  if (!db) return [];
+  const db = getDomainDb();
+  if (!db) {
+    return readJSON<CustomerRollup[]>("customers.json", []);
+  }
   try {
     await ensureCustomersTable();
     const rows = await db.select().from(customersTable);
@@ -871,9 +996,17 @@ export async function setCustomerConsent(
   rawPhone: string,
   consent: { smsOptout?: boolean; emailOptout?: boolean },
 ): Promise<CustomerRollup | null> {
-  const db = getDb();
-  if (!db) return null;
+  const db = getDomainDb();
   const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  if (!db) {
+    const all = await readJSON<CustomerRollup[]>("customers.json", []);
+    const i = all.findIndex((c) => c.phone === phone);
+    if (i < 0) return null;
+    if (typeof consent.smsOptout === "boolean") all[i].smsOptout = consent.smsOptout;
+    if (typeof consent.emailOptout === "boolean") all[i].emailOptout = consent.emailOptout;
+    await writeJSON("customers.json", all);
+    return all[i];
+  }
   try {
     await ensureCustomersTable();
     const set: Partial<typeof customersTable.$inferInsert> = { updatedAt: new Date() };
@@ -891,7 +1024,7 @@ export async function setCustomerConsent(
 }
 
 async function dualWriteOrderItems(order: Order): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureOrderItemsTable();
@@ -1014,7 +1147,7 @@ function orderToValues(order: Order) {
 }
 
 async function dualWriteOrder(order: Order): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureOrdersTable();
@@ -1040,7 +1173,7 @@ async function dualWriteOrder(order: Order): Promise<void> {
 }
 
 async function dualDeleteOrder(id: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureOrdersTable();
@@ -1123,7 +1256,7 @@ export async function getOrders(
 ): Promise<Order[]> {
   const keepSim = opts?.includeSimulated === true;
   const stripSim = (list: Order[]): Order[] => (keepSim ? list : list.filter((o) => !o.simulated));
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureOrdersTable();
@@ -1191,7 +1324,7 @@ export async function getOrdersByPhone(
   const canonical = normalizePlPhoneE164(phoneRaw) || phoneRaw.trim();
   if (!canonical) return [];
 
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureOrdersTable();
@@ -1235,7 +1368,7 @@ export async function getOrdersByPhone(
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureOrdersTable();
@@ -1271,7 +1404,7 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
 export async function getOrderByStripePaymentIntent(
   paymentIntentId: string,
 ): Promise<Order | undefined> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureOrdersTable();
@@ -1300,7 +1433,7 @@ export async function getOrderByStripePaymentIntent(
 
 export async function createOrder(
   order: Order,
-  opts?: { suppressNotifications?: boolean },
+  opts?: { suppressNotifications?: boolean; suppressCascades?: boolean },
 ): Promise<Order> {
   // Audit §4 "Scalability (tech) — 300 orders/hour ceiling". Old shape
   // took a global `orders.json` lock and rewrote the entire orders array
@@ -1316,7 +1449,7 @@ export async function createOrder(
   //      hot path so request latency is unaffected.
   //   3. When DB is unset (dev/CI), fall back to the legacy global-lock
   //      path so nothing breaks locally.
-  const db = getDb();
+  const db = getDomainDb();
   let saved: Order;
   if (db) {
     await dualWriteOrder(order); // primary path: normalized table is source of truth
@@ -1332,13 +1465,16 @@ export async function createOrder(
   }
   // Fire-and-forget rollup so the checkout request doesn't wait. A failure
   // here only means the customer's row is one order behind until the next
-  // event refreshes it — non-blocking and idempotent.
-  void recomputeCustomerRollup(order.customerPhone);
+  // event refreshes it — non-blocking and idempotent. suppressCascades is for
+  // bulk seeding: the fire-and-forget rollup + KDS writes race the next insert
+  // on the shared kv blob (filesystem/sandbox), so the seeder runs them once,
+  // awaited, after all orders land.
+  if (!opts?.suppressCascades) void recomputeCustomerRollup(order.customerPhone);
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
   incrCounter("orders.placed");
   // Fire KDS tickets (m2_2). Idempotent on (order_id, station_id) so
   // retried createOrder calls don't double-create.
-  void fireKdsTickets(order);
+  if (!opts?.suppressCascades) void fireKdsTickets(order);
   // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
   // dedupeKey is just "placed" so retried createOrder calls converge on
   // one row rather than creating multiple identical events. POS counter
@@ -1374,7 +1510,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
   // kv_store mirror still updates under a per-location lock so two trucks
   // never contend. Reduces lock-key cardinality from 1 → N (number of
   // active locations) for the critical hot path.
-  const db = getDb();
+  const db = getDomainDb();
   let updated: Order | null = null;
   if (db) {
     try {
@@ -1468,7 +1604,7 @@ export async function updateOrder(
   id: string,
   patch: Partial<Omit<Order, "id" | "createdAt">>,
 ): Promise<Order | null> {
-  const db = getDb();
+  const db = getDomainDb();
   let updated: Order | null = null;
   if (db) {
     try {
@@ -1570,7 +1706,7 @@ export async function deleteOrder(id: string): Promise<boolean> {
   let locationSlug: string | undefined;
   let removed = false;
 
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureOrdersTable();
@@ -2226,6 +2362,8 @@ export async function addNotification(notif: Omit<Notification, "id" | "createdA
 }
 
 async function fanOutAdminPush(n: Notification): Promise<void> {
+  // Never page operators for sandbox/demo activity.
+  if (isSandboxActiveSync()) return;
   // Only fire for types operators want to be paged on. Daily_summary is
   // intentionally excluded — it's an EOD digest, no need to wake anyone.
   if (n.type === "daily_summary") return;
@@ -2904,6 +3042,11 @@ export interface AppSettings {
   /** Master toggle for /admin/simulation (the Calculator). When false the nav
    *  link is hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
+  /** Whole-business sandbox: when true the ENTIRE app (admin + storefront)
+   *  reads/writes a `sandbox:`-namespaced demo dataset, real data untouched.
+   *  Distinct from simulationEnabled (which only gates the Calculator).
+   *  Toggled owner-only via /api/admin/sandbox. */
+  sandboxModeEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -3132,6 +3275,9 @@ function mergeSettings(
 
 export async function getSettings(): Promise<AppSettings> {
   const saved = await readJSON<Partial<AppSettings>>("settings.json", {});
+  // Prime the sandbox-flag cache off the same (shared, never-namespaced) read
+  // so cold requests pick up the mode without a second round-trip.
+  sandboxCache = { on: saved.sandboxModeEnabled === true, at: Date.now() };
   return mergeSettings(saved);
 }
 
@@ -3140,6 +3286,10 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
     const current = await readJSON<Partial<AppSettings>>("settings.json", {});
     const merged = mergeSettings(current, updates);
     await writeJSON("settings.json", merged);
+    // Prime the sandbox-flag cache to the new value so the mode takes effect
+    // immediately in-process (a flipped toggle must be live for the very next
+    // read/write — e.g. the seeder that runs right after enabling).
+    sandboxCache = { on: merged.sandboxModeEnabled === true, at: Date.now() };
     return merged;
   });
 }
@@ -4610,7 +4760,7 @@ function rowToLoyaltyMember(row: typeof loyaltyMembersTable.$inferSelect): Loyal
 }
 
 async function dualWriteLoyaltyMember(m: LoyaltyMember): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureLoyaltyMembersTable();
@@ -4633,7 +4783,7 @@ async function dualWriteLoyaltyMember(m: LoyaltyMember): Promise<void> {
 }
 
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureLoyaltyMembersTable();
@@ -4668,7 +4818,7 @@ export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMe
 }
 
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
-  const db = getDb();
+  const db = getDomainDb();
   const canonical = normalizePlPhoneE164(phone) ?? phone.trim();
   if (db) {
     try {
@@ -5255,7 +5405,7 @@ function rowToPointAdjustment(row: typeof pointAdjustmentsTable.$inferSelect): P
 }
 
 async function dualWritePointAdjustment(a: PointAdjustment): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensurePointAdjustmentsTable();
@@ -5276,7 +5426,7 @@ async function dualWritePointAdjustment(a: PointAdjustment): Promise<void> {
 }
 
 export async function getPointAdjustments(): Promise<PointAdjustment[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensurePointAdjustmentsTable();
@@ -5868,7 +6018,7 @@ function rowToFeedback(row: typeof feedbackTable.$inferSelect): FeedbackEntry {
 }
 
 async function dualWriteFeedback(entry: FeedbackEntry): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureFeedbackTable();
@@ -5897,7 +6047,7 @@ async function dualWriteFeedback(entry: FeedbackEntry): Promise<void> {
 }
 
 export async function getFeedback(): Promise<FeedbackEntry[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureFeedbackTable();
@@ -6079,7 +6229,7 @@ function rowToSurveyResponse(
 }
 
 async function dualWriteSurveyResponse(entry: SurveyResponse): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureSurveyResponsesTable();
@@ -6109,7 +6259,7 @@ async function dualWriteSurveyResponse(entry: SurveyResponse): Promise<void> {
 }
 
 export async function getSurveyResponses(): Promise<SurveyResponse[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureSurveyResponsesTable();
@@ -6767,7 +6917,7 @@ function rowToMovement(row: typeof stockMovementsTable.$inferSelect): StockMovem
 }
 
 async function dualWriteStock(stock: IngredientStock): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureIngredientStockTable();
@@ -6794,7 +6944,7 @@ async function dualWriteStock(stock: IngredientStock): Promise<void> {
 }
 
 async function dualDeleteStock(ingredientId: string, locationSlug: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureIngredientStockTable();
@@ -6812,7 +6962,7 @@ async function dualDeleteStock(ingredientId: string, locationSlug: string): Prom
 }
 
 async function dualWriteMovement(movement: StockMovement): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureStockMovementsTable();
@@ -6839,7 +6989,7 @@ async function dualWriteMovement(movement: StockMovement): Promise<void> {
 export async function getIngredientStock(
   locationSlug?: string,
 ): Promise<IngredientStock[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureIngredientStockTable();
@@ -6867,7 +7017,7 @@ export async function getStockForIngredient(
   ingredientId: string,
   locationSlug: string,
 ): Promise<IngredientStock | null> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureIngredientStockTable();
@@ -6937,7 +7087,7 @@ export async function getStockMovements(filters?: {
   ingredientId?: string;
   limit?: number;
 }): Promise<StockMovement[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureStockMovementsTable();
@@ -7202,7 +7352,7 @@ function rowToCustomerNote(row: typeof customerNotesTable.$inferSelect): Custome
 }
 
 async function dualWriteCustomerNote(n: CustomerNote): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureCustomerNotesTable();
@@ -7223,7 +7373,7 @@ async function dualWriteCustomerNote(n: CustomerNote): Promise<void> {
 }
 
 async function dualDeleteCustomerNote(id: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureCustomerNotesTable();
@@ -7234,7 +7384,7 @@ async function dualDeleteCustomerNote(id: string): Promise<void> {
 }
 
 export async function getCustomerNotes(phone?: string): Promise<CustomerNote[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureCustomerNotesTable();
@@ -7394,7 +7544,7 @@ function rowToTimePunch(row: typeof timePunchesTable.$inferSelect): TimePunch {
 }
 
 async function dualWriteStaff(m: StaffMember): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureStaffTable();
@@ -7418,7 +7568,7 @@ async function dualWriteStaff(m: StaffMember): Promise<void> {
   }
 }
 async function dualDeleteStaff(id: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureStaffTable();
@@ -7428,7 +7578,7 @@ async function dualDeleteStaff(id: string): Promise<void> {
   }
 }
 async function dualWriteShift(s: Shift): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureShiftsTable();
@@ -7448,7 +7598,7 @@ async function dualWriteShift(s: Shift): Promise<void> {
   }
 }
 async function dualDeleteShift(id: string): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureShiftsTable();
@@ -7458,7 +7608,7 @@ async function dualDeleteShift(id: string): Promise<void> {
   }
 }
 async function dualWriteTimePunch(p: TimePunch): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureTimePunchesTable();
@@ -7478,7 +7628,7 @@ async function dualWriteTimePunch(p: TimePunch): Promise<void> {
 }
 
 export async function getStaff(locationSlug?: string): Promise<StaffMember[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureStaffTable();
@@ -7545,7 +7695,7 @@ export async function getShifts(filters?: {
   from?: string;
   to?: string;
 }): Promise<Shift[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureShiftsTable();
@@ -7613,7 +7763,7 @@ export async function getTimePunches(filters?: {
   from?: string;
   to?: string;
 }): Promise<TimePunch[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureTimePunchesTable();
@@ -7896,7 +8046,7 @@ function rowToAuditEntry(row: typeof auditLogTable.$inferSelect): AuditLogEntry 
 }
 
 async function dualWriteAuditEntry(entry: AuditLogEntry): Promise<void> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     await ensureAuditLogTable();
@@ -7932,7 +8082,7 @@ export async function getAuditLog(filters?: {
   entityType?: string;
   limit?: number;
 }): Promise<AuditLogEntry[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureAuditLogTable();
@@ -7999,7 +8149,7 @@ export async function deleteAuditLog(
     }
   });
 
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureAuditLogTable();
@@ -8084,7 +8234,7 @@ export async function getActorCompTotalToday(
     }
     return total;
   };
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureAuditLogTable();
@@ -9433,9 +9583,51 @@ function computePromisedReadyAt(order: Order, firedAt: Date): Date {
  * (computePromisedReadyAt) and set on every ticket. The KDS countdown
  * + red+audible overdue indicator read this column.
  */
+// Sandbox KDS: the kds_tickets table is DB-only, so in sandbox tickets live in
+// a kv blob (resolveKey namespaces this to `sandbox:kds-tickets.json`). These
+// helpers are only ever reached when getDomainDb() is null (sandbox active).
+async function readSandboxKdsTickets(): Promise<KdsTicket[]> {
+  return readJSON<KdsTicket[]>("kds-tickets.json", []);
+}
+async function writeSandboxKdsTickets(list: KdsTicket[]): Promise<void> {
+  await writeJSON("kds-tickets.json", list);
+}
+
 export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
-  const db = getDb();
-  if (!db) return [];
+  const db = getDomainDb();
+  if (!db) {
+    // Sandbox: same fanout/stagger logic, persisted to the kv ticket blob.
+    try {
+      const fanout = await resolveOrderStationFanout(order);
+      const now = new Date();
+      const promisedReadyAt = computePromisedReadyAt(order, now);
+      const orderMaxPrep = Math.max(0, ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0));
+      const tickets: KdsTicket[] = [];
+      for (const [stationId, items] of fanout) {
+        const stationMaxPrep = Math.max(0, ...items.map((i) => i.menuItem.prepTimeMinutes ?? 0));
+        const stagger = Math.max(0, orderMaxPrep - stationMaxPrep);
+        void stagger; // fireAt staggering is a DB-only refinement; sandbox fires immediately
+        tickets.push({
+          id: `tkt-${order.id}-${stationId || "default"}`,
+          orderId: order.id,
+          stationId: stationId || "ungrouped",
+          locationSlug: order.locationSlug,
+          status: "fired",
+          items: items.map((i) => ({ menuItemId: i.menuItem.id, name: i.menuItem.name, quantity: i.quantity, notes: i.notes, allergens: i.menuItem.allergens })),
+          firedAt: now.toISOString(),
+          promisedReadyAt: promisedReadyAt.toISOString(),
+        });
+      }
+      const all = await readSandboxKdsTickets();
+      const ids = new Set(tickets.map((t) => t.id));
+      await writeSandboxKdsTickets([...all.filter((t) => !ids.has(t.id)), ...tickets]);
+      await updateOrder(order.id, { estimatedReadyAt: promisedReadyAt.toISOString() });
+      return tickets;
+    } catch (err) {
+      logger.warn("fireKdsTickets (sandbox) failed", { orderId: order.id, layer: "store.kds" }, err);
+      return [];
+    }
+  }
   try {
     await ensureKdsTables();
     const fanout = await resolveOrderStationFanout(order);
@@ -9505,8 +9697,15 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
 
 /** Mark a ticket as ready (m2_3). Sets ready_at; returns the updated ticket. */
 export async function markTicketReady(ticketId: string): Promise<KdsTicket | null> {
-  const db = getDb();
-  if (!db) return null;
+  const db = getDomainDb();
+  if (!db) {
+    const all = await readSandboxKdsTickets();
+    const i = all.findIndex((t) => t.id === ticketId);
+    if (i < 0) return null;
+    all[i] = { ...all[i], status: "ready", readyAt: new Date().toISOString() };
+    await writeSandboxKdsTickets(all);
+    return all[i];
+  }
   try {
     await ensureKdsTables();
     const updated = await db
@@ -9537,8 +9736,19 @@ export async function markTicketReady(ticketId: string): Promise<KdsTicket | nul
 /** Bump (complete) a ticket from the expo screen. Marks the order ready if
  *  all its tickets are bumped. */
 export async function bumpTicket(ticketId: string): Promise<KdsTicket | null> {
-  const db = getDb();
-  if (!db) return null;
+  const db = getDomainDb();
+  if (!db) {
+    const all = await readSandboxKdsTickets();
+    const i = all.findIndex((t) => t.id === ticketId);
+    if (i < 0) return null;
+    all[i] = { ...all[i], status: "bumped", bumpedAt: new Date().toISOString() };
+    await writeSandboxKdsTickets(all);
+    const orderId = all[i].orderId;
+    if (!all.some((t) => t.orderId === orderId && t.status === "fired")) {
+      await updateOrderStatus(orderId, "ready");
+    }
+    return all[i];
+  }
   try {
     await ensureKdsTables();
     const updated = await db
@@ -9585,8 +9795,15 @@ export async function getKdsTickets(
   locationSlug: string,
   opts?: { includeBumped?: boolean; stationId?: string },
 ): Promise<KdsTicket[]> {
-  const db = getDb();
-  if (!db) return [];
+  const db = getDomainDb();
+  if (!db) {
+    const all = await readSandboxKdsTickets();
+    return all
+      .filter((t) => t.locationSlug === locationSlug)
+      .filter((t) => !opts?.stationId || t.stationId === opts.stationId)
+      .filter((t) => opts?.includeBumped || ["fired", "ready", "recalled"].includes(t.status))
+      .sort((a, b) => a.firedAt.localeCompare(b.firedAt));
+  }
   try {
     await ensureKdsTables();
     const where = [eq(kdsTicketsTable.locationSlug, locationSlug)];
@@ -10195,7 +10412,7 @@ export async function saveTempLog(input: Omit<TempLog, "id" | "status"> & { id?:
   const id = input.id || `tl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const status = tempVerdict(input.sensor, input.tempCelsius);
   const record: TempLog = { id, status, ...input };
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureComplianceTables();
@@ -10230,7 +10447,7 @@ export async function getTempLogs(filters: {
   toIso?: string;
   limit?: number;
 }): Promise<TempLog[]> {
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) {
     const all = await readJSON<TempLog[]>("temp-logs.json", []);
     let list = all.filter((t) => t.locationSlug === filters.locationSlug);
@@ -10833,7 +11050,7 @@ async function ensureWhatsappMessagesTable(): Promise<void> {
  */
 async function maybeTrimWaTranscript(phone: string): Promise<void> {
   if (Math.random() > 0.01) return;
-  const db = getDb();
+  const db = getDomainDb();
   if (!db) return;
   try {
     // Keep the newest WA_TRANSCRIPT_MAX_PER_PHONE rows for this phone, delete the rest.
@@ -10868,7 +11085,7 @@ async function maybeTrimWaTranscript(phone: string): Promise<void> {
 export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise<void> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return;
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureWhatsappMessagesTable();
@@ -10944,7 +11161,7 @@ export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise
 export async function getWaTranscript(rawPhone: string, limit = 100): Promise<WaMessage[]> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return [];
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureWhatsappMessagesTable();
@@ -10987,7 +11204,7 @@ export async function getWaTranscript(rawPhone: string, limit = 100): Promise<Wa
 export async function listWaTranscriptHeads(limit = 100): Promise<
   { phone: string; lastAt: string; lastBody: string; messageCount: number; hasInbound: boolean }[]
 > {
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureWhatsappMessagesTable();
@@ -11060,7 +11277,7 @@ export async function listWaTranscriptHeads(limit = 100): Promise<
 export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return false;
-  const db = getDb();
+  const db = getDomainDb();
   if (db) {
     try {
       await ensureWhatsappMessagesTable();

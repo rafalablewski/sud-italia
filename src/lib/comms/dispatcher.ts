@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { getEmailProvider } from "@/lib/providers/email";
 import { getSmsProvider } from "@/lib/providers/sms";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
-import { getCustomer, getOrderById } from "@/lib/store";
+import { getCustomer, getOrderById, isSandboxActive } from "@/lib/store";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { formatPrice } from "@/lib/utils";
 import { pushToCustomer, PUSH_TEMPLATES } from "@/lib/push-notifications";
@@ -77,6 +77,11 @@ async function loadContext(payload: OrderEventPayload): Promise<{
  * Throws on send failure so drainOutbox retries the row.
  */
 export async function commsDispatcher(event: OutboxRow): Promise<void> {
+  // Sandbox mode: never send real SMS / email / WhatsApp / push for demo data.
+  if (await isSandboxActive()) {
+    logger.info("comms.skip.sandbox", { eventType: event.eventType });
+    return;
+  }
   const payload = (event.payload ?? {}) as OrderEventPayload;
 
   switch (event.eventType) {

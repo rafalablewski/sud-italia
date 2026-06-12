@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
 import { logger } from "@/lib/logger";
+import { isSandboxActive } from "@/lib/store";
 
 /**
  * Single-cron fan-out dispatcher. Vercel Hobby caps the deployment
@@ -82,6 +83,12 @@ function shouldRun(
 export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
+
+  // Sandbox mode pauses the whole business — skip every scheduled job (they
+  // send real SMS/WhatsApp, generate invoices, run backups, etc.).
+  if (await isSandboxActive()) {
+    return NextResponse.json({ skipped: "sandbox" });
+  }
 
   const now = new Date();
   const origin = req.nextUrl.origin;

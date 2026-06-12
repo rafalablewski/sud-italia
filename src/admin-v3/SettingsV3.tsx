@@ -16,6 +16,7 @@ interface Settings {
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
   simulationEnabled?: boolean;
+  sandboxModeEnabled?: boolean;
   layout?: Layout;
 }
 interface Me {
@@ -88,6 +89,18 @@ export function SettingsV3() {
   const put = async (updates: Partial<Settings>) => {
     setS((cur) => ({ ...cur, ...updates }));
     await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+  };
+
+  // Sandbox mode flips the WHOLE app onto demo data — so after a change we
+  // hard-reload to refresh the banner + every data surface at once.
+  const [sandboxBusy, setSandboxBusy] = useState<null | "toggle" | "reset">(null);
+  const sandboxCall = async (kind: "toggle" | "reset", body: Record<string, unknown>) => {
+    setSandboxBusy(kind);
+    try {
+      const res = await fetch("/api/admin/sandbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) window.location.reload();
+      else setSandboxBusy(null);
+    } catch { setSandboxBusy(null); }
   };
 
   const saveBiz = async () => {
@@ -203,6 +216,37 @@ export function SettingsV3() {
               The Floor Twin and Demand Exchange are always-on operational models computed live from real tables, slots and orders — not toggled sandboxes, so they aren&apos;t listed here.
             </div>
           </CardBody>
+
+          {me?.role === "owner" && (
+            <CardBody style={{ borderTop: "2px solid var(--av3-line)", paddingTop: 16 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>Sandbox mode</span>
+                    {s.sandboxModeEnabled && <Badge tone="warn" dot>ON · demo data</Badge>}
+                  </div>
+                  <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 4 }}>
+                    Flips the <strong>whole business</strong> — admin and the customer storefront — onto an isolated demo dataset (orders, customers, KDS, cash, staff, schedule, suppliers, waste, HACCP, feedback… everything except the menu). Real data is untouched and restored the instant you switch it off. While on, no real payments, SMS, WhatsApp or scheduled jobs fire. First enable seeds rich demo data; your sandbox edits persist until you reset.
+                  </div>
+                </div>
+                <Switch
+                  aria-label="Sandbox mode"
+                  checked={!!s.sandboxModeEnabled}
+                  disabled={sandboxBusy != null}
+                  onChange={() => sandboxCall("toggle", { enabled: !s.sandboxModeEnabled })}
+                />
+              </div>
+              {sandboxBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… seeding demo data on first enable. The page will reload.</div>}
+              {s.sandboxModeEnabled && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <Button variant="secondary" size="sm" loading={sandboxBusy === "reset"} onClick={() => sandboxCall("reset", { action: "reset" })}>
+                    Reset sandbox data
+                  </Button>
+                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Wipe the demo dataset and re-seed a clean one.</span>
+                </div>
+              )}
+            </CardBody>
+          )}
         </Card>
       )}
 

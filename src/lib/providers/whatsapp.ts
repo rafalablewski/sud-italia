@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { appendWaMessage, type WaMessageActor } from "@/lib/store";
+import { appendWaMessage, isSandboxActive, type WaMessageActor } from "@/lib/store";
 
 /**
  * WhatsApp Cloud API provider. Talks directly to Meta's Graph API —
@@ -119,6 +119,8 @@ class MetaCloudWhatsAppProvider implements WhatsAppProvider {
   }
 
   private async post(body: unknown): Promise<WhatsAppSendResult> {
+    // Sandbox mode pauses the business — never hit the Meta Graph API.
+    if (await isSandboxActive()) return { id: "sandbox-suppressed", status: "skipped" };
     const res = await fetch(this.url, {
       method: "POST",
       headers: {
