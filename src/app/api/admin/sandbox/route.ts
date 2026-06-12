@@ -20,7 +20,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async () => {
 });
 
 export const POST = withAdmin({ roles: ["owner"] }, async (req: NextRequest) => {
-  const body = (await req.json().catch(() => ({}))) as { enabled?: boolean; action?: string };
+  const body = ((await req.json().catch(() => ({}))) || {}) as { enabled?: boolean; action?: string };
 
   // Reset: wipe the sandbox dataset and re-seed a clean demo (mode stays on).
   // Sandbox + simulation are mutually exclusive, so enabling sandbox forces

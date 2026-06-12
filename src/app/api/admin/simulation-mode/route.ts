@@ -18,7 +18,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async () => {
 });
 
 export const POST = withAdmin({ roles: ["owner"] }, async (req: NextRequest) => {
-  const body = (await req.json().catch(() => ({}))) as { enabled?: boolean; action?: string };
+  const body = ((await req.json().catch(() => ({}))) || {}) as { enabled?: boolean; action?: string };
 
   // Wipe: clear every hand-entered test row but stay in simulation mode.
   if (body.action === "wipe") {

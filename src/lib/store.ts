@@ -9074,14 +9074,7 @@ export async function getTodayAiSpendGrosze(): Promise<number> {
     getDailyAiSpendGrosze(sinceIso),
     readJSON<AgentEvent[]>("agent-events.json", []),
   ]);
-  let offLedger = 0;
-  for (const e of events) {
-    if (e.at < sinceIso || typeof e.costGrosze !== "number") continue;
-    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
-      offLedger += e.costGrosze;
-    }
-  }
-  return chatGrosze + offLedger;
+  return chatGrosze + offLedgerAiSpend(events, sinceIso);
 }
 
 /** Warsaw-local midnight (as a UTC instant ISO) for the calendar day that the
@@ -9098,12 +9091,14 @@ function chainMidnightIso(at: Date): string {
   return new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) - offset).toISOString();
 }
 
-/** Off-ledger AI spend (meeting/schedule/work agent-events) within [from, to). */
+/** Off-ledger AI spend (meeting/schedule/work agent-events) within [from, to).
+ *  Defensive against malformed rows: a missing `at`/`actor` is skipped rather
+ *  than throwing or slipping past the window guard. */
 function offLedgerAiSpend(events: AgentEvent[], fromIso: string, toIso?: string): number {
   let total = 0;
   for (const e of events) {
-    if (typeof e.costGrosze !== "number" || e.at < fromIso || (toIso && e.at >= toIso)) continue;
-    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
+    if (typeof e.costGrosze !== "number" || typeof e.at !== "string" || e.at < fromIso || (toIso && e.at >= toIso)) continue;
+    if (typeof e.actor === "string" && (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:"))) {
       total += e.costGrosze;
     }
   }
