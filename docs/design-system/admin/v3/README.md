@@ -269,8 +269,9 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
   pages** — every `.av3-loading` spinner was replaced (full-page returns →
   `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
-  where the generic shape misled: Orders uses `SkeletonKanban` (view-aware) and
-  Cash leads with a `SkeletonKpiRail` since its loaded view does.
+  where the generic shape misled: Cash leads with a `SkeletonKpiRail` since its
+  loaded view does. (`SkeletonKanban` still ships for the CORE KDS/POS surfaces;
+  the admin Orders history is a plain `SkeletonRows` table now.)
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
   (text caps at ~300px for readability).
@@ -709,11 +710,16 @@ auth canvas's signature lighting and the sign-in lockup:
   `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
   no cross-writes — never wire one into the other. Nav: Overview section (two
   entries).
-- [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
-  the real SSE order stream (`useAdminOrdersStream`); status advances via
-  `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
-  detail dialog opens a `RefundDialogV3` (full/partial via `ChipRow`, reason
-  code, notes, Stripe-reversal vs manager-comp note) wired to
+- [x] Orders (`/admin/orders`) — **read-only order history**, not the live
+  pipeline (the operational kanban + status moves live in CORE → POS / KDS,
+  `/core/pos` + `/core/kds`). A single **table** (Order # · Placed datetime ·
+  Customer · Type · Status · Total) over the real SSE order stream
+  (`useAdminOrdersStream`), newest-first, with **status filter chips** (live
+  counts); covers **all channels** (web / QR / WhatsApp / POS). Row → a
+  **read-only detail dialog** (customer, slot, items, total, refund state).
+  No status-advance / cancel controls — only **Refund** survives as the admin
+  financial action: the detail opens a `RefundDialogV3` (full/partial via
+  `ChipRow`, reason code, notes, Stripe-reversal vs manager-comp note) wired to
   `POST /api/admin/orders/:id/refund` with a live `evaluateRefundGuard` preview
   (per-refund cap + daily comp budget → owner-approval gate); a refunded order
   shows the amount + reason in the detail.

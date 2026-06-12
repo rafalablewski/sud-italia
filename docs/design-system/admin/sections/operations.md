@@ -139,8 +139,10 @@ End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
 
 ## What Operations is not
 
-- It is **not** order management — live orders live under Overview
-  (`/admin/orders`) and the Core KDS surface (`/core/kds`).
+- It is **not** order management — the live order pipeline lives in the
+  CORE → POS / KDS surfaces (`/core/pos`, `/core/kds`). Overview's
+  `/admin/orders` is a read-only **order history** list (newest-first,
+  all channels), not a place to work orders.
 - It is **not** stock management — that's Inventory ([`inventory.md`](./inventory.md)).
 - It is **not** the POS — the customer-facing order-entry surface is a
   Core module, not an admin page.

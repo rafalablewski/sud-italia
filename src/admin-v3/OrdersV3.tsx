@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, KanbanSquare, MapPin, Phone, RefreshCw, RotateCcw, TableProperties, User } from "lucide-react";
+import { MapPin, Phone, RefreshCw, RotateCcw, User } from "lucide-react";
 import type { Order, OrderStatus } from "@/data/types";
 import { REFUND_REASON_CODES, REFUND_REASON_LABELS, type RefundReasonCode } from "@/data/types";
 import { evaluateRefundGuard, type RefundGuardDecision } from "@/lib/refund-guard";
@@ -10,10 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, ChipRow, type ColumnV3, Dialog, SkeletonKanban, SkeletonRows, Table } from "./ui";
-
-const PIPELINE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
-const KANBAN_COLUMNS: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
+import { Badge, type BadgeTone, Button, ChipRow, type ColumnV3, Dialog, SkeletonRows, Table } from "./ui";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "Pending",
@@ -38,19 +35,10 @@ const STATUS_TONE: Record<OrderStatus, BadgeTone> = {
   completed: "ok",
   cancelled: "bad",
 };
-const TONE_VAR: Record<BadgeTone, string> = {
-  neutral: "var(--av3-subtle)",
-  ok: "var(--av3-ok)",
-  warn: "var(--av3-warn)",
-  bad: "var(--av3-bad)",
-  info: "var(--av3-info)",
-  brand: "var(--av3-brand)",
-};
-
-function nextStatus(s: OrderStatus): OrderStatus | null {
-  const i = PIPELINE.indexOf(s);
-  if (i < 0 || i >= PIPELINE.length - 1) return null;
-  return PIPELINE[i + 1];
+function fmtWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pl-PL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 function fmtAgo(iso: string): string {
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
@@ -70,11 +58,9 @@ export function OrdersV3() {
   const { location } = useAdminLocationV3();
   const { orders: streamed, loading, refresh } = useAdminOrdersStream(location);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [view, setView] = useState<"kanban" | "table">("kanban");
   const [filter, setFilter] = useState<"all" | OrderStatus>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [refundId, setRefundId] = useState<string | null>(null);
-  const [updating, setUpdating] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -88,15 +74,6 @@ export function OrdersV3() {
     return c;
   }, [orders]);
 
-  const byStatus = useMemo(() => {
-    const m = new Map<OrderStatus, Order[]>();
-    for (const col of KANBAN_COLUMNS) m.set(col, []);
-    for (const o of orders) {
-      if (m.has(o.status)) m.get(o.status)!.push(o);
-    }
-    return m;
-  }, [orders]);
-
   const tableRows = useMemo(() => {
     const rows = filter === "all" ? orders : orders.filter((o) => o.status === filter);
     return [...rows].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -104,21 +81,6 @@ export function OrdersV3() {
 
   const detail = detailId ? orders.find((o) => o.id === detailId) ?? null : null;
   const refundTarget = refundId ? orders.find((o) => o.id === refundId) ?? null : null;
-
-  async function changeStatus(orderId: string, status: OrderStatus) {
-    setUpdating(orderId);
-    // optimistic — the next SSE frame reconciles
-    setOrders((arr) => arr.map((o) => (o.id === orderId ? { ...o, status } : o)));
-    try {
-      await fetch("/api/admin/orders", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, status }),
-      });
-    } finally {
-      setUpdating(null);
-    }
-  }
 
   // Refund reaches Stripe + reverses revenue rows — owner/manager + the
   // orders.refund grant only (server-enforced). The SSE stream reconciles the
@@ -144,7 +106,7 @@ export function OrdersV3() {
 
   const tableCols: ColumnV3<Order>[] = [
     { key: "id", header: "Order", render: (o) => <span className="av3-cell-muted">#{o.id.slice(-5)}</span> },
-    { key: "time", header: "Age", render: (o) => <span className="av3-cell-muted">{fmtAgo(o.createdAt)}</span> },
+    { key: "time", header: "Placed", render: (o) => <span className="av3-cell-muted">{fmtWhen(o.createdAt)}</span> },
     { key: "customer", header: "Customer", render: (o) => o.customerName || "Walk-in" },
     { key: "type", header: "Type", render: (o) => <span className="av3-cell-muted">{fulfillmentLabel(o.fulfillmentType)}</span> },
     { key: "status", header: "Status", render: (o) => <Badge tone={STATUS_TONE[o.status]} dot>{STATUS_LABEL[o.status]}</Badge> },
@@ -155,14 +117,10 @@ export function OrdersV3() {
     <>
       <div className="av3-pagehead">
         <div>
-          <h1>Orders</h1>
-          <div className="av3-pagehead-sub">Live order pipeline · streams in real time</div>
+          <h1>Order history</h1>
+          <div className="av3-pagehead-sub">Every order placed, newest first · the live pipeline lives in CORE → POS / KDS</div>
         </div>
         <div className="av3-pagehead-actions">
-          <div className="av3-viewtoggle" role="tablist" aria-label="View">
-            <button type="button" role="tab" className={view === "kanban" ? "is-active" : ""} aria-label="Kanban view" aria-selected={view === "kanban"} onClick={() => setView("kanban")}><KanbanSquare /></button>
-            <button type="button" role="tab" className={view === "table" ? "is-active" : ""} aria-label="Table view" aria-selected={view === "table"} onClick={() => setView("table")}><TableProperties /></button>
-          </div>
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); refresh(); }}>
             <RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} />
             Refresh
@@ -170,57 +128,19 @@ export function OrdersV3() {
         </div>
       </div>
 
-      {view === "table" && (
-        <div className="av3-filterchips">
-          {filterChips.map((f) => (
-            <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : STATUS_LABEL[f]}
-              <span className="av3-fchip-count">{counts[f] ?? 0}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="av3-filterchips">
+        {filterChips.map((f) => (
+          <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
+            {f === "all" ? "All" : STATUS_LABEL[f]}
+            <span className="av3-fchip-count">{counts[f] ?? 0}</span>
+          </button>
+        ))}
+      </div>
 
       {loading && orders.length === 0 ? (
-        view === "kanban" ? <SkeletonKanban /> : <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : orders.length === 0 ? (
-        <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No orders yet</div><div className="av3-empty-text">New orders stream in here the moment they’re placed.</div></div></div>
-      ) : view === "kanban" ? (
-        <div className="av3-kanban">
-          {KANBAN_COLUMNS.map((col) => {
-            const list = byStatus.get(col) ?? [];
-            return (
-              <div className="av3-kcol" key={col}>
-                <div className="av3-kcol-head">
-                  <span className="av3-kcol-title">{STATUS_LABEL[col]}</span>
-                  <span className="av3-kcol-count">{list.length}</span>
-                </div>
-                <div className="av3-kcol-body">
-                  {list.length === 0 ? (
-                    <div className="av3-empty-text" style={{ padding: "10px 4px", fontSize: 11.5, color: "var(--av3-subtle)" }}>—</div>
-                  ) : (
-                    list
-                      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                      .map((o) => (
-                        <button type="button" className="av3-ocard" key={o.id} onClick={() => setDetailId(o.id)}>
-                          <div className="av3-ocard-top">
-                            <span className="av3-ocard-id">#{o.id.slice(-5)}</span>
-                            <span className="av3-ocard-amt">{formatPrice(o.totalAmount)}</span>
-                          </div>
-                          <div className="av3-ocard-name">{o.customerName || "Walk-in"}</div>
-                          <div className="av3-ocard-meta">
-                            <span className="av3-ocard-dot" style={{ background: TONE_VAR[STATUS_TONE[o.status]] }} />
-                            {fulfillmentLabel(o.fulfillmentType)}
-                            <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 3 }}><Clock />{fmtAgo(o.createdAt)}</span>
-                          </div>
-                        </button>
-                      ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No orders yet</div><div className="av3-empty-text">Orders placed through CORE → POS (and every other channel) show up here.</div></div></div>
       ) : (
         <div className="av3-card av3-card-p" style={{ padding: 0 }}>
           {tableRows.length === 0 ? (
@@ -236,25 +156,16 @@ export function OrdersV3() {
         open={!!detail}
         onClose={() => setDetailId(null)}
         title={detail ? `Order #${detail.id.slice(-6)}` : ""}
-        subtitle={detail ? `${fulfillmentLabel(detail.fulfillmentType)} · placed ${fmtAgo(detail.createdAt)} ago` : undefined}
+        subtitle={detail ? `${fulfillmentLabel(detail.fulfillmentType)} · placed ${fmtWhen(detail.createdAt)} (${fmtAgo(detail.createdAt)} ago)` : undefined}
         headerExtra={detail ? <Badge tone={STATUS_TONE[detail.status]} dot>{STATUS_LABEL[detail.status]}</Badge> : undefined}
         width={560}
         footer={
           detail && (
             <>
+              <Button variant="ghost" size="sm" onClick={() => setDetailId(null)} style={{ marginRight: "auto" }}>Close</Button>
               {!detail.refund && detail.status !== "cancelled" && detail.status !== "pending" && (
-                <Button variant="danger" size="sm" onClick={() => setRefundId(detail.id)} style={{ marginRight: "auto" }}>
+                <Button variant="danger" size="sm" onClick={() => setRefundId(detail.id)}>
                   <RotateCcw className="av3-btn-ico" /> Refund
-                </Button>
-              )}
-              {detail.status !== "cancelled" && detail.status !== "completed" && (
-                <Button variant="ghost" size="sm" loading={updating === detail.id} onClick={() => changeStatus(detail.id, "cancelled")}>
-                  Cancel order
-                </Button>
-              )}
-              {nextStatus(detail.status) && (
-                <Button variant="primary" size="sm" loading={updating === detail.id} onClick={() => changeStatus(detail.id, nextStatus(detail.status)!)}>
-                  Move to {STATUS_LABEL[nextStatus(detail.status)!]}
                 </Button>
               )}
             </>
