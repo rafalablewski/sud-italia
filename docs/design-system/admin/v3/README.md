@@ -817,7 +817,12 @@ auth canvas's signature lighting and the sign-in lockup:
   daily write-off); **search + reason filter chips**; a **Board⇄Table toggle**
   with a default board of waste cards (cost, qty, share-of-today); and a
   **row → detail popup** (qty/reason/cost/share/time + an "uncosted = invisible"
-  nudge when no cost was recorded).
+  nudge when no cost was recorded). **Item + unit pass:** the **Item** field is
+  an ingredient picker (`<datalist>` fed from `/api/admin/ingredients`) that
+  still accepts free-typed text for fast at-the-line entry; selecting a known
+  ingredient pre-fills its default **Unit**. **Unit** is a grouped `<select>`
+  (weight/mass · count & packaging · volume & capacity · length · temperature)
+  instead of free text, so the stored unit code stays consistent.
 - [x] Shift handover (`/admin/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
   week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /

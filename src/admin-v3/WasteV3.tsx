@@ -18,6 +18,66 @@ interface WasteEntry {
   recordedAt: string;
 }
 
+interface IngredientLite {
+  id: string;
+  name: string;
+  category?: string;
+  unit?: string;
+}
+
+// Pre-set unit picker — grouped so the operator scans to the right family
+// fast at the line. Values are the short codes we store; labels spell them
+// out. Weight & count lead because that's the bulk of pizza-line waste.
+const UNIT_GROUPS: { label: string; units: { value: string; label: string }[] }[] = [
+  { label: "Weight / mass", units: [
+    { value: "kg", label: "Kilogram (kg)" },
+    { value: "g", label: "Gram (g)" },
+    { value: "mg", label: "Milligram (mg)" },
+    { value: "lb", label: "Pound (lb)" },
+    { value: "oz", label: "Ounce (oz)" },
+    { value: "t", label: "Ton (t)" },
+  ] },
+  { label: "Count & packaging", units: [
+    { value: "piece", label: "Each / piece" },
+    { value: "dozen", label: "Dozen" },
+    { value: "slice", label: "Slice" },
+    { value: "loaf", label: "Loaf" },
+    { value: "bunch", label: "Bunch" },
+    { value: "case", label: "Case" },
+    { value: "pack", label: "Pack" },
+    { value: "box", label: "Box" },
+    { value: "crate", label: "Crate" },
+    { value: "tub", label: "Tub" },
+    { value: "bottle", label: "Bottle" },
+    { value: "can", label: "Can" },
+    { value: "bag", label: "Bag" },
+  ] },
+  { label: "Volume & capacity", units: [
+    { value: "L", label: "Liter (L)" },
+    { value: "ml", label: "Milliliter (mL)" },
+    { value: "gal", label: "Gallon (gal)" },
+    { value: "qt", label: "Quart (qt)" },
+    { value: "pt", label: "Pint (pt)" },
+    { value: "cup", label: "Cup (c)" },
+    { value: "fl oz", label: "Fluid ounce (fl oz)" },
+    { value: "tbsp", label: "Tablespoon (tbsp)" },
+    { value: "tsp", label: "Teaspoon (tsp)" },
+  ] },
+  { label: "Length", units: [
+    { value: "m", label: "Meter (m)" },
+    { value: "cm", label: "Centimeter (cm)" },
+    { value: "mm", label: "Millimeter (mm)" },
+    { value: "ft", label: "Foot (ft)" },
+    { value: "in", label: "Inch (in)" },
+  ] },
+  { label: "Temperature", units: [
+    { value: "°C", label: "Celsius (°C)" },
+    { value: "°F", label: "Fahrenheit (°F)" },
+    { value: "K", label: "Kelvin (K)" },
+  ] },
+];
+const KNOWN_UNITS = new Set(UNIT_GROUPS.flatMap((g) => g.units.map((u) => u.value)));
+
 const REASONS: { value: string; label: string }[] = [
   { value: "spoilage", label: "Spoilage" },
   { value: "prep_error", label: "Prep error" },
@@ -45,6 +105,7 @@ export function WasteV3() {
   const city = all.find((l) => l.slug === loc)?.city ?? loc;
 
   const [logs, setLogs] = useState<WasteEntry[]>([]);
+  const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
   const [item, setItem] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("kg");
@@ -62,6 +123,32 @@ export function WasteV3() {
     setLogs(Array.isArray(res) ? res : []);
   }, [loc]);
   useEffect(() => { load(); }, [load]);
+
+  // Ingredient catalog is chain-wide, so fetch it once (not per-location).
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/admin/ingredients`)
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => [])
+      .then((list) => { if (alive) setIngredients(Array.isArray(list) ? list : []); });
+    return () => { alive = false; };
+  }, []);
+
+  // Sorted, de-duped ingredient names for the picker datalist.
+  const ingredientOptions = useMemo(() => {
+    const byName = new Map<string, IngredientLite>();
+    for (const ing of ingredients) {
+      if (ing?.name && !byName.has(ing.name.toLowerCase())) byName.set(ing.name.toLowerCase(), ing);
+    }
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [ingredients]);
+
+  // Picking a known ingredient pre-fills its default unit; free text still works.
+  const onItemChange = (value: string) => {
+    setItem(value);
+    const match = ingredients.find((ing) => ing.name.toLowerCase() === value.trim().toLowerCase());
+    if (match?.unit && KNOWN_UNITS.has(match.unit)) setUnit(match.unit);
+  };
 
   const qtyNum = parseFloat(quantity);
   const canSubmit = item.trim().length > 0 && Number.isFinite(qtyNum) && qtyNum > 0;
@@ -138,9 +225,23 @@ export function WasteV3() {
         <CardHead title="Log waste" />
         <CardBody>
           <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
-            <label className="av3-field" style={{ flex: 1, minWidth: 180 }}><span className="av3-field-label">Item</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={item} onChange={(e) => setItem(e.target.value)} placeholder="e.g. mozzarella" /></label>
+            <label className="av3-field" style={{ flex: 1, minWidth: 180 }}>
+              <span className="av3-field-label">Item</span>
+              <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} list="waste-ingredient-options" value={item} onChange={(e) => onItemChange(e.target.value)} placeholder="Pick an ingredient or type your own…" autoComplete="off" />
+              <datalist id="waste-ingredient-options">
+                {ingredientOptions.map((ing) => <option key={ing.id} value={ing.name} />)}
+              </datalist>
+            </label>
             <label className="av3-field" style={{ width: 90 }}><span className="av3-field-label">Qty</span><input className="av3-input" type="number" step="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></label>
-            <label className="av3-field" style={{ width: 80 }}><span className="av3-field-label">Unit</span><input className="av3-input" value={unit} onChange={(e) => setUnit(e.target.value)} /></label>
+            <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Unit</span>
+              <select className="av3-select" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                {UNIT_GROUPS.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.units.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
             <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Reason</span>
               <select className="av3-select" value={reason} onChange={(e) => setReason(e.target.value)}>{REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select>
             </label>
