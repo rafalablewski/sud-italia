@@ -36,6 +36,7 @@ import {
   getIngredients,
   fireKdsTickets,
   recomputeCustomerRollup,
+  appendAgentEvent,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
 import type {
@@ -171,6 +172,24 @@ export async function seedSandbox(): Promise<void> {
   }
   await addPointAdjustment({ phone: GUESTS[0].phone, amount: 150, reason: "Anniversary gesture (demo)", adjustedBy: "owner", adjustedAt: iso(days(2)) });
   await addPointAdjustment({ phone: GUESTS[2].phone, amount: -50, reason: "Goodwill correction (demo)", adjustedBy: "manager", adjustedAt: iso(days(5)) });
+
+  // AI agent spend (chain-wide) — a daily boardroom briefing + a few scheduled
+  // self-reviews on both today and yesterday, so the Morning Brief's "AI agents ·
+  // spend today & yesterday" module shows a full picture. Actors meeting:/schedule:
+  // are the off-ledger rows getAiSpendTodayYesterday/getTodayAiSpend sum. Offsets
+  // stay within the last few hours / ~yesterday so both day-buckets are non-empty.
+  const aiRuns: { agentId: string; actor: string; summary: string; cost: number; ageMs: number }[] = [
+    { agentId: "ceo", actor: "meeting:daily", summary: "Daily boardroom briefing — chain numbers reviewed", cost: 280, ageMs: hours(3) },
+    { agentId: "coo", actor: "schedule:cron", summary: "Ops self-review — KDS pace + waste flags", cost: 120, ageMs: hours(5) },
+    { agentId: "cfo", actor: "schedule:cron", summary: "Finance self-review — margin + cash variance", cost: 140, ageMs: hours(6) },
+    { agentId: "cmo", actor: "schedule:cron", summary: "Growth self-review — repeat rate + segments", cost: 110, ageMs: hours(8) },
+    { agentId: "ceo", actor: "meeting:daily", summary: "Daily boardroom briefing — chain numbers reviewed", cost: 265, ageMs: days(1) + hours(3) },
+    { agentId: "coo", actor: "schedule:cron", summary: "Ops self-review — labour vs sales gap", cost: 130, ageMs: days(1) + hours(5) },
+    { agentId: "cfo", actor: "schedule:cron", summary: "Finance self-review — refund-adjusted net sales", cost: 135, ageMs: days(1) + hours(7) },
+  ];
+  for (const r of aiRuns) {
+    await appendAgentEvent({ agentId: r.agentId, type: r.actor.startsWith("meeting:") ? "schedule" : "run", summary: r.summary, costGrosze: r.cost, ok: true, actor: r.actor, at: iso(r.ageMs) });
+  }
 
   // Suppliers (chain-wide) + a couple of POs.
   const suppliers = [

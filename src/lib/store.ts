@@ -9084,6 +9084,64 @@ export async function getTodayAiSpendGrosze(): Promise<number> {
   return chatGrosze + offLedger;
 }
 
+/** Warsaw-local midnight (as a UTC instant ISO) for the calendar day that the
+ *  instant `at` falls in — DST-correct, mirrors chainPeriodStarts(). */
+function chainMidnightIso(at: Date): string {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: CHAIN_TZ, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(at).map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  const y = +p.year, mo = +p.month, d = +p.day;
+  const offset = Date.UTC(y, mo - 1, d, +p.hour, +p.minute, +p.second) - at.getTime();
+  return new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) - offset).toISOString();
+}
+
+/** Off-ledger AI spend (meeting/schedule/work agent-events) within [from, to). */
+function offLedgerAiSpend(events: AgentEvent[], fromIso: string, toIso?: string): number {
+  let total = 0;
+  for (const e of events) {
+    if (typeof e.costGrosze !== "number" || e.at < fromIso || (toIso && e.at >= toIso)) continue;
+    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
+      total += e.costGrosze;
+    }
+  }
+  return total;
+}
+
+/**
+ * AI spend for the current Warsaw day and the one before it — the Morning Brief
+ * "are the agents actually working / what are they costing" check. Buckets the
+ * same two ledgers as getTodayAiSpendGrosze (ai_messages chat + off-ledger
+ * meeting/schedule/work agent-events) into today vs yesterday by Warsaw midnight,
+ * and returns the effective daily budget so the brief can show spend-vs-budget.
+ */
+export async function getAiSpendTodayYesterdayGrosze(): Promise<{
+  todayGrosze: number;
+  yesterdayGrosze: number;
+  budgetGrosze: number;
+}> {
+  const now = new Date();
+  const todayStartIso = chainMidnightIso(now);
+  // Step back 12h from today's midnight to land safely inside yesterday (DST-proof),
+  // then take that day's midnight.
+  const yestStartIso = chainMidnightIso(new Date(Date.parse(todayStartIso) - 12 * 3600_000));
+
+  const [chatToday, chatYest, events, budgetGrosze] = await Promise.all([
+    getDailyAiSpendGrosze(todayStartIso),
+    getDailyAiSpendGrosze(yestStartIso, todayStartIso),
+    readJSON<AgentEvent[]>("agent-events.json", []),
+    getEffectiveDailyBudgetGrosze(),
+  ]);
+
+  return {
+    todayGrosze: chatToday + offLedgerAiSpend(events, todayStartIso),
+    yesterdayGrosze: chatYest + offLedgerAiSpend(events, yestStartIso, todayStartIso),
+    budgetGrosze,
+  };
+}
+
 // --- Agent HQ: per-agent scorecard stats + KPI actuals ----------------------
 
 export interface AgentScorecard {

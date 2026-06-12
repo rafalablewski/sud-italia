@@ -272,11 +272,12 @@ export async function getMessages(conversationId: string): Promise<AiMessageRow[
 }
 
 /**
- * Daily LLM spend across all users — used to enforce
- * AI_DAILY_BUDGET_GROSZE in the agent route. Computed against
- * created_at >= start-of-today UTC.
+ * LLM chat spend across all users — used to enforce AI_DAILY_BUDGET_GROSZE in
+ * the agent route. Sums ai_messages.cost_grosze over [sinceIso, untilIso):
+ * `sinceIso` defaults to start-of-today UTC, `untilIso` (optional) bounds the
+ * window above so callers can total a specific past day (e.g. yesterday).
  */
-export async function getDailyAiSpendGrosze(sinceIso?: string): Promise<number> {
+export async function getDailyAiSpendGrosze(sinceIso?: string, untilIso?: string): Promise<number> {
   await ensureAiTables();
   let startIso = sinceIso;
   if (!startIso) {
@@ -287,7 +288,7 @@ export async function getDailyAiSpendGrosze(sinceIso?: string): Promise<number> 
   if (!dbReady()) {
     let total = 0;
     for (const list of memMessages.values()) {
-      for (const m of list) if (m.createdAt >= startIso) total += m.costGrosze;
+      for (const m of list) if (m.createdAt >= startIso && (!untilIso || m.createdAt < untilIso)) total += m.costGrosze;
     }
     return total;
   }
@@ -296,8 +297,8 @@ export async function getDailyAiSpendGrosze(sinceIso?: string): Promise<number> 
     const rows = (await sql.query(
       `SELECT COALESCE(SUM(cost_grosze), 0)::bigint AS total
          FROM ai_messages
-        WHERE created_at >= $1`,
-      [startIso],
+        WHERE created_at >= $1 AND ($2::timestamptz IS NULL OR created_at < $2)`,
+      [startIso, untilIso ?? null],
     )) as { total: string | number }[];
     return Number(rows[0]?.total ?? 0);
   } catch (err) {
