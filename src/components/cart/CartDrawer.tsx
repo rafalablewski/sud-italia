@@ -302,6 +302,10 @@ export function CartDrawer() {
    *  Falls back to the code-side seed in computeDeliveryFee until the
    *  fetch resolves. */
   const [publicDeliveryFee, setPublicDeliveryFee] = useState<number | undefined>(undefined);
+  /** Operator-managed global minimum order (grosze) from public settings.
+   *  Gates checkout client-side so the soft block matches createOrder's hard
+   *  enforcement; 0/undefined = no minimum. */
+  const [publicMinOrder, setPublicMinOrder] = useState<number>(0);
   const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
@@ -341,6 +345,7 @@ export function CartDrawer() {
       }
       if (data.loyalty) setPublicLoyalty(data.loyalty);
       if (typeof data.deliveryFee === "number") setPublicDeliveryFee(data.deliveryFee);
+      if (typeof data.minOrderAmount === "number") setPublicMinOrder(data.minOrderAmount);
     });
     return () => {
       cancelled = true;
@@ -403,12 +408,18 @@ export function CartDrawer() {
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
+  // Global minimum order — gated on the food subtotal (after combo/bundle,
+  // before referral) to match createOrder's server-side check. 0 = no minimum.
+  const minOrderShortfall = publicMinOrder > 0 ? publicMinOrder - (subtotal - comboDiscount) : 0;
+  const belowMinOrder = minOrderShortfall > 0;
+
   const canCheckout =
     customerFirstName.trim().length > 0 &&
     customerLastName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
     unavailableItems.length === 0 &&
+    !belowMinOrder &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0) &&
     (fulfillmentType !== "dine-in" || partySize >= 1);
 
@@ -1280,7 +1291,9 @@ export function CartDrawer() {
                         ? "Processing…"
                         : unavailableItems.length > 0
                           ? "Remove sold-out items"
-                          : !selectedSlotId
+                          : belowMinOrder
+                            ? `Add ${formatPrice(minOrderShortfall)} to reach the ${formatPrice(publicMinOrder)} minimum`
+                            : !selectedSlotId
                             ? "Select a time slot"
                             : canCheckout
                               ? (

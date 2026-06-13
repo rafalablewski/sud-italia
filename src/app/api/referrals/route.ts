@@ -8,7 +8,19 @@ import {
   REFEREE_DISCOUNT_GROSZE,
   REFERRER_REWARD_POINTS,
 } from "@/lib/referral-loop";
+import { getLoyaltySettings } from "@/lib/store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+
+/** Operator-set referral policy (admin: /admin/growth → Referrals), with the
+ *  referral-loop consts as the first-deploy fallback. Single source so the
+ *  policy the customer sees matches what checkout actually applies/awards. */
+async function referralPolicy(): Promise<{ rewardPoints: number; discountGrosze: number }> {
+  const ref = (await getLoyaltySettings()).referral;
+  return {
+    rewardPoints: ref.referrerPoints ?? REFERRER_REWARD_POINTS,
+    discountGrosze: ref.refereeDiscountGrosze ?? REFEREE_DISCOUNT_GROSZE,
+  };
+}
 
 /**
  * Public referral endpoint backing the customer-facing /rewards page,
@@ -36,6 +48,7 @@ const postSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const policy = await referralPolicy();
   const codeParam = req.nextUrl.searchParams.get("code");
   // Validation mode (non-recording) — the cart drawer asks "is this code
   // real, and whose is it?" so it can show the give-get line. It never
@@ -52,27 +65,20 @@ export async function GET(req: NextRequest) {
       valid: !selfReferral,
       selfReferral,
       ownerName: owner.ownerName || null,
-      discountGrosze: REFEREE_DISCOUNT_GROSZE,
+      discountGrosze: policy.discountGrosze,
     });
   }
 
   const phone = req.nextUrl.searchParams.get("phone");
   if (!phone) {
     return NextResponse.json(
-      { error: "missing_phone", policy: { rewardPoints: REFERRER_REWARD_POINTS, discountGrosze: REFEREE_DISCOUNT_GROSZE } },
+      { error: "missing_phone", policy },
       { status: 400 },
     );
   }
   const { code } = await getOrCreateReferralCode(phone);
   const stats = await getReferralStats(phone);
-  return NextResponse.json({
-    code,
-    stats,
-    policy: {
-      rewardPoints: REFERRER_REWARD_POINTS,
-      discountGrosze: REFEREE_DISCOUNT_GROSZE,
-    },
-  });
+  return NextResponse.json({ code, stats, policy });
 }
 
 export async function POST(req: NextRequest) {
@@ -95,7 +101,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     status: result.status,
-    discountGrosze: REFEREE_DISCOUNT_GROSZE,
+    discountGrosze: (await referralPolicy()).discountGrosze,
     ownerName: owner.ownerName,
   });
 }

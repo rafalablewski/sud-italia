@@ -127,6 +127,7 @@ export type CreateOrderResult =
         | "item_unavailable"
         | "invalid_quantity"
         | "below_min_spend"
+        | "below_min_order"
         | "slot_capacity_lost";
       message: string;
       detail?: string;
@@ -304,7 +305,20 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     };
   }
 
+  // Global minimum order (audit — `minOrderAmount` was an admin setting that
+  // nothing enforced). Checked against the food subtotal — the same number the
+  // cart's minimum-order gate shows — before delivery fee / tip. 0 = no minimum.
+  const minOrderAmount = (await getSettings()).minOrderAmount;
+  if (minOrderAmount > 0 && calculatedTotal < minOrderAmount) {
+    return {
+      ok: false,
+      code: "below_min_order",
+      message: `Minimum order is ${formatPrice(minOrderAmount)}.`,
+    };
+  }
+
   const segmentCustomer = await getCustomer(phoneE164);
+  const loyalty = await getLoyaltySettings();
 
   // Referral give-get (audit §6 #5) — apply the flat referee discount to
   // the food subtotal when a code is present and this is a new customer
@@ -314,16 +328,20 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   // self-referral + duplicate, so a forged or reused code applies no
   // discount. Recorded here (server) — the client only validates for
   // display, never records, so there's exactly one pending intent.
+  // The discount amount + the programme on/off come from the operator's
+  // LoyaltySettings.referral (admin: /admin/growth → Referrals) — NOT the
+  // hardcoded REFEREE_DISCOUNT_GROSZE, which is only the first-deploy default.
   let referralDiscount = 0;
   let referralOwnerName: string | null = null;
   const isNewCustomer = !segmentCustomer || segmentCustomer.orderCount === 0;
-  if (input.referralCode && isNewCustomer) {
+  if (input.referralCode && isNewCustomer && loyalty.referral.active) {
     const code = input.referralCode.trim().toUpperCase();
     const owner = await getReferralCodeOwner(code);
     if (owner && owner.ownerPhone !== phoneE164) {
       const intent = await recordRedemptionIntent(code, phoneE164);
       if (intent.status === "pending") {
-        referralDiscount = Math.min(REFEREE_DISCOUNT_GROSZE, calculatedTotal);
+        const refereeDiscount = loyalty.referral.refereeDiscountGrosze ?? REFEREE_DISCOUNT_GROSZE;
+        referralDiscount = Math.min(refereeDiscount, calculatedTotal);
         calculatedTotal -= referralDiscount;
         referralOwnerName = owner.ownerName || null;
       }
@@ -331,7 +349,6 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   }
 
   const appSettings = await getSettings();
-  const loyalty = await getLoyaltySettings();
   const segmentThreshold = getDeliveryThresholdForCustomer(
     segmentCustomer
       ? {

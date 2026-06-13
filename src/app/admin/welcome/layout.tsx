@@ -2,6 +2,7 @@ import "../../themes/admin-v3/index.css";
 import "./welcome.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { SITE_NAME } from "@/lib/constants";
 
 /**
  * Welcome / Morning Brief — a full-bleed CEO catch-up surface that lives under
@@ -19,7 +20,7 @@ const displayFont = Fraunces({ subsets: ["latin"], variable: "--font-admin-displ
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Morning Brief | Sud Italia",
+  title: `Morning Brief | ${SITE_NAME}`,
   robots: "noindex, nofollow",
 };
 

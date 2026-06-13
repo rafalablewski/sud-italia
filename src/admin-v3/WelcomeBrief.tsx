@@ -7,6 +7,7 @@ import { adminV3BaseForPath, withAdminV3Base } from "@/lib/admin-base";
 import { formatPricePLN, formatPricePLNCompact } from "@/lib/utils";
 import { Monogram } from "@/admin-v3/agent-hq/shared";
 import { InfoButton } from "@/admin-v3/ui/Explainer";
+import { SITE_NAME } from "@/lib/constants";
 
 /**
  * WelcomeBrief — the wired Morning Brief (design direction #5), built on the
@@ -107,7 +108,7 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
     <div className="wb-stage">
       {/* ── LEFT HERO ── */}
       <div className="wb-hero">
-        <div className="wb-brandline"><span className="wb-mark" /> Sud Italia · Morning Briefing</div>
+        <div className="wb-brandline"><span className="wb-mark" /> {SITE_NAME} · Morning Briefing</div>
         <div className="wb-greet" suppressHydrationWarning>{greetingFor(now)},<br /><span className="em">{name}.</span></div>
         <div className="wb-date" suppressHydrationWarning>{dateStr} · {openNow}/{locationCount} trucks open</div>
         <div className="wb-tldr">{loading ? skel("90%", 22) : tldr}</div>

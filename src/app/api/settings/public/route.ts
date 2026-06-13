@@ -101,6 +101,10 @@ export async function GET(req: NextRequest) {
      *  /admin/settings → Delivery fee; cart drawer passes it to
      *  computeDeliveryFee so the bar + the receipt agree. */
     deliveryFee: appSettings.deliveryFee,
+    /** Global minimum order value (grosze) set at /admin/settings. The cart
+     *  uses it to gate checkout + show an "add X more" hint so the soft block
+     *  matches the server's hard enforcement in createOrder. 0 = no minimum. */
+    minOrderAmount: appSettings.minOrderAmount,
     /** Customer display-currency config: switcher options + rates.
      *  The customer site hydrates the currency module from this so a
      *  switch from PLN → SGD reflects operator-set rates, not the
