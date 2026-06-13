@@ -3,8 +3,9 @@ import { logger } from "@/lib/logger";
 import { getEmailProvider } from "@/lib/providers/email";
 import { getSmsProvider } from "@/lib/providers/sms";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
-import { getCustomer, getOrderById, isTestModeActive } from "@/lib/store";
+import { getCustomer, getOrderById, getSettings, isTestModeActive } from "@/lib/store";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { SITE_NAME } from "@/lib/constants";
 import { formatPrice } from "@/lib/utils";
 import { pushToCustomer, PUSH_TEMPLATES } from "@/lib/push-notifications";
 import {
@@ -57,11 +58,15 @@ interface OrderEventPayload {
 async function loadContext(payload: OrderEventPayload): Promise<{
   customer: NonNullable<Awaited<ReturnType<typeof getCustomer>>>;
   order: NonNullable<Awaited<ReturnType<typeof getOrderById>>>;
+  /** Operator trading name for the message templates (admin-set, single
+   *  source). Falls back to SITE_NAME on a fresh install. */
+  brand: string;
 } | null> {
   if (!payload.orderId || !payload.customerPhone) return null;
-  const [customer, order] = await Promise.all([
+  const [customer, order, settings] = await Promise.all([
     getCustomer(payload.customerPhone),
     getOrderById(payload.orderId),
+    getSettings(),
   ]);
   if (!order) return null;
   if (!customer) {
@@ -69,7 +74,7 @@ async function loadContext(payload: OrderEventPayload): Promise<{
     // let the next drain pick it up.
     return null;
   }
-  return { customer, order };
+  return { customer, order, brand: settings.businessName || SITE_NAME };
 }
 
 /**
@@ -100,6 +105,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         return;
       }
       const sms = orderPlacedSms({
+        brand: ctx.brand,
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
         totalDisplay: formatPrice(ctx.order.totalAmount),
@@ -135,6 +141,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         return;
       }
       const body = orderReadySms({
+        brand: ctx.brand,
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
         fulfillmentType: ctx.order.fulfillmentType,
@@ -156,6 +163,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         return;
       }
       const body = orderCancelledSms({
+        brand: ctx.brand,
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
       }).body;
@@ -174,6 +182,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       if (!refund) return; // race; will retry on the next drain
       if (!ctx.customer.smsOptout) {
         const body = orderRefundedSms({
+          brand: ctx.brand,
           orderId: ctx.order.id,
           customerName: ctx.customer.name || ctx.order.customerName || "Friend",
           amountDisplay: formatPrice(refund.amount),
@@ -210,6 +219,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         ? `${baseUrl}/?ref=${encodeURIComponent(ctx.customer.phone)}`
         : undefined;
       const email = orderConfirmedReceiptEmail({
+        brand: ctx.brand,
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
         totalDisplay: formatPrice(ctx.order.totalAmount),

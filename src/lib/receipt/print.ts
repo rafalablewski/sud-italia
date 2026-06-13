@@ -2,6 +2,8 @@ import net from "node:net";
 import type { Order } from "@/data/types";
 import { buildReceiptModel, renderEscPos, renderPlainText } from "./escpos";
 import { logger } from "@/lib/logger";
+import { getSettings } from "@/lib/store";
+import { SITE_NAME } from "@/lib/constants";
 
 /**
  * Server-side receipt transport. When a network printer is configured
@@ -64,7 +66,8 @@ function sendRaw(host: string, port: number, payload: Uint8Array): Promise<void>
 }
 
 export async function printReceipt(order: Order): Promise<PrintResult> {
-  const model = buildReceiptModel(order);
+  const brand = (await getSettings()).businessName || SITE_NAME;
+  const model = buildReceiptModel(order, brand);
   const payload = renderEscPos(model);
   const preview = renderPlainText(model);
 

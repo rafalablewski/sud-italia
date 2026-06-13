@@ -13,12 +13,20 @@
  */
 
 import type { FulfillmentType } from "@/data/types";
+import { SITE_NAME } from "@/lib/constants";
 
 export type Locale = "pl" | "en";
 
 const DEFAULT_LOCALE: Locale = "pl";
 
+/** Operator trading name shown in every message. Templates take it on the
+ *  payload (the dispatcher passes `getSettings().businessName`); the SITE_NAME
+ *  constant is only the first-deploy fallback. */
+type Branded = { brand?: string };
+
 export interface OrderPlacedPayload {
+  /** Trading name (operator-set); defaults to SITE_NAME. */
+  brand?: string;
   orderId: string;
   customerName: string;
   /** PLN amount as a display string, e.g. "32.50". */
@@ -29,6 +37,8 @@ export interface OrderPlacedPayload {
 }
 
 export interface OrderReadyPayload {
+  /** Trading name (operator-set); defaults to SITE_NAME. */
+  brand?: string;
   orderId: string;
   customerName: string;
   /** Drives the wording: delivery → "on the way", dine-in → "your table is
@@ -38,6 +48,8 @@ export interface OrderReadyPayload {
 }
 
 export interface OrderRefundedPayload {
+  /** Trading name (operator-set); defaults to SITE_NAME. */
+  brand?: string;
   orderId: string;
   customerName: string;
   /** "12.00 PLN" — pre-formatted. */
@@ -46,6 +58,8 @@ export interface OrderRefundedPayload {
 }
 
 export interface OrderConfirmedReceipt {
+  /** Trading name (operator-set); defaults to SITE_NAME. */
+  brand?: string;
   orderId: string;
   customerName: string;
   totalDisplay: string;
@@ -84,11 +98,11 @@ export function orderPlacedSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Ottaviano: thanks ${p.customerName}! Order ${p.orderId} (${p.totalDisplay} PLN) received. ${p.fulfillmentType === "delivery" ? "We'll text again when it's on the way." : p.slotDisplay ? `Ready at ${p.slotDisplay}.` : "We'll text when ready."}`,
+      body: `${p.brand ?? SITE_NAME}: thanks ${p.customerName}! Order ${p.orderId} (${p.totalDisplay} PLN) received. ${p.fulfillmentType === "delivery" ? "We'll text again when it's on the way." : p.slotDisplay ? `Ready at ${p.slotDisplay}.` : "We'll text when ready."}`,
     };
   }
   return {
-    body: `Ottaviano: dziękujemy, ${p.customerName}! Zamówienie ${p.orderId} (${p.totalDisplay} PLN) przyjęte. ${p.fulfillmentType === "delivery" ? "Damy znać, gdy ruszy do Ciebie." : p.slotDisplay ? `Gotowe o ${p.slotDisplay}.` : "Damy znać, gdy będzie gotowe."}`,
+    body: `${p.brand ?? SITE_NAME}: dziękujemy, ${p.customerName}! Zamówienie ${p.orderId} (${p.totalDisplay} PLN) przyjęte. ${p.fulfillmentType === "delivery" ? "Damy znać, gdy ruszy do Ciebie." : p.slotDisplay ? `Gotowe o ${p.slotDisplay}.` : "Damy znać, gdy będzie gotowe."}`,
   };
 }
 
@@ -102,35 +116,35 @@ export function orderReadySms(
     return {
       body:
         p.fulfillmentType === "delivery"
-          ? `Ottaviano: ${p.customerName}, your order ${p.orderId} is on the way!`
+          ? `${p.brand ?? SITE_NAME}: ${p.customerName}, your order ${p.orderId} is on the way!`
           : p.fulfillmentType === "dine-in"
-            ? `Ottaviano: ${p.customerName}, your table at ${p.locationName} is ready and order ${p.orderId} is being served.`
-            : `Ottaviano: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
+            ? `${p.brand ?? SITE_NAME}: ${p.customerName}, your table at ${p.locationName} is ready and order ${p.orderId} is being served.`
+            : `${p.brand ?? SITE_NAME}: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
     };
   }
   return {
     body:
       p.fulfillmentType === "delivery"
-        ? `Ottaviano: ${p.customerName}, zamówienie ${p.orderId} jest w drodze!`
+        ? `${p.brand ?? SITE_NAME}: ${p.customerName}, zamówienie ${p.orderId} jest w drodze!`
         : p.fulfillmentType === "dine-in"
-          ? `Ottaviano: ${p.customerName}, Twój stolik w ${p.locationName} jest gotowy, a zamówienie ${p.orderId} jest podawane.`
-          : `Ottaviano: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
+          ? `${p.brand ?? SITE_NAME}: ${p.customerName}, Twój stolik w ${p.locationName} jest gotowy, a zamówienie ${p.orderId} jest podawane.`
+          : `${p.brand ?? SITE_NAME}: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
   };
 }
 
 // --- Templates: order cancelled ----------------------------------------
 
 export function orderCancelledSms(
-  p: { orderId: string; customerName: string },
+  p: { orderId: string; customerName: string } & Branded,
   locale: Locale = DEFAULT_LOCALE,
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Ottaviano: ${p.customerName}, we had to cancel order ${p.orderId}. If you were charged, the refund is on the way. Sorry for the trouble.`,
+      body: `${p.brand ?? SITE_NAME}: ${p.customerName}, we had to cancel order ${p.orderId}. If you were charged, the refund is on the way. Sorry for the trouble.`,
     };
   }
   return {
-    body: `Ottaviano: ${p.customerName}, musieliśmy anulować zamówienie ${p.orderId}. Jeśli było pobrane, zwrot w drodze. Przepraszamy.`,
+    body: `${p.brand ?? SITE_NAME}: ${p.customerName}, musieliśmy anulować zamówienie ${p.orderId}. Jeśli było pobrane, zwrot w drodze. Przepraszamy.`,
   };
 }
 
@@ -142,11 +156,11 @@ export function orderRefundedSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Ottaviano: ${p.customerName}, your refund of ${p.amountDisplay} for order ${p.orderId} is on the way. Reason: ${p.reasonLabel}.`,
+      body: `${p.brand ?? SITE_NAME}: ${p.customerName}, your refund of ${p.amountDisplay} for order ${p.orderId} is on the way. Reason: ${p.reasonLabel}.`,
     };
   }
   return {
-    body: `Ottaviano: ${p.customerName}, zwrot ${p.amountDisplay} za zamówienie ${p.orderId} został zlecony. Powód: ${p.reasonLabel}.`,
+    body: `${p.brand ?? SITE_NAME}: ${p.customerName}, zwrot ${p.amountDisplay} za zamówienie ${p.orderId} został zlecony. Powód: ${p.reasonLabel}.`,
   };
 }
 
@@ -169,7 +183,7 @@ export function orderConfirmedReceiptEmail(
 
   const labels = isEnglish
     ? {
-        subject: `Ottaviano receipt — order ${p.orderId}`,
+        subject: `${p.brand ?? SITE_NAME} receipt — order ${p.orderId}`,
         hi: `Hi ${p.customerName},`,
         thanks: `Thanks for your order at ${p.locationName}!`,
         orderL: "Order",
@@ -179,11 +193,11 @@ export function orderConfirmedReceiptEmail(
         pointsEarned: "Loyalty points earned",
         footer:
           "A copy of this receipt is on your account. Reply to this email if anything's off.",
-        sign: "— The Ottaviano team",
-        referralCta: "Share Ottaviano, earn points",
+        sign: `— The ${p.brand ?? SITE_NAME} team`,
+        referralCta: `Share ${p.brand ?? SITE_NAME}, earn points`,
       }
     : {
-        subject: `Paragon Ottaviano — zamówienie ${p.orderId}`,
+        subject: `Paragon ${p.brand ?? SITE_NAME} — zamówienie ${p.orderId}`,
         hi: `Cześć ${p.customerName},`,
         thanks: `Dziękujemy za zamówienie w ${p.locationName}!`,
         orderL: "Zamówienie",
@@ -193,8 +207,8 @@ export function orderConfirmedReceiptEmail(
         pointsEarned: "Punkty zdobyte",
         footer:
           "Kopia paragonu jest na Twoim koncie. Odpowiedz na tę wiadomość, jeśli coś się nie zgadza.",
-        sign: "— Zespół Ottaviano",
-        referralCta: "Poleć Ottaviano, zdobądź punkty",
+        sign: `— Zespół ${p.brand ?? SITE_NAME}`,
+        referralCta: `Poleć ${p.brand ?? SITE_NAME}, zdobądź punkty`,
       };
 
   const text = `${labels.hi}
@@ -234,7 +248,7 @@ ${labels.sign}`;
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f4;margin:0;padding:24px;color:#222;">
   <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5;">
     <tr><td style="padding:24px 24px 0;">
-      <h1 style="font-size:18px;margin:0 0 4px;color:#9A2742;">Ottaviano</h1>
+      <h1 style="font-size:18px;margin:0 0 4px;color:#9A2742;">${escapeHtml(p.brand ?? SITE_NAME)}</h1>
       <p style="margin:0 0 20px;color:#666;font-size:13px;">${escapeHtml(p.locationName)}</p>
       <p style="margin:0 0 12px;">${escapeHtml(labels.hi)}</p>
       <p style="margin:0 0 16px;">${escapeHtml(labels.thanks)}</p>
@@ -280,15 +294,15 @@ ${labels.sign}`;
 // --- Templates: feedback request after delivery -------------------------
 
 export function feedbackRequestSms(
-  p: { orderId: string; customerName: string; feedbackUrl: string },
+  p: { orderId: string; customerName: string; feedbackUrl: string } & Branded,
   locale: Locale = DEFAULT_LOCALE,
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Ottaviano: ${p.customerName}, how was order ${p.orderId}? 30 seconds of feedback helps a lot: ${p.feedbackUrl}`,
+      body: `${p.brand ?? SITE_NAME}: ${p.customerName}, how was order ${p.orderId}? 30 seconds of feedback helps a lot: ${p.feedbackUrl}`,
     };
   }
   return {
-    body: `Ottaviano: ${p.customerName}, jak było z zamówieniem ${p.orderId}? Wystarczy 30 sekund opinii: ${p.feedbackUrl}`,
+    body: `${p.brand ?? SITE_NAME}: ${p.customerName}, jak było z zamówieniem ${p.orderId}? Wystarczy 30 sekund opinii: ${p.feedbackUrl}`,
   };
 }
