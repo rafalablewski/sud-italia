@@ -11,7 +11,7 @@ interface Layout {
   showFeedbackSurvey: boolean; showNpsSurvey: boolean; showPostOrderUpsell: boolean; showChatWidget: boolean;
 }
 interface Settings {
-  deliveryFee?: number; minOrderAmount?: number; businessPhone?: string; businessEmail?: string;
+  deliveryFee?: number; minOrderAmount?: number; businessName?: string; businessPhone?: string; businessEmail?: string;
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -64,6 +64,7 @@ export function SettingsV3() {
   const [savingCtl, setSavingCtl] = useState(false);
   const [seeded, setSeeded] = useState<string | null>(null);
 
+  const [bizName, setBizName] = useState("");
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
   const [fee, setFee] = useState(""); const [minOrder, setMinOrder] = useState("");
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
@@ -76,6 +77,7 @@ export function SettingsV3() {
       fetch("/api/admin/me").then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<Me | null>,
     ]);
     setS(d); setMe(m);
+    setBizName(d.businessName ?? "");
     setPhone(d.businessPhone ?? ""); setEmail(d.businessEmail ?? "");
     setFee(zl(d.deliveryFee)); setMinOrder(zl(d.minOrderAmount));
     setIg(d.socialLinks?.instagram ?? ""); setFb(d.socialLinks?.facebook ?? ""); setTt(d.socialLinks?.tiktok ?? "");
@@ -108,7 +110,7 @@ export function SettingsV3() {
     setSavingBiz(true);
     try {
       await put({
-        businessPhone: phone.trim(), businessEmail: email.trim(),
+        businessName: bizName.trim(), businessPhone: phone.trim(), businessEmail: email.trim(),
         deliveryFee: Math.round((Number(fee) || 0) * 100), minOrderAmount: Math.round((Number(minOrder) || 0) * 100),
         socialLinks: { instagram: ig.trim(), facebook: fb.trim(), tiktok: tt.trim() },
       });
@@ -164,6 +166,9 @@ export function SettingsV3() {
         <Card>
           <CardHead title="Business" actions={<Button variant="primary" size="sm" loading={savingBiz} onClick={saveBiz}>Save</Button>} />
           <CardBody>
+            <div className="av3-formrow" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Business name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={bizName} onChange={(e) => setBizName(e.target.value)} placeholder="Shown in SMS, receipts & chat" /></label>
+            </div>
             <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Phone</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={email} onChange={(e) => setEmail(e.target.value)} /></label>

@@ -17,68 +17,114 @@
 // to keep the audit ledger honest — see docs/audits/2026-05-nyc-singapore-viability-audit.md
 // §10.3 ("Unnecessary Complexity To Cut").
 
+import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { getSettings, getLoyaltySettings } from "@/lib/store";
+import { formatPricePLN } from "@/lib/utils";
+import { SITE_NAME } from "@/lib/constants";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
 }
 
-const CHATBOT_RESPONSES: Record<string, string> = {
+// Static answers that don't depend on operator config (menu copy, dietary,
+// allergen handling, the help fallback). The config-driven answers — hours,
+// delivery, locations, loyalty, and the brand name — are built live from the
+// store so the bot never quotes a stale price, address or opening time.
+// NOTE: server-only now (reads the store). Reach it via /api/chat — never
+// import getChatResponse into a client component (Rule #3).
+const STATIC_RESPONSES = {
   menu:
     "We serve authentic Neapolitan pizza, fresh pasta, antipasti, panini, drinks, and desserts. Our most popular items are Margherita pizza and Spaghetti Carbonara! Would you like to see the full menu?",
-  hours:
-    "Our hours vary by location:\n- Kraków: Mon-Thu 11:00-21:00, Fri-Sat 11:00-23:00, Sun 12:00-20:00\n- Warsaw: Mon-Thu 11:00-21:00, Fri-Sat 11:00-22:00, Sun 12:00-20:00",
-  delivery:
-    "Yes, we offer delivery! You can order through our website. There's a minimum order of 30 PLN, and delivery is free for orders over 60 PLN.",
   vegetarian:
     "We have great vegetarian options! Try our Margherita, Quattro Formaggi, Ortolana pizza, Penne Arrabbiata (vegan!), Linguine al Pesto, or our Bruschetta Classica.",
   allergen:
-    "For specific allergen information, please ask our staff at the truck. We handle dairy, gluten, nuts, and eggs in our kitchen. Gluten-free options are marked on the menu.",
-  location:
-    "We're currently in Kraków (Rynek Główny) and Warsaw (ul. Nowy Świat 15). Wrocław is coming soon!",
-  loyalty:
-    "Join our Ottaviano Rewards program! Earn 1 point per PLN spent. Bronze tier starts immediately, and you unlock Silver at 500 points with a 1.5x multiplier!",
+    "For specific allergen information, please ask our staff. We handle dairy, gluten, nuts, and eggs in our kitchen. Gluten-free options are marked on the menu.",
   default:
     "I'd be happy to help! I can answer questions about our menu, locations, hours, delivery, vegetarian options, allergies, and our loyalty program. What would you like to know?",
 };
 
-export function getChatResponse(message: string): string {
+async function brandName(): Promise<string> {
+  return (await getSettings()).businessName || SITE_NAME;
+}
+
+/** Hours per active location, straight from the admin-managed location records. */
+async function hoursAnswer(): Promise<string> {
+  const locs = await getActiveLocationsAsync();
+  if (locs.length === 0) return "Please check our website for current opening hours.";
+  const lines = locs.map((l) => {
+    const hrs = l.hours.map((h) => `${h.day} ${h.open}-${h.close}`).join(", ");
+    return `- ${l.city}: ${hrs}`;
+  });
+  return `Our hours vary by location:\n${lines.join("\n")}`;
+}
+
+/** Delivery answer from the live `minOrderAmount` + `deliveryFee` settings —
+ *  the same numbers checkout enforces, so the bot can't quote a stale gate. */
+async function deliveryAnswer(): Promise<string> {
+  const s = await getSettings();
+  const min = formatPricePLN(s.minOrderAmount);
+  const fee = s.deliveryFee > 0 ? formatPricePLN(s.deliveryFee) : "free";
+  const freeThreshold = s.deliveryThresholds?.regular;
+  const freeLine = freeThreshold && freeThreshold > 0
+    ? ` Delivery is free on orders over ${formatPricePLN(freeThreshold)}.`
+    : "";
+  return `Yes, we offer delivery! You can order through our website. There's a minimum order of ${min}, and the delivery fee is ${fee}.${freeLine}`;
+}
+
+/** Locations + addresses from the admin-managed location list. */
+async function locationAnswer(): Promise<string> {
+  const locs = await getActiveLocationsAsync();
+  if (locs.length === 0) return "Please check our website for our current locations.";
+  const list = locs.map((l) => `${l.city} (${l.address})`).join(" and ");
+  return `We're currently in ${list}.`;
+}
+
+/** Loyalty answer from the live tier ladder + brand name. */
+async function loyaltyAnswer(): Promise<string> {
+  const [loyalty, brand] = await Promise.all([getLoyaltySettings(), brandName()]);
+  const t = loyalty.tiers;
+  return `Join ${brand} Rewards! Earn 1 point per PLN spent. ${t.bronze.label} starts immediately, and you unlock ${t.silver.label} at ${t.silver.threshold} points with a ${t.silver.multiplier}x multiplier!`;
+}
+
+export async function getChatResponse(message: string): Promise<string> {
   const lower = message.toLowerCase();
   if (lower.includes("menu") || lower.includes("food") || lower.includes("eat"))
-    return CHATBOT_RESPONSES.menu;
+    return STATIC_RESPONSES.menu;
   if (
     lower.includes("hour") ||
     lower.includes("open") ||
     lower.includes("close") ||
     lower.includes("time")
   )
-    return CHATBOT_RESPONSES.hours;
+    return hoursAnswer();
   if (lower.includes("deliver") || lower.includes("shipping"))
-    return CHATBOT_RESPONSES.delivery;
+    return deliveryAnswer();
   if (
     lower.includes("vegetarian") ||
     lower.includes("vegan") ||
     lower.includes("plant")
   )
-    return CHATBOT_RESPONSES.vegetarian;
+    return STATIC_RESPONSES.vegetarian;
   if (
     lower.includes("allergen") ||
     lower.includes("allergy") ||
     lower.includes("gluten") ||
     lower.includes("nut")
   )
-    return CHATBOT_RESPONSES.allergen;
+    return STATIC_RESPONSES.allergen;
   if (
     lower.includes("where") ||
     lower.includes("location") ||
     lower.includes("address")
   )
-    return CHATBOT_RESPONSES.location;
+    return locationAnswer();
   if (
     lower.includes("loyal") ||
     lower.includes("point") ||
     lower.includes("reward")
   )
-    return CHATBOT_RESPONSES.loyalty;
-  return CHATBOT_RESPONSES.default;
+    return loyaltyAnswer();
+  return STATIC_RESPONSES.default;
 }

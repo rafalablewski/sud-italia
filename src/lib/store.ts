@@ -9,7 +9,7 @@ import {
   getCartPresenceForLocationRedis,
   upsertCartPresenceRedis,
 } from "@/lib/cart-presence-redis";
-import { WALLET_MAX_PHONES } from "@/lib/constants";
+import { SITE_NAME, WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { cashVarianceGrosze as computeCashVariance } from "@/lib/cash-recon";
 import type { Experiment } from "@/lib/experiments";
@@ -3116,6 +3116,11 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Operator-set trading name used in every customer comm (SMS, email +
+   *  thermal receipts, chat assistant). Single source of truth so a rebrand
+   *  is one admin edit, not a code change across comms files. Defaults to the
+   *  SITE_NAME constant on first deploy. Editable at /admin/settings → General. */
+  businessName?: string;
   /** Operator-managed social handles, rendered in the public footer.
    *  Empty string = the corresponding link is hidden. Editable from
    *  /admin/settings → General. */
@@ -3327,6 +3332,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   // their saved number (which now actually drives the charge).
   deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
+  businessName: SITE_NAME,
   businessPhone: "+48 123 456 789",
   businessEmail: "hello@ottaviano.pl",
   socialLinks: {
