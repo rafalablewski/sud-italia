@@ -19,8 +19,20 @@ function streamProgress(
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const write = (obj: Record<string, unknown>) =>
-        controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      // A vanished client (operator navigates away mid-seed, or the 15–20s
+      // reseed outlives the tab) closes the consumer, after which
+      // controller.enqueue throws. Never let that abort the work: swallow the
+      // enqueue/close failures and just stop emitting, so the seed always runs
+      // to completion server-side instead of leaving a half-populated namespace.
+      let open = true;
+      const write = (obj: Record<string, unknown>) => {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+        } catch {
+          open = false;
+        }
+      };
       try {
         const result = await run((e) => write({ t: "log", ...e }));
         write({ t: "done", ok: true, pct: 100, ...result });
@@ -28,7 +40,7 @@ function streamProgress(
         logger.error("simulation-mode stream failed", { layer: "simulation-mode" }, err);
         write({ t: "error", ok: false, msg: err instanceof Error ? err.message : "Operation failed" });
       } finally {
-        controller.close();
+        try { controller.close(); } catch { /* already closed by a vanished client */ }
       }
     },
   });
