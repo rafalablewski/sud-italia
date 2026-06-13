@@ -636,7 +636,7 @@ export function CoreKds() {
 
   return (
     <CoreShell
-      eyebrow={`Kitchen Display · ${location || "all trucks"}`}
+      eyebrow={`Kitchen Display · ${location || "all restaurants"}`}
       tabs={tabs}
       bleed
       subRight={

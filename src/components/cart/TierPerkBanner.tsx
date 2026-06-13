@@ -110,7 +110,7 @@ export function TierPerkBanner({ allMenuItems }: TierPerkBannerProps) {
         <div className="v8-cart-perk-sub">
           {applied
             ? <>{compCandidate.name} <em>added to the table</em> — on us.</>
-            : <>A complimentary <em>{compCandidate.name}</em> — on us, added at the truck.</>}
+            : <>A complimentary <em>{compCandidate.name}</em> — on us, added at the restaurant.</>}
         </div>
       </div>
       {applied ? (

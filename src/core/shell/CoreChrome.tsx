@@ -12,7 +12,7 @@ export function CoreLocationChip() {
   const { location, setLocation, activeLocations } = useLocation();
   const order = ["", ...activeLocations.map((l) => l.slug)];
   const current = activeLocations.find((l) => l.slug === location);
-  const label = current ? current.name : "All trucks";
+  const label = current ? current.name : "All restaurants";
   return (
     <button
       type="button"

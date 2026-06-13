@@ -56,7 +56,7 @@ export function ComplianceV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Compliance</h1>
-          <div className="av3-pagehead-sub">License renewals · inspections · insurance — a lapsed permit closes the truck</div>
+          <div className="av3-pagehead-sub">License renewals · inspections · insurance — a lapsed permit closes the restaurant</div>
         </div>
         <div className="av3-pagehead-actions"><Button variant="primary" size="sm" onClick={() => setEdit("new")}><Plus className="av3-btn-ico" /> Add item</Button></div>
       </div>

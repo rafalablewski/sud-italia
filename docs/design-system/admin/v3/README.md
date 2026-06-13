@@ -996,7 +996,7 @@ auth canvas's signature lighting and the sign-in lockup:
   hours editor, active/alcohol — round-tripping the whole record via
   `/api/admin/locations` (the GET returns `{ locations: [...] }`, so the list
   reads `res.locations`). `teamLead` now persists end-to-end (DB column
-  `team_lead` + zod field), and the **welcome brief's "trucks open" count**
+  `team_lead` + zod field), and the **welcome brief's "restaurants open" count**
   reads the same DB-backed `getActiveLocationsAsync()` so edits here move that
   number. + re-seed. Insights (`/admin/ai`): **five
   tabs restored to v2 parity (flag #5)** — **Forecast** bars
