@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getEnabledStripeMethods, getUpsellSettings, isSandboxActive } from "@/lib/store";
+import { getEnabledStripeMethods, getUpsellSettings, isTestModeActive } from "@/lib/store";
 import { findBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -133,9 +133,9 @@ export async function POST(req: NextRequest) {
     const menuItems = await getMenuWithOverrides(locationSlug);
     const menuItemsById = new Map(menuItems.map((m) => [m.id, m]));
 
-    // Sandbox mode never takes a real payment — fall through to the demo-mode
-    // path below so the sandbox order is placed without a Stripe charge.
-    if (process.env.STRIPE_SECRET_KEY && !(await isSandboxActive())) {
+    // Simulation mode never takes a real payment — fall through to the demo-mode
+    // path below so the test order is placed without a Stripe charge.
+    if (process.env.STRIPE_SECRET_KEY && !(await isTestModeActive())) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
       // Methods the operator enabled in /admin/payments drive the Stripe

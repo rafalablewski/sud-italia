@@ -123,46 +123,40 @@ async function ensureDataDir() {
   }
 }
 
-// --- Isolated data modes: Sandbox & Simulation ---------------------------
+// --- Isolated data mode: Simulation --------------------------------------
 // Two whole-business datasets isolated behind a key prefix, so real data is
 // physically untouched (un-prefixed keys are never read or written while a mode
-// is active). They are MUTUALLY EXCLUSIVE — at most one prefix is live at a time:
+// is active). At most one prefix is live at a time:
 //
 //   ""          live / real operations
-//   "sandbox:"  Sandbox mode — a rich demo dataset auto-seeded by seedSandbox()
-//               so every screen shows a full picture for exploring/demoing.
 //   "sim:"      Simulation mode — seeded on first enable (seedSimulation) with a
-//               REALISTIC, DEEP version of the sandbox CORE picture (~10 months of
-//               weekend-weighted, daypart-curved trading over a large mostly-
-//               one-time guest base) so reports/cohorts/dayparts/menu-eng have
-//               genuine signal for a pre-launch dry-run; the owner then layers
-//               their own test orders/waste/costs on top. Toggling it off hides
-//               every test row instantly (data is kept so you can resume; "reset"
-//               re-seeds a clean run, "wipe" clears it to empty for hand-entry).
+//               REALISTIC, DEEP CORE picture (~10 months of weekend-weighted,
+//               daypart-curved trading over a large mostly-one-time guest base)
+//               so reports/cohorts/dayparts/menu-eng have genuine signal for a
+//               pre-launch dry-run; the owner then layers their own test
+//               orders/waste/costs on top. Toggling it off hides every test row
+//               instantly (data is kept so you can resume; "reset" re-seeds a
+//               clean run, "wipe" clears it to empty for hand-entry).
 //
-// Both modes suppress real-world side-effects (payments, SMS, WhatsApp, cron) —
-// see isSandboxActive(). Driven by the `sandboxModeEnabled` / `simulationModeEnabled`
-// settings; toggled via /api/admin/sandbox + /api/admin/simulation-mode. Distinct
-// from the per-record `simulated` flag.
+// Simulation suppresses real-world side-effects (payments, SMS, WhatsApp, cron)
+// — see isTestModeActive(). Driven by the `simulationModeEnabled` setting;
+// toggled via /api/admin/simulation-mode. Distinct from the per-record
+// `simulated` flag.
 
-const SANDBOX_PREFIX = "sandbox:";
 const SIMULATION_PREFIX = "sim:";
 
-/** The active namespace prefix for a given settings blob (simulation wins if
- *  both flags are somehow set; "" = live). */
+/** The active namespace prefix for a given settings blob ("" = live). */
 function prefixForSettings(s: {
-  sandboxModeEnabled?: boolean;
   simulationModeEnabled?: boolean;
 }): string {
   if (s.simulationModeEnabled === true) return SIMULATION_PREFIX;
-  if (s.sandboxModeEnabled === true) return SANDBOX_PREFIX;
   return "";
 }
 
-// Keys that STAY real/shared even in sandbox: the menu (prices/86s, recipes,
+// Keys that STAY real/shared even in simulation: the menu (prices/86s, recipes,
 // ingredients), auth, locations, and config/credentials. settings.json holds
 // the toggle itself, so it must never be namespaced (also breaks recursion).
-const SANDBOX_SHARED_KEYS = new Set<string>([
+const SHARED_KEYS = new Set<string>([
   "settings.json",
   "menu-overrides.json",
   "recipes.json",
@@ -198,7 +192,7 @@ async function refreshDataMode(): Promise<string> {
   if (dataModeInflight) return dataModeInflight;
   dataModeInflight = (async () => {
     try {
-      const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean; simulationModeEnabled?: boolean }>("settings.json", {});
+      const raw = await rawReadJSON<{ simulationModeEnabled?: boolean }>("settings.json", {});
       dataModeCache = { prefix: prefixForSettings(raw), at: Date.now() };
       return dataModeCache.prefix;
     } finally {
@@ -209,22 +203,22 @@ async function refreshDataMode(): Promise<string> {
 }
 
 /** Clear the cache so the next read reflects a just-toggled value. */
-export function bustSandboxCache(): void {
+export function bustDataModeCache(): void {
   dataModeCache = null;
 }
 
 /** Public async guard for external side-effects (Stripe, comms, push, cron):
- *  true whenever ANY isolated test mode (Sandbox OR Simulation) is active, so
- *  no real charge/message/job ever fires against test data. */
-export async function isSandboxActive(): Promise<boolean> {
+ *  true whenever the isolated Simulation mode is active, so no real
+ *  charge/message/job ever fires against test data. */
+export async function isTestModeActive(): Promise<boolean> {
   return (await refreshDataMode()) !== "";
 }
 
 /** Which isolated data mode is live right now — for banners, wipes and the
- *  toggle routes. */
-export async function getActiveDataMode(): Promise<"live" | "sandbox" | "simulation"> {
+ *  toggle route. */
+export async function getActiveDataMode(): Promise<"live" | "simulation"> {
   const p = await refreshDataMode();
-  return p === SANDBOX_PREFIX ? "sandbox" : p === SIMULATION_PREFIX ? "simulation" : "live";
+  return p === SIMULATION_PREFIX ? "simulation" : "live";
 }
 
 /** Wipe every key under one namespace prefix. Real/shared keys are never
@@ -249,18 +243,13 @@ async function wipeNamespace(prefix: string): Promise<void> {
   }
 }
 
-/** Wipe the entire Sandbox dataset (the reset action). */
-export async function wipeSandboxData(): Promise<void> {
-  return wipeNamespace(SANDBOX_PREFIX);
-}
-
 /** Wipe the entire Simulation dataset — clears every hand-entered test row. */
 export async function wipeSimulationData(): Promise<void> {
   return wipeNamespace(SIMULATION_PREFIX);
 }
 
 function resolveKey(key: string): string {
-  if (SANDBOX_SHARED_KEYS.has(key)) return key;
+  if (SHARED_KEYS.has(key)) return key;
   return activePrefixSync() + key;
 }
 
@@ -284,7 +273,7 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
   // each start with an unprimed cache, which would silently read the REAL dataset
   // while a test mode is on. Shared keys are never namespaced, so they skip the
   // round-trip (and avoid recursing on settings.json, which refreshDataMode reads raw).
-  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshDataMode();
+  if (!SHARED_KEYS.has(key)) await refreshDataMode();
   return rawReadJSON(resolveKey(key), fallback);
 }
 
@@ -321,7 +310,7 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
   // Same namespace guard as readJSON: a cold cache must not route a test-mode
   // write into the REAL dataset (which would both corrupt real data and leave
   // the test surface empty). Shared keys are never namespaced.
-  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshDataMode();
+  if (!SHARED_KEYS.has(key)) await refreshDataMode();
   await rawWriteJSON(resolveKey(key), data);
   invalidateKvCache(key);
 }
@@ -958,9 +947,9 @@ export async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
     const birthday = member?.dob ?? null;
 
     if (!db) {
-      // Sandbox: the customers table is DB-only, so persist the rollup to the
-      // `customers.json` kv blob (namespaced to sandbox:). Preserve any
-      // consent/notes a prior sandbox row carried (recompute never owns those).
+      // Test mode: the customers table is DB-only, so persist the rollup to the
+      // `customers.json` kv blob (namespaced to sim:). Preserve any
+      // consent/notes a prior test row carried (recompute never owns those).
       const all = await readJSON<CustomerRollup[]>("customers.json", []);
       const prev = all.find((c) => c.phone === phone);
       const rollup: CustomerRollup = {
@@ -1537,7 +1526,7 @@ export async function createOrder(
   // here only means the customer's row is one order behind until the next
   // event refreshes it — non-blocking and idempotent. suppressCascades is for
   // bulk seeding: the fire-and-forget rollup + KDS writes race the next insert
-  // on the shared kv blob (filesystem/sandbox), so the seeder runs them once,
+  // on the shared kv blob (filesystem/sim), so the seeder runs them once,
   // awaited, after all orders land.
   if (!opts?.suppressCascades) void recomputeCustomerRollup(order.customerPhone);
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
@@ -2466,10 +2455,10 @@ export async function addNotification(notif: Omit<Notification, "id" | "createdA
 }
 
 async function fanOutAdminPush(n: Notification): Promise<void> {
-  // Never page operators for sandbox/demo activity. Use the awaited guard (not
-  // the sync snapshot): a real push is an external side-effect, so a cold cache
-  // must not let demo activity reach an operator's phone.
-  if (await isSandboxActive()) return;
+  // Never page operators for simulation/test activity. Use the awaited guard
+  // (not the sync snapshot): a real push is an external side-effect, so a cold
+  // cache must not let test activity reach an operator's phone.
+  if (await isTestModeActive()) return;
   // Only fire for types operators want to be paged on. Daily_summary is
   // intentionally excluded — it's an EOD digest, no need to wake anyone.
   if (n.type === "daily_summary") return;
@@ -3148,15 +3137,10 @@ export interface AppSettings {
   /** Master toggle for /admin/simulation (the Calculator). When false the nav
    *  link is hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
-  /** Whole-business sandbox: when true the ENTIRE app (admin + storefront)
-   *  reads/writes a `sandbox:`-namespaced demo dataset, real data untouched.
-   *  Distinct from simulationEnabled (which only gates the Calculator).
-   *  Toggled owner-only via /api/admin/sandbox. */
-  sandboxModeEnabled?: boolean;
-  /** Whole-business simulation: like sandbox, seeded on first enable with a
+  /** Whole-business simulation: seeded on first enable with a
    *  realistic, deep CORE picture (~10 months of trading) as a pre-launch dry-run,
    *  the owner then layers their own test orders/waste/costs on top — behind `sim:`.
-   *  Toggling off hides every test row. Mutually exclusive with sandboxModeEnabled.
+   *  Toggling off hides every test row.
    *  Toggled owner-only via /api/admin/simulation-mode. */
   simulationModeEnabled?: boolean;
   /** True once the simulation namespace has been seeded (or deliberately wiped
@@ -9761,20 +9745,20 @@ function computePromisedReadyAt(order: Order, firedAt: Date): Date {
  * (computePromisedReadyAt) and set on every ticket. The KDS countdown
  * + red+audible overdue indicator read this column.
  */
-// Sandbox KDS: the kds_tickets table is DB-only, so in sandbox tickets live in
-// a kv blob (resolveKey namespaces this to `sandbox:kds-tickets.json`). These
-// helpers are only ever reached when getDomainDb() is null (sandbox active).
-async function readSandboxKdsTickets(): Promise<KdsTicket[]> {
+// Simulation KDS: the kds_tickets table is DB-only, so in simulation tickets
+// live in a kv blob (resolveKey namespaces this to `sim:kds-tickets.json`).
+// These helpers are only ever reached when getDomainDb() is null (sim active).
+async function readSimKdsTickets(): Promise<KdsTicket[]> {
   return readJSON<KdsTicket[]>("kds-tickets.json", []);
 }
-async function writeSandboxKdsTickets(list: KdsTicket[]): Promise<void> {
+async function writeSimKdsTickets(list: KdsTicket[]): Promise<void> {
   await writeJSON("kds-tickets.json", list);
 }
 
 export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
   const db = await getDomainDb();
   if (!db) {
-    // Sandbox: same fanout/stagger logic, persisted to the kv ticket blob.
+    // Simulation: same fanout/stagger logic, persisted to the kv ticket blob.
     try {
       const fanout = await resolveOrderStationFanout(order);
       const now = new Date();
@@ -9784,7 +9768,7 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
       for (const [stationId, items] of fanout) {
         const stationMaxPrep = Math.max(0, ...items.map((i) => i.menuItem.prepTimeMinutes ?? 0));
         const stagger = Math.max(0, orderMaxPrep - stationMaxPrep);
-        void stagger; // fireAt staggering is a DB-only refinement; sandbox fires immediately
+        void stagger; // fireAt staggering is a DB-only refinement; sim fires immediately
         tickets.push({
           id: `tkt-${order.id}-${stationId || "default"}`,
           orderId: order.id,
@@ -9796,13 +9780,13 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
           promisedReadyAt: promisedReadyAt.toISOString(),
         });
       }
-      const all = await readSandboxKdsTickets();
+      const all = await readSimKdsTickets();
       const ids = new Set(tickets.map((t) => t.id));
-      await writeSandboxKdsTickets([...all.filter((t) => !ids.has(t.id)), ...tickets]);
+      await writeSimKdsTickets([...all.filter((t) => !ids.has(t.id)), ...tickets]);
       await updateOrder(order.id, { estimatedReadyAt: promisedReadyAt.toISOString() });
       return tickets;
     } catch (err) {
-      logger.warn("fireKdsTickets (sandbox) failed", { orderId: order.id, layer: "store.kds" }, err);
+      logger.warn("fireKdsTickets (sim) failed", { orderId: order.id, layer: "store.kds" }, err);
       return [];
     }
   }
@@ -9877,11 +9861,11 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
 export async function markTicketReady(ticketId: string): Promise<KdsTicket | null> {
   const db = await getDomainDb();
   if (!db) {
-    const all = await readSandboxKdsTickets();
+    const all = await readSimKdsTickets();
     const i = all.findIndex((t) => t.id === ticketId);
     if (i < 0) return null;
     all[i] = { ...all[i], status: "ready", readyAt: new Date().toISOString() };
-    await writeSandboxKdsTickets(all);
+    await writeSimKdsTickets(all);
     return all[i];
   }
   try {
@@ -9916,11 +9900,11 @@ export async function markTicketReady(ticketId: string): Promise<KdsTicket | nul
 export async function bumpTicket(ticketId: string): Promise<KdsTicket | null> {
   const db = await getDomainDb();
   if (!db) {
-    const all = await readSandboxKdsTickets();
+    const all = await readSimKdsTickets();
     const i = all.findIndex((t) => t.id === ticketId);
     if (i < 0) return null;
     all[i] = { ...all[i], status: "bumped", bumpedAt: new Date().toISOString() };
-    await writeSandboxKdsTickets(all);
+    await writeSimKdsTickets(all);
     const orderId = all[i].orderId;
     if (!all.some((t) => t.orderId === orderId && t.status === "fired")) {
       await updateOrderStatus(orderId, "ready");
@@ -9975,7 +9959,7 @@ export async function getKdsTickets(
 ): Promise<KdsTicket[]> {
   const db = await getDomainDb();
   if (!db) {
-    const all = await readSandboxKdsTickets();
+    const all = await readSimKdsTickets();
     return all
       .filter((t) => t.locationSlug === locationSlug)
       .filter((t) => !opts?.stationId || t.stationId === opts.stationId)

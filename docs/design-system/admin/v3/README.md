@@ -1056,14 +1056,13 @@ auth canvas's signature lighting and the sign-in lockup:
 - [x] Settings (`/admin/settings`, owner-only): six tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles, toggle = saved), **Simulations**
-  (every simulation in one explicit place — the **Calculator** toggle, plus two
-  owner-only whole-app data modes: **Sandbox mode** switch + "Reset sandbox" that
-  flips the whole app onto an isolated `sandbox:`-namespaced *seeded demo* dataset
-  via `/api/admin/sandbox`, and **Simulation mode** switch + "Wipe simulation data"
-  that flips it onto an isolated `sim:`-namespaced dataset that starts *empty* for a
-  hand-entered pre-launch dry-run via `/api/admin/simulation-mode` — the two are
-  mutually exclusive, enabling either forces the other off; a footnote names Floor
-  Twin + Demand Exchange as always-on operational models, not toggled sandboxes),
+  (every simulation in one explicit place — the **Calculator** toggle, plus the
+  owner-only whole-app **Simulation mode** switch + "Reset & re-seed" / "Wipe to
+  empty" that flips the whole app onto an isolated `sim:`-namespaced dataset —
+  seeded on first enable with a realistic, deep pre-launch dry-run (orders, KDS,
+  staff, cash…), or wiped to empty for hand-entry — via
+  `/api/admin/simulation-mode`; a footnote names Floor Twin + Demand Exchange as
+  always-on operational models, not toggled sandboxes),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
   `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**
