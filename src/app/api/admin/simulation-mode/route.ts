@@ -30,13 +30,16 @@ export const POST = withAdmin({ roles: ["owner"] }, async (req: NextRequest) => 
     await updateSettings({ simulationModeEnabled: true, sandboxModeEnabled: false });
     await wipeSimulationData();
     await seedSimulation();
+    await updateSettings({ simulationSeeded: true });
     return NextResponse.json({ ok: true, enabled: true, reset: true });
   }
 
   // Wipe: clear every test row to an empty namespace but stay in simulation
-  // mode (for operators who want to hand-enter the dry-run from scratch).
+  // mode (for operators who want to hand-enter the dry-run from scratch). Mark
+  // it seeded so a later off→on toggle does NOT auto-reseed over the deliberately
+  // empty namespace and clobber the operator's hand-entered data.
   if (body.action === "wipe") {
-    await updateSettings({ simulationModeEnabled: true, sandboxModeEnabled: false });
+    await updateSettings({ simulationModeEnabled: true, sandboxModeEnabled: false, simulationSeeded: true });
     await wipeSimulationData();
     return NextResponse.json({ ok: true, enabled: true, wiped: true });
   }
@@ -45,12 +48,16 @@ export const POST = withAdmin({ roles: ["owner"] }, async (req: NextRequest) => 
   await updateSettings({ simulationModeEnabled: enabled, ...(enabled ? { sandboxModeEnabled: false } : {}) });
 
   if (enabled) {
-    // Seed on first enable only (persist across off→on). Reads are now
-    // sim-namespaced, so an empty order set means "never seeded".
+    // Seed on FIRST enable only. The persisted `simulationSeeded` flag is the
+    // source of truth so a deliberate `wipe` (empty-but-seeded) isn't re-seeded
+    // on a later off→on toggle. The empty-orders check is a belt-and-braces
+    // guard for legacy namespaces seeded before the flag existed.
+    const s = await getSettings();
     const existing = await getOrders();
     let seeded = false;
-    if (existing.length === 0) {
+    if (!s.simulationSeeded && existing.length === 0) {
       await seedSimulation();
+      await updateSettings({ simulationSeeded: true });
       seeded = true;
     }
     return NextResponse.json({ ok: true, enabled: true, seeded });

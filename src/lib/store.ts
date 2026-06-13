@@ -3159,6 +3159,12 @@ export interface AppSettings {
    *  Toggling off hides every test row. Mutually exclusive with sandboxModeEnabled.
    *  Toggled owner-only via /api/admin/simulation-mode. */
   simulationModeEnabled?: boolean;
+  /** True once the simulation namespace has been seeded (or deliberately wiped
+   *  to empty for hand-entry). The seed-on-first-enable path checks this instead
+   *  of "are there 0 orders?", so a `wipe` to an empty dry-run is NOT re-seeded
+   *  on a later off→on toggle. "reset" re-seeds and keeps it true. Lives in
+   *  settings (a shared key) so wipeSimulationData() never clears it. */
+  simulationSeeded?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;

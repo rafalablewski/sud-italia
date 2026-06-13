@@ -16,6 +16,7 @@
  */
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   getActiveDataMode,
   bulkAppendOrders,
@@ -63,10 +64,12 @@ const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString();
 const min = (m: number) => m * 60_000;
 const hours = (h: number) => h * 3_600_000;
 const days = (d: number) => d * 86_400_000;
-// Id prefix for seeded rows — set per run by seedDataset(). The two modes are
-// mutually exclusive and seeding is serial, so a module-level switch is safe and
-// keeps every helper's ids namespaced-by-mode (sb-… vs sim-…) for legibility.
-let idp = "sb";
+// Id prefix for seeded rows, namespaced-by-mode (sb-… vs sim-…) for legibility.
+// Bound to each seedDataset() call's async context via AsyncLocalStorage so two
+// interleaving seeds (rapid mode switches) can't clobber a shared mutable and
+// mix prefixes — `idp.toString()` resolves per execution context, not globally.
+const idpStorage = new AsyncLocalStorage<string>();
+const idp = { toString: () => idpStorage.getStore() ?? "sb" };
 const rid = (p: string) => `${idp}-${p}-${Math.random().toString(36).slice(2, 8)}`;
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const today = new Date(NOW).toISOString().slice(0, 10);
@@ -242,7 +245,13 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
   if ((await getActiveDataMode()) !== mode) {
     throw new Error(`seedDataset refused: ${mode} mode is not active`);
   }
-  idp = mode === "simulation" ? "sim" : "sb";
+  // Bind the id prefix to this call's async context for the whole seed run.
+  return idpStorage.run(mode === "simulation" ? "sim" : "sb", () => seedActiveDataset(mode));
+}
+
+/** The seed body — always runs inside the idpStorage context set by
+ *  seedDataset(), so rid() resolves the right per-mode prefix. */
+async function seedActiveDataset(mode: "sandbox" | "simulation"): Promise<void> {
   const vol = VOLUME[mode];
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
