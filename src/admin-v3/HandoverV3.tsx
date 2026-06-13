@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardCheck, Clock, LayoutGrid, Rows3, Scale } from "
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, SkeletonKpiRail, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -139,8 +139,7 @@ export function HandoverV3() {
         </div>
       </div>
 
-      {loading && logs.length === 0 ? <SkeletonKpiRail count={4} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={logs.length === 0}>
         <Kpi label="This week" icon={ClipboardCheck} value={`${stats.week}`} accentVar="--av3-c3" />
         <Kpi label="Issues flagged" icon={AlertTriangle} value={`${stats.issues}`} accentVar="--av3-c1"
           info={<InfoButton title="Issues flagged this week" description="Number of sign-offs in the last 7 days where at least one shift check (temps, waste, equipment) was not clear."
@@ -155,8 +154,7 @@ export function HandoverV3() {
             tips="Investigate any single variance over your comp cap, not just the net; count the drawer blind (before seeing expected) so the number is honest; if one operator's shifts always run short, retrain or watch the void/refund pattern; reconcile against the Cash page."
             methodology="Sum of cashVarianceGrosze (counted − expected drawer) over this week's handovers. Per-sign-off tone in the table: green <2 zł, amber <10 zł, red ≥10 zł absolute." />} />
         <Kpi label="Last sign-off" icon={Clock} value={stats.last ? fmtWhen(stats.last) : "—"} accentVar="--av3-c4" />
-      </div>
-      )}
+      </KpiRail>
 
       <Card>
         <CardHead title="Sign off a shift" />

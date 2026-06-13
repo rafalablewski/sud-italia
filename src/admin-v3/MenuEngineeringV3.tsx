@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, ChipRow, type ColumnV3, InfoButton, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, ChipRow, type ColumnV3, InfoButton, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 type Quadrant = SimulationMenuEngineeringLine["quadrant"];
 const QUAD: Record<Quadrant, { label: string; tone: BadgeTone; verdict: string }> = {
@@ -65,8 +65,7 @@ export function MenuEngineeringV3() {
         </div>
       </div>
 
-      {loading && items.length === 0 ? <SkeletonKpiRail count={4} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={items.length === 0}>
         <Kpi
           label="Stars"
           value={`${counts.star}`}
@@ -127,8 +126,7 @@ export function MenuEngineeringV3() {
             />
           }
         />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-filterchips">
         {chips.map((f) => (

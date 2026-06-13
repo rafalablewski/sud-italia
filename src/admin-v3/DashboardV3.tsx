@@ -22,7 +22,7 @@ import {
 import { formatPrice } from "@/lib/utils";
 import { isLocationOpenNow } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, SkeletonKpiRail, SkeletonPage, Table } from "./ui";
+import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, KpiRail, SkeletonPage, Table } from "./ui";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function zl(grosze: number): string {
@@ -477,8 +477,7 @@ export function DashboardV3() {
         </span>
       </div>
 
-      {execLoading && !exec ? <SkeletonKpiRail count={7} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={execLoading} empty={!exec}>
         <Kpi label="Revenue" icon={Banknote} value={zl(exec?.totalRevenue ?? 0)} deltaPct={exRevDelta} spark={exRevSpark} accentVar="--av3-c1" />
         <Kpi label="Orders" icon={ClipboardList} value={(exec?.totalOrders ?? 0).toLocaleString("pl-PL")} deltaPct={exOrdDelta} spark={exOrdSpark} accentVar="--av3-c3" />
         <Kpi label="Avg order" icon={Receipt} value={formatPrice(exec?.avgOrderValue ?? 0)} deltaPct={exAovDelta} spark={exAovSpark} accentVar="--av3-c2" />
@@ -486,8 +485,7 @@ export function DashboardV3() {
         <Kpi label="Gross profit" icon={PiggyBank} value={zl(exec?.totalProfit ?? 0)} deltaPct={exProfitDelta} accentVar="--av3-c4" />
         <Kpi label="Cancellations" icon={XCircle} value={`${exCancel.toFixed(1)}%`} deltaPct={exCancelDelta} invertDelta accentVar="--av3-c1" />
         <Kpi label="Labour ratio" icon={Coins} value={ratioPct != null ? `${ratioPct.toFixed(0)}%` : "—"} accentVar="--av3-c3" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-grid-2-1">
         <Card>

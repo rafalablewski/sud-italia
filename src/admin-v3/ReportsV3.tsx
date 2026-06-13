@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, ClipboardList, Coins, Download, Percent, PiggyBank, Receipt } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { AreaChart, BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, ChipRow, Donut, Kpi, Skeleton, SkeletonKpiRail, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
+import { AreaChart, BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, ChipRow, Donut, Kpi, KpiRail, Skeleton, SkeletonKpiRail, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
 
 type Preset = "7d" | "30d" | "90d";
 const PRESET_DAYS: Record<Preset, number> = { "7d": 7, "30d": 30, "90d": 90 };
@@ -137,14 +137,14 @@ export function ReportsV3() {
         </>
       ) : (
         <>
-          <div className="av3-kpi-rail">
+          <KpiRail>
             <Kpi label="Revenue" icon={Banknote} value={formatPrice(summary?.totalRevenue ?? 0)} accentVar="--av3-c1" />
             <Kpi label="Gross profit" icon={PiggyBank} value={formatPrice(summary?.totalProfit ?? 0)} accentVar="--av3-c4" />
             <Kpi label="Margin" icon={Percent} value={`${(summary?.profitMargin ?? 0).toFixed(0)}%`} accentVar="--av3-c4" />
             <Kpi label="Orders" icon={ClipboardList} value={(summary?.totalOrders ?? 0).toLocaleString("pl-PL")} accentVar="--av3-c3" />
             <Kpi label="Avg order" icon={Receipt} value={formatPrice(summary?.avgOrderValue ?? 0)} accentVar="--av3-c2" />
             <Kpi label="Tips" icon={Coins} value={formatPrice(tips?.totals.totalTipGrosze ?? 0)} accentVar="--av3-c5" />
-          </div>
+          </KpiRail>
 
           <Card>
             <CardHead title="Revenue trend" description={`Daily revenue · ${range.from} → ${range.to}`} />

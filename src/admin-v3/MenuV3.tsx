@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { ALLERGEN_LABELS } from "@/data/types";
 import type { Allergen, MenuCategory, MenuRole, ModifierGroup, ModifierOption } from "@/data/types";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 type MenuTag = "vegetarian" | "vegan" | "spicy" | "gluten-free";
 type Halal = "halal" | "non-halal" | "uncertified";
@@ -284,15 +284,13 @@ export function MenuV3() {
         </div>
       </div>
 
-      {loading ? <SkeletonKpiRail count={5} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading}>
         <Kpi label="Dishes" icon={UtensilsCrossed} value={kpis.dishes.toLocaleString("pl-PL")} accentVar="--av3-c3" />
         <Kpi label="Avg margin" icon={Percent} value={`${kpis.avgMargin.toFixed(0)}%`} accentVar="--av3-c4" />
         <Kpi label="Low margin" icon={TrendingDown} value={`${kpis.lowMargin}`} accentVar="--av3-c1" />
         <Kpi label="86’d (off)" icon={Ban} value={`${kpis.off}`} accentVar="--av3-c5" />
         <Kpi label="No recipe" icon={FlaskConical} value={`${kpis.noRecipe}`} accentVar="--av3-c2" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-toolbar">
         <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search dishes…" />

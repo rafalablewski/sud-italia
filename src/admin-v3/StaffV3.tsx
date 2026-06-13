@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import type { StaffMember, StaffRole, StaffStatus } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 interface Punch { id: string; staffId: string; type: "clock-in" | "clock-out"; at?: string; occurredAt?: string; createdAt?: string }
 
@@ -98,12 +98,10 @@ export function StaffV3() {
         </div>
       </div>
 
-      {loading && list.length === 0 ? <SkeletonKpiRail count={2} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={list.length === 0}>
         <Kpi label="Active staff" icon={Users} value={`${counts.active}`} accentVar="--av3-c3" />
         <Kpi label="On shift now" icon={Users} value={`${onShift.size}`} accentVar="--av3-c4" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-toolbar">
         <div className="av3-filterchips">

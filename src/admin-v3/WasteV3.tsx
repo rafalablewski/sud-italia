@@ -5,7 +5,7 @@ import { Coins, LayoutGrid, Rows3, Tag, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, SkeletonKpiRail, SkeletonRows, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Table, type ColumnV3 } from "./ui";
 
 interface WasteEntry {
   id: string;
@@ -207,8 +207,7 @@ export function WasteV3() {
         </div>
       </div>
 
-      {loading && logs.length === 0 ? <SkeletonKpiRail count={3} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={logs.length === 0}>
         <Kpi label="Entries today" icon={Trash2} value={`${logs.length}`} accentVar="--av3-c5" />
         <Kpi label="Write-off today" icon={Coins} value={formatPrice(costToday)} accentVar="--av3-c1"
           info={<InfoButton title="Write-off today" description="Total estimated cost of everything logged as waste today on this location."
@@ -217,8 +216,7 @@ export function WasteV3() {
             tips="Log everything (uncosted waste is invisible waste); attack the top reason first — over-production means prep to a tighter par, spoilage means fix rotation/FIFO; review this daily at close so a bad pattern is caught in days, not at month-end stocktake."
             methodology="Sum of estimatedCostGrosze across today's waste entries for this location (/api/admin/waste). Entries logged without a cost contribute zero — fill the cost field so the number stays honest." />} />
         <Kpi label="Top reason" icon={Tag} value={topReason ?? "—"} accentVar="--av3-c4" />
-      </div>
-      )}
+      </KpiRail>
 
       <Card>
         <CardHead title="Log waste" />

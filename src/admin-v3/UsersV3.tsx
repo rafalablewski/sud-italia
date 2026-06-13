@@ -5,7 +5,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { Fingerprint, KeyRound, Lock, Plus, ShieldCheck, Smartphone, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { AdminRole } from "@/lib/admin-roles";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 interface WebauthnKey { id: string; name?: string; createdAt: string }
 interface UserRow {
@@ -100,14 +100,12 @@ export function UsersV3() {
         </div>
       </div>
 
-      {loading && list.length === 0 ? <SkeletonKpiRail count={4} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={list.length === 0}>
         <Kpi label="Users" icon={ShieldCheck} value={`${list.length}`} accentVar="--av3-c3" />
         <Kpi label="Secured (2FA)" icon={ShieldCheck} value={`${securedCount}/${list.length}`} accentVar="--av3-c4" />
         <Kpi label="No 2FA" icon={ShieldCheck} value={`${list.length - securedCount}`} accentVar="--av3-c1" invertDelta />
         <Kpi label="With passkeys" icon={Fingerprint} value={`${passkeyUsers}`} accentVar="--av3-c2" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-toolbar">
         <div className="av3-filterchips">

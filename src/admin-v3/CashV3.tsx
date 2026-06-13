@@ -5,7 +5,7 @@ import { Banknote } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
 
 interface Drop { amountGrosze: number; kind: string; notes?: string; at?: string }
 interface CashSession {
@@ -117,11 +117,11 @@ export function CashV3() {
         </>
       ) : open ? (
         <>
-          <div className="av3-kpi-rail">
+          <KpiRail>
             <Kpi label="Opening float" icon={Banknote} value={formatPrice(open.openingFloat)} accentVar="--av3-c2" />
             <Kpi label="Expected in drawer" icon={Banknote} value={formatPrice(expected(open))} accentVar="--av3-c4" />
             <Kpi label="Entries" icon={Banknote} value={`${open.drops.length}`} accentVar="--av3-c3" />
-          </div>
+          </KpiRail>
 
           <Card>
             <CardHead title={`Open session · ${city}`} description={`Opened ${fmtWhen(open.openedAt)} by ${open.openedBy}`} actions={<Button variant="primary" size="sm" onClick={() => setClosing(true)}>Close session</Button>} />

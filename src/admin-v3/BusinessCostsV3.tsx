@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { monthlyGrosze } from "@/lib/business-costs-math";
 import type { BusinessCost, BusinessCostCategory, BusinessCostFrequency, BusinessCostPayrollRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 const CATEGORY_LABEL: Record<BusinessCostCategory, string> = {
   payroll: "Payroll", rent: "Rent & lease", utilities: "Utilities", insurance: "Insurance", fuel: "Fuel",
@@ -84,14 +84,12 @@ export function BusinessCostsV3() {
         </div>
       </div>
 
-      {loading && costs.length === 0 ? <SkeletonKpiRail count={4} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={costs.length === 0}>
         <Kpi label="Monthly recurring" icon={Wallet} value={formatPrice(monthly)} accentVar="--av3-c1" />
         <Kpi label="Annualised" icon={Wallet} value={formatPrice(monthly * 12)} accentVar="--av3-c2" />
         <Kpi label="Payroll / mo" icon={Receipt} value={formatPrice(payrollMonthly)} accentVar="--av3-c5" />
         <Kpi label="One-off (active)" icon={Receipt} value={formatPrice(oneOff)} accentVar="--av3-c3" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>

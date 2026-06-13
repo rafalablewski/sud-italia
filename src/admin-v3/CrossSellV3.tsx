@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import type { MenuCategory, MenuRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonKpiRail, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 interface RequiredItem { suffix: string; label: string }
 interface Combo {
@@ -186,8 +186,7 @@ export function CrossSellV3() {
         </div>
       ) : tab === "combos" ? (
         <>
-          {loading ? <SkeletonKpiRail count={4} /> : (
-          <div className="av3-kpi-rail">
+          <KpiRail loading={loading}>
             <Kpi label="Active combos" icon={Tag} value={`${comboKpis.active}/${comboKpis.total}`} accentVar="--av3-c2" />
             <Kpi label="Avg discount" icon={Percent} value={comboKpis.active ? `${comboKpis.avgDiscount.toFixed(0)}%` : "—"} accentVar="--av3-c4"
               info={<InfoButton title="Average combo discount" description="The mean discount across every combo deal currently switched live on this location."
@@ -202,8 +201,7 @@ export function CrossSellV3() {
                 plain="Right now it's after lunch, so the 'afternoon pick-me-up' banner is showing and the breakfast one is parked until tomorrow morning — each speaks to what people actually want at this hour."
                 tips="Cover your real trading hours with non-overlapping windows; align each to its daypart (morning espresso, lunch combo, late-night deal); use the one-tap add item so the nudge is a single click; check this count during a shift to confirm the right banner is live."
                 methodology="Counts timeWindows where active === true and the current local hour falls within [startHour, endHour) (wrapping past midnight). Recomputed from the browser clock; the customer site applies the same gate." />} />
-          </div>
-          )}
+          </KpiRail>
 
           <div className="av3-toolbar">
             <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search combos…" />

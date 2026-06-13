@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Clock, Contact, Plus, Zap } from "lucide-react";
-import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 interface Supplier {
   id: string;
@@ -64,14 +64,12 @@ export function SuppliersV3() {
         </div>
       </div>
 
-      {loading && suppliers.length === 0 ? <SkeletonKpiRail count={4} /> : (
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={suppliers.length === 0}>
         <Kpi label="Suppliers" icon={Building2} value={`${stats.total}`} accentVar="--av3-c3" />
         <Kpi label="Avg lead time" icon={Clock} value={stats.avgLead != null ? `${stats.avgLead}d` : "—"} accentVar="--av3-c2" />
         <Kpi label="Fastest" icon={Zap} value={stats.fastest != null ? `${stats.fastest}d` : "—"} accentVar="--av3-c4" />
         <Kpi label="With contact" icon={Contact} value={`${stats.withContact}/${stats.total}`} accentVar="--av3-c5" />
-      </div>
-      )}
+      </KpiRail>
 
       <div className="av3-toolbar">
         <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier, contact, email…" />

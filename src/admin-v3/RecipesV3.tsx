@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { INGREDIENT_CATEGORY_LABELS } from "@/data/types";
 import type { IngredientCategory, IngredientUnit, MenuCategory } from "@/data/types";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonPage, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonPage, SkeletonRows, Table } from "./ui";
 
 interface MenuItemData { id: string; name: string; price: number; category: MenuCategory }
 /** Ingredient joined to its active offering (cost + macros are read-only cache). */
@@ -161,15 +161,13 @@ export function RecipesV3() {
 
       {tab === "recipes" ? (
         <>
-          {loading ? <SkeletonKpiRail count={5} /> : (
-          <div className="av3-kpi-rail">
+          <KpiRail loading={loading}>
             <Kpi label="Costed" icon={FlaskConical} value={`${kpis.costed}/${kpis.total}`} accentVar="--av3-c3" />
             <Kpi label="Avg food cost" icon={Percent} value={kpis.avgFc ? `${kpis.avgFc.toFixed(0)}%` : "—"} accentVar="--av3-c4" />
             <Kpi label="Over target" icon={AlertTriangle} value={`${kpis.overTarget}`} accentVar="--av3-c1" />
             <Kpi label="Uncosted" icon={AlertTriangle} value={`${kpis.uncosted}`} accentVar="--av3-c5" />
             <Kpi label="Ingredients" icon={Boxes} value={ingredients.length.toLocaleString("pl-PL")} accentVar="--av3-c2" />
-          </div>
-          )}
+          </KpiRail>
 
           <div className="av3-toolbar">
             <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search dishes…" />

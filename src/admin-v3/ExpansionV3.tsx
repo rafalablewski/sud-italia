@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { ExpansionChecklist, ExpansionChecklistItem } from "@/data/types";
-import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 const DEFAULT_ITEMS: Omit<ExpansionChecklistItem, "id" | "done">[] = [
   { label: "Register local business entity", category: "legal" },
@@ -78,10 +78,10 @@ export function ExpansionV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail>
         <Kpi label="Live sites" icon={MapPin} value={`${rows.filter((r) => r.isActive).length}`} accentVar="--av3-c4" />
         <Kpi label="Planned sites" icon={MapPin} value={`${plannedCount}`} accentVar="--av3-c3" />
-      </div>
+      </KpiRail>
 
       {loading ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
