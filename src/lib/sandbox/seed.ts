@@ -33,6 +33,7 @@ import {
   saveFeedback,
   saveSurveyResponse,
   openCashSession,
+  appendCashDrop,
   closeCashSession,
   addNotification,
   saveTask,
@@ -399,8 +400,16 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 // engineering all have genuine signal.
 // ~10 months deep so cohort RETENTION (returning vs new) has a real prior
 // period at every UI window preset (30/90/180d), and SSSG/seasonality too.
+//
+// ordersPerDay is sized so the business is ECONOMICALLY SOUND: a busy
+// restaurant doing ~70 covers/day at the real ~80 zł avg ticket grosses
+// ~180k zł/month, which puts the full-week 6-person rota (~48.5k zł/month) at a
+// healthy ~27% labor cost — not the bankrupt 200%+ a token volume produced.
+// syntheticGuests scales with volume so the long tail stays mostly one-timers
+// (≈ orders ÷ ~2) instead of everyone becoming a regular; recentOrders is
+// ~half a day's covers so "today" tracks the daily rate on the dashboards.
 type Volume = { historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
-const SIM_VOLUME: Volume = { historyDays: 300, ordersPerDay: 8, syntheticGuests: 2500, recentOrders: 14 };
+const SIM_VOLUME: Volume = { historyDays: 300, ordersPerDay: 70, syntheticGuests: 20000, recentOrders: 36 };
 
 /** The seed body — always runs inside the idpStorage("sim") context set by
  *  seedSimulation(), so rid() resolves the sim- prefix. */
@@ -471,20 +480,22 @@ async function seedActiveDataset(): Promise<void> {
     // every day of the window, each at a weighted service hour, from the long
     // guest tail. Build them all, then land them in one write per location.
     const pending: Order[] = [];
+    // Cash drawer reflects ONLY today's cash-paid sales (~1/3 of orders pay
+    // cash) — a single till can't hold cumulative history, which would show a
+    // nonsensical five-figure expected count on the Cash screen.
     let cashRevenue = 0;
     for (let dayAgo = 1; dayAgo <= vol.historyDays; dayAgo++) {
       const n = dayVolume(vol.ordersPerDay, dayAgo);
       for (let k = 0; k < n; k++) {
         const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), customer: base.pickGuest() });
         pending.push(o);
-        if (pending.length % 3 === 0) cashRevenue += o.totalAmount;
       }
     }
     // Recent completed orders (today's throughput) + a live KDS rush.
     for (let i = 0; i < vol.recentOrders; i++) {
       const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7), customer: base?.pickGuest() });
       pending.push(o);
-      if (i % 2 === 0) cashRevenue += o.totalAmount;
+      if (i % 3 === 0) cashRevenue += o.totalAmount; // today's cash share
     }
     const activeMix: OrderStatus[] = ["preparing", "preparing", "confirmed", "ready", "confirmed"];
     const activeOrders: Order[] = [];
@@ -550,11 +561,22 @@ async function seedActiveDataset(): Promise<void> {
       await saveSurveyResponse({ id: rid("sv"), surveyId: "post-order", trigger: "post-order", rating: pick([5, 5, 4, 5, 3, 4]), comment: i % 2 ? "Smooth checkout" : undefined, customerPhone: pick(GUESTS).phone, locationSlug: slug, date: iso(days(i)) });
     }
 
-    // Cash session — open, a mid-shift drop, close with a small realistic variance.
-    const opened = await openCashSession({ locationSlug: slug, openingFloat: 30000, openedBy: "manager", notes: "Morning float (demo)" });
+    // Cash session — open with a float, record the day's cash takings as a SALE
+    // drop (the drawer math counts the close against opening float + drops, so
+    // sales MUST be recorded here, not just added to the counted total), bank a
+    // mid-shift safe drop when the till runs heavy, then close with a small
+    // realistic variance (the EOD shrink signal stays ±a few złoty, not +900).
+    const opened = await openCashSession({ locationSlug: slug, openingFloat: 30000, openedBy: "manager", notes: "Morning float" });
     if (!("error" in opened)) {
-      const expected = 30000 + cashRevenue;
-      await closeCashSession(opened.id, expected - pick([0, 0, 250, -150, 500]), "manager", "EOD count (demo)");
+      await appendCashDrop(opened.id, { amountGrosze: cashRevenue, kind: "sale", actor: "manager", notes: "Cash sales (today)" });
+      let dropsSum = cashRevenue;
+      if (cashRevenue > 60000) {
+        const safeDrop = -40000; // -400 zł to the safe mid-shift
+        await appendCashDrop(opened.id, { amountGrosze: safeDrop, kind: "drop", actor: "manager", notes: "Mid-shift safe drop" });
+        dropsSum += safeDrop;
+      }
+      const expected = 30000 + dropsSum;
+      await closeCashSession(opened.id, expected + pick([0, 0, -250, 150, -100]), "manager", "EOD count");
     }
 
     // Bookings tonight against the 20:00 slot.
