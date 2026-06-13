@@ -3424,6 +3424,14 @@ function mergeSettings(
       ...(overrides.compliance?.byLocation ?? {}),
     },
   };
+  // Deep-merge the nested ops/fee blocks too, so a partial PUT (e.g. only
+  // operations.labor) can't drop the sibling sub-keys back to undefined.
+  base.processorFee = { ...DEFAULT_PROCESSOR_FEE, ...(saved.processorFee ?? {}), ...(overrides.processorFee ?? {}) };
+  base.operations = {
+    labor: { ...DEFAULT_OPERATIONS.labor, ...(saved.operations?.labor ?? {}), ...(overrides.operations?.labor ?? {}) },
+    kitchen: { ...DEFAULT_OPERATIONS.kitchen, ...(saved.operations?.kitchen ?? {}), ...(overrides.operations?.kitchen ?? {}) },
+    inventory: { ...DEFAULT_OPERATIONS.inventory, ...(saved.operations?.inventory ?? {}), ...(overrides.operations?.inventory ?? {}) },
+  };
   return base;
 }
 

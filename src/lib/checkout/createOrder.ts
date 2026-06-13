@@ -308,7 +308,10 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   // Global minimum order (audit — `minOrderAmount` was an admin setting that
   // nothing enforced). Checked against the food subtotal — the same number the
   // cart's minimum-order gate shows — before delivery fee / tip. 0 = no minimum.
-  const minOrderAmount = (await getSettings()).minOrderAmount;
+  // Read settings once here and reuse below (avoids a 2nd round-trip on the
+  // hot checkout path).
+  const appSettings = await getSettings();
+  const minOrderAmount = appSettings.minOrderAmount;
   if (minOrderAmount > 0 && calculatedTotal < minOrderAmount) {
     return {
       ok: false,
@@ -348,7 +351,6 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     }
   }
 
-  const appSettings = await getSettings();
   const segmentThreshold = getDeliveryThresholdForCustomer(
     segmentCustomer
       ? {

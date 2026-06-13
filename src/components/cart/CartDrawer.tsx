@@ -414,9 +414,11 @@ export function CartDrawer() {
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
-  // Global minimum order — gated on the food subtotal (after combo/bundle,
-  // before referral) to match createOrder's server-side check. 0 = no minimum.
-  const minOrderShortfall = publicMinOrder > 0 ? publicMinOrder - (subtotal - comboDiscount) : 0;
+  // Global minimum order — gated on the same food total createOrder checks:
+  // the locked bundle price when a bundle is applied, otherwise the
+  // combo-discounted subtotal (both before delivery/tip). 0 = no minimum.
+  const minOrderBaseGrosze = isBundleActive ? bundlePriceGrosze : subtotal - comboDiscount;
+  const minOrderShortfall = publicMinOrder > 0 ? publicMinOrder - minOrderBaseGrosze : 0;
   const belowMinOrder = minOrderShortfall > 0;
 
   const canCheckout =
