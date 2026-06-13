@@ -9,7 +9,7 @@ import {
   type SurveyDefinition,
   type SurveyResponse,
 } from "@/lib/surveys";
-import { Badge, type BadgeTone, type ColumnV3, InfoButton, Kpi, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, type BadgeTone, type ColumnV3, InfoButton, Kpi, SkeletonKpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 function pulseTone(score: number): BadgeTone {
   if (score >= 50) return "ok";
@@ -34,7 +34,7 @@ export function SurveysV3() {
     setResponses(Array.isArray(res?.responses) ? res.responses : []);
     setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setLoading(true); load(); }, [load]);
 
   const pulse = useMemo(() => computePulseScore(responses), [responses]);
   const avg = useMemo(() => averageStars(responses), [responses]);
@@ -87,6 +87,7 @@ export function SurveysV3() {
         </div>
       </div>
 
+      {loading && responses.length === 0 ? <SkeletonKpiRail count={3} /> : (
       <div className="av3-kpi-rail">
         <Kpi
           label="Pulse score"
@@ -107,6 +108,7 @@ export function SurveysV3() {
         <Kpi label="Avg rating" icon={Star} value={avg ? `${avg.toFixed(1)}` : "—"} accentVar="--av3-c2" />
         <Kpi label="Responses" icon={MessageSquare} value={`${responses.length}`} accentVar="--av3-c3" />
       </div>
+      )}
 
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${tab === "catalogue" ? "is-active" : ""}`} onClick={() => setTab("catalogue")}>Catalogue<span className="av3-fchip-count">{surveys.length}</span></button>

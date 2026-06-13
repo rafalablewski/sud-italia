@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, CheckCircle2, PauseCircle, Repeat } from "lucide-react";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 interface Intent {
@@ -101,6 +101,7 @@ export function ScheduledBundlesV3() {
         </div>
       </div>
 
+      {loading && list.length === 0 ? <SkeletonKpiRail count={4} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Pending approval" icon={CalendarClock} value={`${counts.pending}`} accentVar="--av3-c5"
           info={<InfoButton title="Pending approval" description="Standing weekly pre-orders a customer has set up that are waiting for you to approve before they go live."
@@ -117,6 +118,7 @@ export function ScheduledBundlesV3() {
             methodology="Sum of cartSnapshot quantities over intents with status === 'active'. Recomputed from the live list; paused/cancelled orders are excluded." />} />
         <Kpi label="Paused" icon={PauseCircle} value={`${counts.paused}`} accentVar="--av3-c2" />
       </div>
+      )}
 
       <div className="av3-filterchips">
         {chips.map((f) => (

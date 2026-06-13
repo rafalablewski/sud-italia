@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Crown, Gift, Pencil, Plus, Rocket, Sparkles, Target, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
-import { Badge, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonPage, Switch, Table } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonPage, Switch, Table } from "./ui";
 
 interface Reward { id: string; name: string; pointsCost: number; description?: string; active: boolean }
 interface ReferralRow { code: string; owner: string; ownerPhone: string; used: number; earned: number; createdAt: string }
@@ -145,12 +145,14 @@ export function GrowthV3() {
         </div>
       </div>
 
+      {loading && !s ? <SkeletonKpiRail count={4} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Active rewards" icon={Gift} value={`${rewards.filter((r) => r.active).length}/${rewards.length}`} accentVar="--av3-c2" />
         <Kpi label="Active challenges" icon={Target} value={`${challenges.filter((c) => c.active).length}/${challenges.length}`} accentVar="--av3-c4" />
         <Kpi label="Seasonal live" icon={Sparkles} value={`${seasonal.filter((i) => i.active).length}/${seasonal.length}`} accentVar="--av3-c5" />
         <Kpi label="Referrals" icon={Rocket} value={s?.referral?.active ? "On" : "Off"} accentVar="--av3-c3" />
       </div>
+      )}
 
       <Card>
         <CardHead title="Referral program" description="Reward both sides of a referral" actions={<Switch aria-label="Referral program" checked={s?.referral?.active ?? false} onChange={() => put({ referral: { referrerPoints: s?.referral?.referrerPoints ?? 0, refereeDiscountGrosze: s?.referral?.refereeDiscountGrosze ?? 0, active: !(s?.referral?.active ?? false) } })} />} />

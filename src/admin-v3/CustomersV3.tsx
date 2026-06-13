@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cake, Coins, Download, PartyPopper, Plus, Repeat, ShieldAlert, Trash2, Users, Wallet } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
 
 interface CustomerSummary {
   phone: string;
@@ -97,11 +97,13 @@ export function CustomersV3() {
         </div>
       </div>
 
+      {loading && list.length === 0 ? <SkeletonKpiRail count={3} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Customers" icon={Users} value={totalCustomers.toLocaleString("pl-PL")} accentVar="--av3-c3" />
         <Kpi label="Repeat" icon={Repeat} value={`${repeat}`} accentVar="--av3-c4" />
         <Kpi label="Lifetime revenue" icon={Wallet} value={formatPrice(totalRevenue)} accentVar="--av3-c2" />
       </div>
+      )}
 
       {triggers.length > 0 && (
         <Card>

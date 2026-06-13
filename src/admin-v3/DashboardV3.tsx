@@ -22,7 +22,7 @@ import {
 import { formatPrice } from "@/lib/utils";
 import { isLocationOpenNow } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, SkeletonPage, Table } from "./ui";
+import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, SkeletonKpiRail, SkeletonPage, Table } from "./ui";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function zl(grosze: number): string {
@@ -164,6 +164,7 @@ export function DashboardV3() {
   // executive overview (analytics report) — own period + payloads
   const [exPeriod, setExPeriod] = useState<ExecPeriod>("7d");
   const [exec, setExec] = useState<Summary | null>(null);
+  const [execLoading, setExecLoading] = useState(true);
   const [execPrev, setExecPrev] = useState<Summary | null>(null);
   const [execIns, setExecIns] = useState<Insights | null>(null);
   const [execInsPrev, setExecInsPrev] = useState<Insights | null>(null);
@@ -184,10 +185,12 @@ export function DashboardV3() {
       setExecInsPrev(insPrev);
     } catch (err) {
       console.error("Executive overview refresh failed:", err);
+    } finally {
+      setExecLoading(false);
     }
   }, [exPeriod, location]);
 
-  useEffect(() => { fetchExec(); }, [fetchExec]);
+  useEffect(() => { setExecLoading(true); fetchExec(); }, [fetchExec]);
 
   const fetchAll = useCallback(async () => {
     const today = isoDay();
@@ -474,6 +477,7 @@ export function DashboardV3() {
         </span>
       </div>
 
+      {execLoading && !exec ? <SkeletonKpiRail count={7} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Revenue" icon={Banknote} value={zl(exec?.totalRevenue ?? 0)} deltaPct={exRevDelta} spark={exRevSpark} accentVar="--av3-c1" />
         <Kpi label="Orders" icon={ClipboardList} value={(exec?.totalOrders ?? 0).toLocaleString("pl-PL")} deltaPct={exOrdDelta} spark={exOrdSpark} accentVar="--av3-c3" />
@@ -483,6 +487,7 @@ export function DashboardV3() {
         <Kpi label="Cancellations" icon={XCircle} value={`${exCancel.toFixed(1)}%`} deltaPct={exCancelDelta} invertDelta accentVar="--av3-c1" />
         <Kpi label="Labour ratio" icon={Coins} value={ratioPct != null ? `${ratioPct.toFixed(0)}%` : "—"} accentVar="--av3-c3" />
       </div>
+      )}
 
       <div className="av3-grid-2-1">
         <Card>

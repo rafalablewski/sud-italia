@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardCheck, Clock, LayoutGrid, Rows3, Scale } from "
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, SkeletonKpiRail, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -51,6 +51,7 @@ export function HandoverV3() {
   const city = all.find((l) => l.slug === loc)?.city ?? loc;
 
   const [logs, setLogs] = useState<Handover[]>([]);
+  const [loading, setLoading] = useState(true);
   const [shift, setShift] = useState("close");
   const [cashStr, setCashStr] = useState("");
   const [tempOk, setTempOk] = useState(true);
@@ -69,8 +70,9 @@ export function HandoverV3() {
     const res = await fetch(`/api/admin/handover?location=${encodeURIComponent(loc)}&from=${encodeURIComponent(startOfWeekIso())}`)
       .then((r) => (r.ok ? r.json() : [])).catch(() => []);
     setLogs(Array.isArray(res) ? res : []);
+    setLoading(false);
   }, [loc]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setLoading(true); load(); }, [load]);
 
   const stats = useMemo(() => {
     const issues = logs.filter((h) => !h.tempChecksOk || !h.wasteNoted || !h.equipmentOk).length;
@@ -137,6 +139,7 @@ export function HandoverV3() {
         </div>
       </div>
 
+      {loading && logs.length === 0 ? <SkeletonKpiRail count={4} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="This week" icon={ClipboardCheck} value={`${stats.week}`} accentVar="--av3-c3" />
         <Kpi label="Issues flagged" icon={AlertTriangle} value={`${stats.issues}`} accentVar="--av3-c1"
@@ -153,6 +156,7 @@ export function HandoverV3() {
             methodology="Sum of cashVarianceGrosze (counted − expected drawer) over this week's handovers. Per-sign-off tone in the table: green <2 zł, amber <10 zł, red ≥10 zł absolute." />} />
         <Kpi label="Last sign-off" icon={Clock} value={stats.last ? fmtWhen(stats.last) : "—"} accentVar="--av3-c4" />
       </div>
+      )}
 
       <Card>
         <CardHead title="Sign off a shift" />

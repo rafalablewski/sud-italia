@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, Dialog, Kpi, SkeletonRows } from "./ui";
+import { Badge, type BadgeTone, Button, Dialog, Kpi, SkeletonKpiRail, SkeletonRows } from "./ui";
 
 function roleColor(role: StaffRole): string {
   const t = roleToneOf(role);
@@ -63,7 +63,7 @@ export function ScheduleV3() {
     setStaff(Array.isArray(st) ? st : []);
     setLoading(false);
   }, [loc, week]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setLoading(true); load(); }, [load]);
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
   const byDay = useMemo(() => {
@@ -106,6 +106,7 @@ export function ScheduleV3() {
         </div>
       </div>
 
+      {loading && shifts.length === 0 ? <SkeletonKpiRail count={5} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Shifts" icon={CalendarRange} value={`${stats.count}`} accentVar="--av3-c3" />
         <Kpi label="Hours" icon={Clock} value={stats.hours ? `${stats.hours.toFixed(0)}h` : "—"} accentVar="--av3-c4" />
@@ -113,6 +114,7 @@ export function ScheduleV3() {
         <Kpi label="On rota" icon={Users} value={`${stats.onRota}`} accentVar="--av3-c5" />
         <Kpi label="Uncovered days" icon={AlertTriangle} value={`${stats.uncovered}`} accentVar="--av3-c1" />
       </div>
+      )}
 
       <div className="av3-toolbar">
         <span className="av3-toolbar-spacer" />

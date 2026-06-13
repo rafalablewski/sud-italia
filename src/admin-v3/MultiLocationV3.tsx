@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Banknote, MapPin, Percent } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { BarChart, type BarDatum, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Donut, type DonutDatum, Kpi, SkeletonRows, Table } from "./ui";
+import { BarChart, type BarDatum, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Donut, type DonutDatum, Kpi, SkeletonKpiRail, SkeletonRows, Table } from "./ui";
 
 const SITE_PALETTE = ["--av3-c1", "--av3-c3", "--av3-c4", "--av3-c2", "--av3-c5", "--av3-c6"];
 
@@ -70,11 +70,13 @@ export function MultiLocationV3() {
         </div>
       </div>
 
+      {loading && rows.length === 0 ? <SkeletonKpiRail count={3} /> : (
       <div className="av3-kpi-rail">
         <Kpi label="Chain revenue" icon={Banknote} value={formatPrice(totals.revenue)} accentVar="--av3-c1" />
         <Kpi label="Chain orders" icon={MapPin} value={totals.orders.toLocaleString("pl-PL")} accentVar="--av3-c3" />
         <Kpi label="Avg margin" icon={Percent} value={`${totals.margin.toFixed(1)}%`} accentVar="--av3-c4" />
       </div>
+      )}
 
       {!loading && sorted.length > 0 && (
         <div className="av3-grid-2">
