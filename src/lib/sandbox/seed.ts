@@ -22,11 +22,12 @@ import {
   addLoyaltyMember,
   addPointAdjustment,
   saveStaff,
-  saveShift,
+  bulkAppendShifts,
   recordTimePunch,
   saveSupplier,
   savePurchaseOrder,
-  createStockMovement,
+  bulkAppendStockMovements,
+  bulkUpsertIngredientStock,
   bulkAppendWasteLogs,
   bulkAppendTempLogs,
   saveFeedback,
@@ -36,22 +37,26 @@ import {
   addNotification,
   saveTask,
   getIngredients,
-  getRecipes,
   fireKdsTickets,
   recomputeCustomerRollup,
   appendAgentEvent,
 } from "@/lib/store";
-import { buildDraws } from "@/lib/inventory-decrement";
 import { createBooking } from "@/lib/booking";
 import { HACCP_SENSORS, rangeForSensor } from "@/lib/haccp";
 import type { WasteReason } from "@/lib/store";
 import type {
   CartItem,
   FulfillmentType,
+  IngredientStock,
   MenuItem,
   Order,
   OrderStatus,
+  PurchaseOrderStatus,
+  Shift,
+  ShiftStatus,
   StaffRole,
+  StockMovement,
+  StockMovementType,
   TimeSlot,
 } from "@/data/types";
 
@@ -178,6 +183,97 @@ function buildWasteHistory(slug: string): SeedWasteLog[] {
     }
   }
   return out;
+}
+
+// --- Staff rota (recurring weekly template) --------------------------------
+// The Schedule screen shows a ROLLING 7-day window starting TODAY, so seeding
+// only past shifts left the visible week almost empty. Instead lay down a
+// stable per-weekday rota across a multi-week window — the SAME pattern every
+// week — so whatever 7 days are shown land on a full, consistent rota.
+const ROTA_PAST_DAYS = 7; // history (done shifts, time-punches)
+const ROTA_FUTURE_DAYS = 13; // ahead (scheduled) — covers today..+6 with headroom
+// staffIdx indexes the per-location roster, built in STAFF_ROLES order:
+// [manager, pizzaiolo, chef, waiter, waiter, driver]. Same six shifts daily =
+// full lunch + dinner coverage, identical every week.
+const ROTA_TEMPLATE: { staffIdx: number; role: StaffRole; start: string; end: string }[] = [
+  { staffIdx: 0, role: "manager", start: "10:00", end: "18:00" },
+  { staffIdx: 2, role: "chef", start: "11:00", end: "21:00" },
+  { staffIdx: 1, role: "pizzaiolo", start: "11:30", end: "22:30" },
+  { staffIdx: 3, role: "waiter", start: "11:00", end: "16:00" },
+  { staffIdx: 4, role: "waiter", start: "16:30", end: "23:00" },
+  { staffIdx: 5, role: "driver", start: "16:00", end: "23:00" },
+];
+
+/** ISO timestamp at `dayOffset` days from today (UTC) at `hh:mm`. Negative
+ *  offset = past. Built in UTC so the day matches the Schedule grid's grouping
+ *  (which keys off the ISO date). */
+function rotaIso(dayOffset: number, hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(NOW);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + dayOffset);
+  d.setUTCHours(h, m, 0, 0);
+  return d.toISOString();
+}
+/** Verdict for a shift against NOW: past = done, straddling = in-progress. */
+function rotaStatus(startIso: string, endIso: string): ShiftStatus {
+  if (Date.parse(endIso) < NOW) return "done";
+  if (Date.parse(startIso) <= NOW) return "in-progress";
+  return "scheduled";
+}
+
+// --- Inventory (stock levels + movement history) ---------------------------
+/** A par level (in the ingredient's own unit) sized to the unit so the numbers
+ *  read sensibly — kilos/litres in the tens, pieces in the dozens. */
+function baseParFor(unit: string): number {
+  switch (unit.toLowerCase()) {
+    case "kg": return 8 + Math.floor(Math.random() * 16);
+    case "l": return 6 + Math.floor(Math.random() * 14);
+    case "g": case "ml": return 2000 + Math.floor(Math.random() * 4000);
+    default: return 30 + Math.floor(Math.random() * 90); // pieces / units
+  }
+}
+
+type SeedStockBuild = { stock: IngredientStock[]; movements: StockMovement[] };
+/** Build a location's inventory: a par/reorder + onHand stock row per catalogue
+ *  ingredient, with a ~3-week receive/consume/(occasional) waste movement
+ *  history whose net EXACTLY equals onHand (so the log and on-hand agree, the
+ *  invariant createStockMovement maintains). A realistic share lands below
+ *  reorder so the low-stock alerts have something to fire on. */
+function buildInventory(slug: string, ingredients: { id: string; unit: string; costPerUnit?: number }[]): SeedStockBuild {
+  const stock: IngredientStock[] = [];
+  const movements: StockMovement[] = [];
+  const mkMove = (ingredientId: string, type: StockMovementType, quantity: number, agoMs: number, reason: string, costImpact?: number): StockMovement =>
+    ({ id: rid("mv"), ingredientId, locationSlug: slug, type, quantity, costImpact, reason, occurredAt: iso(agoMs), byUser: "system:seed" });
+
+  for (const ing of ingredients) {
+    const par = baseParFor(ing.unit);
+    const reorder = Math.max(1, Math.round(par * 0.4));
+    const unitCost = ing.costPerUnit && ing.costPerUnit > 0 ? ing.costPerUnit : 200 + Math.floor(Math.random() * 1800);
+    // Buy ~1.4–2.2× par over the window across two receipts, then consume most
+    // of it; onHand falls out of the net so it always matches the movements.
+    const receivedTotal = Math.round(par * (1.4 + Math.random() * 0.8));
+    const r1 = Math.round(receivedTotal * 0.55);
+    const r2 = receivedTotal - r1;
+    movements.push(mkMove(ing.id, "receive", r1, days(21), "Opening stock", Math.round(r1 * unitCost)));
+    movements.push(mkMove(ing.id, "receive", r2, days(9), "PO receipt", Math.round(r2 * unitCost)));
+    const consumedTotal = Math.round(receivedTotal * (0.55 + Math.random() * 0.38));
+    let left = consumedTotal;
+    const chunk = Math.max(1, Math.round(consumedTotal / 8));
+    for (let d = 16; d >= 1 && left > 0; d -= 2) {
+      const q = Math.min(left, chunk);
+      movements.push(mkMove(ing.id, "consume", -q, days(d), "Service usage"));
+      left -= q;
+    }
+    let wasted = 0;
+    if (Math.random() < 0.12) {
+      wasted = Math.max(1, Math.round(par * 0.05));
+      movements.push(mkMove(ing.id, "waste", -wasted, days(3), "Spoilage", Math.round(wasted * unitCost)));
+    }
+    const onHand = Math.max(0, receivedTotal - consumedTotal - wasted);
+    stock.push({ ingredientId: ing.id, locationSlug: slug, onHand, parLevel: par, reorderPoint: reorder, lastCountedAt: iso(days(2)), lastCountedBy: "manager", updatedAt: iso(hours(6)) });
+  }
+  return { stock, movements };
 }
 
 // A realistic guest base for the deep simulation dataset: the 6 named regulars
@@ -312,7 +408,6 @@ async function seedActiveDataset(): Promise<void> {
   const vol = SIM_VOLUME;
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
-  const recipes = await getRecipes(); // shared formulas — for the stock draw-down
   // Simulation trades against a long guest tail (mostly one-timers + a core).
   const base = buildGuestBase(vol.syntheticGuests);
 
@@ -359,6 +454,12 @@ async function seedActiveDataset(): Promise<void> {
   // location's deep history and land each in ONE write after the loop.
   const allTempLogs: SeedTempLog[] = [];
   const allWasteLogs: SeedWasteLog[] = [];
+  // Shifts / stock / movements are single cross-location kv blobs too —
+  // accumulate every location's history and land each in ONE write after loop.
+  const allShifts: Shift[] = [];
+  const allStock: IngredientStock[] = [];
+  const allMovements: StockMovement[] = [];
+  const punches: { staffId: string; shiftId: string; startAt: string; endAt: string; done: boolean }[] = [];
 
   for (const loc of locations) {
     const slug = loc.slug;
@@ -380,64 +481,54 @@ async function seedActiveDataset(): Promise<void> {
       }
     }
     // Recent completed orders (today's throughput) + a live KDS rush.
-    const todayOrders: Order[] = [];
     for (let i = 0; i < vol.recentOrders; i++) {
       const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7), customer: base?.pickGuest() });
-      pending.push(o); todayOrders.push(o);
+      pending.push(o);
       if (i % 2 === 0) cashRevenue += o.totalAmount;
     }
     const activeMix: OrderStatus[] = ["preparing", "preparing", "confirmed", "ready", "confirmed"];
     const activeOrders: Order[] = [];
     for (let i = 0; i < activeMix.length; i++) {
       const o = buildOrder(slug, menu, { status: activeMix[i], ageMs: min(1 + i * 3), customer: base?.pickGuest() });
-      activeOrders.push(o); pending.push(o); todayOrders.push(o);
+      activeOrders.push(o); pending.push(o);
     }
     // Land every order for this location in ONE locked write, then fire KDS for
     // the live ones (awaited, so no race on the kv blob).
     await bulkAppendOrders(pending);
     for (const o of activeOrders) await fireKdsTickets(o);
 
-    // Staff + schedule + time-punches.
-    const staffIds: string[] = [];
+    // Staff (the per-location roster, in STAFF_ROLES order so the rota template
+    // can index it) + a recurring weekly rota across the visible window.
+    const roster: { id: string; role: StaffRole }[] = [];
     for (let i = 0; i < STAFF_ROLES.length; i++) {
       const s = await saveStaff({
         name: `${pick(["Marco", "Elena", "Piotr", "Giulia", "Kasia", "Luca"])} ${pick(["R.", "B.", "K.", "N.", "W."])}`,
         role: STAFF_ROLES[i].role, locationSlug: slug, hourlyRateGrosze: STAFF_ROLES[i].rate,
         status: "active", hireDate: iso(days(120 + i * 30)).slice(0, 10),
       });
-      staffIds.push(s.id);
+      roster.push({ id: s.id, role: STAFF_ROLES[i].role });
     }
-    for (let d = 0; d < 5; d++) {
-      for (let k = 0; k < 3; k++) {
-        const staffId = staffIds[(d + k) % staffIds.length];
-        const startAt = new Date(NOW - days(d) ).toISOString().slice(0, 10) + "T11:00:00.000Z";
-        const endAt = new Date(NOW - days(d)).toISOString().slice(0, 10) + "T19:00:00.000Z";
-        const shift = await saveShift({ staffId, locationSlug: slug, startAt, endAt, role: pick(STAFF_ROLES).role, status: d === 0 ? "in-progress" : "done" });
-        if (d <= 1) {
-          await recordTimePunch({ staffId, type: "clock-in", occurredAt: startAt, shiftId: shift.id });
-          if (d === 1) await recordTimePunch({ staffId, type: "clock-out", occurredAt: endAt, shiftId: shift.id });
+    for (let off = -ROTA_PAST_DAYS; off <= ROTA_FUTURE_DAYS; off++) {
+      for (const t of ROTA_TEMPLATE) {
+        const member = roster[t.staffIdx % roster.length];
+        if (!member) continue;
+        const startAt = rotaIso(off, t.start);
+        const endAt = rotaIso(off, t.end);
+        const status = rotaStatus(startAt, endAt);
+        allShifts.push({ id: rid("shift"), staffId: member.id, locationSlug: slug, startAt, endAt, role: t.role, status });
+        // Time-punches for the last couple of days' worked shifts only.
+        if (off >= -2 && (status === "done" || status === "in-progress")) {
+          punches.push({ staffId: member.id, shiftId: allShifts[allShifts.length - 1].id, startAt, endAt, done: status === "done" });
         }
       }
     }
 
-    // Stock movements: a baseline receipt for a few catalogue ingredients, then
-    // draw stock down through the REAL recipe math for today's service — receive
-    // ~1.8× each ingredient's consumption, then consume it — so on-hand reflects
-    // sales (not a static count) and lands positive instead of deep-negative.
-    for (let i = 0; i < Math.min(5, ingredients.length); i++) {
-      await createStockMovement({ ingredientId: ingredients[i].id, locationSlug: slug, type: "receive", quantity: 20 + i * 5, costImpact: (1500 + i * 300), reason: `PO receipt — ${pick(suppliers).name}`, occurredAt: iso(days(2)) });
-    }
-    const draw = new Map<string, number>();
-    for (const o of todayOrders) {
-      for (const d of buildDraws(o, recipes)) draw.set(d.ingredientId, (draw.get(d.ingredientId) ?? 0) + d.quantity);
-    }
-    for (const [ingredientId, qty] of draw) {
-      await createStockMovement({ ingredientId, locationSlug: slug, type: "receive", quantity: Math.ceil(qty * 1.8), reason: "PO receipt — opening stock", occurredAt: iso(days(1)) });
-      await createStockMovement({ ingredientId, locationSlug: slug, type: "consume", quantity: -qty, reason: "today's service (seed)", byUser: "system:seed", occurredAt: iso(hours(2)) });
-    }
-    if (ingredients[0]) {
-      await createStockMovement({ ingredientId: ingredients[0].id, locationSlug: slug, type: "waste", quantity: -2, costImpact: 300, reason: "spoilage", occurredAt: iso(hours(20)) });
-    }
+    // Inventory — a par/reorder + onHand stock row per catalogue ingredient with
+    // a ~3-week movement history (net == onHand). Built here, landed once after
+    // the loop. No-op when the (real, shared) ingredient catalogue is empty.
+    const inv = buildInventory(slug, ingredients);
+    allStock.push(...inv.stock);
+    allMovements.push(...inv.movements);
 
     // HACCP + waste — a deep, dated history (built here, landed once after the
     // loop) so both compliance screens show a real record, not a couple of rows.
@@ -480,18 +571,32 @@ async function seedActiveDataset(): Promise<void> {
       }
     }
 
-    // Purchase orders referencing the shared ingredient catalogue.
-    if (ingredients.length >= 2) {
-      await savePurchaseOrder({
-        supplierId: suppliers[0].id, locationSlug: slug, status: "received",
-        lines: ingredients.slice(0, 2).map((ing) => ({ ingredientId: ing.id, quantity: 25, unitCost: 1200 })),
-        expectedAt: iso(days(1)), receivedAt: iso(days(1)), createdBy: "manager",
-      });
-      await savePurchaseOrder({
-        supplierId: suppliers[1].id, locationSlug: slug, status: "draft",
-        lines: ingredients.slice(0, 1).map((ing) => ({ ingredientId: ing.id, quantity: 40, unitCost: 950 })),
-        createdBy: "manager",
-      });
+    // Purchase orders — a spread across suppliers and every status, referencing
+    // the shared ingredient catalogue, dated across the past few weeks so the PO
+    // board shows a real pipeline (draft → sent → received, plus a cancellation).
+    if (ingredients.length > 0) {
+      const poPlan: { status: PurchaseOrderStatus; createdAgo: number }[] = [
+        { status: "received", createdAgo: days(18) },
+        { status: "received", createdAgo: days(11) },
+        { status: "sent", createdAgo: days(4) },
+        { status: "draft", createdAgo: days(1) },
+        { status: "cancelled", createdAgo: days(7) },
+      ];
+      for (let p = 0; p < poPlan.length; p++) {
+        const plan = poPlan[p];
+        const sup = suppliers[p % suppliers.length];
+        const lineCount = Math.min(ingredients.length, 2 + Math.floor(Math.random() * 3));
+        const lines = Array.from({ length: lineCount }, (_, idx) => {
+          const ing = ingredients[(p * 3 + idx) % ingredients.length];
+          return { ingredientId: ing.id, quantity: 10 + Math.floor(Math.random() * 30), unitCost: ing.costPerUnit && ing.costPerUnit > 0 ? ing.costPerUnit : 300 + Math.floor(Math.random() * 1500) };
+        });
+        await savePurchaseOrder({
+          supplierId: sup.id, locationSlug: slug, status: plan.status, lines,
+          expectedAt: iso(plan.createdAgo - days(3)),
+          receivedAt: plan.status === "received" ? iso(plan.createdAgo - days(3)) : undefined,
+          createdAt: iso(plan.createdAgo), createdBy: "manager",
+        });
+      }
     }
 
     // A couple of ops tasks + notifications so those panels aren't empty.
@@ -503,11 +608,19 @@ async function seedActiveDataset(): Promise<void> {
     await addNotification({ type: "low_stock", title: "Mozzarella below reorder point", message: `${slug}: 1.2kg left`, locationSlug: slug });
   }
 
-  // Land the deep HACCP + waste history in one write each (single locked
-  // read-modify-write per cross-location blob) — mirrors bulkAppendOrders so a
-  // 30-day, multi-sensor record stays cheap on Neon instead of N round-trips.
+  // Land the deep histories in one write each (single locked read-modify-write
+  // per cross-location blob) — mirrors bulkAppendOrders so the deep dry-run
+  // stays cheap on Neon instead of thousands of round-trips.
+  await bulkAppendShifts(allShifts);
+  await bulkUpsertIngredientStock(allStock);
+  await bulkAppendStockMovements(allMovements);
   await bulkAppendTempLogs(allTempLogs);
   await bulkAppendWasteLogs(allWasteLogs);
+  // Time-punches for recently-worked shifts (small volume, after the rota lands).
+  for (const p of punches) {
+    await recordTimePunch({ staffId: p.staffId, type: "clock-in", occurredAt: p.startAt, shiftId: p.shiftId });
+    if (p.done) await recordTimePunch({ staffId: p.staffId, type: "clock-out", occurredAt: p.endAt, shiftId: p.shiftId });
+  }
 
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free. In

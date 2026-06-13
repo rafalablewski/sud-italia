@@ -7283,6 +7283,46 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
   return movement;
 }
 
+/**
+ * Bulk-append pre-built stock movements in ONE locked write — the simulation
+ * seeder lays down a multi-week receive/consume/waste history per ingredient,
+ * and createStockMovement's per-row lock + stock recompute would be hundreds of
+ * round-trips. Does NOT touch ingredient_stock — the seeder pairs this with
+ * bulkUpsertIngredientStock, whose onHand it computes to match these movements.
+ * Only called while a test mode is active (getDomainDb() is null then).
+ */
+export async function bulkAppendStockMovements(movements: StockMovement[]): Promise<void> {
+  if (movements.length === 0) return;
+  const db = await getDomainDb();
+  if (db) {
+    for (const m of movements) await dualWriteMovement(m);
+    return;
+  }
+  await withLock("stock-movements.json", async () => {
+    const list = await readJSON<StockMovement[]>("stock-movements.json", []);
+    list.push(...movements);
+    await writeJSON("stock-movements.json", list);
+  });
+}
+
+/** Bulk-upsert pre-built stock rows in ONE locked write (keyed by
+ *  ingredient+location), mirroring upsertIngredientStock per row. The seeder
+ *  computes onHand to match the movement history it lands alongside. */
+export async function bulkUpsertIngredientStock(rows: IngredientStock[]): Promise<void> {
+  if (rows.length === 0) return;
+  await withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    for (const row of rows) {
+      const i = list.findIndex((s) => s.ingredientId === row.ingredientId && s.locationSlug === row.locationSlug);
+      if (i >= 0) list[i] = row;
+      else list.push(row);
+    }
+    await writeJSON("ingredient-stock.json", list);
+  });
+  const db = await getDomainDb();
+  if (db) for (const row of rows) await dualWriteStock(row);
+}
+
 // --- Suppliers ---
 
 export async function getSuppliers(): Promise<Supplier[]> {
@@ -7846,6 +7886,27 @@ export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Pro
     await writeJSON("shifts.json", list);
     await dualWriteShift(shift);
     return shift;
+  });
+}
+
+/**
+ * Bulk-append pre-built shifts in ONE locked write — the simulation seeder lays
+ * down a recurring weekly rota across a multi-week window, so a flat saveShift
+ * loop would pay the lock + O(N) blob rewrite per shift. Mirrors
+ * bulkAppendOrders: only called while a test mode is active (getDomainDb() is
+ * null then, so the kv path runs); the DB branch mirrors saveShift's dual-write.
+ */
+export async function bulkAppendShifts(shifts: Shift[]): Promise<void> {
+  if (shifts.length === 0) return;
+  const db = await getDomainDb();
+  if (db) {
+    for (const s of shifts) await dualWriteShift(s);
+    return;
+  }
+  await withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    list.push(...shifts);
+    await writeJSON("shifts.json", list);
   });
 }
 
