@@ -5,7 +5,7 @@ import { ClipboardList, PackageCheck, PackageSearch, Plus, Truck, Wallet, X } fr
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 type POStatus = "draft" | "sent" | "received" | "cancelled";
 interface POLine { ingredientId: string; quantity: number; unitCost: number; name?: string; unit?: string; lineTotal?: number }
@@ -112,12 +112,12 @@ export function PurchaseOrdersV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={orders.length === 0}>
         <Kpi label="Open POs" icon={ClipboardList} value={`${stats.open}`} accentVar="--av3-c3" />
         <Kpi label="On order" icon={Wallet} value={formatPrice(stats.onOrder)} accentVar="--av3-c2" />
         <Kpi label="Awaiting delivery" icon={Truck} value={`${stats.awaiting}`} accentVar="--av3-c5" />
         <Kpi label="Received" icon={PackageCheck} value={`${stats.received}`} accentVar="--av3-c4" />
-      </div>
+      </KpiRail>
 
       <div className="av3-filterchips">
         {chips.map((f) => (

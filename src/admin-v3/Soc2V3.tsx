@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Card, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Card, Kpi, KpiRail, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type Status = "met" | "partial" | "gap";
 interface Control { id: string; criterion: string; category: string; status: Status; evidence: string; remediation?: string }
@@ -37,12 +37,12 @@ export function Soc2V3({ register }: { register: Register }) {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail>
         <Kpi label="Readiness" value={`${summary.scorePct}%`} accentVar={summary.scorePct >= 80 ? "--av3-c4" : summary.scorePct >= 50 ? "--av3-c5" : "--av3-c1"} />
         <Kpi label="Met" value={`${summary.met}`} accentVar="--av3-c4" />
         <Kpi label="Partial" value={`${summary.partial}`} accentVar="--av3-c5" />
         <Kpi label="Gaps" value={`${summary.gap}`} accentVar="--av3-c1" />
-      </div>
+      </KpiRail>
 
       <div className="av3-filterchips">
         {chips.map((f) => (

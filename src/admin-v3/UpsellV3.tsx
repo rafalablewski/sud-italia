@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
 import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, InfoButton, Kpi, KpiRail, SkeletonKpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 /* ── shapes (mirror src/components/admin/AdminSellingShared) ────────────── */
 interface BundleSlot { kind: "category" | "item"; category?: string; itemIdSuffix?: string; quantity: number }
@@ -185,12 +185,15 @@ export function UpsellV3() {
       </div>
 
       {loading ? (
-        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
+        <>
+          {tab === "bundles" && <SkeletonKpiRail count={5} />}
+          <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
+        </>
       ) : tab === "modifiers" ? (
         <ModifierInventory menusByLoc={menusByLoc} locations={all} />
       ) : (
         <>
-          <div className="av3-kpi-rail">
+          <KpiRail>
             <Kpi label="Active bundles" icon={Layers} value={`${kpis.active}/${kpis.total}`} accentVar="--av3-c2"
               info={<InfoButton title="Active bundles" description="How many bundle tiers are switched live on this location versus the total configured."
                 institutional="Ladders work by contrast: a healthy anchor → core → decoy ladder needs 3–5 live tiers so the mid offer reads as the obvious pick. One live tier has nothing to anchor against; ten dilute the choice. The gate: at least one anchor and one default live per meal period."
@@ -221,7 +224,7 @@ export function UpsellV3() {
                 plain="If items priced separately would be 65 zł and the bundle sells for 55 zł, that's 10 zł / ~15% given away. Fine if those 55 zł baskets are extra — expensive if those customers would have spent 50 zł anyway."
                 tips="Trim the headline % and add value instead (a free add-on slot reads as generous but costs you margin, not price); use split mains/add-ons discounts so you only mark down what you must; let the A/B experiment find the smallest discount that holds penetration."
                 methodology="totalSavingsGrosze ÷ (totalRevenueGrosze + totalSavingsGrosze) from /api/admin/bundle-analytics (30d). Savings = refPrice − finalPrice summed across bundle orders." />} />
-          </div>
+          </KpiRail>
 
           <div className="av3-toolbar">
             <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search bundles…" />

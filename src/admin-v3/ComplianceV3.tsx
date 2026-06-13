@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarCheck2, Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { COMPLIANCE_KINDS, COMPLIANCE_KIND_LABELS, type ComplianceItem, type ComplianceKind } from "@/data/types";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 function daysTo(iso: string) { return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000); }
 function statusOf(iso: string): { tone: BadgeTone; label: string } {
@@ -61,11 +61,11 @@ export function ComplianceV3() {
         <div className="av3-pagehead-actions"><Button variant="primary" size="sm" onClick={() => setEdit("new")}><Plus className="av3-btn-ico" /> Add item</Button></div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={items.length === 0}>
         <Kpi label="Expired" icon={CalendarCheck2} value={`${counts.expired}`} accentVar="--av3-c1" />
         <Kpi label="Due ≤ 7 days" icon={CalendarCheck2} value={`${counts.urgent}`} accentVar="--av3-c1" />
         <Kpi label="Due ≤ 30 days" icon={CalendarCheck2} value={`${counts.soon}`} accentVar="--av3-c5" />
-      </div>
+      </KpiRail>
 
       <div className="av3-toolbar">
         <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item, type or site…" />

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MapPin, Plus, X } from "lucide-react";
 import type { Location } from "@/data/types";
-import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Switch, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Switch, Table } from "./ui";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -46,10 +46,10 @@ export function ManageLocationsV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={list.length === 0}>
         <Kpi label="Locations" icon={MapPin} value={`${list.length}`} accentVar="--av3-c3" />
         <Kpi label="Active" icon={MapPin} value={`${list.filter((l) => l.isActive).length}`} accentVar="--av3-c4" />
-      </div>
+      </KpiRail>
 
       {loading ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>

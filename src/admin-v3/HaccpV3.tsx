@@ -5,7 +5,7 @@ import { LayoutGrid, Rows3, ShieldCheck, Thermometer, TriangleAlert } from "luci
 import { getActiveLocations } from "@/data/locations";
 import { HACCP_SENSORS, rangeForSensor, tempVerdict } from "@/lib/haccp";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Table, type ColumnV3 } from "./ui";
 
 interface TempReading {
   id: string;
@@ -64,6 +64,7 @@ export function HaccpV3() {
   const city = all.find((l) => l.slug === loc)?.city ?? loc;
 
   const [logs, setLogs] = useState<TempReading[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sensor, setSensor] = useState<string>(HACCP_SENSORS[0]);
   const [tempStr, setTempStr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -76,9 +77,10 @@ export function HaccpV3() {
     const qs = new URLSearchParams({ location: loc, from: startOfTodayIso() });
     const res = await fetch(`/api/admin/haccp?${qs}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
     setLogs(Array.isArray(res) ? res : []);
+    setLoading(false);
   }, [loc]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setLoading(true); load(); }, [load]);
 
   const tempTenths = tempStr.trim() === "" || Number.isNaN(Number(tempStr)) ? null : Math.round(Number(tempStr) * 10);
   const verdict = tempTenths === null ? null : tempVerdict(sensor, tempTenths);
@@ -133,7 +135,7 @@ export function HaccpV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={logs.length === 0}>
         <Kpi label="Readings today" icon={Thermometer} value={`${logs.length}`} accentVar="--av3-c3" />
         <Kpi label="Compliance" icon={ShieldCheck} value={compliancePct === null ? "—" : `${compliancePct}%`} accentVar="--av3-c4"
           info={<InfoButton title="HACCP compliance" description="Share of today's temperature checks that landed inside the safe holding range for their sensor."
@@ -147,7 +149,7 @@ export function HaccpV3() {
             plain="If the hot-hold cabinet reads 58 °C when it must be ≥63 °C, the pasta in it is in the danger zone — that flag means reheat or bin it now and note what you did, not at the end of the shift."
             tips="Treat any flag as act-now: move or discard the stock, fix or swap the unit, and log the action; a recurring flag on one sensor is a hardware fault — book a service; never clear a flag without recording why it's safe to continue."
             methodology="Count of today's readings with status === 'flagged' (temp outside the sensor band) from /api/admin/haccp for this location." />} />
-      </div>
+      </KpiRail>
 
       <Card>
         <CardHead title="Record a reading" description={`${sensor} · safe ${fmtTemp(range.minTenths)}–${fmtTemp(range.maxTenths)}`} />
@@ -191,7 +193,9 @@ export function HaccpV3() {
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {loading && logs.length === 0 ? (
+        <Card style={{ padding: 12 }}><SkeletonRows rows={6} /></Card>
+      ) : rows.length === 0 ? (
         <Card style={{ padding: 0 }}>
           <div className="av3-empty"><div className="av3-empty-title">{logs.length === 0 ? "No readings today" : "Nothing matches"}</div><div className="av3-empty-text">{logs.length === 0 ? "Log the first temperature check above." : "Adjust the search or filter."}</div></div>
         </Card>

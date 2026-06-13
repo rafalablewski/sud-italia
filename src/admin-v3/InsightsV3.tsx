@@ -5,7 +5,7 @@ import { AlertTriangle, Boxes, Brain, ChefHat, MessageSquare, Plus, RefreshCw, U
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 interface ForecastDay { date: string; predictedOrders: number; lower?: number; upper?: number }
 interface Forecast { source?: string; days?: ForecastDay[]; reasoning?: string; generatedAt?: string }
@@ -196,10 +196,10 @@ export function InsightsV3() {
           <Card><CardBody><div className="av3-empty" style={{ padding: "24px 0" }}><Boxes style={{ width: 22, height: 22, color: "var(--av3-ok)", margin: "0 auto 8px" }} /><div className="av3-empty-title">Nothing to reorder</div><div className="av3-empty-text">All tracked SKUs are above their reorder point.</div></div></CardBody></Card>
         ) : (
           <>
-            <div className="av3-kpi-rail">
+            <KpiRail>
               <Kpi label="SKUs to reorder" icon={Boxes} value={`${reorderRows.length}`} accentVar="--av3-c5" />
               <Kpi label="Est. reorder cost" icon={Boxes} value={formatPrice(totalReorderCost)} accentVar="--av3-c1" />
-            </div>
+            </KpiRail>
             <Card style={{ padding: 0 }}>
               <CardHead title="Suggested reorder" description="At or below reorder point · quantity = par − on-hand" />
               <Table columns={reorderCols} rows={reorderRows} rowKey={(s) => s.ingredientId} />

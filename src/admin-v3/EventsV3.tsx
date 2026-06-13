@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { BookingEvent, BookingEventStatus, EventRunSheet, RunSheetSegment } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 const STATUS_LABEL: Record<BookingEventStatus, string> = { scheduled: "Scheduled", live: "Live", done: "Done", cancelled: "Cancelled" };
 const STATUS_TONE: Record<BookingEventStatus, BadgeTone> = { scheduled: "warn", live: "info", done: "ok", cancelled: "neutral" };
@@ -71,7 +71,7 @@ export function EventsV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={events.length === 0}>
         <Kpi label="Events" icon={CalendarDays} value={`${events.length}`} accentVar="--av3-c3" />
         <Kpi label="Revenue" icon={Banknote} value={formatPrice(events.reduce((s, e) => s + (e.actualRevenueGrosze ?? 0), 0))} accentVar="--av3-c1"
           info={<InfoButton title="Event revenue" description="Total recorded takings across this location's events — private bookings, catering and special events."
@@ -86,7 +86,7 @@ export function EventsV3() {
             tips="Set a realistic expected count on every event from the organiser's figure or last year's; after the event, compare to actual revenue and adjust your conversion assumption; flag big events early so purchasing and rota can react."
             methodology="Sum of expectedAttendance over the location's events. Used for prep/stock planning; compare against the Revenue tile to sanity-check your spend-per-guest assumption." />} />
         <Kpi label="Live / upcoming" icon={Radio} value={`${events.filter((e) => e.status === "live" || e.status === "scheduled").length}`} accentVar="--av3-c5" />
-      </div>
+      </KpiRail>
 
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${tab === "events" ? "is-active" : ""}`} onClick={() => setTab("events")}>Events<span className="av3-fchip-count">{events.length}</span></button>

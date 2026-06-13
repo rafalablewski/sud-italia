@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, CheckCircle2, PauseCircle, Repeat } from "lucide-react";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 interface Intent {
@@ -101,7 +101,7 @@ export function ScheduledBundlesV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={list.length === 0}>
         <Kpi label="Pending approval" icon={CalendarClock} value={`${counts.pending}`} accentVar="--av3-c5"
           info={<InfoButton title="Pending approval" description="Standing weekly pre-orders a customer has set up that are waiting for you to approve before they go live."
             institutional="This is the only blocking step in the standing-order funnel — a customer has committed to a recurring order, and every day it sits unapproved is a week of guaranteed revenue not locked in. The operator gate: clear this to zero each shift; a growing backlog is leaked recurring demand, not a queue you can sit on."
@@ -116,7 +116,7 @@ export function ScheduledBundlesV3() {
             tips="Grow it by approving pending orders promptly and by pitching the 'save it as a weekly' option at checkout; watch for paused orders creeping up (lost annuity) and win them back; use the cadence sort to batch same-day pickups."
             methodology="Sum of cartSnapshot quantities over intents with status === 'active'. Recomputed from the live list; paused/cancelled orders are excluded." />} />
         <Kpi label="Paused" icon={PauseCircle} value={`${counts.paused}`} accentVar="--av3-c2" />
-      </div>
+      </KpiRail>
 
       <div className="av3-filterchips">
         {chips.map((f) => (

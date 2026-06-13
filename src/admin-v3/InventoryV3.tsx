@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { StockMovementType } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, SkeletonRows, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, KpiRail, SkeletonRows, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface StockRow {
   id: string;
@@ -177,11 +177,11 @@ export function InventoryV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={stock.length === 0}>
         <Kpi label="Inventory value" icon={Boxes} value={formatPrice(totalValue)} accentVar="--av3-c2" />
         <Kpi label="Low / out" icon={TrendingUp} value={`${counts.low + counts.out}`} accentVar="--av3-c1" />
         <Kpi label="Waste · 7 days" icon={Trash2} value={formatPrice(waste7d)} accentVar="--av3-c1" />
-      </div>
+      </KpiRail>
 
       {view === "stock" && (
         <div className="av3-toolbar">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles, Star } from "lucide-react";
-import { Badge, type BadgeTone, BarChart, type BarDatum, Button, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Dialog, Donut, type DonutDatum, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, BarChart, type BarDatum, Button, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Dialog, Donut, type DonutDatum, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 type Status = "new" | "reviewed" | "responded";
 interface FeedbackEntry {
@@ -124,11 +124,11 @@ export function FeedbackV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={list.length === 0}>
         <Kpi label="Avg rating" icon={Star} value={avg ? `${avg.toFixed(1)}` : "—"} accentVar="--av3-c4" />
         <Kpi label="Reviews" icon={Star} value={`${list.length}`} accentVar="--av3-c3" />
         <Kpi label="New" icon={Star} value={`${counts.new}`} accentVar="--av3-c1" />
-      </div>
+      </KpiRail>
 
       {list.length > 0 && (
         <div className="av3-grid-2">

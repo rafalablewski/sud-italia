@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardCheck, Clock, LayoutGrid, Rows3, Scale } from "
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -51,6 +51,7 @@ export function HandoverV3() {
   const city = all.find((l) => l.slug === loc)?.city ?? loc;
 
   const [logs, setLogs] = useState<Handover[]>([]);
+  const [loading, setLoading] = useState(true);
   const [shift, setShift] = useState("close");
   const [cashStr, setCashStr] = useState("");
   const [tempOk, setTempOk] = useState(true);
@@ -69,8 +70,9 @@ export function HandoverV3() {
     const res = await fetch(`/api/admin/handover?location=${encodeURIComponent(loc)}&from=${encodeURIComponent(startOfWeekIso())}`)
       .then((r) => (r.ok ? r.json() : [])).catch(() => []);
     setLogs(Array.isArray(res) ? res : []);
+    setLoading(false);
   }, [loc]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setLoading(true); load(); }, [load]);
 
   const stats = useMemo(() => {
     const issues = logs.filter((h) => !h.tempChecksOk || !h.wasteNoted || !h.equipmentOk).length;
@@ -137,7 +139,7 @@ export function HandoverV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={logs.length === 0}>
         <Kpi label="This week" icon={ClipboardCheck} value={`${stats.week}`} accentVar="--av3-c3" />
         <Kpi label="Issues flagged" icon={AlertTriangle} value={`${stats.issues}`} accentVar="--av3-c1"
           info={<InfoButton title="Issues flagged this week" description="Number of sign-offs in the last 7 days where at least one shift check (temps, waste, equipment) was not clear."
@@ -152,7 +154,7 @@ export function HandoverV3() {
             tips="Investigate any single variance over your comp cap, not just the net; count the drawer blind (before seeing expected) so the number is honest; if one operator's shifts always run short, retrain or watch the void/refund pattern; reconcile against the Cash page."
             methodology="Sum of cashVarianceGrosze (counted − expected drawer) over this week's handovers. Per-sign-off tone in the table: green <2 zł, amber <10 zł, red ≥10 zł absolute." />} />
         <Kpi label="Last sign-off" icon={Clock} value={stats.last ? fmtWhen(stats.last) : "—"} accentVar="--av3-c4" />
-      </div>
+      </KpiRail>
 
       <Card>
         <CardHead title="Sign off a shift" />
@@ -207,7 +209,9 @@ export function HandoverV3() {
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {loading && logs.length === 0 ? (
+        <Card style={{ padding: 12 }}><SkeletonRows rows={6} /></Card>
+      ) : rows.length === 0 ? (
         <Card style={{ padding: 0 }}>
           <div className="av3-empty"><div className="av3-empty-title">{logs.length === 0 ? "No handovers this week" : "Nothing matches"}</div><div className="av3-empty-text">{logs.length === 0 ? "Sign off the first shift above." : "Adjust the search or filter."}</div></div>
         </Card>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Users } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, KpiRail, SkeletonRows, Table } from "./ui";
 
 interface CorporatePayload {
   slug: string;
@@ -64,11 +64,11 @@ export function CorporateV3() {
         </div>
       </div>
 
-      <div className="av3-kpi-rail">
+      <KpiRail loading={loading} empty={accounts.length === 0}>
         <Kpi label="Accounts" icon={Building2} value={`${accounts.length}`} accentVar="--av3-c3" />
         <Kpi label="Members" icon={Users} value={`${totalMembers}`} accentVar="--av3-c4" />
         <Kpi label="Pool earned · month" icon={Building2} value={`${poolThisMonth.toLocaleString("pl-PL")} pts`} accentVar="--av3-c2" />
-      </div>
+      </KpiRail>
 
       {loading && accounts.length === 0 ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>

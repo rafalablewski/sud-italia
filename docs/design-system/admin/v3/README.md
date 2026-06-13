@@ -178,7 +178,9 @@ so reach for a class:
 
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Switch` (the **one** on/off
 control — see below), `Kpi` (the dense metric tile
-with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
+with inline sparkline + delta), `KpiRail` (the `.av3-kpi-rail` wrapper with the
+loading skeleton baked in — see Loading & empty states below), `Sparkline`
+(dependency-free inline SVG),
 `Skeleton` / `SkeletonKpiRail` / `SkeletonRows` / `SkeletonKanban` /
 `SkeletonPage` (shimmer loading stand-ins — see Loading & empty states below),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
@@ -268,10 +270,25 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   card of rows) for `if (loading) return …` branches. Mark the region
   `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
   pages** — every `.av3-loading` spinner was replaced (full-page returns →
-  `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
-  where the generic shape misled: Cash leads with a `SkeletonKpiRail` since its
-  loaded view does. (`SkeletonKanban` still ships for the CORE KDS/POS surfaces;
-  the admin Orders history is a plain `SkeletonRows` table now.)
+  `SkeletonPage`, in-tree content → a card of `SkeletonRows`). **The KPI rail is gated,
+  not just the table body.** A rail whose tiles read from data fetched on mount
+  (counts/sums that start at `0`/`—`) flashes `0`/`0 zł` and then jumps once the
+  request resolves unless it's gated. The canonical fix is the **`KpiRail`
+  primitive** (`v3/ui/KpiRail.tsx`): write
+  `<KpiRail loading={loading} empty={list.length === 0}>…<Kpi/>…</KpiRail>` and
+  it renders a `SkeletonKpiRail` (sized to the tile count) while `loading &&
+  empty`, else the real `.av3-kpi-rail`. `empty` defaults `true` so `loading`
+  alone gates — right for a config object that starts `{}`/`null`; a bare
+  `<KpiRail>` with no props just renders the rail, for tiles fed by synchronous
+  data (Expansion, Soc2). Dashboard's executive rail passes its own
+  `execLoading && !exec`. Equally valid: the whole-page skeleton pages
+  (Calculator, Currency, Payments, Permissions, QrOrdering, Regulatory,
+  Integrations, Languages) early-return `<SkeletonPage … />` before the rail
+  renders. **Guardrail:** `tests/kpi-rail-guard.test.ts` fails CI if any admin
+  page hand-rolls a bare `.av3-kpi-rail` without one of these gates — reach for
+  `<KpiRail>`, don't re-derive the ternary. (`SkeletonKanban` still ships for the
+  CORE KDS/POS surfaces; the admin Orders history is a plain `SkeletonRows`
+  table now.)
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
   (text caps at ~300px for readability).
