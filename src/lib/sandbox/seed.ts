@@ -23,7 +23,6 @@ import {
   addPointAdjustment,
   saveStaff,
   bulkAppendShifts,
-  recordTimePunch,
   saveSupplier,
   savePurchaseOrder,
   bulkAppendStockMovements,
@@ -40,8 +39,10 @@ import {
   getIngredients,
   fireKdsTickets,
   recomputeCustomerRollupsBulk,
-  appendAgentEvent,
+  bulkAppendAgentEvents,
+  bulkAppendTimePunches,
 } from "@/lib/store";
+import { runWithoutLocks } from "@/lib/locks";
 import { createBooking } from "@/lib/booking";
 import { HACCP_SENSORS, rangeForSensor } from "@/lib/haccp";
 import type { WasteReason } from "@/lib/store";
@@ -464,21 +465,23 @@ async function seedActiveDataset(progress?: SeedProgress): Promise<void> {
   // day-over-day change has a denominator. All offsets stay inside the 30d window.
   tick("Seeding AI agent activity");
   const aiPersonas = ["coo", "cfo", "cmo", "ceo"];
+  const agentEvents: Parameters<typeof bulkAppendAgentEvents>[0] = [];
   for (let d = 1; d <= 14; d++) {
-    await appendAgentEvent({
+    agentEvents.push({
       agentId: "ceo", type: "schedule", actor: "meeting:daily",
       summary: "Daily boardroom briefing — chain numbers reviewed",
       costGrosze: 250 + (d % 4) * 15, ok: true, at: iso(days(d) + hours(3)),
     });
     if (d % 2 === 1 || d <= 2) {
       const a = aiPersonas[d % aiPersonas.length];
-      await appendAgentEvent({
+      agentEvents.push({
         agentId: a, type: "run", actor: "schedule:cron",
         summary: `${a.toUpperCase()} scheduled self-review`,
         costGrosze: 100 + (d % 3) * 20, ok: true, at: iso(days(d) + hours(6)),
       });
     }
   }
+  await bulkAppendAgentEvents(agentEvents);
 
   // Suppliers (chain-wide) + a couple of POs.
   tick("Adding suppliers");
@@ -686,10 +689,12 @@ async function seedActiveDataset(progress?: SeedProgress): Promise<void> {
   await bulkAppendWasteLogs(allWasteLogs);
   // Time-punches for recently-worked shifts (small volume, after the rota lands).
   tick(`Recording ${punches.length} time punches`);
+  const punchInputs: Parameters<typeof bulkAppendTimePunches>[0] = [];
   for (const p of punches) {
-    await recordTimePunch({ staffId: p.staffId, type: "clock-in", occurredAt: p.startAt, shiftId: p.shiftId });
-    if (p.done) await recordTimePunch({ staffId: p.staffId, type: "clock-out", occurredAt: p.endAt, shiftId: p.shiftId });
+    punchInputs.push({ staffId: p.staffId, type: "clock-in", occurredAt: p.startAt, shiftId: p.shiftId });
+    if (p.done) punchInputs.push({ staffId: p.staffId, type: "clock-out", occurredAt: p.endAt, shiftId: p.shiftId });
   }
+  await bulkAppendTimePunches(punchInputs);
 
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free. In
@@ -711,6 +716,9 @@ export async function seedSimulation(progress?: SeedProgress): Promise<void> {
   if ((await getActiveDataMode()) !== "simulation") {
     throw new Error("seedSimulation refused: simulation mode is not active");
   }
-  // Bind the id prefix to this call's async context for the whole seed run.
-  return idpStorage.run("sim", () => seedActiveDataset(progress));
+  // Bind the id prefix to this call's async context for the whole seed run, and
+  // run the body lock-free: the seed is the only writer to the freshly-wiped sim
+  // namespace and serializes itself, so the per-write distributed lock is pure
+  // round-trip overhead that pushed the deep seed past the serverless timeout.
+  return idpStorage.run("sim", () => runWithoutLocks(() => seedActiveDataset(progress)));
 }

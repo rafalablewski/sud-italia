@@ -1,6 +1,22 @@
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import { logger } from "@/lib/logger";
 import { incrCounter, recordHistogram } from "@/lib/metrics";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+/**
+ * Opt-out for single-owner, strictly-sequential batch jobs (the simulation
+ * seeder). Such a job has no concurrent writer to serialize against — its own
+ * `await` chain already orders every write — so the per-write distributed lock
+ * is pure overhead: two extra Upstash round-trips on top of each Neon
+ * read+write. Across the ~200 writes a deep seed makes, that overhead is enough
+ * to push the request past the serverless time budget. Run the job inside
+ * runWithoutLocks() and withDistributedLock becomes a passthrough for its async
+ * context only — other requests still lock normally.
+ */
+const lockBypass = new AsyncLocalStorage<boolean>();
+export function runWithoutLocks<T>(fn: () => Promise<T>): Promise<T> {
+  return lockBypass.run(true, fn);
+}
 
 /**
  * Distributed mutex for read-modify-write sections that must serialize across
@@ -124,6 +140,11 @@ export async function withDistributedLock<T>(
   fn: () => Promise<T>,
   opts: LockOptions = {},
 ): Promise<T> {
+  // Seed-style batch job in this async context → skip the mutex entirely (see
+  // runWithoutLocks). The job serializes its own writes, so there is nothing to
+  // contend with, and the saved round-trips are what keep it under the timeout.
+  if (lockBypass.getStore()) return fn();
+
   const ttlMs = opts.ttlMs ?? DEFAULT_TTL_MS;
   const acquireTimeoutMs = opts.acquireTimeoutMs ?? DEFAULT_ACQUIRE_TIMEOUT_MS;
   const retryDelayMs = opts.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;

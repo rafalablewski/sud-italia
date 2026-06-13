@@ -8172,6 +8172,30 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
   });
 }
 
+/** Append many punches in ONE locked read-modify-write, mirroring recordTimePunch
+ *  per row. The seeder lands dozens of rota punches at once; a per-punch loop was
+ *  dozens of sequential round-trips that helped blow the serverless budget. */
+export async function bulkAppendTimePunches(
+  inputs: (Omit<TimePunch, "id" | "occurredAt"> & { occurredAt?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  const punches: TimePunch[] = inputs.map((input, i) => ({
+    id: `pn-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    staffId: input.staffId,
+    type: input.type,
+    shiftId: input.shiftId,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+  }));
+  await withLock("time-punches.json", async () => {
+    const list = await readJSON<TimePunch[]>("time-punches.json", []);
+    list.push(...punches);
+    await writeJSON("time-punches.json", list);
+  });
+  const db = await getDomainDb();
+  if (db) for (const p of punches) await dualWriteTimePunch(p);
+}
+
 /**
  * Compute realised labour cost (grosze) over an arbitrary window by pairing
  * clock-in / clock-out punches per staff member and multiplying worked hours
@@ -9107,6 +9131,33 @@ export async function appendAgentEvent(
     await writeJSON("agent-events.json", trimmed);
   });
   return event;
+}
+
+/** Append many agent events in ONE locked read-modify-write, mirroring
+ *  appendAgentEvent per row. The seeder lays down ~3 weeks of AI activity; a
+ *  per-event loop was ~23 sequential round-trips inside the deep seed. */
+export async function bulkAppendAgentEvents(
+  inputs: (Omit<AgentEvent, "id" | "at"> & { at?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  const events: AgentEvent[] = inputs.map((input, i) => ({
+    id: `ae-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    agentId: input.agentId,
+    type: input.type,
+    summary: input.summary,
+    detail: input.detail,
+    costGrosze: input.costGrosze,
+    ok: input.ok,
+    actor: input.actor,
+    at: input.at ?? new Date().toISOString(),
+  }));
+  await withLock("agent-events.json", async () => {
+    const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+    list.push(...events);
+    const trimmed = list.length > AGENT_EVENTS_MAX ? list.slice(list.length - AGENT_EVENTS_MAX) : list;
+    await writeJSON("agent-events.json", trimmed);
+  });
 }
 
 export async function listAgentEvents(opts?: { agentId?: string; limit?: number }): Promise<AgentEvent[]> {
