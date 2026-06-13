@@ -13,6 +13,7 @@ interface Layout {
 interface Settings {
   deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; processorFee?: { pct: number; fixedGrosze: number }; businessPhone?: string; businessEmail?: string;
   operations?: { labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number }; kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number }; inventory?: { fallbackLeadDays?: number; usageWindowDays?: number } };
+  legalEntity?: { nip?: string; name?: string; regon?: string; email?: string };
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -68,6 +69,7 @@ export function SettingsV3() {
   const [bizName, setBizName] = useState("");
   const [tips, setTips] = useState("");
   const [feePct, setFeePct] = useState(""); const [feeFixed, setFeeFixed] = useState("");
+  const [legal, setLegal] = useState({ nip: "", name: "", regon: "", email: "" });
   const [savingOps, setSavingOps] = useState(false);
   const [ops, setOps] = useState({ coversHr: "", splhLow: "", splhHigh: "", minPrep: "", expoBuf: "", leadDays: "", usageDays: "" });
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
@@ -85,6 +87,7 @@ export function SettingsV3() {
     setBizName(d.businessName ?? "");
     setTips((d.tipPresets ?? [0.1, 0.15, 0.2]).map((p) => Math.round(p * 100)).join(", "));
     setFeePct(String((d.processorFee?.pct ?? 0.014) * 100)); setFeeFixed(zl(d.processorFee?.fixedGrosze ?? 40));
+    setLegal({ nip: d.legalEntity?.nip ?? "", name: d.legalEntity?.name ?? "", regon: d.legalEntity?.regon ?? "", email: d.legalEntity?.email ?? "" });
     const op = d.operations;
     setOps({
       coversHr: String(op?.labor?.coversPerStaffHour ?? 3),
@@ -136,6 +139,7 @@ export function SettingsV3() {
         deliveryFee: Math.round((Number(fee) || 0) * 100), minOrderAmount: Math.round((Number(minOrder) || 0) * 100),
         tipPresets,
         processorFee: { pct: (Number(feePct) || 0) / 100, fixedGrosze: Math.round((Number(feeFixed) || 0) * 100) },
+        legalEntity: { nip: legal.nip.trim(), name: legal.name.trim(), regon: legal.regon.trim(), email: legal.email.trim() },
         socialLinks: { instagram: ig.trim(), facebook: fb.trim(), tiktok: tt.trim() },
       });
     } finally { setSavingBiz(false); }
@@ -226,10 +230,17 @@ export function SettingsV3() {
               <label className="av3-field"><span className="av3-field-label">Delivery fee (zł)</span><input className="av3-input" type="number" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Min order (zł)</span><input className="av3-input" type="number" step="0.01" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} /></label>
             </div>
-            <div className="av3-formrow">
+            <div className="av3-formrow" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Instagram</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={ig} onChange={(e) => setIg(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Facebook</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={fb} onChange={(e) => setFb(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">TikTok</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={tt} onChange={(e) => setTt(e.target.value)} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Legal entity — used on JPK_V7M tax filings (leave blank to use the JPK_* env vars)</div>
+            <div className="av3-formrow av3-formrow-4">
+              <label className="av3-field"><span className="av3-field-label">Legal name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={legal.name} onChange={(e) => setLegal((l) => ({ ...l, name: e.target.value }))} placeholder="Ottaviano Sp. z o.o." /></label>
+              <label className="av3-field"><span className="av3-field-label">NIP</span><input className="av3-input" style={{ fontFamily: "var(--av3-mono)" }} value={legal.nip} onChange={(e) => setLegal((l) => ({ ...l, nip: e.target.value }))} placeholder="1234567890" /></label>
+              <label className="av3-field"><span className="av3-field-label">REGON</span><input className="av3-input" style={{ fontFamily: "var(--av3-mono)" }} value={legal.regon} onChange={(e) => setLegal((l) => ({ ...l, regon: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Tax email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={legal.email} onChange={(e) => setLegal((l) => ({ ...l, email: e.target.value }))} /></label>
             </div>
           </CardBody>
         </Card>

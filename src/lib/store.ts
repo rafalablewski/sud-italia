@@ -3138,6 +3138,12 @@ export interface AppSettings {
     kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number };
     inventory?: { fallbackLeadDays?: number; usageWindowDays?: number };
   };
+  /** Registered legal entity for tax filings (JPK_V7M). Operator-set so the
+   *  NIP / legal name / REGON aren't stuck on `process.env.JPK_*` placeholders
+   *  (a filing with NIP=0000000000 is invalid). When a field is blank the
+   *  filing falls back to the env var, then the placeholder. Admin →
+   *  Settings → General → Legal entity. */
+  legalEntity?: { nip?: string; name?: string; regon?: string; email?: string };
   /** Operator-managed social handles, rendered in the public footer.
    *  Empty string = the corresponding link is hidden. Editable from
    *  /admin/settings → General. */

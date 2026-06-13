@@ -68,12 +68,15 @@ interface JpkSettings {
   email?: string;
 }
 
-function loadSettings(): JpkSettings {
+function loadSettings(legalEntity?: { nip?: string; name?: string; regon?: string; email?: string }): JpkSettings {
+  // Operator-set legal entity (admin) wins; env is the deploy bootstrap; the
+  // literal placeholder is the last resort (and signals an unconfigured filing).
+  const trim = (v?: string) => (v && v.trim() !== "" ? v.trim() : undefined);
   return {
-    nip: process.env.JPK_NIP || "0000000000",
-    name: process.env.JPK_NAME || "OTTAVIANO SP. Z O.O. (placeholder)",
-    regon: process.env.JPK_REGON,
-    email: process.env.JPK_EMAIL,
+    nip: trim(legalEntity?.nip) || process.env.JPK_NIP || "0000000000",
+    name: trim(legalEntity?.name) || process.env.JPK_NAME || "OTTAVIANO SP. Z O.O. (placeholder)",
+    regon: trim(legalEntity?.regon) || process.env.JPK_REGON,
+    email: trim(legalEntity?.email) || process.env.JPK_EMAIL,
   };
 }
 
@@ -87,8 +90,9 @@ export async function buildJpkV7m(
   toIso: string,
   locationSlug?: string,
 ): Promise<string> {
-  const settings = loadSettings();
-  const compliance = (await getSettings()).compliance;
+  const appSettings = await getSettings();
+  const settings = loadSettings(appSettings.legalEntity);
+  const compliance = appSettings.compliance;
   const orders = (await getOrders(locationSlug)).filter(
     (o) => o.status !== "pending" && o.status !== "cancelled",
   );
