@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8111,17 +8111,21 @@ export async function getLaborCostInRange(
   };
 }
 
-// --- Truck operations ---
+// --- Events & bookings (private bookings, catering, special events + run sheets) ---
+// The kv keys stay "truck-events.json" / "truck-routes.json" on purpose: they
+// back already-persisted operator data (and the sim namespace), so renaming the
+// storage key would orphan it. The feature, types and APIs are "events" /
+// "run sheets" everywhere an operator or developer reads them.
 
-export async function getTruckRoutes(locationSlug?: string): Promise<TruckRoute[]> {
-  const all = await readJSON<TruckRoute[]>("truck-routes.json", []);
+export async function getRunSheets(locationSlug?: string): Promise<EventRunSheet[]> {
+  const all = await readJSON<EventRunSheet[]>("truck-routes.json", []);
   return locationSlug ? all.filter((r) => r.locationSlug === locationSlug) : all;
 }
 
-export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckRoute> {
+export async function saveRunSheet(input: Omit<EventRunSheet, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<EventRunSheet> {
   return withLock("truck-routes.json", async () => {
-    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
-    const route: TruckRoute = {
+    const list = await readJSON<EventRunSheet[]>("truck-routes.json", []);
+    const route: EventRunSheet = {
       id: input.id || `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       name: input.name,
       locationSlug: input.locationSlug,
@@ -8137,9 +8141,9 @@ export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt">
   });
 }
 
-export async function deleteTruckRoute(id: string): Promise<boolean> {
+export async function deleteRunSheet(id: string): Promise<boolean> {
   return withLock("truck-routes.json", async () => {
-    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const list = await readJSON<EventRunSheet[]>("truck-routes.json", []);
     const filtered = list.filter((r) => r.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("truck-routes.json", filtered);
@@ -8147,12 +8151,12 @@ export async function deleteTruckRoute(id: string): Promise<boolean> {
   });
 }
 
-export async function getTruckEvents(filters?: {
+export async function getEvents(filters?: {
   locationSlug?: string;
   from?: string;
   to?: string;
-}): Promise<TruckEvent[]> {
-  const all = await readJSON<TruckEvent[]>("truck-events.json", []);
+}): Promise<BookingEvent[]> {
+  const all = await readJSON<BookingEvent[]>("truck-events.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((e) => e.locationSlug === filters.locationSlug);
   if (filters?.from) list = list.filter((e) => e.date >= filters.from!);
@@ -8160,10 +8164,10 @@ export async function getTruckEvents(filters?: {
   return list.slice().sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckEvent> {
+export async function saveEvent(input: Omit<BookingEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<BookingEvent> {
   return withLock("truck-events.json", async () => {
-    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
-    const event: TruckEvent = {
+    const list = await readJSON<BookingEvent[]>("truck-events.json", []);
+    const event: BookingEvent = {
       id: input.id || `te-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       routeId: input.routeId,
       locationSlug: input.locationSlug,
@@ -8184,9 +8188,9 @@ export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt">
   });
 }
 
-export async function deleteTruckEvent(id: string): Promise<boolean> {
+export async function deleteEvent(id: string): Promise<boolean> {
   return withLock("truck-events.json", async () => {
-    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const list = await readJSON<BookingEvent[]>("truck-events.json", []);
     const filtered = list.filter((e) => e.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("truck-events.json", filtered);

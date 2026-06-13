@@ -12,7 +12,7 @@ the events & bookings run-sheet planner.
 | `/admin/upsell`               | `src/components/admin/AdminUpsell.tsx`            | manager+  |
 | `/admin/crosssell`            | `src/components/admin/AdminCrossSell.tsx`         | manager+  |
 | `/admin/scheduled-bundles`    | `src/components/admin/AdminScheduledBundles.tsx`  | manager+  |
-| `/admin/truck`                | `src/admin-v3/TruckV3.tsx`                        | manager+  |
+| `/admin/events`                | `src/admin-v3/EventsV3.tsx`                        | manager+  |
 | `/admin/integrations`         | `src/admin-v3/IntegrationsV3.tsx`                 | manager+  |
 
 ## Common rules across the section
@@ -179,7 +179,7 @@ Time-windowed bundle activation — "Lunch combo, weekdays 11–14".
 - **Expiry handling** — schedules past their end date show as
   `expired` with a one-click `Extend` action.
 
-## Events & bookings — `/admin/truck`
+## Events & bookings — `/admin/events`
 
 Private bookings, catering & special events, plus reusable **run sheets**
 — timed segments for an event (setup, service, teardown).

@@ -205,7 +205,7 @@ For each, the mobile build uses a 60-line windowed renderer (`mobile/useVirtual.
 | **Push** | Browser Push API → owner gets a "Refund requested" / "Cash variance > 50 zł" / "Slot full" tap-able. Out of scope this PR; design accommodates it. |
 | **Voice** | Web Speech API → "Show me yesterday's revenue", "Comp the last order for table 5". Capability-detected. |
 | **Barcode** | `BarcodeDetector` → tap "Receive" → camera viewfinder → ingredient pre-populated. Inventory page. |
-| **GPS** | Driver-mode (`/admin/truck`) → real-time location updates from driver phones to ops dashboards. |
+| **GPS** | Driver-mode (`/admin/events`) → real-time location updates from driver phones to ops dashboards. |
 | **Haptics** | `navigator.vibrate` → swipe-commit feedback, KDS bump, FAB tap. |
 | **Camera** | Photo proof on delivery completion (driver app); receipt photo on cash drop (cash sessions). |
 | **Offline KDS queue** | Local queue of bump events when network drops, replayed on reconnect. Critical in basement/back-of-house wifi blackspots. |

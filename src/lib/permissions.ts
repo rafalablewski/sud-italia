@@ -142,8 +142,8 @@ export const PERMISSION_GROUPS = [
       { key: "crosssell.edit", label: "Manage cross-sell", description: "Edit cross-sell suggestions." },
       { key: "bundles.view", label: "View bundles", description: "See scheduled bundle deals." },
       { key: "bundles.edit", label: "Manage bundles", description: "Create and schedule bundle deals." },
-      { key: "truck.view", label: "View truck ops", description: "See truck routes and events." },
-      { key: "truck.edit", label: "Manage truck ops", description: "Edit truck routes and schedules." },
+      { key: "truck.view", label: "View events & bookings", description: "See event bookings and run sheets." },
+      { key: "truck.edit", label: "Manage events & bookings", description: "Create and edit event bookings and run sheets." },
       { key: "integrations.view", label: "Integrations", description: "See and configure third-party integrations." },
     ],
   },
@@ -362,7 +362,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/upsell")) return "upsell.view";
   if (is("/admin/crosssell")) return "crosssell.view";
   if (is("/admin/scheduled-bundles")) return "bundles.view";
-  if (is("/admin/truck")) return "truck.view";
+  if (is("/admin/events")) return "truck.view";
   if (is("/admin/integrations")) return "integrations.view";
   if (is("/admin/locations")) return "locations.view";
   if (is("/admin/expansion")) return "expansion.view";
@@ -482,7 +482,7 @@ export function permissionForApiPath(
       return write ? "crosssell.edit" : "crosssell.view";
     case "scheduled-bundles":
       return write ? "bundles.edit" : "bundles.view";
-    case "truck":
+    case "events":
       return write ? "truck.edit" : "truck.view";
     case "locations":
       return write ? "locations.manage" : "locations.view";

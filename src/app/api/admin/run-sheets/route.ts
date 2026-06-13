@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { hasLocationAccess } from "@/lib/admin-auth";
-import { deleteTruckRoute, getTruckRoutes, saveTruckRoute } from "@/lib/store";
+import { deleteRunSheet, getRunSheets, saveRunSheet } from "@/lib/store";
 
 export const GET = withAdmin(
   { locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    return NextResponse.json(await getTruckRoutes(locationSlug ?? undefined));
+    return NextResponse.json(await getRunSheets(locationSlug ?? undefined));
   },
 );
 
@@ -22,7 +22,7 @@ async function upsertRoute(req: NextRequest) {
         { status: 403 },
       );
     }
-    const saved = await saveTruckRoute({
+    const saved = await saveRunSheet({
       id: body.id,
       name: body.name.trim(),
       locationSlug: body.locationSlug,
@@ -50,7 +50,7 @@ export const DELETE = withAdmin(
   async (req) => {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const ok = await deleteTruckRoute(id);
+    const ok = await deleteRunSheet(id);
     return NextResponse.json({ ok });
   },
 );

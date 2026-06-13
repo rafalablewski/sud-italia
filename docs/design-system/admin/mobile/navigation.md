@@ -325,7 +325,7 @@ Per-page mapping of how each route is reached on mobile:
 | `/admin/upsell` | More → Growth → Upsell |
 | `/admin/crosssell` | More → Growth → Cross-sell |
 | `/admin/scheduled-bundles` | More → Growth → Scheduled bundles |
-| `/admin/truck` | More → Growth → Events & bookings |
+| `/admin/events` | More → Growth → Events & bookings |
 | `/admin/locations` | More → Intelligence → Multi-location |
 | `/admin/locations/manage` | More → Intelligence → Manage locations |
 | `/admin/reports/cohort` | More → Intelligence → Cohort |

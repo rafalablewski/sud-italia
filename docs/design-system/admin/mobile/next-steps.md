@@ -51,7 +51,7 @@
 
 | # | Item | Status |
 |---|---|:---:|
-| 2.1 | Driver app surface (`/admin/truck` mobile) | 🟡 list/route browse shipped (`MobileTruck`); real-time GPS push from driver phones is a separate driver-app project |
+| 2.1 | Driver app surface (`/admin/events` mobile) | 🟡 list/route browse shipped (`MobileTruck`); real-time GPS push from driver phones is a separate driver-app project |
 | 2.2 | Voice-driven mutations beyond palette search | ⏳ palette has voice input; voice-triggered mutations require an intent parser + confirmation UI — backlog |
 | 2.3 | Photo proof on delivery completion | ⏳ requires driver app + S3 upload pipeline |
 | 2.4 | Drag-drop bundle editor on tablet | ⏳ explicit desktop-only per audit; tablet would need a touch-DnD rewrite |

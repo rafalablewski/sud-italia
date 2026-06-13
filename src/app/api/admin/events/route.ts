@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { hasLocationAccess } from "@/lib/admin-auth";
-import { deleteTruckEvent, getTruckEvents, saveTruckEvent } from "@/lib/store";
-import type { TruckEventStatus } from "@/data/types";
+import { deleteEvent, getEvents, saveEvent } from "@/lib/store";
+import type { BookingEventStatus } from "@/data/types";
 
-const VALID_STATUS: TruckEventStatus[] = ["scheduled", "live", "done", "cancelled"];
+const VALID_STATUS: BookingEventStatus[] = ["scheduled", "live", "done", "cancelled"];
 
 export const GET = withAdmin(
   { locationParam: "location" },
@@ -12,7 +12,7 @@ export const GET = withAdmin(
     const from = req.nextUrl.searchParams.get("from") || undefined;
     const to = req.nextUrl.searchParams.get("to") || undefined;
     return NextResponse.json(
-      await getTruckEvents({
+      await getEvents({
         locationSlug: locationSlug ?? undefined,
         from,
         to,
@@ -33,8 +33,8 @@ async function upsertEvent(req: NextRequest) {
         { status: 403 },
       );
     }
-    const status: TruckEventStatus = VALID_STATUS.includes(body.status) ? body.status : "scheduled";
-    const saved = await saveTruckEvent({
+    const status: BookingEventStatus = VALID_STATUS.includes(body.status) ? body.status : "scheduled";
+    const saved = await saveEvent({
       id: body.id,
       routeId: body.routeId || undefined,
       locationSlug: body.locationSlug,
@@ -67,7 +67,7 @@ export const DELETE = withAdmin(
   async (req) => {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const ok = await deleteTruckEvent(id);
+    const ok = await deleteEvent(id);
     return NextResponse.json({ ok });
   },
 );

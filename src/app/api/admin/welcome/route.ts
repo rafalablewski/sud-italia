@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import {
-  getSummary, getInsights, getOpsGoals, getTruckEvents, getSurveyResponses,
+  getSummary, getInsights, getOpsGoals, getEvents, getSurveyResponses,
   computeHourlyThroughput, computeCohortSnapshot, getAiSpendBriefGrosze,
 } from "@/lib/store";
 import { computeLaborEfficiencyDaily } from "@/lib/labor-efficiency";
@@ -37,7 +37,7 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
     computeLaborEfficiencyDaily().catch(() => null),
     computeHourlyThroughput(30).catch(() => []),
     computeCohortSnapshot(30).catch(() => null),
-    getTruckEvents({ from: today, to: in14 }).catch(() => []),
+    getEvents({ from: today, to: in14 }).catch(() => []),
     getSurveyResponses().catch(() => []),
     getAiSpendBriefGrosze().catch(() => null),
   ]);

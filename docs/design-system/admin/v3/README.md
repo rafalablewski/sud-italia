@@ -917,8 +917,8 @@ auth canvas's signature lighting and the sign-in lockup:
   **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
   the full standing-cart line items + the status actions, so the operator can
   see *what's in* a recurring order, not just its item count. Events & bookings
-  (`/admin/truck`): events + run-sheets CRUD (incl. segment editor) over
-  `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
+  (`/admin/events`): events + run-sheets CRUD (incl. segment editor) over
+  `/api/admin/events` + `/api/admin/run-sheets`, plus the **KPI rail**
   (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
   five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table
   view toggle** for events with a default **Board** of event cards (status dot,

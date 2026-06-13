@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getTruckEvents } from "@/lib/store";
+import { getEvents } from "@/lib/store";
 import { publishFix, readFix, type LiveLocationFix } from "@/lib/truck-live-location";
 
 /**
@@ -33,7 +33,7 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
       return NextResponse.json({ error: "Invalid lat/lng" }, { status: 400 });
     }
 
-    const events = await getTruckEvents();
+    const events = await getEvents();
     const event = events.find((e) => e.id === id);
     if (!event) {
       return NextResponse.json({ error: "Truck event not found" }, { status: 404 });

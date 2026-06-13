@@ -830,7 +830,7 @@ export interface TimePunch {
 
 // --- Truck operations ---
 
-export interface TruckStop {
+export interface RunSheetSegment {
   name: string;
   /** Optional decimal lat/lng for map placement. */
   lat?: number;
@@ -839,18 +839,18 @@ export interface TruckStop {
   endTime?: string;
 }
 
-export interface TruckRoute {
+export interface EventRunSheet {
   id: string;
   name: string;
   locationSlug: string;
   description?: string;
-  stops: TruckStop[];
+  stops: RunSheetSegment[];
   createdAt: string;
 }
 
-export type TruckEventStatus = "scheduled" | "live" | "done" | "cancelled";
+export type BookingEventStatus = "scheduled" | "live" | "done" | "cancelled";
 
-export interface TruckEvent {
+export interface BookingEvent {
   id: string;
   routeId?: string;
   locationSlug: string;
@@ -861,7 +861,7 @@ export interface TruckEvent {
   actualOrders?: number;
   /** Free-form notes (weather, road closures, etc). */
   notes?: string;
-  status: TruckEventStatus;
+  status: BookingEventStatus;
   createdAt: string;
 }
 
