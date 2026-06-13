@@ -104,10 +104,11 @@ export function SettingsV3() {
     } catch { setSandboxBusy(null); }
   };
 
-  // Simulation mode mirrors sandbox but writes to an isolated, initially-empty
-  // `sim:` namespace — same whole-app reload so banner + every surface refresh.
-  const [simBusy, setSimBusy] = useState<null | "toggle" | "wipe">(null);
-  const simCall = async (kind: "toggle" | "wipe", body: Record<string, unknown>) => {
+  // Simulation mode mirrors sandbox but writes to an isolated `sim:` namespace
+  // (seeded with the same full CORE picture on first enable) — same whole-app
+  // reload so banner + every surface refresh.
+  const [simBusy, setSimBusy] = useState<null | "toggle" | "reset" | "wipe">(null);
+  const simCall = async (kind: "toggle" | "reset" | "wipe", body: Record<string, unknown>) => {
     setSimBusy(kind);
     try {
       const res = await fetch("/api/admin/simulation-mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -270,7 +271,7 @@ export function SettingsV3() {
                     {s.simulationModeEnabled && <Badge tone="info" dot>ON · your test data</Badge>}
                   </div>
                   <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 4 }}>
-                    A pre-launch <strong>dry-run</strong>. Like Sandbox it flips the <strong>whole business</strong> — admin and storefront — onto an isolated dataset, real data untouched. But it starts <strong>completely empty</strong>: you push your own test orders, waste, costs, customers and bookings by hand, exactly as you would once open, to rehearse the full flow before go-live. Your <strong>AI agents keep working</strong> — they analyse this hand-entered data (daily briefings, customer segments, summaries) so they learn and you can check their output. No real payments, SMS, WhatsApp, billing or backups fire. Switch it off and every test row disappears instantly (it&apos;s kept, so you can switch back on and continue). Enabling it turns Sandbox mode off.
+                    A pre-launch <strong>dry-run</strong>. Like Sandbox it flips the <strong>whole business</strong> — admin and storefront — onto an isolated dataset, real data untouched. First enable <strong>seeds a realistic, deep CORE picture</strong> — ~10 months of trading (orders, KDS, tables, slots, staff, schedule, cash, bookings, loyalty) with lunch/dinner peaks and a real customer base, so Reports, Cohorts, Dayparts, Hourly and Menu engineering all show genuine signal and every operational screen is testable straight away; from there you push your own test orders, waste and costs by hand to rehearse the flow before go-live. Your <strong>AI agents keep working</strong> — they analyse this data (daily briefings, customer segments, summaries) so they learn and you can check their output. No real payments, SMS, WhatsApp, billing or backups fire. Switch it off and every test row disappears instantly (it&apos;s kept, so you can switch back on and continue). Enabling it turns Sandbox mode off.
                   </div>
                 </div>
                 <Switch
@@ -280,13 +281,17 @@ export function SettingsV3() {
                   onChange={() => simCall("toggle", { enabled: !s.simulationModeEnabled })}
                 />
               </div>
-              {simBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… the page will reload.</div>}
+              {simBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… seeding test data on first enable. The page will reload.</div>}
               {s.simulationModeEnabled && (
-                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                  <Button variant="secondary" size="sm" loading={simBusy === "wipe"} onClick={() => simCall("wipe", { action: "wipe" })}>
-                    Wipe simulation data
+                <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                  <Button variant="secondary" size="sm" loading={simBusy === "reset"} onClick={() => simCall("reset", { action: "reset" })}>
+                    Reset &amp; re-seed
                   </Button>
-                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Clear every test row and start the dry-run from scratch.</span>
+                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Wipe the test dataset and re-seed a clean dry-run.</span>
+                  <Button variant="secondary" size="sm" loading={simBusy === "wipe"} onClick={() => simCall("wipe", { action: "wipe" })}>
+                    Wipe to empty
+                  </Button>
+                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Clear every test row for hand-entry from scratch.</span>
                 </div>
               )}
             </CardBody>

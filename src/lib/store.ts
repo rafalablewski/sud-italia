@@ -131,10 +131,14 @@ async function ensureDataDir() {
 //   ""          live / real operations
 //   "sandbox:"  Sandbox mode — a rich demo dataset auto-seeded by seedSandbox()
 //               so every screen shows a full picture for exploring/demoing.
-//   "sim:"      Simulation mode — starts EMPTY; the owner pushes their own test
-//               orders/waste/costs/customers by hand as a dry-run before opening.
-//               Toggling it off hides every test row instantly (data is kept so
-//               you can resume; "wipe" clears it).
+//   "sim:"      Simulation mode — seeded on first enable (seedSimulation) with a
+//               REALISTIC, DEEP version of the sandbox CORE picture (~10 months of
+//               weekend-weighted, daypart-curved trading over a large mostly-
+//               one-time guest base) so reports/cohorts/dayparts/menu-eng have
+//               genuine signal for a pre-launch dry-run; the owner then layers
+//               their own test orders/waste/costs on top. Toggling it off hides
+//               every test row instantly (data is kept so you can resume; "reset"
+//               re-seeds a clean run, "wipe" clears it to empty for hand-entry).
 //
 // Both modes suppress real-world side-effects (payments, SMS, WhatsApp, cron) —
 // see isSandboxActive(). Driven by the `sandboxModeEnabled` / `simulationModeEnabled`
@@ -1569,6 +1573,40 @@ export async function createOrder(
     await consumeRecipeForOrder(order);
   })();
   return saved;
+}
+
+/**
+ * Bulk-append pre-built orders in ONE locked read-modify-write per location —
+ * the path the seeders (seedDataset) take so a deep dataset doesn't pay
+ * createOrder's per-insert O(N) blob rewrite (which, in a test-mode namespace
+ * on Neon, is a network round-trip each and would blow the seed past the
+ * serverless budget). No per-order cascades: the seeder fires KDS tickets and
+ * rebuilds CRM rollups itself, once, after the orders land. Only ever called
+ * while a test mode is active (getDomainDb() is null then, so the kv path runs);
+ * the DB branch is a safety net that mirrors createOrder's primary path.
+ */
+export async function bulkAppendOrders(orders: Order[]): Promise<void> {
+  if (orders.length === 0) return;
+  const db = await getDomainDb();
+  if (db) {
+    for (const o of orders) await dualWriteOrder(o);
+    return;
+  }
+  // Group by location to honour the per-location lock scope, then one
+  // read-modify-write per location instead of one per order.
+  const byLoc = new Map<string, Order[]>();
+  for (const o of orders) {
+    const arr = byLoc.get(o.locationSlug);
+    if (arr) arr.push(o);
+    else byLoc.set(o.locationSlug, [o]);
+  }
+  for (const [loc, list] of byLoc) {
+    await withLockScoped("orders", loc, async () => {
+      const all = await readJSON<Order[]>("orders.json", []);
+      all.push(...list);
+      await writeJSON("orders.json", all);
+    });
+  }
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
@@ -3115,11 +3153,18 @@ export interface AppSettings {
    *  Distinct from simulationEnabled (which only gates the Calculator).
    *  Toggled owner-only via /api/admin/sandbox. */
   sandboxModeEnabled?: boolean;
-  /** Whole-business simulation: like sandbox but starts EMPTY — the owner pushes
-   *  their own test orders/waste/costs/customers by hand as a pre-launch dry-run,
-   *  isolated behind a `sim:` namespace. Toggling off hides every test row. Mutually
-   *  exclusive with sandboxModeEnabled. Toggled owner-only via /api/admin/simulation. */
+  /** Whole-business simulation: like sandbox, seeded on first enable with a
+   *  realistic, deep CORE picture (~10 months of trading) as a pre-launch dry-run,
+   *  the owner then layers their own test orders/waste/costs on top — behind `sim:`.
+   *  Toggling off hides every test row. Mutually exclusive with sandboxModeEnabled.
+   *  Toggled owner-only via /api/admin/simulation-mode. */
   simulationModeEnabled?: boolean;
+  /** True once the simulation namespace has been seeded (or deliberately wiped
+   *  to empty for hand-entry). The seed-on-first-enable path checks this instead
+   *  of "are there 0 orders?", so a `wipe` to an empty dry-run is NOT re-seeded
+   *  on a later off→on toggle. "reset" re-seeds and keeps it true. Lives in
+   *  settings (a shared key) so wipeSimulationData() never clears it. */
+  simulationSeeded?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
