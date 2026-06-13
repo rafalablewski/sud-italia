@@ -16,13 +16,20 @@ import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limi
 
 /**
  * Per-user ceiling on admin API calls, applied by withAdmin to every wrapped
- * route. Generous enough that a dashboard firing a dozen fetches per page load
- * never trips it, low enough that a runaway script or stolen session is
- * throttled. Override with ADMIN_RATE_LIMIT_PER_MIN.
+ * route. Must clear the real fan-out of the operator surfaces: the Operator
+ * Terminal alone fires ~9 fetches every 30s poll, the Executive overview adds
+ * 4 more on each interaction, the Morning Brief another 4, plus the nav's
+ * notification poller — and operators routinely keep several of these open in
+ * separate tabs and hammer Refresh. The old 300/min ceiling (5 req/s) tripped
+ * under that ordinary load, and because a 429 made the client blank every card
+ * to 0, the whole board "twitched" to zero on the unlucky poll cycle. 1200/min
+ * (20 req/s) covers a handful of concurrent polling dashboards with burst
+ * headroom while still throttling a runaway script or stolen session, which
+ * sustains hundreds of req/s. Override with ADMIN_RATE_LIMIT_PER_MIN.
  */
 function adminRateLimitPerMin(): number {
   const raw = Number.parseInt(process.env.ADMIN_RATE_LIMIT_PER_MIN ?? "", 10);
-  return Number.isInteger(raw) && raw > 0 ? raw : 300;
+  return Number.isInteger(raw) && raw > 0 ? raw : 1200;
 }
 
 /**

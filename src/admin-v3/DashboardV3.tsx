@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Banknote,
@@ -25,6 +25,22 @@ import { useAdminLocationV3 } from "./LocationContext";
 import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, KpiRail, SkeletonPage, Table } from "./ui";
 
 // ── helpers ────────────────────────────────────────────────────────────────
+// Sentinel returned by okJson when a request did NOT yield a usable response
+// (HTTP error like a rate-limit 429, a transient 500, or a network/parse
+// failure). Callers compare against it to decide "skip this update" vs "apply
+// this response" — the distinction the old `r.ok ? json : null` collapsed,
+// which let a single failed poll blank the entire dashboard to 0.
+const FETCH_FAILED = Symbol("fetch-failed");
+async function okJson(url: string): Promise<unknown> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return FETCH_FAILED;
+    return await r.json();
+  } catch {
+    return FETCH_FAILED;
+  }
+}
+
 function zl(grosze: number): string {
   return `${Math.round(grosze / 100).toLocaleString("pl-PL")} zł`;
 }
@@ -155,6 +171,11 @@ export function DashboardV3() {
   const [goals, setGoals] = useState<OpsGoals | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Tracks whether the core summary has ever loaded. Used to drive a fast
+  // self-heal retry when the first poll(s) come back failed (e.g. a cold
+  // rate-limit window) instead of leaving the operator on 0s for a full 30s.
+  const loadedOnce = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // goal editor
   const [editingGoal, setEditingGoal] = useState(false);
@@ -174,15 +195,19 @@ export function DashboardV3() {
     const loc = location ? `&location=${location}` : "";
     try {
       const [cur, prevp, ins, insPrev] = await Promise.all([
-        fetch(`/api/admin/analytics?from=${from}&to=${to}${loc}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/analytics?from=${pFrom}&to=${pTo}${loc}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/insights?from=${pFrom}&to=${pTo}`).then((r) => (r.ok ? r.json() : null)),
+        okJson(`/api/admin/analytics?from=${from}&to=${to}${loc}`),
+        okJson(`/api/admin/analytics?from=${pFrom}&to=${pTo}${loc}`),
+        okJson(`/api/admin/insights?from=${from}&to=${to}`),
+        okJson(`/api/admin/insights?from=${pFrom}&to=${pTo}`),
       ]);
-      setExec(cur);
-      setExecPrev(prevp);
-      setExecIns(ins);
-      setExecInsPrev(insPrev);
+      // Only overwrite on a genuine response. A failed poll (rate-limit 429,
+      // transient 500, network blip) returns FETCH_FAILED, and clobbering the
+      // last-good value with that is what made the cards flash to 0 between
+      // 30s refresh cycles — keep showing the prior numbers instead.
+      if (cur !== FETCH_FAILED) setExec(cur as Summary | null);
+      if (prevp !== FETCH_FAILED) setExecPrev(prevp as Summary | null);
+      if (ins !== FETCH_FAILED) setExecIns(ins as Insights | null);
+      if (insPrev !== FETCH_FAILED) setExecInsPrev(insPrev as Insights | null);
     } catch (err) {
       console.error("Executive overview refresh failed:", err);
     } finally {
@@ -199,25 +224,37 @@ export function DashboardV3() {
     const locQ = location ? `?location=${location}` : "";
     try {
       const [a, b, ins, fl, lr, le, ord, nt, gl] = await Promise.all([
-        fetch(`/api/admin/analytics?from=${today}&to=${today}${loc}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/analytics?from=${yest}&to=${yest}${loc}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/insights?from=${today}&to=${today}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/kds/fleet`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/labor-ratio${locQ}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/labor-efficiency`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/admin/orders${locQ}`).then((r) => (r.ok ? r.json() : [])),
-        fetch(`/api/admin/notifications`).then((r) => (r.ok ? r.json() : [])),
-        fetch(`/api/admin/ops-goals`).then((r) => (r.ok ? r.json() : null)),
+        okJson(`/api/admin/analytics?from=${today}&to=${today}${loc}`),
+        okJson(`/api/admin/analytics?from=${yest}&to=${yest}${loc}`),
+        okJson(`/api/admin/insights?from=${today}&to=${today}`),
+        okJson(`/api/admin/kds/fleet`),
+        okJson(`/api/admin/labor-ratio${locQ}`),
+        okJson(`/api/admin/labor-efficiency`),
+        okJson(`/api/admin/orders${locQ}`),
+        okJson(`/api/admin/notifications`),
+        okJson(`/api/admin/ops-goals`),
       ]);
-      setSummary(a);
-      setPrev(b);
-      setInsights(ins);
-      setFleet(fl);
-      setLaborRatio(lr);
-      setLaborEff(le);
-      setOrders(Array.isArray(ord) ? ord : []);
-      setNotifs(Array.isArray(nt) ? nt : []);
-      setGoals(gl);
+      // A failed poll returns FETCH_FAILED — never let it overwrite the last
+      // good value, or the whole board flashes to 0 mid-shift the moment one
+      // 30s refresh cycle gets rate-limited / errors (see okJson). A real
+      // response (even an empty one) still updates as normal.
+      if (a !== FETCH_FAILED) setSummary(a as Summary | null);
+      if (b !== FETCH_FAILED) setPrev(b as Summary | null);
+      if (ins !== FETCH_FAILED) setInsights(ins as Insights | null);
+      if (fl !== FETCH_FAILED) setFleet(fl as Fleet | null);
+      if (lr !== FETCH_FAILED) setLaborRatio(lr as { ratio: number | null } | null);
+      if (le !== FETCH_FAILED) setLaborEff(le as LaborEff | null);
+      if (Array.isArray(ord)) setOrders(ord as OrderRow[]);
+      if (Array.isArray(nt)) setNotifs(nt as Notif[]);
+      if (gl !== FETCH_FAILED) setGoals(gl as OpsGoals | null);
+      if (a !== FETCH_FAILED) {
+        loadedOnce.current = true;
+      } else if (!loadedOnce.current) {
+        // First load(s) failed and we have nothing to show yet — retry soon
+        // rather than waiting out the full 30s poll interval.
+        if (retryTimer.current) clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(() => { void fetchAll(); }, 4000);
+      }
     } catch (err) {
       console.error("Operator Terminal refresh failed:", err);
     } finally {
@@ -230,7 +267,10 @@ export function DashboardV3() {
     setLoading(true);
     fetchAll();
     const t = setInterval(fetchAll, 30_000);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
   }, [fetchAll]);
 
   // ── derived ───────────────────────────────────────────────────────────────
