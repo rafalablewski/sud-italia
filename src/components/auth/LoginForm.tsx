@@ -129,7 +129,7 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
           <input
             id="login-email"
             type="email"
-            placeholder={isAdmin ? "shared owner session if blank" : "you@ottaviano.pl"}
+            placeholder={isAdmin ? "shared owner session if blank" : "you@email.com"}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
