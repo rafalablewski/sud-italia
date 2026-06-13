@@ -271,12 +271,16 @@ export function DashboardV3() {
   useEffect(() => {
     setLoading(true);
     fetchAll();
-    const t = setInterval(fetchAll, 30_000);
+    // Refresh the Executive overview on the same cadence as the rest of the
+    // board. Without this the exec rail only reloaded on mount / period change /
+    // manual Refresh, so a single bad load left it stranded (e.g. showing 0)
+    // while the polling sections moved on — a board that contradicts itself.
+    const t = setInterval(() => { fetchAll(); fetchExec(); }, 30_000);
     return () => {
       clearInterval(t);
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
-  }, [fetchAll]);
+  }, [fetchAll, fetchExec]);
 
   // ── derived ───────────────────────────────────────────────────────────────
   const scopeCity = location ? activeLocations.find((l) => l.slug === location)?.city ?? location : "All locations";
