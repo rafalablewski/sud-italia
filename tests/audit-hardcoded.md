@@ -21,6 +21,28 @@ Re-running the audit with a deeper look at modules underweighted in Phase 0 turn
 - **P1** — admin change requires a deploy; or a server route uses the seed where it should use the live store.
 - **P2** — cosmetic mismatch / DX papercut.
 
+## Phase 9 — third sweep (admin-v3 era)
+
+A fresh sweep over surfaces added/grown since the close-out (the `src/admin-v3/`
+suite, new routes + libs). New findings + their resolution:
+
+| # | area | symbol | file:line | should-be | sev | note |
+|---|------|--------|-----------|-----------|-----|------|
+| P9-1 | ~~Pricing~~ | ~~`minOrderAmount` never enforced~~ | ~~`createOrder.ts`~~ | hard-gated in createOrder (`below_min_order`) + exposed on `/api/settings/public` + cart soft-gate ("add X more") | ~~P0~~ | **DONE.** Dead admin setting — saved, enforced nowhere. Now end-to-end. |
+| P9-2 | ~~Referral~~ | ~~`REFEREE_DISCOUNT_GROSZE` / `REFERRER_REWARD_POINTS`~~ | ~~`referral-loop.ts:25-26`~~ | `getLoyaltySettings().referral.{refereeDiscountGrosze,referrerPoints,active}` | ~~P0~~ | **DONE.** Checkout discount, referrer award, `/api/referrals` policy + `/r/[code]` landing all read the setting + honour `active`. Consts kept as first-deploy fallback. |
+| P9-3 | ~~Fiscal~~ | ~~card fee `0.014+40` vs sim `0.019`~~ | ~~`reports/delivery/route.ts`, `store.ts` sim default~~ | `AppSettings.processorFee` (single source) + shared `DEFAULT_PROCESSOR_FEE` | ~~P0~~ | **DONE (F2).** Delivery report + Calculator scenario both read it. Admin: Settings → General. |
+| P9-4 | ~~Brand~~ | ~~"Sud Italia" / "Ottaviano" hardcoded~~ | ~~welcome layout, WelcomeBrief, SMS/email/receipt templates, chat~~ | `AppSettings.businessName` (defaults to `SITE_NAME`) | ~~P1~~ | **DONE (F3).** Admin welcome → SITE_NAME; comms templates + thermal receipt thread `businessName` via the dispatcher / printReceipt. |
+| P9-5 | ~~Chatbot~~ | ~~stale hours/addresses/"30/60 PLN"~~ | ~~`ai-engine.ts` `CHATBOT_RESPONSES`~~ | live `getActiveLocationsAsync()` + `minOrderAmount`/`deliveryFee` + tiers | ~~P1~~ | **DONE (F4).** getChatResponse now server-only via `/api/chat`; ChatWidget fetches it (Rule #3). |
+| P9-6 | ~~Pricing~~ | ~~tip presets `[0.1,0.15,0.2]`~~ | ~~`CartDrawer.tsx`~~ | `AppSettings.tipPresets` (public) | ~~P1~~ | **DONE.** Admin: Settings → General "Tip presets (%)". |
+| P9-7 | Labor | `COVERS_PER_STAFF_PER_HOUR`, SPLH targets | `labor-efficiency.ts:30-32` | operator labor-productivity settings | P1 | **OPEN.** Drives staffing verdicts; no admin lever. |
+| P9-8 | KDS/ETA | prep floor / expo buffer / promise target | `eta.ts`, `kds-prediction.ts` | operator SLA settings | P1 | **OPEN.** Customer-visible ETAs. |
+| P9-9 | Inventory | `FALLBACK_LEAD_DAYS`, `USAGE_WINDOW_DAYS` | `par-purchase-orders.ts:38-39` | reorder-policy settings | P1 | **OPEN.** |
+| P9-10 | Marketing | `VIP_SPEND_GROSZE`, `VIP_ORDERS` | `whatsapp/audience.ts:21-22` | align with loyalty tiers / a VIP setting | P2 | **OPEN.** Two definitions of "VIP". |
+| P9-11 | Bundles | `BUNDLE_MARGIN_FLOOR=0.4` | `bundles.ts:125` | margin-policy setting | P2 | **OPEN.** Money guardrail, no override. |
+| P9-12 | Brand | JPK `JPK_NIP/NAME` env placeholders | `jpk.ts:73-74` | admin compliance config | P2 | **OPEN.** Legal identity for tax filings; env-only. |
+| P9-13 | Brand | login placeholder `you@ottaviano.pl` | `LoginForm.tsx:132` | derive from `businessEmail` domain | P2 | **OPEN — cosmetic.** |
+| P9-14 | Comms | re-engagement message stubs hardcode brand | `sms.ts:44-59` | `businessName` | P2 | **DEFERRED — dead code** (no callers). Wire when the SMS re-engagement cron ships. |
+
 ## Findings
 
 | # | area | symbol | file:line | current source | should-be source | sev | fix sketch |
