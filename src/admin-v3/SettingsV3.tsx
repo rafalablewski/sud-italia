@@ -11,7 +11,10 @@ interface Layout {
   showFeedbackSurvey: boolean; showNpsSurvey: boolean; showPostOrderUpsell: boolean; showChatWidget: boolean;
 }
 interface Settings {
-  deliveryFee?: number; minOrderAmount?: number; businessPhone?: string; businessEmail?: string;
+  deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; processorFee?: { pct: number; fixedGrosze: number }; businessPhone?: string; businessEmail?: string;
+  operations?: { labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number }; kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number }; inventory?: { fallbackLeadDays?: number; usageWindowDays?: number } };
+  legalEntity?: { nip?: string; name?: string; regon?: string; email?: string };
+  marketing?: { vipSpendGrosze?: number; vipMinOrders?: number };
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -64,6 +67,12 @@ export function SettingsV3() {
   const [savingCtl, setSavingCtl] = useState(false);
   const [seeded, setSeeded] = useState<string | null>(null);
 
+  const [bizName, setBizName] = useState("");
+  const [tips, setTips] = useState("");
+  const [feePct, setFeePct] = useState(""); const [feeFixed, setFeeFixed] = useState("");
+  const [legal, setLegal] = useState({ nip: "", name: "", regon: "", email: "" });
+  const [savingOps, setSavingOps] = useState(false);
+  const [ops, setOps] = useState({ coversHr: "", splhLow: "", splhHigh: "", minPrep: "", expoBuf: "", leadDays: "", usageDays: "", vipSpend: "", vipOrders: "" });
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
   const [fee, setFee] = useState(""); const [minOrder, setMinOrder] = useState("");
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
@@ -76,6 +85,22 @@ export function SettingsV3() {
       fetch("/api/admin/me").then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<Me | null>,
     ]);
     setS(d); setMe(m);
+    setBizName(d.businessName ?? "");
+    setTips((d.tipPresets ?? [0.1, 0.15, 0.2]).map((p) => Math.round(p * 100)).join(", "));
+    setFeePct(String((d.processorFee?.pct ?? 0.014) * 100)); setFeeFixed(zl(d.processorFee?.fixedGrosze ?? 40));
+    setLegal({ nip: d.legalEntity?.nip ?? "", name: d.legalEntity?.name ?? "", regon: d.legalEntity?.regon ?? "", email: d.legalEntity?.email ?? "" });
+    const op = d.operations;
+    setOps({
+      coversHr: String(op?.labor?.coversPerStaffHour ?? 3),
+      splhLow: zl(op?.labor?.splhLowGrosze ?? 7000),
+      splhHigh: zl(op?.labor?.splhHighGrosze ?? 15000),
+      minPrep: String(op?.kitchen?.minPrepMinutes ?? 10),
+      expoBuf: String(op?.kitchen?.expoBufferMinutes ?? 3),
+      leadDays: String(op?.inventory?.fallbackLeadDays ?? 3),
+      usageDays: String(op?.inventory?.usageWindowDays ?? 14),
+      vipSpend: zl(d.marketing?.vipSpendGrosze ?? 20000),
+      vipOrders: String(d.marketing?.vipMinOrders ?? 6),
+    });
     setPhone(d.businessPhone ?? ""); setEmail(d.businessEmail ?? "");
     setFee(zl(d.deliveryFee)); setMinOrder(zl(d.minOrderAmount));
     setIg(d.socialLinks?.instagram ?? ""); setFb(d.socialLinks?.facebook ?? ""); setTt(d.socialLinks?.tiktok ?? "");
@@ -107,12 +132,47 @@ export function SettingsV3() {
   const saveBiz = async () => {
     setSavingBiz(true);
     try {
+      const tipPresets = tips
+        .split(",")
+        .map((x) => Number(x.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0)
+        .map((n) => n / 100);
       await put({
-        businessPhone: phone.trim(), businessEmail: email.trim(),
+        businessName: bizName.trim(), businessPhone: phone.trim(), businessEmail: email.trim(),
         deliveryFee: Math.round((Number(fee) || 0) * 100), minOrderAmount: Math.round((Number(minOrder) || 0) * 100),
+        tipPresets,
+        processorFee: { pct: (Number(feePct) || 0) / 100, fixedGrosze: Math.round((Number(feeFixed) || 0) * 100) },
+        legalEntity: { nip: legal.nip.trim(), name: legal.name.trim(), regon: legal.regon.trim(), email: legal.email.trim() },
         socialLinks: { instagram: ig.trim(), facebook: fb.trim(), tiktok: tt.trim() },
       });
     } finally { setSavingBiz(false); }
+  };
+  const saveOps = async () => {
+    setSavingOps(true);
+    try {
+      const num = (v: string, fallback: number) => (Number.isFinite(Number(v)) && v.trim() !== "" ? Number(v) : fallback);
+      await put({
+        operations: {
+          labor: {
+            coversPerStaffHour: Math.max(0.1, num(ops.coversHr, 3)),
+            splhLowGrosze: Math.round(num(ops.splhLow, 70) * 100),
+            splhHighGrosze: Math.round(num(ops.splhHigh, 150) * 100),
+          },
+          kitchen: {
+            minPrepMinutes: Math.max(0, Math.round(num(ops.minPrep, 10))),
+            expoBufferMinutes: Math.max(0, Math.round(num(ops.expoBuf, 3))),
+          },
+          inventory: {
+            fallbackLeadDays: Math.max(0, Math.round(num(ops.leadDays, 3))),
+            usageWindowDays: Math.max(1, Math.round(num(ops.usageDays, 14))),
+          },
+        },
+        marketing: {
+          vipSpendGrosze: Math.round(num(ops.vipSpend, 200) * 100),
+          vipMinOrders: Math.max(1, Math.round(num(ops.vipOrders, 6))),
+        },
+      });
+    } finally { setSavingOps(false); }
   };
   const saveControls = async () => {
     setSavingCtl(true);
@@ -161,22 +221,63 @@ export function SettingsV3() {
       </div>
 
       {tab === "general" && (
+        <>
         <Card>
           <CardHead title="Business" actions={<Button variant="primary" size="sm" loading={savingBiz} onClick={saveBiz}>Save</Button>} />
           <CardBody>
+            <div className="av3-formrow" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Business name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={bizName} onChange={(e) => setBizName(e.target.value)} placeholder="Shown in SMS, receipts & chat" /></label>
+              <label className="av3-field"><span className="av3-field-label">Tip presets (%)</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={tips} onChange={(e) => setTips(e.target.value)} placeholder="10, 15, 20" /></label>
+              <label className="av3-field"><span className="av3-field-label">Card fee (%)</span><input className="av3-input" type="number" step="0.01" value={feePct} onChange={(e) => setFeePct(e.target.value)} placeholder="1.4" /></label>
+              <label className="av3-field"><span className="av3-field-label">Card fee fixed (zł)</span><input className="av3-input" type="number" step="0.01" value={feeFixed} onChange={(e) => setFeeFixed(e.target.value)} placeholder="0.40" /></label>
+            </div>
             <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Phone</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Delivery fee (zł)</span><input className="av3-input" type="number" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Min order (zł)</span><input className="av3-input" type="number" step="0.01" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} /></label>
             </div>
-            <div className="av3-formrow">
+            <div className="av3-formrow" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Instagram</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={ig} onChange={(e) => setIg(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">Facebook</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={fb} onChange={(e) => setFb(e.target.value)} /></label>
               <label className="av3-field"><span className="av3-field-label">TikTok</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={tt} onChange={(e) => setTt(e.target.value)} /></label>
             </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Legal entity — used on JPK_V7M tax filings (leave blank to use the JPK_* env vars)</div>
+            <div className="av3-formrow av3-formrow-4">
+              <label className="av3-field"><span className="av3-field-label">Legal name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={legal.name} onChange={(e) => setLegal((l) => ({ ...l, name: e.target.value }))} placeholder="Ottaviano Sp. z o.o." /></label>
+              <label className="av3-field"><span className="av3-field-label">NIP</span><input className="av3-input" style={{ fontFamily: "var(--av3-mono)" }} value={legal.nip} onChange={(e) => setLegal((l) => ({ ...l, nip: e.target.value }))} placeholder="1234567890" /></label>
+              <label className="av3-field"><span className="av3-field-label">REGON</span><input className="av3-input" style={{ fontFamily: "var(--av3-mono)" }} value={legal.regon} onChange={(e) => setLegal((l) => ({ ...l, regon: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Tax email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={legal.email} onChange={(e) => setLegal((l) => ({ ...l, email: e.target.value }))} /></label>
+            </div>
           </CardBody>
         </Card>
+        <Card style={{ marginTop: 16 }}>
+          <CardHead title="Operations" description="Labor, kitchen SLA & reorder policy — the targets the dashboards and ETA quotes use" actions={<Button variant="primary" size="sm" loading={savingOps} onClick={saveOps}>Save</Button>} />
+          <CardBody>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Labor productivity</div>
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Covers / staff / hr</span><input className="av3-input" type="number" step="0.5" value={ops.coversHr} onChange={(e) => setOps((o) => ({ ...o, coversHr: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">SPLH low (zł/hr)</span><input className="av3-input" type="number" step="1" value={ops.splhLow} onChange={(e) => setOps((o) => ({ ...o, splhLow: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">SPLH high (zł/hr)</span><input className="av3-input" type="number" step="1" value={ops.splhHigh} onChange={(e) => setOps((o) => ({ ...o, splhHigh: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Kitchen prep SLA (customer ready-time quote)</div>
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Min prep (min)</span><input className="av3-input" type="number" step="1" value={ops.minPrep} onChange={(e) => setOps((o) => ({ ...o, minPrep: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Expo buffer (min)</span><input className="av3-input" type="number" step="1" value={ops.expoBuf} onChange={(e) => setOps((o) => ({ ...o, expoBuf: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Inventory reorder policy</div>
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Fallback lead (days)</span><input className="av3-input" type="number" step="1" value={ops.leadDays} onChange={(e) => setOps((o) => ({ ...o, leadDays: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Usage window (days)</span><input className="av3-input" type="number" step="1" value={ops.usageDays} onChange={(e) => setOps((o) => ({ ...o, usageDays: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Marketing — VIP broadcast audience</div>
+            <div className="av3-formrow av3-formrow-4">
+              <label className="av3-field"><span className="av3-field-label">VIP min spend (zł)</span><input className="av3-input" type="number" step="1" value={ops.vipSpend} onChange={(e) => setOps((o) => ({ ...o, vipSpend: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">VIP min orders</span><input className="av3-input" type="number" step="1" value={ops.vipOrders} onChange={(e) => setOps((o) => ({ ...o, vipOrders: e.target.value }))} /></label>
+            </div>
+          </CardBody>
+        </Card>
+        </>
       )}
 
       {tab === "storefront" && (

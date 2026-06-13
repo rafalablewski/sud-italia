@@ -302,6 +302,14 @@ export function CartDrawer() {
    *  Falls back to the code-side seed in computeDeliveryFee until the
    *  fetch resolves. */
   const [publicDeliveryFee, setPublicDeliveryFee] = useState<number | undefined>(undefined);
+  /** Operator-managed global minimum order (grosze) from public settings.
+   *  Gates checkout client-side so the soft block matches createOrder's hard
+   *  enforcement; 0/undefined = no minimum. */
+  const [publicMinOrder, setPublicMinOrder] = useState<number>(0);
+  /** Operator-set tip percentages from public settings (fractions). */
+  const [publicTipPresets, setPublicTipPresets] = useState<number[]>([0.1, 0.15, 0.2]);
+  /** Operator-set kitchen prep SLA for the "Ready by" quote. */
+  const [publicPrepSla, setPublicPrepSla] = useState<{ minPrepMinutes?: number; expoBufferMinutes?: number }>({});
   const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
@@ -341,6 +349,9 @@ export function CartDrawer() {
       }
       if (data.loyalty) setPublicLoyalty(data.loyalty);
       if (typeof data.deliveryFee === "number") setPublicDeliveryFee(data.deliveryFee);
+      if (typeof data.minOrderAmount === "number") setPublicMinOrder(data.minOrderAmount);
+      if (Array.isArray(data.tipPresets)) setPublicTipPresets(data.tipPresets.filter((n): n is number => typeof n === "number"));
+      if (data.prepSla && typeof data.prepSla === "object") setPublicPrepSla(data.prepSla);
     });
     return () => {
       cancelled = true;
@@ -387,7 +398,7 @@ export function CartDrawer() {
   // promised-ready (mirrors store.computePromisedReadyAt for slot orders), so
   // we surface it verbatim. Before a slot is picked we fall back to the shared
   // prep estimate so an ETA is visible from the moment there's a cart.
-  const prepMinutes = useMemo(() => estimatePrepMinutes(items), [items]);
+  const prepMinutes = useMemo(() => estimatePrepMinutes(items, publicPrepSla), [items, publicPrepSla]);
   const readyByLabel = useMemo<string | null>(() => {
     if (items.length === 0) return null;
     if (selectedSlotTime) {
@@ -403,12 +414,20 @@ export function CartDrawer() {
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
+  // Global minimum order — gated on the same food total createOrder checks:
+  // the locked bundle price when a bundle is applied, otherwise the
+  // combo-discounted subtotal (both before delivery/tip). 0 = no minimum.
+  const minOrderBaseGrosze = isBundleActive ? bundlePriceGrosze : subtotal - comboDiscount;
+  const minOrderShortfall = publicMinOrder > 0 ? publicMinOrder - minOrderBaseGrosze : 0;
+  const belowMinOrder = minOrderShortfall > 0;
+
   const canCheckout =
     customerFirstName.trim().length > 0 &&
     customerLastName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
     unavailableItems.length === 0 &&
+    !belowMinOrder &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0) &&
     (fulfillmentType !== "dine-in" || partySize >= 1);
 
@@ -1136,6 +1155,7 @@ export function CartDrawer() {
                 subtotalGrosze={subtotal - comboDiscount - referralDiscount}
                 valueGrosze={tipAmount}
                 onChange={setTipAmount}
+                presets={publicTipPresets}
               />
 
               <div className="v8-cart-foot">
@@ -1280,7 +1300,9 @@ export function CartDrawer() {
                         ? "Processing…"
                         : unavailableItems.length > 0
                           ? "Remove sold-out items"
-                          : !selectedSlotId
+                          : belowMinOrder
+                            ? `Add ${formatPrice(minOrderShortfall)} to reach the ${formatPrice(publicMinOrder)} minimum`
+                            : !selectedSlotId
                             ? "Select a time slot"
                             : canCheckout
                               ? (
@@ -1348,12 +1370,14 @@ function TipPicker({
   subtotalGrosze,
   valueGrosze,
   onChange,
+  presets,
 }: {
   subtotalGrosze: number;
   valueGrosze: number;
   onChange: (g: number) => void;
+  /** Operator-set tip percentages (fractions) from public settings. */
+  presets: number[];
 }) {
-  const presets = [0.1, 0.15, 0.2];
   const presetValues = presets.map((p) => Math.round(subtotalGrosze * p));
   const [customMode, setCustomMode] = useState(
     valueGrosze > 0 && !presetValues.includes(valueGrosze),
@@ -1405,7 +1429,7 @@ function TipPicker({
               className={`v8-cart-tip${selected ? " is-on" : ""}`}
             >
               <span>{Math.round(p * 100)}%</span>
-              <span className="v8-cart-tip-label">{labels[i + 1]}</span>
+              <span className="v8-cart-tip-label">{labels[i + 1] ?? ""}</span>
             </button>
           );
         })}

@@ -7,6 +7,7 @@ import { adminV3BaseForPath, withAdminV3Base } from "@/lib/admin-base";
 import { formatPricePLN, formatPricePLNCompact } from "@/lib/utils";
 import { Monogram } from "@/admin-v3/agent-hq/shared";
 import { InfoButton } from "@/admin-v3/ui/Explainer";
+import { SITE_NAME } from "@/lib/constants";
 
 /**
  * WelcomeBrief — the wired Morning Brief (design direction #5), built on the
@@ -107,9 +108,9 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
     <div className="wb-stage">
       {/* ── LEFT HERO ── */}
       <div className="wb-hero">
-        <div className="wb-brandline"><span className="wb-mark" /> Sud Italia · Morning Briefing</div>
+        <div className="wb-brandline"><span className="wb-mark" /> {SITE_NAME} · Morning Briefing</div>
         <div className="wb-greet" suppressHydrationWarning>{greetingFor(now)},<br /><span className="em">{name}.</span></div>
-        <div className="wb-date" suppressHydrationWarning>{dateStr} · {openNow}/{locationCount} trucks open</div>
+        <div className="wb-date" suppressHydrationWarning>{dateStr} · {openNow}/{locationCount} restaurants open</div>
         <div className="wb-tldr">{loading ? skel("90%", 22) : tldr}</div>
 
         <div className="wb-pace">
@@ -291,7 +292,7 @@ const PACING_EXPLAINER = {
 };
 const CONSTRAINT_EXPLAINER = {
   description: "The hour of the day that carries your heaviest order load, averaged over the last 30 days.",
-  institutional: "Throughput, not demand, caps a truck's revenue: the peak hour is where the queue forms and orders get turned away. Theory-of-constraints says you grow the whole system only by relieving its tightest link — so staffing, prep or oven capacity bought for this one hour returns more than any off-peak change.",
+  institutional: "Throughput, not demand, caps a restaurant's revenue: the peak hour is where the queue forms and orders get turned away. Theory-of-constraints says you grow the whole system only by relieving its tightest link — so staffing, prep or oven capacity bought for this one hour returns more than any off-peak change.",
   plain: "If 18:00–19:00 runs ~28 orders/hour while the rest of the day sits at 8, that hour is your ceiling. Add a second pizzaiolo or pre-stretch dough for that window and you sell more in 60 minutes than a whole quiet afternoon — maybe 600 zł a night you were leaving on the table.",
   tips: "Pre-prep before the peak, schedule your strongest hands onto it, and shift demand off it with a 'beat-the-rush' early-bird nudge. Watch late-ticket counts in KDS during this hour — that's the constraint biting.",
   methodology: "computeHourlyThroughput(30 days) buckets every non-cancelled order by created-hour and divides by active days; the brief surfaces the hour with the highest average orders/hour. Source: getOrders. Computed server-side in /api/admin/welcome.",

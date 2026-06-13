@@ -917,8 +917,8 @@ auth canvas's signature lighting and the sign-in lockup:
   **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
   the full standing-cart line items + the status actions, so the operator can
   see *what's in* a recurring order, not just its item count. Events & bookings
-  (`/admin/truck`): events + run-sheets CRUD (incl. segment editor) over
-  `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
+  (`/admin/events`): events + run-sheets CRUD (incl. segment editor) over
+  `/api/admin/events` + `/api/admin/run-sheets`, plus the **KPI rail**
   (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
   five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table
   view toggle** for events with a default **Board** of event cards (status dot,
@@ -996,7 +996,7 @@ auth canvas's signature lighting and the sign-in lockup:
   hours editor, active/alcohol — round-tripping the whole record via
   `/api/admin/locations` (the GET returns `{ locations: [...] }`, so the list
   reads `res.locations`). `teamLead` now persists end-to-end (DB column
-  `team_lead` + zod field), and the **welcome brief's "trucks open" count**
+  `team_lead` + zod field), and the **welcome brief's "restaurants open" count**
   reads the same DB-backed `getActiveLocationsAsync()` so edits here move that
   number. + re-seed. Insights (`/admin/ai`): **five
   tabs restored to v2 parity (flag #5)** — **Forecast** bars

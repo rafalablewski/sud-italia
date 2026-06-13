@@ -141,7 +141,7 @@ export const POST = withAdmin(
       "labor target ≤30% of revenue, prime cost target ≤60–65%.\n" +
       "- Behavior levers that are explicitly disabled (enabled=false) are NOT in the math — suggest " +
       "  turning them ON if the lever would help.\n" +
-      "- Don't suggest size/crust upsell — Neapolitan trucks don't do that.\n" +
+      "- Don't suggest size/crust upsell — Neapolitan restaurants don't do that.\n" +
       "- DO suggest pushing espresso attach when coffeeAttach.attachPct < 0.40: espresso " +
       "  has ~85% pre-leakage gross margin (1.40 zł cost on a 9.90 zł sale), but the actual " +
       "  NET margin landing on the bottom line is ~65-72% after the P&L applies blended " +

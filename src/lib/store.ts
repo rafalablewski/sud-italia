@@ -2,14 +2,14 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
   upsertCartPresenceRedis,
 } from "@/lib/cart-presence-redis";
-import { WALLET_MAX_PHONES } from "@/lib/constants";
+import { SITE_NAME, WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { cashVarianceGrosze as computeCashVariance } from "@/lib/cash-recon";
 import type { Experiment } from "@/lib/experiments";
@@ -54,7 +54,7 @@ import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
 import { getBaseSlug } from "@/lib/utils";
-import { estimateReadyAt } from "@/lib/eta";
+import { estimateReadyAt, type PrepOpts } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
 import { tempVerdict } from "@/lib/haccp";
 
@@ -3116,6 +3116,38 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Operator-set trading name used in every customer comm (SMS, email +
+   *  thermal receipts, chat assistant). Single source of truth so a rebrand
+   *  is one admin edit, not a code change across comms files. Defaults to the
+   *  SITE_NAME constant on first deploy. Editable at /admin/settings → General. */
+  businessName?: string;
+  /** Suggested tip percentages shown in the cart (fractions, e.g.
+   *  [0.1, 0.15, 0.2]). Operator-tunable so gratuity prompts match the
+   *  market without a deploy. Empty array hides the preset buttons. */
+  tipPresets?: number[];
+  /** Card-processing fee — the SINGLE source for the card fee, read by the
+   *  delivery P&L report and used as the default for the Calculator scenario.
+   *  `pct` is a fraction (0.014 = 1.4%); `fixedGrosze` is the flat per-txn fee. */
+  processorFee?: { pct: number; fixedGrosze: number };
+  /** Operational tuning targets that used to be hardcoded constants — labor
+   *  productivity benchmarks, kitchen prep SLA floors, and inventory reorder
+   *  policy. All operator-editable at /admin/settings → Operations. Each field
+   *  falls back to DEFAULT_OPERATIONS when unset. */
+  operations?: {
+    labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number };
+    kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number };
+    inventory?: { fallbackLeadDays?: number; usageWindowDays?: number };
+  };
+  /** Marketing audience tuning. `vip*` define who the WhatsApp/SMS broadcast
+   *  "VIP" segment targets — operator-set so the cut isn't a hardcoded literal.
+   *  Admin → Settings → General → Operations. */
+  marketing?: { vipSpendGrosze?: number; vipMinOrders?: number };
+  /** Registered legal entity for tax filings (JPK_V7M). Operator-set so the
+   *  NIP / legal name / REGON aren't stuck on `process.env.JPK_*` placeholders
+   *  (a filing with NIP=0000000000 is invalid). When a field is blank the
+   *  filing falls back to the env var, then the placeholder. Admin →
+   *  Settings → General → Legal entity. */
+  legalEntity?: { nip?: string; name?: string; regon?: string; email?: string };
   /** Operator-managed social handles, rendered in the public footer.
    *  Empty string = the corresponding link is hidden. Editable from
    *  /admin/settings → General. */
@@ -3320,6 +3352,22 @@ export function resolveLocationCompliance(
   return { zone: config?.defaultZone ?? "EU" };
 }
 
+/** Default card-processing fee (Stripe's PL card rate: 1.4% + 0.40 zł). The
+ *  single source for the fee's default — referenced by DEFAULT_SETTINGS and the
+ *  Calculator's default scenario so the rate isn't duplicated as a bare literal. */
+export const DEFAULT_PROCESSOR_FEE = { pct: 0.014, fixedGrosze: 40 };
+
+/** Default operational tuning — the values these levers used to hardcode, kept
+ *  as the single fallback source so unedited installs behave identically.
+ *  - labor: ~3 covers/staff/hr; SPLH healthy band 70–150 zł/hr (QSR norm).
+ *  - kitchen: 10-min prep floor + 3-min expo buffer (the customer ETA quote).
+ *  - inventory: 3-day fallback supplier lead time; 14-day usage-averaging window. */
+export const DEFAULT_OPERATIONS = {
+  labor: { coversPerStaffHour: 3, splhLowGrosze: 7000, splhHighGrosze: 15000 },
+  kitchen: { minPrepMinutes: 10, expoBufferMinutes: 3 },
+  inventory: { fallbackLeadDays: 3, usageWindowDays: 14 },
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   // Matches the pre-Phase-8 hardcoded DELIVERY_FEE_GROSZE in lib/upsell.ts
   // so first-deploy / unedited installs see no customer-visible price
@@ -3327,6 +3375,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   // their saved number (which now actually drives the charge).
   deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
+  businessName: SITE_NAME,
+  tipPresets: [0.1, 0.15, 0.2],
+  processorFee: DEFAULT_PROCESSOR_FEE,
+  operations: DEFAULT_OPERATIONS,
   businessPhone: "+48 123 456 789",
   businessEmail: "hello@ottaviano.pl",
   socialLinks: {
@@ -3371,6 +3423,14 @@ function mergeSettings(
       ...(saved.compliance?.byLocation ?? {}),
       ...(overrides.compliance?.byLocation ?? {}),
     },
+  };
+  // Deep-merge the nested ops/fee blocks too, so a partial PUT (e.g. only
+  // operations.labor) can't drop the sibling sub-keys back to undefined.
+  base.processorFee = { ...DEFAULT_PROCESSOR_FEE, ...(saved.processorFee ?? {}), ...(overrides.processorFee ?? {}) };
+  base.operations = {
+    labor: { ...DEFAULT_OPERATIONS.labor, ...(saved.operations?.labor ?? {}), ...(overrides.operations?.labor ?? {}) },
+    kitchen: { ...DEFAULT_OPERATIONS.kitchen, ...(saved.operations?.kitchen ?? {}), ...(overrides.operations?.kitchen ?? {}) },
+    inventory: { ...DEFAULT_OPERATIONS.inventory, ...(saved.operations?.inventory ?? {}), ...(overrides.operations?.inventory ?? {}) },
   };
   return base;
 }
@@ -7283,6 +7343,46 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
   return movement;
 }
 
+/**
+ * Bulk-append pre-built stock movements in ONE locked write — the simulation
+ * seeder lays down a multi-week receive/consume/waste history per ingredient,
+ * and createStockMovement's per-row lock + stock recompute would be hundreds of
+ * round-trips. Does NOT touch ingredient_stock — the seeder pairs this with
+ * bulkUpsertIngredientStock, whose onHand it computes to match these movements.
+ * Only called while a test mode is active (getDomainDb() is null then).
+ */
+export async function bulkAppendStockMovements(movements: StockMovement[]): Promise<void> {
+  if (movements.length === 0) return;
+  const db = await getDomainDb();
+  if (db) {
+    for (const m of movements) await dualWriteMovement(m);
+    return;
+  }
+  await withLock("stock-movements.json", async () => {
+    const list = await readJSON<StockMovement[]>("stock-movements.json", []);
+    list.push(...movements);
+    await writeJSON("stock-movements.json", list);
+  });
+}
+
+/** Bulk-upsert pre-built stock rows in ONE locked write (keyed by
+ *  ingredient+location), mirroring upsertIngredientStock per row. The seeder
+ *  computes onHand to match the movement history it lands alongside. */
+export async function bulkUpsertIngredientStock(rows: IngredientStock[]): Promise<void> {
+  if (rows.length === 0) return;
+  await withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    for (const row of rows) {
+      const i = list.findIndex((s) => s.ingredientId === row.ingredientId && s.locationSlug === row.locationSlug);
+      if (i >= 0) list[i] = row;
+      else list.push(row);
+    }
+    await writeJSON("ingredient-stock.json", list);
+  });
+  const db = await getDomainDb();
+  if (db) for (const row of rows) await dualWriteStock(row);
+}
+
 // --- Suppliers ---
 
 export async function getSuppliers(): Promise<Supplier[]> {
@@ -7849,6 +7949,27 @@ export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Pro
   });
 }
 
+/**
+ * Bulk-append pre-built shifts in ONE locked write — the simulation seeder lays
+ * down a recurring weekly rota across a multi-week window, so a flat saveShift
+ * loop would pay the lock + O(N) blob rewrite per shift. Mirrors
+ * bulkAppendOrders: only called while a test mode is active (getDomainDb() is
+ * null then, so the kv path runs); the DB branch mirrors saveShift's dual-write.
+ */
+export async function bulkAppendShifts(shifts: Shift[]): Promise<void> {
+  if (shifts.length === 0) return;
+  const db = await getDomainDb();
+  if (db) {
+    for (const s of shifts) await dualWriteShift(s);
+    return;
+  }
+  await withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    list.push(...shifts);
+    await writeJSON("shifts.json", list);
+  });
+}
+
 export async function deleteShift(id: string): Promise<boolean> {
   return withLock("shifts.json", async () => {
     const list = await readJSON<Shift[]>("shifts.json", []);
@@ -7998,17 +8119,21 @@ export async function getLaborCostInRange(
   };
 }
 
-// --- Truck operations ---
+// --- Events & bookings (private bookings, catering, special events + run sheets) ---
+// The kv keys stay "truck-events.json" / "truck-routes.json" on purpose: they
+// back already-persisted operator data (and the sim namespace), so renaming the
+// storage key would orphan it. The feature, types and APIs are "events" /
+// "run sheets" everywhere an operator or developer reads them.
 
-export async function getTruckRoutes(locationSlug?: string): Promise<TruckRoute[]> {
-  const all = await readJSON<TruckRoute[]>("truck-routes.json", []);
+export async function getRunSheets(locationSlug?: string): Promise<EventRunSheet[]> {
+  const all = await readJSON<EventRunSheet[]>("truck-routes.json", []);
   return locationSlug ? all.filter((r) => r.locationSlug === locationSlug) : all;
 }
 
-export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckRoute> {
+export async function saveRunSheet(input: Omit<EventRunSheet, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<EventRunSheet> {
   return withLock("truck-routes.json", async () => {
-    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
-    const route: TruckRoute = {
+    const list = await readJSON<EventRunSheet[]>("truck-routes.json", []);
+    const route: EventRunSheet = {
       id: input.id || `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       name: input.name,
       locationSlug: input.locationSlug,
@@ -8024,9 +8149,9 @@ export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt">
   });
 }
 
-export async function deleteTruckRoute(id: string): Promise<boolean> {
+export async function deleteRunSheet(id: string): Promise<boolean> {
   return withLock("truck-routes.json", async () => {
-    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const list = await readJSON<EventRunSheet[]>("truck-routes.json", []);
     const filtered = list.filter((r) => r.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("truck-routes.json", filtered);
@@ -8034,12 +8159,12 @@ export async function deleteTruckRoute(id: string): Promise<boolean> {
   });
 }
 
-export async function getTruckEvents(filters?: {
+export async function getEvents(filters?: {
   locationSlug?: string;
   from?: string;
   to?: string;
-}): Promise<TruckEvent[]> {
-  const all = await readJSON<TruckEvent[]>("truck-events.json", []);
+}): Promise<BookingEvent[]> {
+  const all = await readJSON<BookingEvent[]>("truck-events.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((e) => e.locationSlug === filters.locationSlug);
   if (filters?.from) list = list.filter((e) => e.date >= filters.from!);
@@ -8047,10 +8172,10 @@ export async function getTruckEvents(filters?: {
   return list.slice().sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckEvent> {
+export async function saveEvent(input: Omit<BookingEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<BookingEvent> {
   return withLock("truck-events.json", async () => {
-    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
-    const event: TruckEvent = {
+    const list = await readJSON<BookingEvent[]>("truck-events.json", []);
+    const event: BookingEvent = {
       id: input.id || `te-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       routeId: input.routeId,
       locationSlug: input.locationSlug,
@@ -8071,9 +8196,9 @@ export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt">
   });
 }
 
-export async function deleteTruckEvent(id: string): Promise<boolean> {
+export async function deleteEvent(id: string): Promise<boolean> {
   return withLock("truck-events.json", async () => {
-    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const list = await readJSON<BookingEvent[]>("truck-events.json", []);
     const filtered = list.filter((e) => e.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("truck-events.json", filtered);
@@ -9721,14 +9846,24 @@ export async function resolveOrderStationFanout(
  *   3. Hard floor of 10 minutes from fire time so a fast-prep order
  *      doesn't promise the customer something we can't deliver.
  */
-function computePromisedReadyAt(order: Order, firedAt: Date): Date {
+function computePromisedReadyAt(order: Order, firedAt: Date, prepOpts?: PrepOpts): Date {
   if (order.slotDate && order.slotTime) {
     const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
     if (Number.isFinite(slotInstant.getTime())) return slotInstant;
   }
   // Shared with the cart's pre-pay "Ready by" quote so the time we promise the
-  // customer before they pay matches the SLA the KDS holds the line to.
-  return estimateReadyAt(order.items, firedAt);
+  // customer before they pay matches the SLA the KDS holds the line to. The
+  // prep floor + expo buffer are operator-set (admin → Operations).
+  return estimateReadyAt(order.items, firedAt, prepOpts);
+}
+
+/** Resolve the operator's kitchen prep SLA (admin → Operations) for the ETA math. */
+async function prepOptsFromSettings(): Promise<PrepOpts> {
+  const k = (await getSettings()).operations?.kitchen;
+  return {
+    minPrepMinutes: k?.minPrepMinutes ?? DEFAULT_OPERATIONS.kitchen.minPrepMinutes,
+    expoBufferMinutes: k?.expoBufferMinutes ?? DEFAULT_OPERATIONS.kitchen.expoBufferMinutes,
+  };
 }
 /**
  * Fire KDS tickets for an order (m2_2 + m2_4 + m2_5). Generates one ticket
@@ -9757,12 +9892,13 @@ async function writeSimKdsTickets(list: KdsTicket[]): Promise<void> {
 
 export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
   const db = await getDomainDb();
+  const prepOpts = await prepOptsFromSettings();
   if (!db) {
     // Simulation: same fanout/stagger logic, persisted to the kv ticket blob.
     try {
       const fanout = await resolveOrderStationFanout(order);
       const now = new Date();
-      const promisedReadyAt = computePromisedReadyAt(order, now);
+      const promisedReadyAt = computePromisedReadyAt(order, now, prepOpts);
       const orderMaxPrep = Math.max(0, ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0));
       const tickets: KdsTicket[] = [];
       for (const [stationId, items] of fanout) {
@@ -9795,7 +9931,7 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
     const fanout = await resolveOrderStationFanout(order);
     const tickets: KdsTicket[] = [];
     const now = new Date();
-    const promisedReadyAt = computePromisedReadyAt(order, now);
+    const promisedReadyAt = computePromisedReadyAt(order, now, prepOpts);
     // m2_4: stagger each ticket's start so the longest-prep finishes
     // alongside the others. Per-ticket "fireAt" is computed from the
     // station's max item prep time vs the longest in the whole order.
@@ -10644,6 +10780,52 @@ export async function getTempLogs(filters: {
   }
 }
 
+/**
+ * Bulk-append pre-built temperature readings in ONE write (kv) or one batch
+ * insert (DB) instead of a round-trip per reading — the path the simulation
+ * seeder takes to lay down a deep HACCP history without paying saveTempLog's
+ * per-row lock + Neon round-trip (which would blow the seed past the
+ * serverless budget). Status is derived per reading via tempVerdict, exactly
+ * like saveTempLog. Only ever called while a test mode is active (getDomainDb()
+ * is null then, so the kv path runs); the DB branch mirrors saveTempLog.
+ */
+export async function bulkAppendTempLogs(
+  inputs: (Omit<TempLog, "id" | "status"> & { id?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  const records: TempLog[] = inputs.map((input, i) => ({
+    id: input.id || `tl-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    status: tempVerdict(input.sensor, input.tempCelsius),
+    ...input,
+  }));
+  const db = await getDomainDb();
+  if (db) {
+    try {
+      await ensureComplianceTables();
+      await db.insert(tempLogsTable).values(
+        records.map((r) => ({
+          id: r.id,
+          locationSlug: r.locationSlug,
+          sensor: r.sensor,
+          tempCelsius: r.tempCelsius,
+          status: r.status,
+          recordedBy: r.recordedBy ?? null,
+          recordedAt: new Date(r.recordedAt),
+        })),
+      );
+    } catch (err) {
+      logger.error("bulkAppendTempLogs failed", { layer: "store.compliance" }, err);
+    }
+    return;
+  }
+  await withLock("temp-logs.json", async () => {
+    const list = await readJSON<TempLog[]>("temp-logs.json", []);
+    list.push(...records);
+    await writeJSON("temp-logs.json", list);
+  });
+}
+
 // --- Waste log (audit §11.2 / §12.4 #4) ---------------------------------
 //
 // A line-level record of food discarded outside a sale — spoilage, prep
@@ -10706,6 +10888,37 @@ export async function saveWasteLog(
     list.push(entry);
     await writeJSON("waste-logs.json", list);
     return entry;
+  });
+}
+
+/**
+ * Bulk-append pre-built waste entries in ONE locked read-modify-write instead
+ * of one per row — the path the simulation seeder takes to lay down a deep
+ * reason-coded waste history cheaply (waste-logs.json is a single cross-location
+ * kv blob, so a flat loop would pay saveWasteLog's lock + O(N) rewrite each).
+ */
+export async function bulkAppendWasteLogs(
+  inputs: (Omit<WasteLogEntry, "id" | "recordedAt"> & { id?: string; recordedAt?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  await withLock("waste-logs.json", async () => {
+    const list = await readJSON<WasteLogEntry[]>("waste-logs.json", []);
+    inputs.forEach((input, i) => {
+      list.push({
+        id: input.id || `waste-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        locationSlug: input.locationSlug,
+        item: input.item,
+        quantity: input.quantity,
+        unit: input.unit,
+        reason: input.reason,
+        estimatedCostGrosze: input.estimatedCostGrosze,
+        notes: input.notes,
+        recordedBy: input.recordedBy,
+        recordedAt: input.recordedAt ?? new Date().toISOString(),
+      });
+    });
+    await writeJSON("waste-logs.json", list);
   });
 }
 
@@ -11846,7 +12059,7 @@ export function defaultSimulationScenario(): SimulationScenario {
     fixedCosts,
     wageInflationPct: 0.07,
     ingredientInflationPct: 0.04,
-    paymentProcessorPct: 0.019,
+    paymentProcessorPct: DEFAULT_PROCESSOR_FEE.pct,
     // Operational leakage the previous model silently ignored. QSR norms:
     // - waste 1-3% of revenue (spoilage, recipe over-portioning)
     // - refunds/comps/theft 1-2% of revenue
@@ -12065,10 +12278,14 @@ function forceAllAssumptionsOff(a: SimulationAssumptions): SimulationAssumptions
 
 export async function getSimulationScenario(): Promise<SimulationScenario> {
   const saved = await readJSON<Partial<SimulationScenario> | null>(SIMULATION_KEY, null);
+  // The card-processing fee has one source (AppSettings.processorFee); seed a
+  // fresh scenario's processor rate from it so the Calculator and the delivery
+  // P&L report agree instead of carrying two different literals.
+  const operatorProcessorPct = (await getSettings()).processorFee?.pct ?? DEFAULT_PROCESSOR_FEE.pct;
   if (!saved || !Array.isArray(saved.labor) || typeof saved.ordersPerDay !== "number") {
-    return defaultSimulationScenario();
+    return { ...defaultSimulationScenario(), paymentProcessorPct: operatorProcessorPct };
   }
-  const defaults = defaultSimulationScenario();
+  const defaults = { ...defaultSimulationScenario(), paymentProcessorPct: operatorProcessorPct };
   const hydratedAssumptions = hydrateAssumptions(saved.assumptions, defaults.assumptions);
   const hydratedWeather = hydrateWeather(saved.weather, defaults.weather);
   // Migration: force every behavior assumption + weather lever off on first

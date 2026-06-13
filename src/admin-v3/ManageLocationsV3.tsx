@@ -38,7 +38,7 @@ export function ManageLocationsV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Manage locations</h1>
-          <div className="av3-pagehead-sub">Every detail per site · name · address · description · hours · coordinates · status — drives the storefront & the “trucks open” brief</div>
+          <div className="av3-pagehead-sub">Every detail per site · name · address · description · hours · coordinates · status — drives the storefront & the “restaurants open” brief</div>
         </div>
         <div className="av3-pagehead-actions">
           <Button variant="ghost" size="sm" loading={reseeding} onClick={reseed}>Re-seed from code</Button>

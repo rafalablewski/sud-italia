@@ -21,6 +21,28 @@ Re-running the audit with a deeper look at modules underweighted in Phase 0 turn
 - **P1** — admin change requires a deploy; or a server route uses the seed where it should use the live store.
 - **P2** — cosmetic mismatch / DX papercut.
 
+## Phase 9 — third sweep (admin-v3 era)
+
+A fresh sweep over surfaces added/grown since the close-out (the `src/admin-v3/`
+suite, new routes + libs). New findings + their resolution:
+
+| # | area | symbol | file:line | should-be | sev | note |
+|---|------|--------|-----------|-----------|-----|------|
+| P9-1 | ~~Pricing~~ | ~~`minOrderAmount` never enforced~~ | ~~`createOrder.ts`~~ | hard-gated in createOrder (`below_min_order`) + exposed on `/api/settings/public` + cart soft-gate ("add X more") | ~~P0~~ | **DONE.** Dead admin setting — saved, enforced nowhere. Now end-to-end. |
+| P9-2 | ~~Referral~~ | ~~`REFEREE_DISCOUNT_GROSZE` / `REFERRER_REWARD_POINTS`~~ | ~~`referral-loop.ts:25-26`~~ | `getLoyaltySettings().referral.{refereeDiscountGrosze,referrerPoints,active}` | ~~P0~~ | **DONE.** Checkout discount, referrer award, `/api/referrals` policy + `/r/[code]` landing all read the setting + honour `active`. Consts kept as first-deploy fallback. |
+| P9-3 | ~~Fiscal~~ | ~~card fee `0.014+40` vs sim `0.019`~~ | ~~`reports/delivery/route.ts`, `store.ts` sim default~~ | `AppSettings.processorFee` (single source) + shared `DEFAULT_PROCESSOR_FEE` | ~~P0~~ | **DONE (F2).** Delivery report + Calculator scenario both read it. Admin: Settings → General. |
+| P9-4 | ~~Brand~~ | ~~"Sud Italia" / "Ottaviano" hardcoded~~ | ~~welcome layout, WelcomeBrief, SMS/email/receipt templates, chat~~ | `AppSettings.businessName` (defaults to `SITE_NAME`) | ~~P1~~ | **DONE (F3).** Admin welcome → SITE_NAME; comms templates + thermal receipt thread `businessName` via the dispatcher / printReceipt. |
+| P9-5 | ~~Chatbot~~ | ~~stale hours/addresses/"30/60 PLN"~~ | ~~`ai-engine.ts` `CHATBOT_RESPONSES`~~ | live `getActiveLocationsAsync()` + `minOrderAmount`/`deliveryFee` + tiers | ~~P1~~ | **DONE (F4).** getChatResponse now server-only via `/api/chat`; ChatWidget fetches it (Rule #3). |
+| P9-6 | ~~Pricing~~ | ~~tip presets `[0.1,0.15,0.2]`~~ | ~~`CartDrawer.tsx`~~ | `AppSettings.tipPresets` (public) | ~~P1~~ | **DONE.** Admin: Settings → General "Tip presets (%)". |
+| P9-7 | ~~Labor~~ | ~~`COVERS_PER_STAFF_PER_HOUR`, SPLH targets~~ | ~~`labor-efficiency.ts`~~ | `AppSettings.operations.labor` (admin → Operations) | ~~P1~~ | **DONE.** Targets threaded into the daily compute; consts → `DEFAULT_OPERATIONS`. |
+| P9-8 | ~~ETA~~ / KDS | ~~prep floor / expo buffer~~ · pace/promise targets | `eta.ts` ✓ · `kds-prediction.ts` (open) | `AppSettings.operations.kitchen` (admin → Operations) | ~~P1~~ / P2 | **ETA prep DONE** — the customer "Ready by" quote now reads the operator's min-prep + expo buffer (server `fireKdsTickets` + cart via `/api/settings/public`). The KDS-internal pace-window / promise-target health knobs (`kds-prediction.ts`, pure module shared by ~8 callers incl. client KDS) stay code — **deferred** (internal SLA tuning, high rewire churn, not a customer-facing number). |
+| P9-9 | ~~Inventory~~ | ~~`FALLBACK_LEAD_DAYS`, `USAGE_WINDOW_DAYS`~~ | ~~`par-purchase-orders.ts:38-39`~~ | `AppSettings.operations.inventory` (admin → Operations) | ~~P1~~ | **DONE.** Reorder policy read from settings in `generateParPurchaseOrders`. |
+| P9-10 | ~~Marketing~~ | ~~`VIP_SPEND_GROSZE`, `VIP_ORDERS`~~ | ~~`whatsapp/audience.ts:21-22`~~ | `AppSettings.marketing.{vipSpendGrosze,vipMinOrders}` (admin → Operations) | ~~P2~~ | **DONE.** The broadcast VIP cut is operator-set; `selectAudience` takes the thresholds, the broadcasts route passes them from settings (consts → `DEFAULT_VIP_*` fallback). (Left as its own axis rather than folding into loyalty points — different concept.) |
+| P9-11 | Bundles | `BUNDLE_MARGIN_FLOOR=0.4` | `bundles.ts:125` | — (stays code) | P2 | **DEFERRED-by-design.** The const's own doc-comment defines it as the deliberate single-source margin guardrail ("the line below which a bundle erodes contribution"). Making it operator-editable would let someone set a margin-eroding floor — a policy constant, not config. |
+| P9-12 | ~~Brand~~ | ~~JPK `JPK_NIP/NAME` env placeholders~~ | ~~`jpk.ts:73-74`~~ | `AppSettings.legalEntity` (admin → Settings → General → Legal entity) | ~~P2~~ | **DONE.** Operator-set NIP / legal name / REGON / tax email win over the `JPK_*` env vars (kept as deploy bootstrap), so a filing no longer ships with `NIP=0000000000`. |
+| P9-13 | ~~Brand~~ | ~~login placeholder `you@ottaviano.pl`~~ | ~~`LoginForm.tsx:132`~~ | neutral placeholder | ~~P2~~ | **DONE.** Hardcoded brand domain → neutral `you@email.com`. |
+| P9-14 | Comms | re-engagement message stubs hardcode brand | `sms.ts:44-59` | `businessName` | P2 | **DEFERRED — dead code** (no callers). Wire when the SMS re-engagement cron ships. |
+
 ## Findings
 
 | # | area | symbol | file:line | current source | should-be source | sev | fix sketch |

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTruckEvents } from "@/lib/store";
+import { getEvents } from "@/lib/store";
 import {
   GEOFENCE_RADIUS_METERS,
   distanceMeters,
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const hasCustomerLoc =
     Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
-  const events = await getTruckEvents({ from: today });
+  const events = await getEvents({ from: today });
   const live = events.filter((e) => e.status === "live");
   const results = await Promise.all(
     live.map(async (event) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { getChatResponse, ChatMessage } from "@/lib/ai-engine";
+import type { ChatMessage } from "@/lib/ai-engine";
 
 // V8 Trattoria chat assistant. Paper-textured FAB in the bottom-right
 // that expands into a parchment chat sheet — italic Cormorant header
@@ -30,7 +30,7 @@ export function ChatWidget() {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = input.trim();
     if (!text) return;
 
@@ -44,16 +44,26 @@ export function ChatWidget() {
     setInput("");
     setTyping(true);
 
-    setTimeout(() => {
-      const response = getChatResponse(text);
-      const botMsg: ChatMessage = {
-        role: "assistant",
-        content: response,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-      setTyping(false);
-    }, 800 + Math.random() * 600);
+    // Answer is built server-side (/api/chat) so hours, delivery gate,
+    // addresses, loyalty + brand reflect live admin settings.
+    let response =
+      "Sorry, I couldn't reach our assistant just now — please try again in a moment.";
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = res.ok ? await res.json() : null;
+      if (data && typeof data.response === "string") response = data.response;
+    } catch {
+      /* keep the fallback message */
+    }
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: response, timestamp: new Date().toISOString() },
+    ]);
+    setTyping(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

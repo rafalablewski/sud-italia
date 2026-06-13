@@ -114,7 +114,7 @@ paper cards. Lives at the `#locations` anchor for the hero kicker's
   oxblood Cormorant, em-dashes flanking the line. Title:
   `Two addresses, one family` — Cormorant 600 with an italic
   `<span class="it">one family</span>` flipping the second clause
-  to oxblood italic. Subtitle: italic Cormorant muted, "Two trucks,
+  to oxblood italic. Subtitle: italic Cormorant muted, "Two restaurants,
   one kitchen, one nonna who taught us the dough."
 - **One card per location** (Kraków + Warszawa today, Wrocław auto-
   shows as Coming Soon because `isActive: false` in the seed data).

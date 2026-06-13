@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getReferralCodeOwner, REFEREE_DISCOUNT_GROSZE } from "@/lib/referral-loop";
+import { getLoyaltySettings } from "@/lib/store";
 
 /**
  * Public referral landing: /r/ABC123 → drops a cookie noting the
@@ -28,6 +29,9 @@ export default async function ReferralLandingPage({
     sameSite: "lax",
     path: "/",
   });
-  const discountPln = Math.round(REFEREE_DISCOUNT_GROSZE / 100);
+  // Operator-set referee discount (admin: /admin/growth → Referrals); const is
+  // the first-deploy fallback. Keeps the landing banner in step with checkout.
+  const refereeDiscountGrosze = (await getLoyaltySettings()).referral.refereeDiscountGrosze ?? REFEREE_DISCOUNT_GROSZE;
+  const discountPln = Math.round(refereeDiscountGrosze / 100);
   redirect(`/?ref=${upper}&from=${encodeURIComponent(owner.ownerName || "friend")}&discount=${discountPln}`);
 }

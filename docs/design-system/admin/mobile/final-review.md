@@ -123,7 +123,7 @@ Where we win:
 
 The closest peer for delivery + KDS pieces. Their KDS is hardware-tight (it lives on dedicated tablets). Where they win:
 
-- **Driver dispatch:** their driver app is full-stack — geo, push, batched pickups. Our `/admin/truck` is desktop-shaped today. Roadmap item.
+- **Driver dispatch:** their driver app is full-stack — geo, push, batched pickups. Our `/admin/events` is desktop-shaped today. Roadmap item.
 
 Where we win:
 

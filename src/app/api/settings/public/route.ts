@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import {
   DEFAULT_LAYOUT_SETTINGS,
+  DEFAULT_OPERATIONS,
   getActiveSurveys,
   getIntegrationSettings,
   getLoyaltySettings,
@@ -101,6 +102,18 @@ export async function GET(req: NextRequest) {
      *  /admin/settings → Delivery fee; cart drawer passes it to
      *  computeDeliveryFee so the bar + the receipt agree. */
     deliveryFee: appSettings.deliveryFee,
+    /** Global minimum order value (grosze) set at /admin/settings. The cart
+     *  uses it to gate checkout + show an "add X more" hint so the soft block
+     *  matches the server's hard enforcement in createOrder. 0 = no minimum. */
+    minOrderAmount: appSettings.minOrderAmount,
+    /** Suggested tip percentages (fractions) for the cart's tip picker. */
+    tipPresets: appSettings.tipPresets,
+    /** Kitchen prep SLA (operator-set) so the cart's pre-pay "Ready by" quote
+     *  matches the promise the KDS is held to (computed via the same eta.ts). */
+    prepSla: {
+      minPrepMinutes: appSettings.operations?.kitchen?.minPrepMinutes ?? DEFAULT_OPERATIONS.kitchen.minPrepMinutes,
+      expoBufferMinutes: appSettings.operations?.kitchen?.expoBufferMinutes ?? DEFAULT_OPERATIONS.kitchen.expoBufferMinutes,
+    },
     /** Customer display-currency config: switcher options + rates.
      *  The customer site hydrates the currency module from this so a
      *  switch from PLN → SGD reflects operator-set rates, not the

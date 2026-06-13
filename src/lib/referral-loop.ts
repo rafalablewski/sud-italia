@@ -5,6 +5,7 @@ import { ensureTable } from "@/db/migrate";
 import { logger } from "@/lib/logger";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { appendOutboxEvent } from "@/lib/outbox";
+import { getLoyaltySettings } from "@/lib/store";
 
 /**
  * Audit §6 "#5 No referral economic loop". A real give-get: every
@@ -202,6 +203,11 @@ export async function qualifyReferralOnFirstPaidOrder(
   const owner = await getReferralCodeOwner(redemption.code);
   if (!owner) return { qualified: false };
 
+  // Referrer reward is operator-set (admin: /admin/growth → Referrals); the
+  // const is only the first-deploy default. Single source of truth so a
+  // change in admin actually lands on the points awarded.
+  const referrerPoints = (await getLoyaltySettings()).referral.referrerPoints ?? REFERRER_REWARD_POINTS;
+
   await db
     .update(referralRedemptions)
     .set({
@@ -212,7 +218,7 @@ export async function qualifyReferralOnFirstPaidOrder(
       // dispatcher's `(p.rewardPoints / 10).toFixed(0)` PLN display so
       // a 100-point reward shows as ~10 PLN, not 100 PLN. (Gemini
       // review caught a 10× overpayment in the original draft.)
-      rewardGivenGrosze: REFERRER_REWARD_POINTS * 10,
+      rewardGivenGrosze: referrerPoints * 10,
     })
     .where(eq(referralRedemptions.id, redemption.id));
 
@@ -227,7 +233,7 @@ export async function qualifyReferralOnFirstPaidOrder(
       ownerName: owner.ownerName,
       refereePhone,
       orderId,
-      rewardPoints: REFERRER_REWARD_POINTS,
+      rewardPoints: referrerPoints,
       discountAppliedGrosze: redemption.discountAppliedGrosze,
     },
   });

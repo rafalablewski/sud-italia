@@ -30,13 +30,13 @@ export function LocationsGrid() {
       <div className="v8-page-inner">
         <div className="v8-ps-head">
           <div className="v8-ps-eyebrow">
-            <span>The trucks</span> <span className="bi-sec">· le botteghe</span>
+            <span>The restaurants</span> <span className="bi-sec">· le botteghe</span>
           </div>
           <h2 className="v8-ps-title">
             Two addresses, <span className="it">one family</span>
           </h2>
           <p className="v8-ps-sub">
-            Two trucks, one kitchen, one nonna who taught us the dough.
+            Two restaurants, one kitchen, one nonna who taught us the dough.
           </p>
         </div>
 

@@ -90,7 +90,7 @@ export const KPI_EXPLAINERS: Record<string, ExplainerProps> = {
     institutional:
       "Same-store sales growth (SSSG) strips out new-site noise and tells the CEO whether the existing business is actually expanding. Positive growth is the gate; flat-to-negative on a young chain is a strategy alarm. Decompose it: volume-led (more orders) vs ticket-led (bigger orders) vs acquisition-led (more customers).",
     plain:
-      "Are this month's existing trucks selling more than last month's? +8% means the machine is compounding. −5% means demand is slipping and a campaign or menu move is overdue.",
+      "Are this month's existing restaurants selling more than last month's? +8% means the machine is compounding. −5% means demand is slipping and a campaign or menu move is overdue.",
     tips:
       "If it's volume that's soft, the CMO runs acquisition + win-back; if it's ticket, the CFO works bundles and pricing (CEO sets the priority). Protect the loyalty loop so repeat rate holds. Set a measurable SSSG OKR and review it weekly.",
     methodology:

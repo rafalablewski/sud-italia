@@ -9,6 +9,7 @@
  */
 import type { Order, CartItem } from "@/data/types";
 import { effectiveUnitPrice } from "@/lib/upsell";
+import { SITE_NAME } from "@/lib/constants";
 
 const WIDTH = 42; // chars per line for an 80mm thermal head at Font A
 
@@ -23,6 +24,8 @@ export interface ReceiptLine {
 }
 
 export interface ReceiptModel {
+  /** Operator trading name printed as the receipt header. */
+  brand: string;
   orderShortId: string;
   locationSlug: string;
   customerName: string;
@@ -49,7 +52,7 @@ function zl(grosze: number): string {
   return `${(grosze / 100).toFixed(2)} zl`;
 }
 
-export function buildReceiptModel(order: Order): ReceiptModel {
+export function buildReceiptModel(order: Order, brand: string = SITE_NAME): ReceiptModel {
   const lines: ReceiptLine[] = order.items.map((ci: CartItem) => {
     const groups = ci.menuItem.modifierGroups ?? [];
     const modifiers = (ci.selectedModifiers ?? [])
@@ -69,6 +72,7 @@ export function buildReceiptModel(order: Order): ReceiptModel {
     };
   });
   return {
+    brand,
     orderShortId: order.id.slice(-6).toUpperCase(),
     locationSlug: order.locationSlug,
     customerName: order.customerName,
@@ -95,7 +99,7 @@ function row(left: string, right: string): string {
 /** Plain-text receipt — the simulator preview + the browser-print fallback. */
 export function renderPlainText(m: ReceiptModel): string {
   const out: string[] = [];
-  out.push(center("OTTAVIANO"));
+  out.push(center(ascii(m.brand).toUpperCase()));
   out.push(center("Neapolitan restaurant"));
   out.push(center(m.locationSlug.toUpperCase()));
   out.push("");
@@ -148,7 +152,7 @@ export function renderEscPos(m: ReceiptModel): Uint8Array {
   const a: number[] = [];
   a.push(...INIT);
   a.push(...ALIGN_CENTER, ...BOLD_ON, ...SIZE_DOUBLE);
-  line(a, "OTTAVIANO");
+  line(a, ascii(m.brand).toUpperCase());
   a.push(...SIZE_NORMAL, ...BOLD_OFF);
   line(a, "Neapolitan restaurant");
   line(a, m.locationSlug.toUpperCase());

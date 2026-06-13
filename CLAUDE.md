@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sud Italia — Neapolitan pizza truck chain ordering platform (Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, Stripe, Neon Postgres).
+Sud Italia — Neapolitan pizza restaurant chain ordering platform (Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, Stripe, Neon Postgres).
 
 Two active locations: Kraków, Warszawa. Serverless deployment.
 

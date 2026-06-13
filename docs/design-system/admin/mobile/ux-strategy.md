@@ -310,5 +310,5 @@ Mobile users **can read** these screens, but the editing affordance is gated to 
 | **1** | Mobile Home, Orders, KDS, Stock, Customers. | Implemented in this branch. |
 | **2** | Mobile Reports, Loyalty, Schedule, Cash, Feedback, Inventory deep view. | Foundation ready; remaining pages auto-inherit shell. |
 | **3** | Mobile-specific power features: voice command palette, barcode receive, offline KDS queue. | Hooks in place, capability-gated. |
-| **4** | Driver app surface (`/admin/truck`) — geo + push. | Out of scope for this PR. |
+| **4** | Driver app surface (`/admin/events`) — geo + push. | Out of scope for this PR. |
 | **5** | Native shell (Capacitor) for push + biometric — only after Phase 1 metrics validate the redesign. | Future. |
