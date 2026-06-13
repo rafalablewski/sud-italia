@@ -54,7 +54,7 @@ import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
 import { getBaseSlug } from "@/lib/utils";
-import { estimateReadyAt } from "@/lib/eta";
+import { estimateReadyAt, type PrepOpts } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
 import { tempVerdict } from "@/lib/haccp";
 
@@ -3129,6 +3129,15 @@ export interface AppSettings {
    *  delivery P&L report and used as the default for the Calculator scenario.
    *  `pct` is a fraction (0.014 = 1.4%); `fixedGrosze` is the flat per-txn fee. */
   processorFee?: { pct: number; fixedGrosze: number };
+  /** Operational tuning targets that used to be hardcoded constants — labor
+   *  productivity benchmarks, kitchen prep SLA floors, and inventory reorder
+   *  policy. All operator-editable at /admin/settings → Operations. Each field
+   *  falls back to DEFAULT_OPERATIONS when unset. */
+  operations?: {
+    labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number };
+    kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number };
+    inventory?: { fallbackLeadDays?: number; usageWindowDays?: number };
+  };
   /** Operator-managed social handles, rendered in the public footer.
    *  Empty string = the corresponding link is hidden. Editable from
    *  /admin/settings → General. */
@@ -3338,6 +3347,17 @@ export function resolveLocationCompliance(
  *  Calculator's default scenario so the rate isn't duplicated as a bare literal. */
 export const DEFAULT_PROCESSOR_FEE = { pct: 0.014, fixedGrosze: 40 };
 
+/** Default operational tuning — the values these levers used to hardcode, kept
+ *  as the single fallback source so unedited installs behave identically.
+ *  - labor: ~3 covers/staff/hr; SPLH healthy band 70–150 zł/hr (QSR norm).
+ *  - kitchen: 10-min prep floor + 3-min expo buffer (the customer ETA quote).
+ *  - inventory: 3-day fallback supplier lead time; 14-day usage-averaging window. */
+export const DEFAULT_OPERATIONS = {
+  labor: { coversPerStaffHour: 3, splhLowGrosze: 7000, splhHighGrosze: 15000 },
+  kitchen: { minPrepMinutes: 10, expoBufferMinutes: 3 },
+  inventory: { fallbackLeadDays: 3, usageWindowDays: 14 },
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   // Matches the pre-Phase-8 hardcoded DELIVERY_FEE_GROSZE in lib/upsell.ts
   // so first-deploy / unedited installs see no customer-visible price
@@ -3348,6 +3368,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   businessName: SITE_NAME,
   tipPresets: [0.1, 0.15, 0.2],
   processorFee: DEFAULT_PROCESSOR_FEE,
+  operations: DEFAULT_OPERATIONS,
   businessPhone: "+48 123 456 789",
   businessEmail: "hello@ottaviano.pl",
   socialLinks: {
@@ -9803,14 +9824,24 @@ export async function resolveOrderStationFanout(
  *   3. Hard floor of 10 minutes from fire time so a fast-prep order
  *      doesn't promise the customer something we can't deliver.
  */
-function computePromisedReadyAt(order: Order, firedAt: Date): Date {
+function computePromisedReadyAt(order: Order, firedAt: Date, prepOpts?: PrepOpts): Date {
   if (order.slotDate && order.slotTime) {
     const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
     if (Number.isFinite(slotInstant.getTime())) return slotInstant;
   }
   // Shared with the cart's pre-pay "Ready by" quote so the time we promise the
-  // customer before they pay matches the SLA the KDS holds the line to.
-  return estimateReadyAt(order.items, firedAt);
+  // customer before they pay matches the SLA the KDS holds the line to. The
+  // prep floor + expo buffer are operator-set (admin → Operations).
+  return estimateReadyAt(order.items, firedAt, prepOpts);
+}
+
+/** Resolve the operator's kitchen prep SLA (admin → Operations) for the ETA math. */
+async function prepOptsFromSettings(): Promise<PrepOpts> {
+  const k = (await getSettings()).operations?.kitchen;
+  return {
+    minPrepMinutes: k?.minPrepMinutes ?? DEFAULT_OPERATIONS.kitchen.minPrepMinutes,
+    expoBufferMinutes: k?.expoBufferMinutes ?? DEFAULT_OPERATIONS.kitchen.expoBufferMinutes,
+  };
 }
 /**
  * Fire KDS tickets for an order (m2_2 + m2_4 + m2_5). Generates one ticket
@@ -9839,12 +9870,13 @@ async function writeSimKdsTickets(list: KdsTicket[]): Promise<void> {
 
 export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
   const db = await getDomainDb();
+  const prepOpts = await prepOptsFromSettings();
   if (!db) {
     // Simulation: same fanout/stagger logic, persisted to the kv ticket blob.
     try {
       const fanout = await resolveOrderStationFanout(order);
       const now = new Date();
-      const promisedReadyAt = computePromisedReadyAt(order, now);
+      const promisedReadyAt = computePromisedReadyAt(order, now, prepOpts);
       const orderMaxPrep = Math.max(0, ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0));
       const tickets: KdsTicket[] = [];
       for (const [stationId, items] of fanout) {
@@ -9877,7 +9909,7 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
     const fanout = await resolveOrderStationFanout(order);
     const tickets: KdsTicket[] = [];
     const now = new Date();
-    const promisedReadyAt = computePromisedReadyAt(order, now);
+    const promisedReadyAt = computePromisedReadyAt(order, now, prepOpts);
     // m2_4: stagger each ticket's start so the longest-prep finishes
     // alongside the others. Per-ticket "fireAt" is computed from the
     // station's max item prep time vs the longest in the whole order.

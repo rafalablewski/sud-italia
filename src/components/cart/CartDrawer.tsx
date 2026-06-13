@@ -308,6 +308,8 @@ export function CartDrawer() {
   const [publicMinOrder, setPublicMinOrder] = useState<number>(0);
   /** Operator-set tip percentages from public settings (fractions). */
   const [publicTipPresets, setPublicTipPresets] = useState<number[]>([0.1, 0.15, 0.2]);
+  /** Operator-set kitchen prep SLA for the "Ready by" quote. */
+  const [publicPrepSla, setPublicPrepSla] = useState<{ minPrepMinutes?: number; expoBufferMinutes?: number }>({});
   const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
@@ -349,6 +351,7 @@ export function CartDrawer() {
       if (typeof data.deliveryFee === "number") setPublicDeliveryFee(data.deliveryFee);
       if (typeof data.minOrderAmount === "number") setPublicMinOrder(data.minOrderAmount);
       if (Array.isArray(data.tipPresets)) setPublicTipPresets(data.tipPresets.filter((n): n is number => typeof n === "number"));
+      if (data.prepSla && typeof data.prepSla === "object") setPublicPrepSla(data.prepSla);
     });
     return () => {
       cancelled = true;
@@ -395,7 +398,7 @@ export function CartDrawer() {
   // promised-ready (mirrors store.computePromisedReadyAt for slot orders), so
   // we surface it verbatim. Before a slot is picked we fall back to the shared
   // prep estimate so an ETA is visible from the moment there's a cart.
-  const prepMinutes = useMemo(() => estimatePrepMinutes(items), [items]);
+  const prepMinutes = useMemo(() => estimatePrepMinutes(items, publicPrepSla), [items, publicPrepSla]);
   const readyByLabel = useMemo<string | null>(() => {
     if (items.length === 0) return null;
     if (selectedSlotTime) {

@@ -1,8 +1,10 @@
 import type { Ingredient, PurchaseOrder, Supplier } from "@/data/types";
 import {
+  DEFAULT_OPERATIONS,
   getIngredientStock,
   getIngredients,
   getPurchaseOrders,
+  getSettings,
   getStockMovements,
   getSuppliers,
   savePurchaseOrder,
@@ -35,8 +37,6 @@ import { logger } from "@/lib/logger";
  * /admin/purchase-orders, reviews, edits if needed, taps Send.
  */
 
-const FALLBACK_LEAD_DAYS = 3;
-const USAGE_WINDOW_DAYS = 14;
 
 function todayUtcStamp(): string {
   const d = new Date();
@@ -69,12 +69,19 @@ export async function generateParPurchaseOrders(locationSlug: string): Promise<{
   belowThreshold: number;
   skippedNoSupplier: number;
 }> {
-  const [ingredients, suppliers, stockHere, movements] = await Promise.all([
+  const [ingredients, suppliers, stockHere, movements, settings] = await Promise.all([
     getIngredients(),
     getSuppliers(),
     getIngredientStock(locationSlug),
     getStockMovements({ locationSlug }),
+    getSettings(),
   ]);
+  // Reorder policy is operator-set (admin → Operations); consts were the
+  // hardcoded defaults, now in DEFAULT_OPERATIONS.
+  const USAGE_WINDOW_DAYS =
+    settings.operations?.inventory?.usageWindowDays ?? DEFAULT_OPERATIONS.inventory.usageWindowDays;
+  const FALLBACK_LEAD_DAYS =
+    settings.operations?.inventory?.fallbackLeadDays ?? DEFAULT_OPERATIONS.inventory.fallbackLeadDays;
 
   // Average daily consumption over the trailing window. `consume`
   // movements carry a negative quantity (drain); we absolute-value

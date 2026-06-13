@@ -1,5 +1,12 @@
-import { getLaborCostInRange, getOrders, getShifts } from "@/lib/store";
+import { DEFAULT_OPERATIONS, getLaborCostInRange, getOrders, getSettings, getShifts } from "@/lib/store";
 import { logger } from "@/lib/logger";
+
+/** Operator-set labor productivity targets (admin → Operations). */
+interface LaborTargets {
+  coversPerStaffHour: number;
+  splhLowGrosze: number;
+  splhHighGrosze: number;
+}
 
 /**
  * Audit §2 "Scalability (ops)" + §10 #3 / §14 McDonald's-ops critique
@@ -27,9 +34,6 @@ import { logger } from "@/lib/logger";
  * rather than recomputing on every page load.
  */
 
-const COVERS_PER_STAFF_PER_HOUR = 3;
-const TARGET_SPLH_PLN_LOW = 70;
-const TARGET_SPLH_PLN_HIGH = 150;
 
 export interface LocationLaborSnapshot {
   locationSlug: string;
@@ -76,6 +80,7 @@ function todayUtc(): Date {
  */
 async function computeYesterday(
   locationSlug: string,
+  targets: LaborTargets,
 ): Promise<LocationLaborSnapshot["yesterday"]> {
   const today = todayUtc();
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -107,11 +112,10 @@ async function computeYesterday(
 
   const splhGrosze =
     laborHours > 0 ? Math.round(revenueGrosze / laborHours) : 0;
-  const splhPln = splhGrosze / 100;
   const rating: LocationLaborSnapshot["yesterday"]["rating"] =
-    splhPln < TARGET_SPLH_PLN_LOW
+    splhGrosze < targets.splhLowGrosze
       ? "under"
-      : splhPln > TARGET_SPLH_PLN_HIGH
+      : splhGrosze > targets.splhHighGrosze
         ? "over"
         : "good";
 
@@ -173,6 +177,7 @@ async function readForecastForToday(
 
 async function computeToday(
   locationSlug: string,
+  targets: LaborTargets,
 ): Promise<LocationLaborSnapshot["today"]> {
   const today = todayUtc();
   const date = yyyymmdd(today);
@@ -199,7 +204,7 @@ async function computeToday(
   // staffing. Good enough as a first signal.
   const impliedHoursNeeded =
     forecastOrders > 0
-      ? Math.ceil(forecastOrders / COVERS_PER_STAFF_PER_HOUR)
+      ? Math.ceil(forecastOrders / targets.coversPerStaffHour)
       : 0;
 
   return {
@@ -214,13 +219,22 @@ async function computeToday(
 
 export async function computeLaborEfficiencyDaily(): Promise<LaborEfficiencyDaily> {
   const { getActiveLocationsAsync } = await import("@/lib/locations-store");
-  const locations = await getActiveLocationsAsync();
+  const [locations, settings] = await Promise.all([
+    getActiveLocationsAsync(),
+    getSettings(),
+  ]);
+  const lab = settings.operations?.labor;
+  const targets: LaborTargets = {
+    coversPerStaffHour: lab?.coversPerStaffHour ?? DEFAULT_OPERATIONS.labor.coversPerStaffHour,
+    splhLowGrosze: lab?.splhLowGrosze ?? DEFAULT_OPERATIONS.labor.splhLowGrosze,
+    splhHighGrosze: lab?.splhHighGrosze ?? DEFAULT_OPERATIONS.labor.splhHighGrosze,
+  };
   const perLocation: LocationLaborSnapshot[] = [];
   for (const loc of locations) {
     try {
       const [yesterday, today] = await Promise.all([
-        computeYesterday(loc.slug),
-        computeToday(loc.slug),
+        computeYesterday(loc.slug, targets),
+        computeToday(loc.slug, targets),
       ]);
       perLocation.push({ locationSlug: loc.slug, yesterday, today });
     } catch (err) {

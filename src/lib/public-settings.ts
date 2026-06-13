@@ -78,6 +78,8 @@ export interface PublicSettings {
   minOrderAmount?: number;
   /** Suggested tip percentages (fractions, e.g. [0.1,0.15,0.2]) for the cart. */
   tipPresets?: number[];
+  /** Kitchen prep SLA (operator-set) for the cart's pre-pay ready-time quote. */
+  prepSla?: { minPrepMinutes?: number; expoBufferMinutes?: number };
   /** Speed-guarantee SLA shown on the menu page ("X minutes guaranteed").
    *  Sourced from `LoyaltySettings.speedGuarantee` so the operator controls
    *  the promised minutes + copy — and can switch it OFF when the kitchen

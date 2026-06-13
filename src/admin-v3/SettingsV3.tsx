@@ -12,6 +12,7 @@ interface Layout {
 }
 interface Settings {
   deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; processorFee?: { pct: number; fixedGrosze: number }; businessPhone?: string; businessEmail?: string;
+  operations?: { labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number }; kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number }; inventory?: { fallbackLeadDays?: number; usageWindowDays?: number } };
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -67,6 +68,8 @@ export function SettingsV3() {
   const [bizName, setBizName] = useState("");
   const [tips, setTips] = useState("");
   const [feePct, setFeePct] = useState(""); const [feeFixed, setFeeFixed] = useState("");
+  const [savingOps, setSavingOps] = useState(false);
+  const [ops, setOps] = useState({ coversHr: "", splhLow: "", splhHigh: "", minPrep: "", expoBuf: "", leadDays: "", usageDays: "" });
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
   const [fee, setFee] = useState(""); const [minOrder, setMinOrder] = useState("");
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
@@ -82,6 +85,16 @@ export function SettingsV3() {
     setBizName(d.businessName ?? "");
     setTips((d.tipPresets ?? [0.1, 0.15, 0.2]).map((p) => Math.round(p * 100)).join(", "));
     setFeePct(String((d.processorFee?.pct ?? 0.014) * 100)); setFeeFixed(zl(d.processorFee?.fixedGrosze ?? 40));
+    const op = d.operations;
+    setOps({
+      coversHr: String(op?.labor?.coversPerStaffHour ?? 3),
+      splhLow: zl(op?.labor?.splhLowGrosze ?? 7000),
+      splhHigh: zl(op?.labor?.splhHighGrosze ?? 15000),
+      minPrep: String(op?.kitchen?.minPrepMinutes ?? 10),
+      expoBuf: String(op?.kitchen?.expoBufferMinutes ?? 3),
+      leadDays: String(op?.inventory?.fallbackLeadDays ?? 3),
+      usageDays: String(op?.inventory?.usageWindowDays ?? 14),
+    });
     setPhone(d.businessPhone ?? ""); setEmail(d.businessEmail ?? "");
     setFee(zl(d.deliveryFee)); setMinOrder(zl(d.minOrderAmount));
     setIg(d.socialLinks?.instagram ?? ""); setFb(d.socialLinks?.facebook ?? ""); setTt(d.socialLinks?.tiktok ?? "");
@@ -126,6 +139,29 @@ export function SettingsV3() {
         socialLinks: { instagram: ig.trim(), facebook: fb.trim(), tiktok: tt.trim() },
       });
     } finally { setSavingBiz(false); }
+  };
+  const saveOps = async () => {
+    setSavingOps(true);
+    try {
+      const num = (v: string, fallback: number) => (Number.isFinite(Number(v)) && v.trim() !== "" ? Number(v) : fallback);
+      await put({
+        operations: {
+          labor: {
+            coversPerStaffHour: Math.max(0.1, num(ops.coversHr, 3)),
+            splhLowGrosze: Math.round(num(ops.splhLow, 70) * 100),
+            splhHighGrosze: Math.round(num(ops.splhHigh, 150) * 100),
+          },
+          kitchen: {
+            minPrepMinutes: Math.max(0, Math.round(num(ops.minPrep, 10))),
+            expoBufferMinutes: Math.max(0, Math.round(num(ops.expoBuf, 3))),
+          },
+          inventory: {
+            fallbackLeadDays: Math.max(0, Math.round(num(ops.leadDays, 3))),
+            usageWindowDays: Math.max(1, Math.round(num(ops.usageDays, 14))),
+          },
+        },
+      });
+    } finally { setSavingOps(false); }
   };
   const saveControls = async () => {
     setSavingCtl(true);
@@ -174,6 +210,7 @@ export function SettingsV3() {
       </div>
 
       {tab === "general" && (
+        <>
         <Card>
           <CardHead title="Business" actions={<Button variant="primary" size="sm" loading={savingBiz} onClick={saveBiz}>Save</Button>} />
           <CardBody>
@@ -196,6 +233,28 @@ export function SettingsV3() {
             </div>
           </CardBody>
         </Card>
+        <Card style={{ marginTop: 16 }}>
+          <CardHead title="Operations" description="Labor, kitchen SLA & reorder policy — the targets the dashboards and ETA quotes use" actions={<Button variant="primary" size="sm" loading={savingOps} onClick={saveOps}>Save</Button>} />
+          <CardBody>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Labor productivity</div>
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Covers / staff / hr</span><input className="av3-input" type="number" step="0.5" value={ops.coversHr} onChange={(e) => setOps((o) => ({ ...o, coversHr: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">SPLH low (zł/hr)</span><input className="av3-input" type="number" step="1" value={ops.splhLow} onChange={(e) => setOps((o) => ({ ...o, splhLow: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">SPLH high (zł/hr)</span><input className="av3-input" type="number" step="1" value={ops.splhHigh} onChange={(e) => setOps((o) => ({ ...o, splhHigh: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Kitchen prep SLA (customer ready-time quote)</div>
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
+              <label className="av3-field"><span className="av3-field-label">Min prep (min)</span><input className="av3-input" type="number" step="1" value={ops.minPrep} onChange={(e) => setOps((o) => ({ ...o, minPrep: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Expo buffer (min)</span><input className="av3-input" type="number" step="1" value={ops.expoBuf} onChange={(e) => setOps((o) => ({ ...o, expoBuf: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Inventory reorder policy</div>
+            <div className="av3-formrow av3-formrow-4">
+              <label className="av3-field"><span className="av3-field-label">Fallback lead (days)</span><input className="av3-input" type="number" step="1" value={ops.leadDays} onChange={(e) => setOps((o) => ({ ...o, leadDays: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">Usage window (days)</span><input className="av3-input" type="number" step="1" value={ops.usageDays} onChange={(e) => setOps((o) => ({ ...o, usageDays: e.target.value }))} /></label>
+            </div>
+          </CardBody>
+        </Card>
+        </>
       )}
 
       {tab === "storefront" && (
