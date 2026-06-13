@@ -88,13 +88,10 @@ console.log("\n=== scoreCustomer ===");
 
 console.log("\n=== referral code determinism ===");
 {
-  // Deterministic-code property is exercised by re-importing the module fresh.
-  const mod = require("@/lib/referral-loop") as typeof import("@/lib/referral-loop");
-  // deriveCode is private, so we hit getOrCreateReferralCode in DB-less mode
-  // which falls back to the seed derivation.
-  // (Skipped here because it's async and the smoke test is sync.)
+  // deriveCode is private, so the deterministic-code property is exercised by
+  // getOrCreateReferralCode in DB-less mode (it falls back to the seed
+  // derivation) in the async test suite — not this sync smoke test.
   console.log("  (deriveCode is exercised by getOrCreateReferralCode in tests)");
-  void mod;
 }
 
 if (failures > 0) {
