@@ -325,6 +325,25 @@ icon — e.g. the Permission matrix "By role / By user"),
 the Kanban board (`.av3-kanban` / `.av3-kcol` / `.av3-ocard`), and the dialog
 (`.av3-dialog-*`).
 
+**Seed console (Settings → Simulations).** The owner-only "Reset & re-seed",
+"Wipe to empty" and the Simulation-mode toggle each lay down a deep ~10-month
+dry-run, which is genuinely heavy. Rather than a blind spinner, the route
+(`/api/admin/simulation-mode`) **streams newline-delimited JSON** progress —
+one `{ t, pct, msg }` object per phase — and `SettingsV3.tsx` renders it inline
+as a **progress bar + macOS-style terminal** (traffic-light header, monospace
+`--av3-mono` log, auto-scroll to the newest line, ✓/✗/› line glyphs). The bar
+fills `--av3-brand` and flips to a fixed red on an `error` line; on `done` it
+holds at 100% for ~1.4s so the operator reads the final line, then hard-reloads
+to refresh the banner + every data surface. The seeder
+(`lib/sandbox/seed.ts`) owns the milestones via a `SeedProgress` callback and a
+`tick()` counter (4 global + 11 per-location + 7 finalize). **Intentional token
+exception:** the terminal body is a fixed dark console (`#0b0f17` + console
+greens/reds) regardless of the admin light/dark theme — a console reads as a
+console in either theme — so it deliberately does **not** use the surface
+tokens; only its frame (border, progress track, %) stays on `--av3-*`. This is
+the one place in v3 where a fixed palette is correct; don't copy it for ordinary
+surfaces.
+
 ## The Dashboard — "Operator Terminal"
 
 The v3 home surface (`v3/DashboardV3.tsx`) is **not** an analytics report — it's

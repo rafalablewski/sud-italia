@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Fingerprint, FlaskConical, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
 import { Badge, Button, Card, CardBody, CardHead, SkeletonPage, Switch } from "./ui";
@@ -120,14 +120,73 @@ export function SettingsV3() {
   // (seeded with a realistic CORE picture on first enable) — so after a change
   // we hard-reload to refresh the banner + every data surface at once.
   const [simBusy, setSimBusy] = useState<null | "toggle" | "reset" | "wipe">(null);
+  // Live seed console: the route streams NDJSON progress ({t,pct,msg}); we render
+  // each line into the terminal below and drive the bar off the latest pct.
+  const [simLog, setSimLog] = useState<{ pct: number; msg: string; tone?: "ok" | "err" }[]>([]);
+  const [simPct, setSimPct] = useState(0);
+  const [simDone, setSimDone] = useState(false);
   const simCall = async (kind: "toggle" | "reset" | "wipe", body: Record<string, unknown>) => {
     setSimBusy(kind);
+    setSimLog([]);
+    setSimPct(0);
+    setSimDone(false);
+    let lastPct = 0;
+    const push = (msg: string, pct: number, tone?: "ok" | "err") => {
+      lastPct = pct;
+      setSimPct(pct);
+      setSimLog((l) => [...l, { pct, msg, tone }]);
+    };
     try {
-      const res = await fetch("/api/admin/simulation-mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) window.location.reload();
-      else setSimBusy(null);
-    } catch { setSimBusy(null); }
+      const res = await fetch("/api/admin/simulation-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok || !res.body) {
+        push(`Request failed (${res.status})`, lastPct, "err");
+        setSimBusy(null);
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let ok = false;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          let evt: { t?: string; pct?: number; msg?: string };
+          try { evt = JSON.parse(line); } catch { continue; }
+          if (evt.t === "log") push(evt.msg ?? "", typeof evt.pct === "number" ? evt.pct : lastPct);
+          else if (evt.t === "done") { ok = true; push("Complete — refreshing every screen…", 100, "ok"); }
+          else if (evt.t === "error") push(evt.msg ?? "Operation failed", lastPct, "err");
+        }
+      }
+      if (ok) {
+        setSimDone(true);
+        // Hold the finished console on screen a beat so the operator reads the
+        // last line, then hard-reload to refresh the banner + every data surface.
+        setTimeout(() => window.location.reload(), 1400);
+      } else {
+        push("Stream ended unexpectedly.", lastPct, "err");
+        setSimBusy(null);
+      }
+    } catch {
+      push("Connection lost.", lastPct, "err");
+      setSimBusy(null);
+    }
   };
+  // Keep the terminal pinned to its newest line as the seed streams in.
+  const termRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = termRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [simLog]);
 
   const saveBiz = async () => {
     setSavingBiz(true);
@@ -338,17 +397,53 @@ export function SettingsV3() {
                   onChange={() => simCall("toggle", { enabled: !s.simulationModeEnabled })}
                 />
               </div>
-              {simBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… seeding test data on first enable. The page will reload.</div>}
               {s.simulationModeEnabled && (
                 <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-                  <Button variant="secondary" size="sm" loading={simBusy === "reset"} onClick={() => simCall("reset", { action: "reset" })}>
+                  <Button variant="secondary" size="sm" loading={simBusy === "reset"} disabled={simBusy != null} onClick={() => simCall("reset", { action: "reset" })}>
                     Reset &amp; re-seed
                   </Button>
                   <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Wipe the test dataset and re-seed a clean dry-run.</span>
-                  <Button variant="secondary" size="sm" loading={simBusy === "wipe"} onClick={() => simCall("wipe", { action: "wipe" })}>
+                  <Button variant="secondary" size="sm" loading={simBusy === "wipe"} disabled={simBusy != null} onClick={() => simCall("wipe", { action: "wipe" })}>
                     Wipe to empty
                   </Button>
                   <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Clear every test row for hand-entry from scratch.</span>
+                </div>
+              )}
+
+              {/* Live seed console — streams what the deep dry-run is doing right
+                  now (NDJSON from the route) so the heavy reseed isn't a blind
+                  wait. Intentionally a fixed dark terminal regardless of the
+                  admin light/dark theme — see design-system admin/v3 doc. */}
+              {(simBusy != null || simLog.length > 0) && (
+                <div style={{ marginTop: 14 }} aria-busy={simBusy != null && !simDone}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{ flex: 1, height: 6, borderRadius: 999, background: "var(--av3-line)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${simPct}%`, borderRadius: 999, background: simLog.some((l) => l.tone === "err") ? "#e5534b" : "var(--av3-brand)", transition: "width .3s ease" }} />
+                    </div>
+                    <span style={{ fontFamily: "var(--av3-mono)", fontSize: 12, fontWeight: 700, minWidth: 40, textAlign: "right", color: "var(--av3-fg)" }}>{simPct}%</span>
+                  </div>
+                  <div style={{ background: "#0b0f17", border: "1px solid var(--av3-line)", borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 11px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                      <span style={{ width: 9, height: 9, borderRadius: 999, background: "#ff5f56", display: "inline-block" }} />
+                      <span style={{ width: 9, height: 9, borderRadius: 999, background: "#ffbd2e", display: "inline-block" }} />
+                      <span style={{ width: 9, height: 9, borderRadius: 999, background: "#27c93f", display: "inline-block" }} />
+                      <span style={{ marginLeft: 6, fontFamily: "var(--av3-mono)", fontSize: 11, color: "#7b8ca0" }}>
+                        simulation seed{simBusy ? ` · ${simBusy}` : ""}
+                      </span>
+                    </div>
+                    <div ref={termRef} style={{ maxHeight: 220, overflowY: "auto", padding: "9px 12px", fontFamily: "var(--av3-mono)", fontSize: 11.5, lineHeight: 1.7 }}>
+                      {simLog.length === 0 ? (
+                        <div style={{ color: "#8aa0b6" }}>Starting…</div>
+                      ) : (
+                        simLog.map((l, i) => (
+                          <div key={i} style={{ display: "flex", gap: 10, whiteSpace: "pre-wrap", color: l.tone === "err" ? "#ff9b9b" : l.tone === "ok" ? "#6ee7a8" : "#c7d4e3" }}>
+                            <span style={{ color: "#5f7891", minWidth: 34, textAlign: "right", flexShrink: 0 }}>{l.pct}%</span>
+                            <span>{l.tone === "err" ? "✗ " : l.tone === "ok" ? "✓ " : "› "}{l.msg}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardBody>
