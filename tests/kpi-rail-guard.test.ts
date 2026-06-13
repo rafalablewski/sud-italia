@@ -23,7 +23,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ADMIN_V3 = join(process.cwd(), "src/admin-v3");
-const RAW_RAIL = 'className="av3-kpi-rail"';
+const RAW_RAIL = /className=["']av3-kpi-rail["']/;
 // A whole-page skeleton return while loading — `if (loading) return <Skeleton…`
 // or `if (loading || !data) return <Skeleton…`. Kept deliberately loose; the
 // point is that the page bails to a skeleton before the rail can render empty.
@@ -37,7 +37,7 @@ test("admin-v3 KPI rails are loading-gated (use <KpiRail> or an early skeleton r
   const offenders: string[] = [];
   for (const file of files) {
     const src = readFileSync(join(ADMIN_V3, file), "utf8");
-    if (!src.includes(RAW_RAIL)) continue; // goes through <KpiRail>, or has no rail
+    if (!RAW_RAIL.test(src)) continue; // goes through <KpiRail>, or has no rail
     if (EARLY_RETURN.test(src)) continue; // whole-page skeleton guard
     offenders.push(file);
   }

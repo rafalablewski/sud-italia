@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardCheck, Clock, LayoutGrid, Rows3, Scale } from "
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, InfoButton, Kpi, KpiRail, SkeletonRows, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -209,7 +209,9 @@ export function HandoverV3() {
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {loading && logs.length === 0 ? (
+        <Card style={{ padding: 12 }}><SkeletonRows rows={6} /></Card>
+      ) : rows.length === 0 ? (
         <Card style={{ padding: 0 }}>
           <div className="av3-empty"><div className="av3-empty-title">{logs.length === 0 ? "No handovers this week" : "Nothing matches"}</div><div className="av3-empty-text">{logs.length === 0 ? "Sign off the first shift above." : "Adjust the search or filter."}</div></div>
         </Card>
