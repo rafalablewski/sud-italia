@@ -95,6 +95,44 @@ The original design-language mockups are kept for reference at
 `tests/sketches/core-v2-design-language.html` (POS hero) and
 `tests/sketches/core-v2-all-surfaces.html` (all surfaces, switchable).
 
+## Re-theming — a theme change vs a structural change
+
+Two very different kinds of "redesign", with very different blast radius — know
+which one you're doing before you start.
+
+**Theme change (re-skin) — edit `themes/core/` only; `/core/` untouched.**
+Palette, typography, radius, materials, dark/light feel. Every colour, font,
+radius, shadow and motion value is a token, and the components reference
+semantic classes (`core-*`) — never raw colours. So a re-skin is: edit
+`tokens.css` (and the `next/font` instances in `src/app/core/layout.tsx`); the
+route + component code in `src/core/` and `src/app/core/` does **not** change.
+
+Where each colour lives:
+
+- **`tokens.css`** — the global palette + semantics (`--bg`, `--panel`,
+  `--ink`, `--brand`, `--basil`/`--amber`/`--info`/`--danger` + washes), the
+  filled-accent inks (`--on-accent` for white-on-brand, `--on-basil` for
+  ink-on-green), the loyalty tier metals (`--tier-platinum`/`-silver`/`-bronze`
+  + washes), elevation, type, radius, motion — in the dark + light blocks.
+- **`index.css` → `.core-kds` / `.core-kiosk`** — the KDS kitchen wall's OWN
+  scoped surface palette + status tones (`--t-firing`/`-warn`/`-risk`/`-late`/
+  `-ready`/`-queued`), because they're KDS-specific (dark by default; the
+  in-shell board follows the app theme, the fullscreen kiosk stays a dark wall).
+- **Functional literals that are NOT theme colours** and must stay hard-coded:
+  the QR quiet-zone white and the print-document styles in `CoreQrQueue` — a QR
+  must scan and a printed poster is theme-independent. These are the only raw
+  colours left in the components, by design.
+
+The rule for components: a colour is always a token (`var(--…)`), never a hex
+literal or a `var(--token, #fallback)` fallback. If you need a new colour, add
+a token in `tokens.css` first.
+
+**Structural change — this touches `/core/` components.**
+A new layout/DOM, a different shell, a new class taxonomy, new surfaces. The
+class names + structure live in the components' JSX, so this is real component
+work — it **cannot** be a `themes/`-only edit. Treat it as a rebuild and follow
+the swap playbook below; don't try to force it through CSS alone.
+
 ## Naming contract & swap playbook
 
 The promotion that created today's Core was a **large diff** for one

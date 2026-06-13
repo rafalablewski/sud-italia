@@ -232,7 +232,7 @@ export function CoreFloor() {
           <div className="k"><div className="kl">Turn time</div><div className="kv mono">{s?.medianTurnMin != null ? `${s.medianTurnMin}m` : "—"}</div></div>
           <div className="k"><div className="kl">Spend / hr</div><div className="kv mono">{s?.spendVelocityPerHourGrosze != null ? zl0(s.spendVelocityPerHourGrosze) : "—"}</div></div>
           <div className="k"><div className="kl">Freeing ≤15m</div><div className="kv mono">{s?.freeingSoon15 ?? "—"}</div></div>
-          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={unpaidCount > 0 ? { color: "var(--brand-bright, #e0564b)" } : undefined}>{unpaidCount || "—"}</div></div>
+          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={unpaidCount > 0 ? { color: "var(--brand-bright)" } : undefined}>{unpaidCount || "—"}</div></div>
         </div>
 
         <div className="core-floor-bar">

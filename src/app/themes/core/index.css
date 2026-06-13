@@ -36,7 +36,7 @@
    pinned; this scrolls horizontally when it can't all fit. */
 .core .core-bar-ctx { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .core .core-bar-ctx::-webkit-scrollbar { display: none; }
-.core .core-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--brand); color: #fff; display: grid;
+.core .core-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--brand); color: var(--on-accent); display: grid;
   place-items: center; font-family: var(--display); font-weight: 700; font-size: 18px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
 .core .core-brand .nm { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.01em; line-height: 1; }
 .core .core-brand .os { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; font-weight: 600; }
@@ -61,7 +61,7 @@
 
 /* notifications bell + panel */
 .core .core-notif { position: relative; display: flex; }
-.core .core-notif-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: var(--brand); color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }
+.core .core-notif-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: var(--brand); color: var(--on-accent); font-size: 10px; font-weight: 700; line-height: 1; }
 .core .core-notif-scrim { position: fixed; inset: 0; z-index: 60; }
 .core .core-notif-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 61; width: 340px; max-height: 70vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2, 0 12px 32px rgba(0,0,0,.4)); overflow: hidden; }
 .core .core-notif-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
@@ -113,10 +113,10 @@
    with .core-gfilters so the tint out-ranks the generic .core-seg.icons .on rule
    and the selected gem keeps its metal colour. */
 .core .core-gfilters .core-tierseg button.t-all { color: var(--ink-3); }
-.core .core-gfilters .core-tierseg button.t-platinum { color: #aab4cc; }
+.core .core-gfilters .core-tierseg button.t-platinum { color: var(--tier-platinum); }
 .core .core-gfilters .core-tierseg button.t-gold { color: var(--amber); }
-.core .core-gfilters .core-tierseg button.t-silver { color: #9aa0ad; }
-.core .core-gfilters .core-tierseg button.t-bronze { color: #c08a5e; }
+.core .core-gfilters .core-tierseg button.t-silver { color: var(--tier-silver); }
+.core .core-gfilters .core-tierseg button.t-bronze { color: var(--tier-bronze); }
 .core .core-gfilters .core-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* ---------- body shell ---------- */
@@ -150,7 +150,7 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .core .core-prod .pf { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 11px; }
 .core .core-prod .pp { font-family: var(--mono); font-weight: 600; font-size: 14.5px; color: var(--ink); }
-.core .core-prod .add { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; display: grid; place-items: center;
+.core .core-prod .add { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: var(--on-accent); display: grid; place-items: center;
   font-size: 18px; line-height: 1; box-shadow: var(--sh-1); transition: all var(--fast); flex: none; }
 .core .core-prod:hover .add { background: var(--brand-bright); }
 .core .core-tagrow { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; min-height: 20px; }
@@ -221,7 +221,7 @@
 .core .core-chanrow { display: flex; gap: 6px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; flex: none; }
 .core .core-chan { height: 30px; padding: 0 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 550; font-size: 12.5px; color: var(--ink-2); }
 .core .core-chan:hover { color: var(--ink); }
-.core .core-chan.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.core .core-chan.on { background: var(--brand); border-color: var(--brand); color: var(--on-accent); font-weight: 600; }
 .core .core-chan-aux { height: 30px; padding: 0 13px; border-radius: 8px; border: 1px dashed var(--line-2); background: transparent; font-weight: 550; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; flex: none; }
 .core .core-chan-aux:hover { color: var(--ink); background: var(--hover); }
 
@@ -232,7 +232,7 @@
 .core .core-course.fired { opacity: .62; }
 .core .core-course-h { display: flex; align-items: center; gap: 9px; padding: 11px 16px 4px; }
 .core .core-course-h .c-n { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
-.core .core-course-h .fire { margin-left: auto; height: 26px; padding: 0 12px; border-radius: 7px; background: var(--brand); color: #fff; font-weight: 650; font-size: 11.5px; }
+.core .core-course-h .fire { margin-left: auto; height: 26px; padding: 0 12px; border-radius: 7px; background: var(--brand); color: var(--on-accent); font-weight: 650; font-size: 11.5px; }
 .core .core-course-h .fire:hover { background: var(--brand-bright); }
 .core .core-course-h .fire:disabled { opacity: .5; cursor: default; }
 .core .core-course-h .fire.done { background: var(--basil-wash); color: var(--basil); }
@@ -255,7 +255,7 @@
 .core .core-offer .ot { flex: 1; font-size: 12px; color: var(--ink-2); } .core .core-offer .ot b { color: var(--ink); font-weight: 600; }
 .core .core-offer .op { font-size: 12.5px; font-weight: 600; }
 .core .core-offer.combo { border-color: var(--brand); background: var(--brand-wash); }
-.core .core-offer.combo .oi { background: var(--brand); color: #fff; }
+.core .core-offer.combo .oi { background: var(--brand); color: var(--on-accent); }
 .core .core-offer.combo .op { color: var(--brand-bright); text-transform: uppercase; font-size: 10px; letter-spacing: .05em; }
 
 /* ---------- ticket foot: totals + actions ---------- */
@@ -283,12 +283,12 @@
 .core .core-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
 .core .core-foot-aux[data-on="true"] .core-glyph { opacity: 1; }
 .core .core-foot-aux.danger { color: var(--danger); }
-.core .core-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: #fff; }
+.core .core-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: var(--on-accent); }
 .core .core-foot-aux:disabled { opacity: .45; cursor: default; }
 .core .core-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .core .core-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .core .core-send:disabled { opacity: .45; cursor: default; }
 .core .core-send .core-glyph { opacity: .75; }
-.core .core-charge { flex: 1; height: 48px; border-radius: var(--r-md); border: none; background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.core .core-charge { flex: 1; height: 48px; border-radius: var(--r-md); border: none; background: var(--brand); color: var(--on-accent); font-weight: 700; font-size: 14.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .core .core-charge:hover:not(:disabled) { background: var(--brand-bright); }
 .core .core-charge:disabled { opacity: .5; cursor: default; }
 .core .core-charge .core-glyph { opacity: .9; }
@@ -300,7 +300,7 @@
 .core .core-steer.calm { background: var(--basil-wash); color: var(--basil); }
 .core .core-steer.warn { background: var(--amber-wash); color: var(--amber); }
 .core .core-steer.risk { background: var(--danger-wash); color: var(--danger); }
-.core .core-chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.core .core-chip.on { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
 /* re-course — tap the grip (touch) or drag a line onto a course (mouse) */
 .core .core-line[draggable="true"] .core-line-main { cursor: grab; }
 .core .core-line[draggable="true"]:active .core-line-main { cursor: grabbing; }
@@ -317,7 +317,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-recourse { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 16px 10px 49px; }
 .core .core-recourse-opt { appearance: none; height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background var(--fast), border-color var(--fast), color var(--fast); }
 .core .core-recourse-opt:hover { border-color: var(--brand); color: var(--brand); }
-.core .core-recourse-opt.on { background: var(--brand); border-color: var(--brand); color: #fff; cursor: default; }
+.core .core-recourse-opt.on { background: var(--brand); border-color: var(--brand); color: var(--on-accent); cursor: default; }
 
 /* ============================================================
    Own UI primitives — Dialog, Toast, Button
@@ -333,7 +333,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 .core .core-btn { height: 38px; padding: 0 16px; border-radius: 9px; font-weight: 600; font-size: 13px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); }
 .core .core-btn:hover { background: var(--hover); }
-.core .core-btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.core .core-btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
 .core .core-btn.primary:hover { background: var(--brand-bright); }
 .core .core-btn.ghost { background: transparent; border-color: var(--line); }
 
@@ -371,7 +371,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 .core .core-toast-stack { position: fixed; left: 0; right: 0; bottom: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 80; pointer-events: none; }
 .core .core-toast { background: var(--ink); color: var(--bg); font-weight: 600; font-size: 13px; padding: 10px 16px; border-radius: var(--pill); box-shadow: var(--sh-pop); animation: core-toast-in 180ms var(--fast); }
-.core .core-toast.success { background: var(--basil); color: #06140d; } .core .core-toast.danger { background: var(--danger); color: #fff; }
+.core .core-toast.success { background: var(--basil); color: var(--on-basil); } .core .core-toast.danger { background: var(--danger); color: var(--on-accent); }
 @keyframes core-toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* ============================================================
@@ -463,7 +463,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-meter i { display: block; height: 100%; border-radius: 3px; background: var(--t-firing); }
 .core .core-meter i.t-warn { background: var(--t-warn); } .core .core-meter i.t-risk { background: var(--t-risk); }
 .core .core-meter i.t-late { background: var(--t-late); } .core .core-meter i.t-ready { background: var(--t-ready); } .core .core-meter i.t-queued { background: var(--t-queued); }
-.core .core-bump { margin-top: 10px; width: 100%; height: 34px; border-radius: 8px; background: var(--t-ready); color: #06140d; font-weight: 700; font-size: 12.5px; }
+.core .core-bump { margin-top: 10px; width: 100%; height: 34px; border-radius: 8px; background: var(--t-ready); color: var(--on-basil); font-weight: 700; font-size: 12.5px; }
 .core .core-tk.t-firing .core-bump, .core .core-tk.t-warn .core-bump, .core .core-tk.t-queued .core-bump { background: var(--kds-veil); color: var(--ink); }
 .core .core-bump:hover { filter: brightness(1.08); } .core .core-bump:disabled { opacity: .5; cursor: default; }
 
@@ -590,7 +590,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-bub .t { display: block; font-size: 9px; opacity: .6; margin-top: 4px; font-family: var(--mono); }
 .core .core-bub-kind { display: block; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .7; margin-bottom: 3px; }
 .core .core-bub.customer { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
-.core .core-bub.operator { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
+.core .core-bub.operator { align-self: flex-end; background: var(--brand); color: var(--on-accent); border-bottom-right-radius: 4px; }
 .core .core-bub.bot { align-self: flex-end; background: var(--info-wash); color: var(--ink); border: 1px solid var(--line); border-bottom-right-radius: 4px; }
 .core .core-bub.system { align-self: center; background: var(--panel-2); color: var(--ink-3); font-size: 11.5px; }
 /* 24h-window indicator in the thread header */
@@ -646,7 +646,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-funnel-stage .drop { display: block; margin-top: 4px; font-size: 10.5px; color: var(--amber); }
 .core .core-composer textarea { flex: 1; resize: none; min-height: 40px; max-height: 120px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 13px; padding: 10px 13px; }
 .core .core-composer textarea:focus { outline: none; border-color: var(--brand); }
-.core .core-send-msg { width: 40px; height: 40px; border-radius: 10px; background: var(--brand); color: #fff; font-size: 15px; flex: none; }
+.core .core-send-msg { width: 40px; height: 40px; border-radius: 10px; background: var(--brand); color: var(--on-accent); font-size: 15px; flex: none; }
 .core .core-send-msg:hover { background: var(--brand-bright); } .core .core-send-msg:disabled { opacity: .5; cursor: default; }
 
 /* context */
@@ -696,7 +696,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-gdpr { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .core .core-gdpr:hover { color: var(--ink); }
 .core .core-gdpr.danger { margin-left: 10px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
-.core .core-gdpr.danger:hover { color: #fff; }
+.core .core-gdpr.danger:hover { color: var(--on-accent); }
 .core .core-profile-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 9px; }
 .core .core-timeline { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .core .core-tl-row { background: var(--panel-2); padding: 9px 13px; display: grid; grid-template-columns: 80px 130px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
@@ -714,10 +714,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    Guest · Loyalty
    ============================================================ */
 .core .core-tierbadge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: var(--pill); text-transform: capitalize; background: var(--panel-3); color: var(--ink-2); }
-.core .core-tierbadge.platinum { background: rgba(180,190,210,.22); color: #aab4cc; }
+.core .core-tierbadge.platinum { background: var(--tier-platinum-wash); color: var(--tier-platinum); }
 .core .core-tierbadge.gold { background: var(--amber-wash); color: var(--amber); }
-.core .core-tierbadge.silver { background: rgba(160,160,170,.2); color: var(--ink-2); }
-.core .core-tierbadge.bronze { background: rgba(176,120,80,.2); color: #c08a5e; }
+.core .core-tierbadge.silver { background: var(--tier-silver-wash); color: var(--ink-2); }
+.core .core-tierbadge.bronze { background: var(--tier-bronze-wash); color: var(--tier-bronze); }
 
 .core .core-wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .core .core-wallet { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; }
@@ -778,7 +778,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-cap-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 4px; }
 .core .core-toggle { width: 34px; height: 20px; border-radius: var(--pill); background: var(--panel-3); border: 1px solid var(--line); position: relative; flex: none; transition: background var(--fast); }
 .core .core-toggle .knob { position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink-3); transition: all var(--fast); }
-.core .core-toggle.on { background: var(--basil); border-color: transparent; } .core .core-toggle.on .knob { left: 15px; background: #fff; }
+.core .core-toggle.on { background: var(--basil); border-color: transparent; } .core .core-toggle.on .knob { left: 15px; background: var(--on-accent); }
 
 .core .core-cap-inspect { overflow-y: auto; padding: 16px; background: var(--bg); }
 .core .core-cap-inspect-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
@@ -793,7 +793,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbadge2 { flex: none; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--pill); background: var(--panel-3); color: var(--ink-3); }
 .core .core-tbadge2.live { background: var(--basil-wash); color: var(--basil); }
 .core .core-tbadge2.off { background: var(--amber-wash); color: var(--amber); }
-.core a.core-tbadge2.live:hover { background: var(--basil); color: #06140d; }
+.core a.core-tbadge2.live:hover { background: var(--basil); color: var(--on-basil); }
 .core .core-matrix-legend { font-size: 11px; color: var(--ink-3); margin: 0 0 8px; }
 .core .core-json { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px 15px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--ink-2); overflow-x: auto; white-space: pre; max-height: 320px; }
 .core .core-matrix-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); }
@@ -817,7 +817,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-pks { display: flex; flex-wrap: wrap; gap: 8px; }
 .core .core-pk { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; padding: 9px 13px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; }
 .core .core-pk:hover { border-color: var(--line-2); background: var(--hover); }
-.core .core-pk.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.core .core-pk.on { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
 .core .core-pk.off { opacity: .45; }
 .core .core-pk .sub { font-size: 10px; font-weight: 500; color: var(--ink-3); }
 .core .core-pk.on .sub { color: rgba(255,255,255,.8); }
@@ -909,7 +909,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-field:last-child { margin-bottom: 0; }
 .core .core-tbl-field .core-inp { width: 100%; }
 .core .core-btn.danger { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
-.core .core-btn.danger:hover { background: var(--danger); color: #fff; }
+.core .core-btn.danger:hover { background: var(--danger); color: var(--on-accent); }
 
 /* slots */
 .core .core-slot-list { display: flex; flex-direction: column; gap: 8px; }
@@ -989,7 +989,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   .core .core-ticket.is-open { transform: translateY(0); }
   .core .core-ticket-backdrop { display: block; position: fixed; inset: 0; z-index: 49; background: rgba(8,7,10,.5); border: 0; }
   .core .core-ticket-fab { display: flex; align-items: center; gap: 10px; position: fixed; left: 12px; right: 12px; z-index: 48;
-    bottom: calc(var(--core-navh) + 10px); height: 52px; padding: 0 16px; border: none; border-radius: 14px; background: var(--brand); color: #fff; font-weight: 600; font-size: 15px;
+    bottom: calc(var(--core-navh) + 10px); height: 52px; padding: 0 16px; border: none; border-radius: 14px; background: var(--brand); color: var(--on-accent); font-weight: 600; font-size: 15px;
     box-shadow: 0 8px 24px rgba(0,0,0,.4); cursor: pointer; }
   .core .core-ticket-fab.is-open { display: none; }
   .core .core-ticket-fab-c { background: rgba(255,255,255,.25); border-radius: 8px; padding: 2px 9px; font-variant-numeric: tabular-nums; }

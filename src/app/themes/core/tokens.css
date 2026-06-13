@@ -19,6 +19,14 @@
 
   /* mode-independent */
   --brand-ink: #7c172b;
+  /* contrast inks for filled accents (mode-independent — brand/danger stay
+     dark enough in both modes that white reads on them) */
+  --on-accent: #fff;
+  --on-basil: #06140d;
+  /* loyalty tier metals (mode-independent) */
+  --tier-platinum: #aab4cc; --tier-platinum-wash: rgba(180, 190, 210, .22);
+  --tier-silver: #9aa0ad;   --tier-silver-wash: rgba(160, 160, 170, .2);
+  --tier-bronze: #c08a5e;   --tier-bronze-wash: rgba(176, 120, 80, .2);
   --r-sm: 7px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --pill: 999px;
   --fast: 130ms cubic-bezier(.3, .7, 0, 1);
   --base: 200ms cubic-bezier(.3, .7, 0, 1);

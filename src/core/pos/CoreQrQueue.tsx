@@ -126,20 +126,20 @@ export function CoreQrQueue({ location }: { location: string }) {
 
           {view === "qr" ? (
             <div style={{ display: "grid", gap: 14, justifyItems: "center", paddingBottom: 6 }}>
-              <label style={{ width: "100%", display: "grid", gap: 6, fontSize: 12.5, color: "var(--ink-2, #b9b4ae)" }}>
+              <label style={{ width: "100%", display: "grid", gap: 6, fontSize: 12.5, color: "var(--ink-2)" }}>
                 Table number / label
                 <input
                   value={tableInput}
                   onChange={(e) => setTableInput(e.target.value)}
                   placeholder="e.g. 12"
-                  style={{ background: "var(--panel, #241f1b)", border: "1px solid var(--line, rgba(255,255,255,.12))", borderRadius: 10, padding: "11px 13px", color: "inherit", fontSize: 16 }}
+                  style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 10, padding: "11px 13px", color: "inherit", fontSize: 16 }}
                 />
               </label>
               <div style={{ background: "#fff", padding: 12, borderRadius: 12, lineHeight: 0 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrSrc} alt="Table QR code" width={240} height={240} />
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--ink-3, #8a857f)", textAlign: "center", wordBreak: "break-all" }}>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", textAlign: "center", wordBreak: "break-all" }}>
                 {origin}/qr?location={location}{qrTable ? `&table=${qrTable}` : ""}
               </div>
               <button type="button" className="core-charge" style={{ height: 40, padding: "0 22px" }} onClick={printQr}>
@@ -147,7 +147,7 @@ export function CoreQrQueue({ location }: { location: string }) {
               </button>
             </div>
           ) : orders.length === 0 ? (
-            <div style={{ padding: "28px 6px", textAlign: "center", color: "var(--ink-3, #8a857f)", fontSize: 14 }}>
+            <div style={{ padding: "28px 6px", textAlign: "center", color: "var(--ink-3)", fontSize: 14 }}>
               No QR orders yet. Guests who scan a table QR appear here to take payment.
             </div>
           ) : (
@@ -156,7 +156,7 @@ export function CoreQrQueue({ location }: { location: string }) {
                 <div
                   key={o.id}
                   style={{
-                    border: "1px solid var(--line, rgba(255,255,255,.12))",
+                    border: "1px solid var(--line)",
                     borderRadius: 12,
                     padding: "12px 14px",
                     display: "grid",
@@ -165,8 +165,8 @@ export function CoreQrQueue({ location }: { location: string }) {
                 >
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                     <strong style={{ fontSize: 15 }}>{o.tableNumber ? `Table ${o.tableNumber}` : "Dine-in"}</strong>
-                    <span style={{ fontSize: 12.5, color: "var(--ink-2, #b9b4ae)" }}>{o.customerName}</span>
-                    {o.partySize ? <span style={{ fontSize: 12, color: "var(--ink-3, #8a857f)" }}>· {o.partySize} guests</span> : null}
+                    <span style={{ fontSize: 12.5, color: "var(--ink-2)" }}>{o.customerName}</span>
+                    {o.partySize ? <span style={{ fontSize: 12, color: "var(--ink-3)" }}>· {o.partySize} guests</span> : null}
                     <span
                       className={o.paid ? "core-chip on" : "core-chip"}
                       style={{ marginLeft: "auto", height: 24, fontSize: 11, textTransform: "capitalize" }}
@@ -174,11 +174,11 @@ export function CoreQrQueue({ location }: { location: string }) {
                       {o.paid ? "paid" : "unpaid"} · {o.status}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12.5, color: "var(--ink-2, #b9b4ae)", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.5 }}>
                     {o.lines.map((l) => `${l.quantity}× ${l.name}`).join(" · ")}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 11.5, color: "var(--ink-3, #8a857f)" }}>{ago(o.createdAt)}</span>
+                    <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{ago(o.createdAt)}</span>
                     <strong className="mono" style={{ marginLeft: "auto", fontSize: 15 }}>{fmtPLN(o.totalAmount)}</strong>
                     {!o.paid && (
                       <button type="button" className="core-charge" style={{ height: 36, padding: "0 16px" }} disabled={busy === o.id} onClick={() => settle(o.id)}>

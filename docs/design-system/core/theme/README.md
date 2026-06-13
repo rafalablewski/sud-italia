@@ -29,6 +29,8 @@ the saved choice without a flash.
 | Lines | `--line` · `--line-2` |
 | Brand | `--brand` · `--brand-bright` · `--brand-ink` · `--brand-wash` |
 | Semantic | `--basil` · `--amber` · `--info` · `--danger` (+ each `*-wash`) |
+| Accent ink | `--on-accent` (white-on-brand/danger) · `--on-basil` (ink on a green fill) |
+| Tier metals | `--tier-platinum` · `--tier-silver` · `--tier-bronze` (+ each `*-wash`) |
 | Elevation | `--sh-1` · `--sh-2` · `--sh-pop` |
 | Type | `--display` · `--ui` · `--mono` |
 | Radius | `--r-sm` 7 · `--r-md` 10 · `--r-lg` 14 · `--r-xl` 20 · `--pill` |

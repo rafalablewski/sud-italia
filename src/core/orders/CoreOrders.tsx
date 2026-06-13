@@ -157,7 +157,7 @@ export function CoreOrders() {
         <div className="core-kpi-strip">
           <div className="k"><div className="kl">Orders today</div><div className="kv mono">{kpi.today}</div></div>
           <div className="k"><div className="kl">Current</div><div className="kv mono">{kpi.current}</div></div>
-          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={kpi.toPay > 0 ? { color: "var(--brand-bright, #e0564b)" } : undefined}>{kpi.toPay || "—"}</div></div>
+          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={kpi.toPay > 0 ? { color: "var(--brand-bright)" } : undefined}>{kpi.toPay || "—"}</div></div>
           <div className="k"><div className="kl">Paid today</div><div className="kv mono">{zl2(kpi.revenue)}</div></div>
         </div>
 
