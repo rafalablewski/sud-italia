@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { coreHref } from "@/core/routes";
 
-// The Guest Engagement hub is split into nested routes (whatsapp / crm /
-// loyalty / concierge / book). The bare hub lands on the Inbox.
-export default function GuestHubIndex() {
-  redirect("/core/guest/whatsapp");
+// The Guest hub lands on the Inbox.
+export default function CoreGuestIndex() {
+  redirect(coreHref("/guest/inbox"));
 }

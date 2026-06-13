@@ -1,17 +1,25 @@
 # Receipt printer (ESC/POS)
 
-← back to [Core README](../README.md)
+← back to [core Modules](./README.md)
 
 Thermal receipt printing for orders (audit §11.2 / §12.4 #7). Built to
 work **with or without hardware**: a real ESC/POS network printer when
 configured, a simulator + browser-print fallback when not.
 
-## Surfaces
+## Surface
 
-- **Trigger:** `Print receipt` button on the order detail footer
-  (`/admin/orders` → open an order). Staff+.
+- **Trigger:** the **Print receipt** button on the Orders detail dialog
+  footer (`/core/orders` → open an order). Staff+. Lives next to
+  **Mark paid**, and is available whether or not the order is settled (a
+  pre-bill is a valid counter task). Live code:
+  `src/core/orders/CoreOrders.tsx` (`printRcpt` + `browserPrintReceipt`).
 - **Endpoint:** `POST /api/admin/orders/[id]/print-receipt` — per-location
-  tenancy enforced; every print audit-logged as `receipt.print`.
+  tenancy enforced; every print audit-logged as `receipt.print`. The route is
+  shared engine, unchanged across the `/core` → `/core` migration.
+
+The trigger previously lived on the `/admin/orders` order-detail footer; that
+page became a read-only order-history list, so the action moved to the
+Core Orders surface, which is now the operator's one place for every order.
 
 ## Pipeline
 
@@ -32,8 +40,8 @@ Order ──► buildReceiptModel ──► renderEscPos  ──► printReceipt
 
 | Mode | When | Behaviour |
 | --- | --- | --- |
-| **Printed** | `RECEIPT_PRINTER_HOST` is set | Opens a TCP socket to `HOST:PORT` (default `9100`, the raw/JetDirect port) and streams the ESC/POS bytes. |
-| **Simulated** | no host configured | Returns the byte count + a plain-text preview; the UI prints that preview through the browser so a receipt still comes out. |
+| **Printed** | `RECEIPT_PRINTER_HOST` is set | Opens a TCP socket to `HOST:PORT` (default `9100`, the raw/JetDirect port) and streams the ESC/POS bytes; the UI toasts the byte count. |
+| **Simulated** | no host configured | Returns the byte count + a plain-text `preview`; `browserPrintReceipt` opens a popup, writes the preview as **text** (never HTML — guest names / notes can't inject markup) into a monospace `<pre>`, and calls `window.print()`, so a receipt still comes out. A blocked popup toasts "allow pop-ups to print it". |
 
 This means the **whole flow is exercised end-to-end without hardware** —
 the simulator is not a stub, it produces the real payload and a real

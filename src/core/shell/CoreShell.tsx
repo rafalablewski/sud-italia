@@ -1,79 +1,88 @@
-"use client";
-
-import { type ReactNode } from "react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CoreNav } from "./CoreNav";
+import { CoreClock, CoreThemeToggle, CoreLocationChip } from "./CoreChrome";
+import { CoreNotificationsBell } from "./CoreNotificationsBell";
+
+export interface CoreTab {
+  label: string;
+  href?: string;
+  active?: boolean;
+  onClick?: () => void;
+}
 
 /**
- * The Core suite shell — one self-contained chrome shared by **every** Core
- * surface (POS, KDS, Guest, Service). Core is a separate entity from /admin:
- * this shell does NOT render the admin sidebar or import anything from the
- * admin v2 shell. There is no sidebar at all.
+ * The one chrome every Core surface shares — a fixed two-row header over a
+ * surface body, no sidebar. Row 1 = brand + the primary surface switcher
+ * (CoreNav) + global actions (location · clock · theme · fullscreen). Row 2 =
+ * the context subbar (eyebrow + the surface's view tabs + its own controls).
  *
- * Layout (identical for all four surfaces, so each subpage's controls sit in
- * the same place):
- *
- *   ┌ header (row 1) ────────────────────────────────────────────┐
- *   │ [brand]   [CoreNav: POS · KDS · Guest · Service]   {right} │
- *   ├ subbar (row 2, only when eyebrow/viewnav/subRight given) ───┤
- *   │ {eyebrow} {viewnav}                            {subRight}  │
- *   └────────────────────────────────────────────────────────────┘
- *   {children}
- *
- * - `right`    — global header actions (location toggle, fullscreen…).
- * - `eyebrow`  — small label at the start of row 2 (e.g. "Guest Engagement").
- * - `viewnav`  — the surface's sub-view tabs (GuestViewNav, ServiceViewNav,
- *                the KDS Fleet/Floor/Chef switch).
- * - `subRight` — the surface's own controls (POS channel/steer, the date
- *                picker, the KDS stage filter + clock…).
- *
- * `bleed` drops the body padding/scroll container so a full-bleed surface
- * (the KDS wall) can own its own layout.
+ * Core is a SEPARATE entity from /admin: this renders none of the admin
+ * shell. It loads only the core theme (see src/app/core/layout.tsx).
  */
-
 export function CoreShell({
-  right,
   eyebrow,
-  viewnav,
+  tabs,
   subRight,
   bleed = false,
   children,
 }: {
-  right?: ReactNode;
-  eyebrow?: ReactNode;
-  viewnav?: ReactNode;
+  eyebrow: string;
+  tabs?: CoreTab[];
   subRight?: ReactNode;
+  /** Surface paints its own full-bleed background (KDS dark wall). */
   bleed?: boolean;
   children: ReactNode;
 }) {
-  const hasSub = Boolean(eyebrow || viewnav || subRight);
   return (
-    <div className="core-suite">
-      <div className="core-shell">
-        <header className="core-head">
-          <Link href="/core/pos" className="brand" aria-label="Ottaviano Core">
-            <div className="brand-mark">SI</div>
-            <div>
-              <div className="brand-name">Ottaviano</div>
-              <div className="brand-sub">Core</div>
-            </div>
-          </Link>
-          <CoreNav />
-          {right && <div className="core-head-right">{right}</div>}
-        </header>
-
-        {hasSub && (
-          <div className="subbar">
-            <div className="subbar-left">
-              {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-              {viewnav && <div className="viewnav">{viewnav}</div>}
-            </div>
-            {subRight && <div className="subbar-right">{subRight}</div>}
+    <>
+      {/* Single optimised command bar: brand · context (eyebrow + view tabs)
+          · the surface's own controls · global controls. The primary surface
+          switcher moved to the bottom nav (CoreNav, below). */}
+      <header className="core-bar">
+        <div className="core-brand">
+          <div className="core-mark">S</div>
+          <div>
+            <div className="nm">Ottaviano</div>
+            <div className="os">Core OS</div>
           </div>
-        )}
+        </div>
+        {/* contextual strip — pinned brand (left) + global controls (right)
+            stay put; this middle scrolls horizontally if it can't all fit */}
+        <div className="core-bar-ctx">
+          <span className="core-eyebrow">{eyebrow}</span>
+          {tabs && tabs.length > 0 && (
+            <div className="core-tabs">
+              {tabs.map((t) =>
+                t.href ? (
+                  <Link key={t.label} href={t.href} className={t.active ? "on" : undefined}>
+                    {t.label}
+                  </Link>
+                ) : (
+                  <button key={t.label} type="button" className={t.active ? "on" : undefined} onClick={t.onClick}>
+                    {t.label}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
+          <div className="core-sp" />
+          {subRight}
+        </div>
+        <div className="core-right">
+          <CoreLocationChip />
+          <CoreClock />
+          <CoreNotificationsBell />
+          <CoreThemeToggle />
+        </div>
+      </header>
 
-        <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+      <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+
+      {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
+      <div className="core-bottomnav">
+        <CoreNav />
       </div>
-    </div>
+    </>
   );
 }

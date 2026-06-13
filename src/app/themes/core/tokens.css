@@ -1,0 +1,82 @@
+/* ============================================================
+   CORE v2 — design tokens (clean-room, NOT suite.css / admin)
+   Scoped under `.core[data-theme]` so nothing leaks into Admin,
+   Homepage, or the current /core. Dark is the default; light is
+   the option. The KDS scope re-declares these (dark by default; the
+   in-shell board follows the theme, the kiosk stays dark).
+   See docs/design-system/core/theme/.
+   ============================================================ */
+
+.core {
+  /* type — bound to the core next/font instances (layout.tsx). The literal
+     family sits INSIDE var() as the fallback so the stack stays valid even when
+     --font-core-* isn't defined (e.g. a standalone snapshot loading the families
+     straight from Google) — without it an undefined var poisons the whole
+     font-family and the browser drops to default serif. */
+  --display: var(--font-core-display, "Bricolage Grotesque"), ui-sans-serif, system-ui, sans-serif;
+  --ui: var(--font-core-ui, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  --mono: var(--font-core-mono, "JetBrains Mono"), ui-monospace, monospace;
+
+  /* mode-independent */
+  --brand-ink: #7c172b;
+  /* contrast inks for filled accents (mode-independent — brand/danger stay
+     dark enough in both modes that white reads on them) */
+  --on-accent: #fff;
+  --on-basil: #06140d;
+  /* loyalty tier metals (mode-independent) */
+  --tier-platinum: #aab4cc; --tier-platinum-wash: rgba(180, 190, 210, .22);
+  --tier-silver: #9aa0ad;   --tier-silver-wash: rgba(160, 160, 170, .2);
+  --tier-bronze: #c08a5e;   --tier-bronze-wash: rgba(176, 120, 80, .2);
+  --r-sm: 7px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --pill: 999px;
+  --fast: 130ms cubic-bezier(.3, .7, 0, 1);
+  --base: 200ms cubic-bezier(.3, .7, 0, 1);
+}
+
+/* DARK — default (night trucks · kitchen glare) */
+.core,
+.core[data-theme="dark"] {
+  --bg: #100f12;
+  --panel: #1a191e;
+  --panel-2: #201e25;
+  --panel-3: #28262e;
+  --hover: #2b2933;
+  --ink: #f4f1ec;
+  --ink-2: #b8b0a6;
+  --ink-3: #857d74;
+  --line: rgba(255, 255, 255, .10);
+  --line-2: rgba(255, 255, 255, .17);
+  --brand: #d23a55;
+  --brand-bright: #e8546e;
+  --brand-wash: rgba(210, 58, 85, .16);
+  --basil: #3aa978; --basil-wash: rgba(58, 169, 120, .16);
+  --amber: #d99a3c; --amber-wash: rgba(217, 154, 60, .16);
+  --info: #5b8bd0; --info-wash: rgba(91, 139, 208, .18);
+  --danger: #e2574f; --danger-wash: rgba(226, 87, 79, .18);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --sh-2: 0 6px 18px rgba(0, 0, 0, .5);
+  --sh-pop: 0 20px 50px rgba(0, 0, 0, .6);
+}
+
+/* LIGHT — optional (bright daytime POS / Service) */
+.core[data-theme="light"] {
+  --bg: #f4f2ee;
+  --panel: #ffffff;
+  --panel-2: #faf8f5;
+  --panel-3: #f1eee9;
+  --hover: #f4f1ec;
+  --ink: #1c1815;
+  --ink-2: #6a625a;
+  --ink-3: #9b9389;
+  --line: rgba(28, 24, 21, .10);
+  --line-2: rgba(28, 24, 21, .16);
+  --brand: #bb2a44;
+  --brand-bright: #d23a55;
+  --brand-wash: #fbe9ec;
+  --basil: #2f7d5b; --basil-wash: #e7f3ed;
+  --amber: #c4831f; --amber-wash: #fbf0db;
+  --info: #3768b0; --info-wash: #e8eff8;
+  --danger: #cf3b33; --danger-wash: #fbe7e5;
+  --sh-1: 0 1px 2px rgba(28, 24, 21, .06);
+  --sh-2: 0 4px 14px rgba(28, 24, 21, .10), 0 1px 3px rgba(28, 24, 21, .07);
+  --sh-pop: 0 18px 48px rgba(28, 24, 21, .18);
+}

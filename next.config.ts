@@ -135,6 +135,11 @@ const nextConfig: NextConfig = {
       { source: "/admin/guest/:path*", destination: "/core/guest/:path*", permanent: true },
       { source: "/admin/service", destination: "/core/service", permanent: true },
       { source: "/admin/service/:path*", destination: "/core/service/:path*", permanent: true },
+      // Core was rebuilt clean-room under a temporary /core-v2 segment during
+      // the migration, then promoted to /core. Redirect any lingering
+      // /core-v2/* bookmark or saved tab to its final home.
+      { source: "/core-v2", destination: "/core", permanent: true },
+      { source: "/core-v2/:path*", destination: "/core/:path*", permanent: true },
     ];
   },
   async headers() {

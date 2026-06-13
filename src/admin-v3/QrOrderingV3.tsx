@@ -53,7 +53,7 @@ export function QrOrderingV3({ locations }: { locations: Loc[] }) {
             description="Whether seated guests can scan the table QR and order from /qr."
             institutional="At-table QR ordering lifts table turns and average check (guests re-order drinks/dessert without flagging a waiter) while cutting order-taking labour — the reason QSR-casual chains push it. The institutional gate is operational readiness, not the tech: only run it where the kitchen + POS can absorb guest-paced tickets, and keep a master kill-switch for a slammed service or a printer outage. Treat it as a channel you can turn down, not a one-way door."
             plain="Turn it on for Kraków and a four-top scans the code on table 12, adds two more pizzas and a Limonata mid-meal, and pays from their phone — no waiter round-trip. If the kitchen is drowning on a Saturday, flip the master switch off and the QR page shows 'ask a member of staff' until you turn it back on."
-            tips="Keep it on at your steady sites; use the per-location toggles to dark-launch one restaurant first. Require a table number so every QR order is seated correctly. Print the table codes from core-v2 POS → QR → Print table QR. Flip the master off during a kitchen meltdown rather than letting tickets pile up."
+            tips="Keep it on at your steady sites; use the per-location toggles to dark-launch one restaurant first. Require a table number so every QR order is seated correctly. Print the table codes from core POS → QR → Print table QR. Flip the master off during a kitchen meltdown rather than letting tickets pile up."
             methodology="Master `enabled` AND the per-location override (isQrOrderingEnabled) in qr-ordering-settings.json (GET/PUT /api/admin/qr-ordering). The /qr page reads this server-side per request, so a toggle gates ordering on the next scan." />
         } />
         <Kpi label="Locations live" icon={ToggleRight} value={`${liveLocations}/${locations.length}`} accentVar="--av3-c2" />
@@ -70,7 +70,7 @@ export function QrOrderingV3({ locations }: { locations: Loc[] }) {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Enable QR ordering</div>
               <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-                When off, /qr shows guests an &ldquo;ask a member of staff&rdquo; message everywhere. Print table codes from core-v2 POS → QR → Print table QR.
+                When off, /qr shows guests an &ldquo;ask a member of staff&rdquo; message everywhere. Print table codes from core POS → QR → Print table QR.
               </div>
             </div>
             <Switch aria-label="Enable QR ordering" checked={s.enabled} onChange={() => persist({ enabled: !s.enabled })} />

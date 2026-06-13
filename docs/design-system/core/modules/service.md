@@ -1,113 +1,80 @@
-# Service — the merged Floor + Slots surface
+# Core · Service
 
-The unified **Core** surface that collapses Slots (time-slot capacity) and Floor
-(tables + reservations) into one place, on the `.core-suite` theme (CoreShell),
-so it reads like POS / Guest / KDS. Two views ride the shared CoreShell subbar
-`.viewnav` (`ServiceViewNav`, same pattern as the Guest hub), each its own
-nested route:
+The merged Floor + Slots surface. `/core/service` (redirects to Floor).
+Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
 
-- **Floor** (`/core/service/floor`) — the live room (Module 3's Twin): tables,
-  occupancy, predicted free-in, seat/clear, the seating recommender, the
-  bottleneck banner, table CRUD.
-- **Slots** (`/core/service/slots`) — time-slot capacity management + the
-  Demand Exchange yield board.
+## Floor (`/core/service/floor`) — wired
 
-Each view opens with the mockup `.intro` banner (Floor "the live room twin",
-Slots "capacity & demand"); the `.core-suite .svc > .intro` rule aligns it to
-the 18px gutter.
+- **Live code:** `src/core/service/CoreFloor.tsx`.
+- **Theme:** `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2`
+  (+ `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-floor-bar` / `.core-fchip` ·
+  `.core-tbl-field` · `.core-bottleneck` in `themes/core/index.css`.
+- The live room: a 5-up KPI strip (covers seated · occupancy · turn time ·
+  **spend / hr** · freeing ≤15m) over zoned table tiles. Each `.core-tbl2`
+  is toned by state — free · seated · **freeing** (predicted ≤15m) ·
+  reserved · out-of-service — and shows party / dwell / open check; hover
+  reveals a `⋯` **edit** affordance. Tap a table to **seat / clear**.
+- **Predictive-seating recommender** (`.core-floor-bar`): type a party size
+  and `recommendSeating(twin, n)` ranks best-fit tables as `.core-fchip`
+  chips — *seat* now or *~Nm* until free; click to seat directly.
+- **Table CRUD**: *+ Add table* (subbar) / the per-tile `⋯` opens the
+  `TableDialog` (core `CoreDialog`, portaled) — number · seats · zone
+  · status, with delete.
+- The **kitchen-bottleneck banner** (`.core-bottleneck`) fires when the KDS
+  engine reports a strained station.
+- **Engine:** `GET /api/admin/floor-twin?location=` → `{ twin, kitchen }`
+  (visibility-aware 15s `usePolling`; create/edit/delete merge optimistically
+  into the twin so a tile never blanks until the refetch lands); seat/clear =
+  `POST /api/admin/floor-twin { action, tableId }`;
+  table create/update = `POST /api/admin/floor/tables?location=`, delete =
+  `DELETE /api/admin/floor/tables?location=&id=`.
 
-- **Floor** tables render as the mockup's `.tcard` tiles — centered table
-  number + status, coloured by state (`.seated` brand / `.freeing` warning /
-  `.booked` platinum), with the seat/clear action kept on the tile.
-- **Slots** (Manage) opens with the mockup KPI strip (`.kpis` of `.bk` —
-  Slots today / Booked of N covers / Fill rate / Demand price, computed from
-  the live slot caps + bookings); each row carries a service-name label, the
-  `.captrack` fill bar, and the `current/cap · %` fraction.
+## Slots (`/core/service/slots`) — wired
 
-**Booking moved out:** the Book console is now a Guest-hub view at
-`/core/guest/book` (`<GuestBook>` → `BookView`) — Service is Floor + Slots only.
-The old `/admin/floor` and `/admin/slots` stub pages were **deleted**; the bare
-`/core/service` `redirect()`s to `/core/service/floor`.
+- **Live code:** `src/core/service/CoreSlots.tsx`.
+- **Theme:** `.core-slot-list` / `.core-slot` (capacity bars, `.core-slot-min`
+  min-spend badge) · `.core-slot-week` / `.core-slot-day-h` (week grouping) ·
+  `.core-tier-d` / `.core-act` (the demand board).
+- Two tabs: **Manage** — a **Day / Week** toggle over the slot list, each
+  row a capacity fill bar (green→amber→red ≥85%), covers, channels, a
+  min-spend badge when set, and an active/draft toggle, over a KPI strip
+  (slots · booked · fill rate · demand-price multiplier; week mode
+  aggregates the seven days, grouped under `.core-slot-day` headers).
+  **Demand** — the Demand Exchange: per-slot forecast vs capacity with a
+  **tier** (under · healthy · tight · over · kitchen-capped) and a
+  recommended lever spelled out in prose (**Raise capacity · Trim /
+  promote · Protect kitchen · Hold**); Apply one or Apply-all.
+- **Create** (`+ New`) opens a `CoreDialog` with a **Single / Bulk**
+  mode toggle: Single posts one slot (time + capacity); Bulk generates a
+  start→end range at an interval.
+- **Engine:** `GET /api/admin/slots?location=[&date=]` (day = date-scoped,
+  week = whole location sliced client-side) +
+  `GET /api/admin/demand-exchange?location=&date=` (forecast); toggle =
+  `PUT /api/admin/slots`; create = `POST /api/admin/slots` (single) /
+  `POST /api/admin/slots?bulk=1` (range); delete =
+  `DELETE /api/admin/slots?id=`; apply = `POST /api/admin/demand-exchange`
+  (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
-← back to [Core README](../README.md)
+Wired 1:1 to the same shared server engine. The booking console (slot + table
+in one move) lives in the Guest hub's **Book** view (`CoreBook`), shared.
 
-> **Live code:** nested routes `src/app/core/service/{floor,slots}/page.tsx`
-> (top-level `/core/*` under `src/app/core/layout.tsx` + `CoreProviders`, no
-> admin chrome), each rendering the shared `ServiceFrame.tsx` (CoreShell +
-> `ServiceViewNav.tsx` + the loc toggle in the header right / date picker in
-> the subbar right) with its `view`. Views
-> `FloorView.tsx` / `SlotsView.tsx` (in `src/core/service/`; the
-> shared `BookView.tsx` lives here too but is rendered by the Guest hub's
-> `GuestBook.tsx`). Styles under the `SERVICE` block in
-> `src/app/themes/core/suite.css` (`.svc-*` / `.flr-*` / `.slt-*`). Booking
-> engine `src/lib/booking.ts` + `POST /api/admin/booking`; Floor reuses
-> `/api/admin/floor-twin` + `/api/admin/floor/tables`; Slots reuses
-> `/api/admin/slots` + `/api/admin/demand-exchange`.
+## Floor — live orders, lookup & notes
 
-## Why merge them
+Live code: `src/core/service/CoreFloor.tsx` · API `src/app/api/admin/floor/orders/route.ts` (orders) + `/api/admin/floor/tables` (CRUD, now incl. `notes`) + `/api/admin/floor-twin`.
 
-Slots answered *when* (capacity per time window); Floor answered *where* (the
-table). For dine-in those are one decision — "a party of 4 at 19:00 needs a
-table" — so they live on one surface and one booking does both, conflict-checked
-on each.
+The Floor board pairs the predictive twin with the table's **live orders**:
 
-## The booking console (Book view)
-
-Three steps, left-to-right, then **Book slot + table**:
-
-1. **When** — `.filters` of `.fchip` slot pills (active dine-in slots for the
-   day), each showing remaining booking capacity (`N left` / `full`). Full slots
-   disable unless **Override** is ticked.
-2. **Where** — `.fchip` table pills; each lights up live for the chosen slot via
-   the **same pure `findReservationConflicts`** the server enforces — too-small
-   / already-booked tables strike through and disable. A **Recommend** button
-   auto-picks the best-fit open table.
-3. **Who** — party size, name, phone, notes (`.svc-fields`).
-
-`POST /api/admin/booking` is conflict-checked again server-side (the client
-preview is convenience, not the gate); a 409 returns the overridable reason.
-The right rail (`.svc-side`) lists the day's bookings (time · party · table),
-sticky. Each booking has an **inline status** `.svc-res-status` select
-(booked → seated → completed / no-show; `POST /api/admin/floor/reservations`
-with `override` + `slotId` preserved) and a `.svc-res-x` cancel.
-
-## Floor view
-
-The live room as a Core surface (Module 3's Twin, folded in) — `.flr-*`:
-
-- `.flr-kitchen` bottleneck banner (warn / risk) from the KDS pace engine.
-- `.flr-kpis` (`.bk` cards): occupancy, open, median turn, spend/hr.
-- `.flr-rec` seating recommender — type a party size, `recommendSeating` ranks
-  best-fit open tables as `.fchip`s; click to **Seat**.
-- `.flr-grid` of `.flr-card` tables: number (click → edit), status badge, live
-  facts (predicted free-in, median turn + `✓` when measured, spend/hr), and
-  **Seat / Clear** (`POST /api/admin/floor-twin` → logs the transition).
-- Table CRUD via a `Dialog theme="core"`.
-
-## Slots view
-
-Capacity management + yield (`.slt-*`), with a `.seg` sub-toggle:
-
-- **Manage** — a **Day / Week** range toggle. Day = `.slt-row` per slot for the
-  date; Week = `.slt-week` of `.slt-day` groups (Mon→Sun of the selected week).
-  Each row: time · `current/max` · fulfilment types · min-spend · status, with
-  Activate/Draft + Delete, and a New-slot dialog (single or bulk).
-  `/api/admin/slots`.
-- **Demand** — the Demand Exchange board (`.tbl`): per-slot tier + forecast +
-  recommendation, **Apply** / **Apply all** (capacity + min-spend).
-  `/api/admin/demand-exchange`.
-
-## Theme notes
-
-- Renders **inside `.core-suite`** (CoreShell), so it uses core primitives
-  directly — `.seg` (location), `.fchip` / `.filters` (pickers), `.input`,
-  `.btn`, `.badge`, `.eyebrow`, `.pane-msg` — plus the `.svc-*` layout classes.
-- `findReservationConflicts` (`src/lib/floor.ts`) is pure (types only), so it's
-  safe to import into this client component for the live conflict preview.
-
-## What Service is not
-
-- Not the POS — that's the till (`/core/pos`); Service is bookings + floor state.
-- Not the customer dine-in flow — the storefront cart books a slot and the
-  checkout **auto-assigns** a table (`pickOpenTable`); this surface is the
-  operator's side.
+- **Per-table status chip** — each tile shows what the table owes, driven by
+  `GET /api/admin/floor/orders` (today's active orders, grouped by `tableId`,
+  tagged with channel + paid/unpaid). Unpaid → a brand `… to pay` chip
+  (prefixed `QR ·` for QR-channel orders); fully paid → a basil `✓ paid` chip.
+  A `📝` glyph on the table number flags a service note. Polls every 10s.
+- **To pay KPI** — count of unpaid active orders across the floor.
+- **Order lookup** — a `⌕ Find order` box filters active orders by id, guest
+  name or table number; each result shows channel + paid status with a
+  **Mark paid** action (`POST /api/admin/floor/orders {action:"settle"}` →
+  `updateOrder` sets `paidAt`, fires a still-pending order to the kitchen).
+- **Table detail** (the `⋯` editor) — adds a **Service note** textarea
+  (persisted on `FloorTable.notes`, threaded through `buildFloorTwin` →
+  `TwinTableRow.notes`) and an **Orders at this table** list with the same
+  settle action.

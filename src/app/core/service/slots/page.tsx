@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { ServiceFrame } from "@/core/service/ServiceFrame";
+import { CoreSlots } from "@/core/service/CoreSlots";
 
-/**
- * Service · Slots — capacity + demand. One view of the merged Service surface;
- * see docs/design-system/core/modules/service.md.
- */
-export default async function ServiceSlotsPage() {
+export default async function CoreSlotsPage() {
   if (!(await isAuthenticated())) redirect("/login");
-  return <ServiceFrame view="slots" />;
+  return <CoreSlots />;
 }

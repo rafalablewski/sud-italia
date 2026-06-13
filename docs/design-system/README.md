@@ -8,8 +8,7 @@ font in one and the other two stay untouched.
 
 | Theme                       | Surface                                          | Owns                                                                                            |
 | --------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| [**Core**](./core/)         | POS, KDS, Guest (CRM + Concierge + WhatsApp)     | Operator-pressure surfaces. The productised IP.                                                 |
-| [**Core v2**](./core-v2/)   | The clean-room `/core-v2/` rebuild of Core       | Ground-up redesign (dark-first, grotesk, flat) that replaces `/core` once ported. Design phase. |
+| [**Core**](./core/)         | POS, KDS, Orders, Guest (Inbox + CRM + Loyalty + Concierge + Book), Service | Operator-pressure surfaces. The productised IP — the clean-room rebuild (dark-first, grotesk, flat). |
 | [**Admin**](./admin/)       | The back-office: every `/admin/*` outside Core   | Dashboard, Orders, Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System |
 | [**Homepage**](./homepage/) | The public storefront: `/`, `/menu`, `/checkout`, `/order`, `/loyalty` | Guest-facing web. Zero-friction ordering.                          |
 
