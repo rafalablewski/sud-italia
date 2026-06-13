@@ -18,8 +18,16 @@ export const AUDIENCES: { key: AudienceKey; label: string; hint: string }[] = [
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const VIP_SPEND_GROSZE = 20_000;
-const VIP_ORDERS = 6;
+/** Default "VIP" thresholds (≥200 zł lifetime spend AND ≥6 orders). Operators
+ *  override via AppSettings.marketing; these are the fallback. */
+export const DEFAULT_VIP_SPEND_GROSZE = 20_000;
+export const DEFAULT_VIP_ORDERS = 6;
+
+/** Operator-set VIP audience thresholds (passed in by the broadcast route). */
+export interface VipThresholds {
+  spendGrosze?: number;
+  minOrders?: number;
+}
 
 function daysSince(iso: string | null, now: number): number | null {
   if (!iso) return null;
@@ -28,7 +36,7 @@ function daysSince(iso: string | null, now: number): number | null {
   return (now - t) / DAY_MS;
 }
 
-function matches(c: CustomerRollup, key: AudienceKey, now: number): boolean {
+function matches(c: CustomerRollup, key: AudienceKey, now: number, vip: VipThresholds): boolean {
   switch (key) {
     case "all":
       return true;
@@ -41,7 +49,10 @@ function matches(c: CustomerRollup, key: AudienceKey, now: number): boolean {
       return d == null || d > 90;
     }
     case "vip":
-      return c.totalSpentGrosze >= VIP_SPEND_GROSZE && c.orderCount >= VIP_ORDERS;
+      return (
+        c.totalSpentGrosze >= (vip.spendGrosze ?? DEFAULT_VIP_SPEND_GROSZE) &&
+        c.orderCount >= (vip.minOrders ?? DEFAULT_VIP_ORDERS)
+      );
     case "new": {
       const d = daysSince(c.firstOrderAt, now);
       return d != null && d <= 14;
@@ -54,9 +65,10 @@ export function selectAudience(
   customers: CustomerRollup[],
   key: AudienceKey,
   now: number = Date.now(),
+  vip: VipThresholds = {},
 ): CustomerRollup[] {
   return customers.filter(
-    (c) => !c.smsOptout && !!c.phone && matches(c, key, now),
+    (c) => !c.smsOptout && !!c.phone && matches(c, key, now, vip),
   );
 }
 

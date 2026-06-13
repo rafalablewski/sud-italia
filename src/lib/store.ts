@@ -3138,6 +3138,10 @@ export interface AppSettings {
     kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number };
     inventory?: { fallbackLeadDays?: number; usageWindowDays?: number };
   };
+  /** Marketing audience tuning. `vip*` define who the WhatsApp/SMS broadcast
+   *  "VIP" segment targets — operator-set so the cut isn't a hardcoded literal.
+   *  Admin → Settings → General → Operations. */
+  marketing?: { vipSpendGrosze?: number; vipMinOrders?: number };
   /** Registered legal entity for tax filings (JPK_V7M). Operator-set so the
    *  NIP / legal name / REGON aren't stuck on `process.env.JPK_*` placeholders
    *  (a filing with NIP=0000000000 is invalid). When a field is blank the

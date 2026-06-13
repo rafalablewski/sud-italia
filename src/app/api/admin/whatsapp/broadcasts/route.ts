@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { appendAuditLog, createWaCampaign, getCustomers, listWaCampaigns } from "@/lib/store";
-import { AUDIENCES, isAudienceKey, selectAudience } from "@/lib/whatsapp/audience";
+import { appendAuditLog, createWaCampaign, getCustomers, getSettings, listWaCampaigns } from "@/lib/store";
+import { AUDIENCES, isAudienceKey, selectAudience, type VipThresholds } from "@/lib/whatsapp/audience";
 
 const MAX_AUDIENCE = 5000;
 
+/** Operator-set VIP thresholds for the audience cut (admin → Operations). */
+async function vipThresholds(): Promise<VipThresholds> {
+  const m = (await getSettings()).marketing;
+  return { spendGrosze: m?.vipSpendGrosze, minOrders: m?.vipMinOrders };
+}
+
 /** List campaigns + live audience counts for the composer. */
 export const GET = withAdmin({ roles: ["manager", "owner"] }, async () => {
-  const [campaigns, customers] = await Promise.all([listWaCampaigns(), getCustomers()]);
+  const [campaigns, customers, vip] = await Promise.all([listWaCampaigns(), getCustomers(), vipThresholds()]);
   const audiences = AUDIENCES.map((a) => ({
     key: a.key,
     label: a.label,
     hint: a.hint,
-    count: selectAudience(customers, a.key).length,
+    count: selectAudience(customers, a.key, Date.now(), vip).length,
   }));
   return NextResponse.json({ campaigns, audiences });
 });
@@ -36,8 +42,8 @@ export const POST = withAdmin({ roles: ["manager", "owner"] }, async (req, _ctx,
       ? body.languageCode
       : "pl";
 
-  const customers = await getCustomers();
-  const audience = selectAudience(customers, body.audienceKey);
+  const [customers, vip] = await Promise.all([getCustomers(), vipThresholds()]);
+  const audience = selectAudience(customers, body.audienceKey, Date.now(), vip);
   const audienceMeta = AUDIENCES.find((a) => a.key === body.audienceKey)!;
   // Dedupe phones and cap the snapshot so one blast can't be unbounded.
   const phones = Array.from(new Set(audience.map((c) => c.phone))).slice(0, MAX_AUDIENCE);

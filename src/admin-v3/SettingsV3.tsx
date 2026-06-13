@@ -14,6 +14,7 @@ interface Settings {
   deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; processorFee?: { pct: number; fixedGrosze: number }; businessPhone?: string; businessEmail?: string;
   operations?: { labor?: { coversPerStaffHour?: number; splhLowGrosze?: number; splhHighGrosze?: number }; kitchen?: { minPrepMinutes?: number; expoBufferMinutes?: number }; inventory?: { fallbackLeadDays?: number; usageWindowDays?: number } };
   legalEntity?: { nip?: string; name?: string; regon?: string; email?: string };
+  marketing?: { vipSpendGrosze?: number; vipMinOrders?: number };
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -71,7 +72,7 @@ export function SettingsV3() {
   const [feePct, setFeePct] = useState(""); const [feeFixed, setFeeFixed] = useState("");
   const [legal, setLegal] = useState({ nip: "", name: "", regon: "", email: "" });
   const [savingOps, setSavingOps] = useState(false);
-  const [ops, setOps] = useState({ coversHr: "", splhLow: "", splhHigh: "", minPrep: "", expoBuf: "", leadDays: "", usageDays: "" });
+  const [ops, setOps] = useState({ coversHr: "", splhLow: "", splhHigh: "", minPrep: "", expoBuf: "", leadDays: "", usageDays: "", vipSpend: "", vipOrders: "" });
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
   const [fee, setFee] = useState(""); const [minOrder, setMinOrder] = useState("");
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
@@ -97,6 +98,8 @@ export function SettingsV3() {
       expoBuf: String(op?.kitchen?.expoBufferMinutes ?? 3),
       leadDays: String(op?.inventory?.fallbackLeadDays ?? 3),
       usageDays: String(op?.inventory?.usageWindowDays ?? 14),
+      vipSpend: zl(d.marketing?.vipSpendGrosze ?? 20000),
+      vipOrders: String(d.marketing?.vipMinOrders ?? 6),
     });
     setPhone(d.businessPhone ?? ""); setEmail(d.businessEmail ?? "");
     setFee(zl(d.deliveryFee)); setMinOrder(zl(d.minOrderAmount));
@@ -163,6 +166,10 @@ export function SettingsV3() {
             fallbackLeadDays: Math.max(0, Math.round(num(ops.leadDays, 3))),
             usageWindowDays: Math.max(1, Math.round(num(ops.usageDays, 14))),
           },
+        },
+        marketing: {
+          vipSpendGrosze: Math.round(num(ops.vipSpend, 200) * 100),
+          vipMinOrders: Math.max(1, Math.round(num(ops.vipOrders, 6))),
         },
       });
     } finally { setSavingOps(false); }
@@ -259,9 +266,14 @@ export function SettingsV3() {
               <label className="av3-field"><span className="av3-field-label">Expo buffer (min)</span><input className="av3-input" type="number" step="1" value={ops.expoBuf} onChange={(e) => setOps((o) => ({ ...o, expoBuf: e.target.value }))} /></label>
             </div>
             <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Inventory reorder policy</div>
-            <div className="av3-formrow av3-formrow-4">
+            <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Fallback lead (days)</span><input className="av3-input" type="number" step="1" value={ops.leadDays} onChange={(e) => setOps((o) => ({ ...o, leadDays: e.target.value }))} /></label>
               <label className="av3-field"><span className="av3-field-label">Usage window (days)</span><input className="av3-input" type="number" step="1" value={ops.usageDays} onChange={(e) => setOps((o) => ({ ...o, usageDays: e.target.value }))} /></label>
+            </div>
+            <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>Marketing — VIP broadcast audience</div>
+            <div className="av3-formrow av3-formrow-4">
+              <label className="av3-field"><span className="av3-field-label">VIP min spend (zł)</span><input className="av3-input" type="number" step="1" value={ops.vipSpend} onChange={(e) => setOps((o) => ({ ...o, vipSpend: e.target.value }))} /></label>
+              <label className="av3-field"><span className="av3-field-label">VIP min orders</span><input className="av3-input" type="number" step="1" value={ops.vipOrders} onChange={(e) => setOps((o) => ({ ...o, vipOrders: e.target.value }))} /></label>
             </div>
           </CardBody>
         </Card>
