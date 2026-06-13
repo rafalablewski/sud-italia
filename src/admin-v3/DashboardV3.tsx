@@ -176,6 +176,7 @@ export function DashboardV3() {
   // rate-limit window) instead of leaving the operator on 0s for a full 30s.
   const loadedOnce = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryAttempts = useRef(0);
 
   // goal editor
   const [editingGoal, setEditingGoal] = useState(false);
@@ -249,9 +250,13 @@ export function DashboardV3() {
       if (gl !== FETCH_FAILED) setGoals(gl as OpsGoals | null);
       if (a !== FETCH_FAILED) {
         loadedOnce.current = true;
-      } else if (!loadedOnce.current) {
-        // First load(s) failed and we have nothing to show yet — retry soon
-        // rather than waiting out the full 30s poll interval.
+        retryAttempts.current = 0;
+      } else if (!loadedOnce.current && retryAttempts.current < 3) {
+        // First load(s) failed and we have nothing to show yet — retry a few
+        // times soon rather than waiting out the full 30s poll interval. Bounded
+        // so a sustained outage falls back to the 30s cadence instead of
+        // hammering a struggling API every 4s forever.
+        retryAttempts.current += 1;
         if (retryTimer.current) clearTimeout(retryTimer.current);
         retryTimer.current = setTimeout(() => { void fetchAll(); }, 4000);
       }
