@@ -66,7 +66,9 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let retry: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    const load = async () => {
       const [b, nRes, apRes, agRes] = await Promise.all([
         j(`/api/admin/welcome`),
         j(`/api/admin/notifications`),
@@ -74,13 +76,28 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
         j(`/api/admin/ai/boardroom/agents`),
       ]);
       if (cancelled) return;
-      setBrief(b as Brief | null);
-      setNotifs((Array.isArray(nRes) ? nRes : []) as Notif[]);
-      setDecisions((apRes?.approvals ?? []) as Approval[]);
-      setAgents(new Map(((agRes?.agents ?? []) as AgentLite[]).map((a) => [a.id, { id: a.id, name: a.name, initials: a.initials, accentVar: a.accentVar }])));
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
+      // `j` returns null only when the request itself failed (rate-limit 429,
+      // transient 500, network). The brief is the page's spine, so when it
+      // fails don't paint a blank shell — keep showing nothing/last-good and
+      // retry shortly. This is why the brief used to come up blank on the
+      // first load and only fill in "after a few reloads".
+      if (b !== null) setBrief(b as Brief | null);
+      if (Array.isArray(nRes)) setNotifs(nRes as Notif[]);
+      if (apRes !== null) setDecisions((apRes?.approvals ?? []) as Approval[]);
+      if (agRes !== null) setAgents(new Map(((agRes?.agents ?? []) as AgentLite[]).map((a) => [a.id, { id: a.id, name: a.name, initials: a.initials, accentVar: a.accentVar }])));
+      if (b !== null || attempts >= 3) {
+        // Either the brief loaded, or fast retries are exhausted — stop the
+        // spinner and let the page degrade to whatever did load (a persistent
+        // 403 for a non-owner, or a sustained outage, must not strand the
+        // operator on an endless skeleton + 4s poll).
+        setLoading(false);
+      } else {
+        attempts += 1;
+        retry = setTimeout(() => { void load(); }, 4000);
+      }
+    };
+    void load();
+    return () => { cancelled = true; if (retry) clearTimeout(retry); };
   }, []);
 
   const now = useMemo(() => new Date(), []);

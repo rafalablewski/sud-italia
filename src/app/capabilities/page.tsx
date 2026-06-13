@@ -70,7 +70,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Rate limiting",
           status: "live",
-          summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback, plus a blanket per-user limit on EVERY admin API route (default 300/min/user, override ADMIN_RATE_LIMIT_PER_MIN) enforced inside withAdmin. Fail-open on Redis error.",
+          summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback, plus a blanket per-user limit on EVERY admin API route (default 1200/min/user, override ADMIN_RATE_LIMIT_PER_MIN) enforced inside withAdmin. Fail-open on Redis error.",
           envVars: ["ADMIN_RATE_LIMIT_PER_MIN"],
         },
         {
