@@ -2340,7 +2340,15 @@ export interface InsightsData {
 
 export async function getInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
   const allSlots = await readJSON<TimeSlot[]>("slots.json", []);
-  const allOrders = await readJSON<Order[]>("orders.json", []);
+  // Read orders through getOrders() — the SAME canonical, table-first source
+  // getAnalytics/getSummary use — not the raw orders.json kv mirror. In
+  // Postgres the normalized `orders` table and its best-effort kv mirror can
+  // drift out of sync; reading the mirror here made the dashboard's two halves
+  // disagree (the Executive rail, fed by analytics→table, showed 0 while the
+  // Location-network table, fed by insights→kv, showed full history). One
+  // source = the halves can never contradict each other. getOrders() already
+  // strips simulated rows and honours the active data-mode namespace.
+  const allOrders = await getOrders();
 
   // Filter by date range
   const slots = allSlots.filter((s) => {
@@ -2350,9 +2358,6 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
   });
 
   const orders = allOrders.filter((o) => {
-    // Simulated records never count toward insights. (This reads the kv
-    // mirror directly, so unlike getOrders() it must strip sims itself.)
-    if (o.simulated) return false;
     const date = o.slotDate || o.createdAt.split("T")[0];
     if (dateFrom && date < dateFrom) return false;
     if (dateTo && date > dateTo) return false;
