@@ -10644,6 +10644,52 @@ export async function getTempLogs(filters: {
   }
 }
 
+/**
+ * Bulk-append pre-built temperature readings in ONE write (kv) or one batch
+ * insert (DB) instead of a round-trip per reading — the path the simulation
+ * seeder takes to lay down a deep HACCP history without paying saveTempLog's
+ * per-row lock + Neon round-trip (which would blow the seed past the
+ * serverless budget). Status is derived per reading via tempVerdict, exactly
+ * like saveTempLog. Only ever called while a test mode is active (getDomainDb()
+ * is null then, so the kv path runs); the DB branch mirrors saveTempLog.
+ */
+export async function bulkAppendTempLogs(
+  inputs: (Omit<TempLog, "id" | "status"> & { id?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  const records: TempLog[] = inputs.map((input, i) => ({
+    id: input.id || `tl-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    status: tempVerdict(input.sensor, input.tempCelsius),
+    ...input,
+  }));
+  const db = await getDomainDb();
+  if (db) {
+    try {
+      await ensureComplianceTables();
+      await db.insert(tempLogsTable).values(
+        records.map((r) => ({
+          id: r.id,
+          locationSlug: r.locationSlug,
+          sensor: r.sensor,
+          tempCelsius: r.tempCelsius,
+          status: r.status,
+          recordedBy: r.recordedBy ?? null,
+          recordedAt: new Date(r.recordedAt),
+        })),
+      );
+    } catch (err) {
+      logger.error("bulkAppendTempLogs failed", { layer: "store.compliance" }, err);
+    }
+    return;
+  }
+  await withLock("temp-logs.json", async () => {
+    const list = await readJSON<TempLog[]>("temp-logs.json", []);
+    list.push(...records);
+    await writeJSON("temp-logs.json", list);
+  });
+}
+
 // --- Waste log (audit §11.2 / §12.4 #4) ---------------------------------
 //
 // A line-level record of food discarded outside a sale — spoilage, prep
@@ -10706,6 +10752,37 @@ export async function saveWasteLog(
     list.push(entry);
     await writeJSON("waste-logs.json", list);
     return entry;
+  });
+}
+
+/**
+ * Bulk-append pre-built waste entries in ONE locked read-modify-write instead
+ * of one per row — the path the simulation seeder takes to lay down a deep
+ * reason-coded waste history cheaply (waste-logs.json is a single cross-location
+ * kv blob, so a flat loop would pay saveWasteLog's lock + O(N) rewrite each).
+ */
+export async function bulkAppendWasteLogs(
+  inputs: (Omit<WasteLogEntry, "id" | "recordedAt"> & { id?: string; recordedAt?: string })[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const stamp = Date.now().toString(36);
+  await withLock("waste-logs.json", async () => {
+    const list = await readJSON<WasteLogEntry[]>("waste-logs.json", []);
+    inputs.forEach((input, i) => {
+      list.push({
+        id: input.id || `waste-${stamp}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        locationSlug: input.locationSlug,
+        item: input.item,
+        quantity: input.quantity,
+        unit: input.unit,
+        reason: input.reason,
+        estimatedCostGrosze: input.estimatedCostGrosze,
+        notes: input.notes,
+        recordedBy: input.recordedBy,
+        recordedAt: input.recordedAt ?? new Date().toISOString(),
+      });
+    });
+    await writeJSON("waste-logs.json", list);
   });
 }
 

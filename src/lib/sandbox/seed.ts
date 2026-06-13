@@ -27,8 +27,8 @@ import {
   saveSupplier,
   savePurchaseOrder,
   createStockMovement,
-  saveWasteLog,
-  saveTempLog,
+  bulkAppendWasteLogs,
+  bulkAppendTempLogs,
   saveFeedback,
   saveSurveyResponse,
   openCashSession,
@@ -43,6 +43,8 @@ import {
 } from "@/lib/store";
 import { buildDraws } from "@/lib/inventory-decrement";
 import { createBooking } from "@/lib/booking";
+import { HACCP_SENSORS, rangeForSensor } from "@/lib/haccp";
+import type { WasteReason } from "@/lib/store";
 import type {
   CartItem,
   FulfillmentType,
@@ -99,6 +101,83 @@ function dayVolume(base: number, dayAgo: number): number {
   const dow = new Date(NOW - days(dayAgo)).getUTCDay(); // 0 Sun … 6 Sat
   const f = dow === 6 || dow === 0 ? 1.4 : dow === 5 ? 1.2 : 1;
   return Math.max(1, Math.round(base * f * (0.8 + Math.random() * 0.4)));
+}
+
+// --- HACCP + waste history --------------------------------------------------
+// Deep, dated compliance history so the HACCP log and Waste log screens show a
+// real record (not a couple of recent rows). Temps are carried in TENTHS of a
+// degree (see @/lib/haccp), so a "fridge" reading of 3.2°C is 32 — the verdict
+// (ok/flagged) is derived from the sensor's band on save.
+const HACCP_DAYS = 30; // ~matches the 30d UI preset; deep enough to feel real
+const WASTE_DAYS = 30;
+
+/** A plausible reading (tenths °C) for a sensor: in-band most of the time, an
+ *  occasional out-of-band breach so the log has real flagged rows. Cold/freezer
+ *  units flag WARM (door left open); hot-hold flags COLD (cooling too far). */
+function tempReading(sensor: string): number {
+  const r = rangeForSensor(sensor);
+  const span = r.maxTenths - r.minTenths;
+  if (Math.random() < 0.05) {
+    return sensor.toLowerCase().includes("hot")
+      ? r.minTenths - (20 + Math.floor(Math.random() * 70)) // hot-hold drifts cold
+      : r.maxTenths + (20 + Math.floor(Math.random() * 90)); // chilled/frozen drifts warm
+  }
+  // Keep ok readings off the band edges so they read as comfortably in-range.
+  const lo = r.minTenths + Math.round(span * 0.2);
+  const hi = r.maxTenths - Math.round(span * 0.2);
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
+/** Reason-coded waste presets — realistic item / unit / reason / unit-cost
+ *  (grosze) so the daily write-off and "top reason" KPIs are believable. */
+const WASTE_PRESETS: { item: string; unit: string; qtyMax: number; reason: WasteReason; costPerUnit: number }[] = [
+  { item: "Mozzarella di Bufala", unit: "kg", qtyMax: 2, reason: "spoilage", costPerUnit: 2800 },
+  { item: "San Marzano tomatoes", unit: "kg", qtyMax: 3, reason: "spoilage", costPerUnit: 900 },
+  { item: "Dough balls", unit: "pcs", qtyMax: 14, reason: "overproduction", costPerUnit: 120 },
+  { item: "Margherita", unit: "pcs", qtyMax: 3, reason: "prep_error", costPerUnit: 900 },
+  { item: "Marinara", unit: "pcs", qtyMax: 2, reason: "dropped", costPerUnit: 800 },
+  { item: "Fresh basil", unit: "bunch", qtyMax: 4, reason: "expired", costPerUnit: 350 },
+  { item: "Prosciutto di Parma", unit: "kg", qtyMax: 1, reason: "spoilage", costPerUnit: 6500 },
+  { item: "Tiramisù", unit: "pcs", qtyMax: 4, reason: "customer_return", costPerUnit: 1500 },
+];
+
+type SeedTempLog = { locationSlug: string; sensor: string; tempCelsius: number; recordedBy?: string; recordedAt: string };
+type SeedWasteLog = { locationSlug: string; item: string; quantity: number; unit: string; reason: WasteReason; estimatedCostGrosze?: number; recordedBy?: string; recordedAt: string };
+
+/** Build a location's HACCP reads: every sensor, twice a day (open + close),
+ *  across HACCP_DAYS — skipping any timestamp still in the future today. */
+function buildTempHistory(slug: string): SeedTempLog[] {
+  const out: SeedTempLog[] = [];
+  for (let dayAgo = HACCP_DAYS - 1; dayAgo >= 0; dayAgo--) {
+    for (const hour of [7, 22]) {
+      for (const sensor of HACCP_SENSORS) {
+        const at = new Date(NOW - days(dayAgo));
+        at.setUTCHours(hour, Math.floor(Math.random() * 30), 0, 0);
+        if (at.getTime() > NOW) continue; // don't log the future
+        out.push({ locationSlug: slug, sensor, tempCelsius: tempReading(sensor), recordedBy: pick(["manager", "chef", "pizzaiolo"]), recordedAt: at.toISOString() });
+      }
+    }
+  }
+  return out;
+}
+
+/** Build a location's waste history: a steady ~1/day reason-coded trickle with
+ *  some quiet days, plus a guaranteed entry today so the today KPIs populate. */
+function buildWasteHistory(slug: string): SeedWasteLog[] {
+  const out: SeedWasteLog[] = [];
+  for (let dayAgo = WASTE_DAYS - 1; dayAgo >= 0; dayAgo--) {
+    const count = dayAgo === 0 ? 1 + Math.floor(Math.random() * 2) : Math.random() < 0.3 ? 0 : 1 + Math.floor(Math.random() * 2);
+    for (let k = 0; k < count; k++) {
+      const p = pick(WASTE_PRESETS);
+      const qty = Math.max(0.5, Math.round((0.5 + Math.random() * p.qtyMax) * 2) / 2);
+      const at = new Date(NOW - days(dayAgo));
+      const hour = dayAgo === 0 ? 8 + Math.floor(Math.random() * 2) : 9 + Math.floor(Math.random() * 13);
+      at.setUTCHours(hour, Math.floor(Math.random() * 60), 0, 0);
+      if (at.getTime() > NOW) continue;
+      out.push({ locationSlug: slug, item: p.item, quantity: qty, unit: p.unit, reason: p.reason, estimatedCostGrosze: Math.round(qty * p.costPerUnit), recordedBy: pick(["chef", "pizzaiolo", "manager"]), recordedAt: at.toISOString() });
+    }
+  }
+  return out;
 }
 
 // A realistic guest base for the deep simulation dataset: the 6 named regulars
@@ -276,6 +355,11 @@ async function seedActiveDataset(): Promise<void> {
     await saveSupplier({ name: "Kraków Fresh Produce", contactName: "Jan Lewandowski", phone: "+48126540011", leadTimeDays: 1 }),
   ];
 
+  // HACCP + waste are single cross-location kv blobs, so accumulate every
+  // location's deep history and land each in ONE write after the loop.
+  const allTempLogs: SeedTempLog[] = [];
+  const allWasteLogs: SeedWasteLog[] = [];
+
   for (const loc of locations) {
     const slug = loc.slug;
     const menu = await getMenuWithOverrides(slug);
@@ -355,13 +439,10 @@ async function seedActiveDataset(): Promise<void> {
       await createStockMovement({ ingredientId: ingredients[0].id, locationSlug: slug, type: "waste", quantity: -2, costImpact: 300, reason: "spoilage", occurredAt: iso(hours(20)) });
     }
 
-    // Waste log + HACCP temp logs.
-    await saveWasteLog({ locationSlug: slug, item: "Mozzarella di Bufala", quantity: 1.5, unit: "kg", reason: "spoilage", estimatedCostGrosze: 4200, recordedBy: "chef", recordedAt: iso(hours(18)) });
-    await saveWasteLog({ locationSlug: slug, item: "Margherita (prep error)", quantity: 2, unit: "pcs", reason: "prep_error", estimatedCostGrosze: 1800, recordedBy: "pizzaiolo", recordedAt: iso(hours(6)) });
-    for (let i = 0; i < 6; i++) {
-      const flagged = i === 2;
-      await saveTempLog({ locationSlug: slug, sensor: pick(["Walk-in fridge", "Dough fridge", "Freezer"]), tempCelsius: flagged ? 9.4 : 2 + Math.random() * 3, recordedBy: "manager", recordedAt: iso(hours(i * 4)) });
-    }
+    // HACCP + waste — a deep, dated history (built here, landed once after the
+    // loop) so both compliance screens show a real record, not a couple of rows.
+    allTempLogs.push(...buildTempHistory(slug));
+    allWasteLogs.push(...buildWasteHistory(slug));
 
     // Feedback + survey responses (tied to seeded guests).
     for (let i = 0; i < 4; i++) {
@@ -421,6 +502,12 @@ async function seedActiveDataset(): Promise<void> {
     });
     await addNotification({ type: "low_stock", title: "Mozzarella below reorder point", message: `${slug}: 1.2kg left`, locationSlug: slug });
   }
+
+  // Land the deep HACCP + waste history in one write each (single locked
+  // read-modify-write per cross-location blob) — mirrors bulkAppendOrders so a
+  // 30-day, multi-sensor record stays cheap on Neon instead of N round-trips.
+  await bulkAppendTempLogs(allTempLogs);
+  await bulkAppendWasteLogs(allWasteLogs);
 
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free. In
