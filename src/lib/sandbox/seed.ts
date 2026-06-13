@@ -39,7 +39,7 @@ import {
   saveTask,
   getIngredients,
   fireKdsTickets,
-  recomputeCustomerRollup,
+  recomputeCustomerRollupsBulk,
   appendAgentEvent,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
@@ -646,11 +646,13 @@ async function seedActiveDataset(): Promise<void> {
 
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free. In
-  // realistic mode this covers the regulars + heaviest tail guests (capped so
-  // the per-phone re-reads stay cheap); the long tail still surfaces in
-  // order-derived CRM + cohort analytics, which read orders directly.
+  // realistic mode this covers the regulars + heaviest tail guests; the long
+  // tail still surfaces in order-derived CRM + cohort analytics, which read
+  // orders directly. recomputeCustomerRollupsBulk reads the (large) order blob
+  // ONCE for the whole set — a per-phone loop re-read it once per phone, which
+  // is what made "Reset & re-seed" hang past the serverless timeout.
   const rollupPhones = base ? base.rollupPhones : GUESTS.map((g) => g.phone);
-  for (const phone of rollupPhones) await recomputeCustomerRollup(phone);
+  await recomputeCustomerRollupsBulk(rollupPhones);
 }
 
 /** Seed the `sim:` dry-run dataset (the full CORE picture), so every operational

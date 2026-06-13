@@ -3,6 +3,13 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getSettings, updateSettings, wipeSimulationData, getOrders } from "@/lib/store";
 import { seedSimulation } from "@/lib/sandbox/seed";
 
+// The first enable + every "Reset & re-seed" lays down a deep ~10-month dataset
+// (tens of thousands of orders plus staff, inventory, compliance and cash
+// history). That work is legitimately heavy, so request the platform's max
+// function budget rather than the default short window — otherwise the reseed
+// is killed mid-flight and the namespace is left half-populated.
+export const maxDuration = 300;
+
 /**
  * Simulation mode control — owner-only. Switches the whole business onto an
  * isolated namespace (`sim:`) so real data is physically untouched. First enable
