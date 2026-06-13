@@ -29,7 +29,10 @@ interface DraftMovement {
   quantity: number;
 }
 
-function buildDraws(
+/** Per-ingredient consumption for one order, via the chain-wide recipes.
+ *  Exported so bulk seeders can aggregate draws across many orders and write
+ *  one stock movement per ingredient instead of paying the per-order path. */
+export function buildDraws(
   order: Order,
   recipes: Recipe[],
 ): DraftMovement[] {

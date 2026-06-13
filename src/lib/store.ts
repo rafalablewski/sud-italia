@@ -132,12 +132,13 @@ async function ensureDataDir() {
 //   "sandbox:"  Sandbox mode — a rich demo dataset auto-seeded by seedSandbox()
 //               so every screen shows a full picture for exploring/demoing.
 //   "sim:"      Simulation mode — seeded on first enable (seedSimulation) with a
-//               DEEPER version of the sandbox CORE picture (~90 days of trading,
-//               spread across service hours) so reports/cohorts/dayparts have
-//               signal for a pre-launch dry-run; the owner then layers their own
-//               test orders/waste/costs on top. Toggling it off hides every test
-//               row instantly (data is kept so you can resume; "reset" re-seeds a
-//               clean run, "wipe" clears it to empty for hand-entry).
+//               REALISTIC, DEEP version of the sandbox CORE picture (~10 months of
+//               weekend-weighted, daypart-curved trading over a large mostly-
+//               one-time guest base) so reports/cohorts/dayparts/menu-eng have
+//               genuine signal for a pre-launch dry-run; the owner then layers
+//               their own test orders/waste/costs on top. Toggling it off hides
+//               every test row instantly (data is kept so you can resume; "reset"
+//               re-seeds a clean run, "wipe" clears it to empty for hand-entry).
 //
 // Both modes suppress real-world side-effects (payments, SMS, WhatsApp, cron) —
 // see isSandboxActive(). Driven by the `sandboxModeEnabled` / `simulationModeEnabled`
@@ -3153,8 +3154,8 @@ export interface AppSettings {
    *  Toggled owner-only via /api/admin/sandbox. */
   sandboxModeEnabled?: boolean;
   /** Whole-business simulation: like sandbox, seeded on first enable with a
-   *  deeper CORE picture (~90 days of trading) as a pre-launch dry-run, the owner
-   *  then layers their own test orders/waste/costs on top — isolated behind `sim:`.
+   *  realistic, deep CORE picture (~10 months of trading) as a pre-launch dry-run,
+   *  the owner then layers their own test orders/waste/costs on top — behind `sim:`.
    *  Toggling off hides every test row. Mutually exclusive with sandboxModeEnabled.
    *  Toggled owner-only via /api/admin/simulation-mode. */
   simulationModeEnabled?: boolean;

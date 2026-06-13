@@ -39,10 +39,12 @@ import {
   addNotification,
   saveTask,
   getIngredients,
+  getRecipes,
   fireKdsTickets,
   recomputeCustomerRollup,
   appendAgentEvent,
 } from "@/lib/store";
+import { buildDraws } from "@/lib/inventory-decrement";
 import { createBooking } from "@/lib/booking";
 import type {
   CartItem,
@@ -53,6 +55,8 @@ import type {
   StaffRole,
   TimeSlot,
 } from "@/data/types";
+
+type Customer = { name: string; phone: string };
 
 const NOW = Date.now();
 const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString();
@@ -77,6 +81,57 @@ const GUESTS = [
 ];
 const CHANNELS: FulfillmentType[] = ["dine-in", "takeout", "delivery"];
 
+// Service-hour weights — dinner heaviest, then lunch, light shoulders/late — so
+// the deep simulation dataset shows real Daypart/Hourly peaks instead of a flat
+// line. Index = UTC hour; weight = relative order share at that hour.
+const HOUR_WEIGHTS: ReadonlyArray<readonly [number, number]> = [
+  [11, 2], [12, 6], [13, 7], [14, 4], [15, 2], [16, 2],
+  [17, 4], [18, 7], [19, 9], [20, 8], [21, 5], [22, 2],
+];
+const HOUR_POOL: number[] = HOUR_WEIGHTS.flatMap(([h, w]) => Array(w).fill(h));
+
+/** A completed order placed `dayAgo` days back at a weighted service hour. */
+function serviceHourIso(dayAgo: number): string {
+  const at = new Date(NOW - days(dayAgo));
+  at.setUTCHours(pick(HOUR_POOL), Math.floor(Math.random() * 60), 0, 0);
+  return at.toISOString();
+}
+/** Weekend/Friday demand uplift (+ a little noise) for a day N days ago. */
+function dayVolume(base: number, dayAgo: number): number {
+  const dow = new Date(NOW - days(dayAgo)).getUTCDay(); // 0 Sun … 6 Sat
+  const f = dow === 6 || dow === 0 ? 1.4 : dow === 5 ? 1.2 : 1;
+  return Math.max(1, Math.round(base * f * (0.8 + Math.random() * 0.4)));
+}
+
+// A realistic guest base for the deep simulation dataset: the 6 named regulars
+// (enrolled in loyalty, heavily weighted) plus a long tail of occasional guests,
+// so Cohort/LTV-CAC and CRM see many one-timers + a few regulars — not 6 whales.
+const FIRST_NAMES = ["Jan", "Anna", "Piotr", "Maria", "Tomasz", "Katarzyna", "Krzysztof", "Agnieszka", "Marco", "Sofia", "Luca", "Elena", "Paweł", "Magda", "Andrzej", "Ewa", "Michał", "Zofia", "Marek", "Julia", "Kamil", "Natalia", "Bartosz", "Alicja"];
+const LAST_NAMES = ["Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Woźniak", "Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Greco", "Conti"];
+/** Build a weighted guest base + a pick() pool that favours the regulars while
+ *  spreading most orders across a tail of light/one-time guests. */
+function buildGuestBase(synthetic: number): { regulars: Customer[]; pickGuest: () => Customer; rollupPhones: string[] } {
+  const tail: { c: Customer; weight: number }[] = [];
+  for (let i = 0; i < synthetic; i++) {
+    const c: Customer = { name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`, phone: `+48${700000000 + i}` };
+    // ~15% are semi-regulars (weight 4–11); the rest are one/two-timers.
+    tail.push({ c, weight: Math.random() < 0.15 ? 4 + Math.floor(Math.random() * 8) : 1 });
+  }
+  const weighted: Customer[] = [
+    ...GUESTS.flatMap((g) => Array(18).fill(g) as Customer[]),
+    ...tail.flatMap((t) => Array(t.weight).fill(t.c) as Customer[]),
+  ];
+  // Roll up the 6 regulars + the heaviest tail guests (cap kept low so the
+  // per-phone rollup re-reads stay cheap on Neon); the rest still surface in
+  // order-derived CRM + cohort analytics.
+  const heavyTail = tail.filter((t) => t.weight >= 4).slice(0, 18).map((t) => t.c.phone);
+  return {
+    regulars: GUESTS,
+    pickGuest: () => pick(weighted),
+    rollupPhones: [...GUESTS.map((g) => g.phone), ...heavyTail],
+  };
+}
+
 function lineFrom(menu: MenuItem[], cat: string, locationSlug: string, qty: number): CartItem | null {
   const pool = menu.filter((m) => m.available && m.category === cat);
   if (pool.length === 0) return null;
@@ -99,11 +154,11 @@ const cartTotal = (cart: CartItem[]) => cart.reduce((s, c) => s + c.menuItem.pri
 function buildOrder(
   locationSlug: string,
   menu: MenuItem[],
-  opts: { status: OrderStatus; ageMs?: number; atIso?: string; channel?: FulfillmentType; guestIdx?: number },
+  opts: { status: OrderStatus; ageMs?: number; atIso?: string; channel?: FulfillmentType; guestIdx?: number; customer?: Customer },
 ): Order {
   const cart = buildCart(menu, locationSlug);
   const channel = opts.channel ?? pick(CHANNELS);
-  const guest = opts.guestIdx != null ? GUESTS[opts.guestIdx] : pick(GUESTS);
+  const guest = opts.customer ?? (opts.guestIdx != null ? GUESTS[opts.guestIdx] : pick(GUESTS));
   const createdAt = opts.atIso ?? iso(opts.ageMs ?? 0);
   return {
     id: rid("ord"),
@@ -165,24 +220,21 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
   { role: "waiter", rate: 2800 }, { role: "waiter", rate: 2800 }, { role: "driver", rate: 2900 },
 ];
 
-// Per-mode order volume. Sandbox stays a compact demo; Simulation is a deep
-// pre-launch dataset — ~90 days of trading at a few orders/day — so Reports,
-// Cohort/LTV, SSSG, Dayparts and Hourly throughput all have real signal to test
-// against. Both spread historical orders across the service window (see
-// makeHistorical) so daypart/hourly analytics aren't bunched at one hour.
-const VOLUME: Record<"sandbox" | "simulation", { historyDays: number; historyOrders: number; recentOrders: number }> = {
-  sandbox: { historyDays: 28, historyOrders: 24, recentOrders: 6 },
-  simulation: { historyDays: 90, historyOrders: 240, recentOrders: 12 },
+// Per-mode order volume. Sandbox stays a COMPACT FLAT demo (a fixed handful of
+// history — enough to fill every screen). Simulation is a DEEP REALISTIC
+// rehearsal: ~90 days of trading at a real daily rate, weekend-weighted, spread
+// across service hours and a long guest tail — so Reports, Cohort/LTV-CAC, SSSG,
+// Dayparts, Hourly throughput and Menu engineering all have genuine signal. This
+// data shape is the real line between the two modes.
+type Volume =
+  | { kind: "flat"; historyDays: number; historyOrders: number; recentOrders: number }
+  | { kind: "realistic"; historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
+const VOLUME: Record<"sandbox" | "simulation", Volume> = {
+  sandbox: { kind: "flat", historyDays: 28, historyOrders: 24, recentOrders: 6 },
+  // ~10 months deep so cohort RETENTION (returning vs new) has a real prior
+  // period at every UI window preset (30/90/180d), and SSSG/seasonality too.
+  simulation: { kind: "realistic", historyDays: 300, ordersPerDay: 8, syntheticGuests: 2500, recentOrders: 14 },
 };
-
-/** Place a completed order `dayAgo` days back at a random service-window hour
- *  (11:00–21:59), so 90 days of seeded orders fan out across dayparts/hours
- *  the way real trading does. */
-function serviceHourIso(dayAgo: number): string {
-  const at = new Date(NOW - days(dayAgo));
-  at.setUTCHours(11 + Math.floor(Math.random() * 11), Math.floor(Math.random() * 60), 0, 0);
-  return at.toISOString();
-}
 
 /** Seed the active test namespace. `mode` MUST be the live data mode — the
  *  guard refuses to run otherwise so a seed can never land in real data. */
@@ -191,8 +243,13 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
     throw new Error(`seedDataset refused: ${mode} mode is not active`);
   }
   idp = mode === "simulation" ? "sim" : "sb";
+  const vol = VOLUME[mode];
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
+  const recipes = await getRecipes(); // shared formulas — for the stock draw-down
+  // Realistic mode trades against a long guest tail; flat mode reuses the 6
+  // named regulars by index (its original, deterministic feel).
+  const base = vol.kind === "realistic" ? buildGuestBase(vol.syntheticGuests) : null;
 
   // Loyalty members (drive CRM tiers + points) — chain-wide.
   for (let i = 0; i < GUESTS.length; i++) {
@@ -239,30 +296,42 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
 
-    // Orders — history (spread across the window + service hours) + recent +
-    // a live KDS rush. Volume is per-mode (VOLUME). Build them all, then land
-    // them in one write per location. Track cash revenue.
-    const vol = VOLUME[mode];
+    // Orders — history + recent + a live KDS rush. Volume/shape is per-mode
+    // (VOLUME). Build them all, then land them in one write per location.
     const pending: Order[] = [];
     let cashRevenue = 0;
-    for (let d = 0; d < vol.historyOrders; d++) {
-      // Fan d across the whole window so deep history has daily coverage.
-      const dayAgo = 1 + Math.floor((d / vol.historyOrders) * (vol.historyDays - 1));
-      const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), guestIdx: d % GUESTS.length });
-      pending.push(o);
-      if (d % 3 === 0) cashRevenue += o.totalAmount;
+    if (vol.kind === "realistic") {
+      // A real trading curve: ordersPerDay (weekend-weighted) across every day
+      // of the window, each at a weighted service hour, from the long guest tail.
+      for (let dayAgo = 1; dayAgo <= vol.historyDays; dayAgo++) {
+        const n = dayVolume(vol.ordersPerDay, dayAgo);
+        for (let k = 0; k < n; k++) {
+          const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), customer: base!.pickGuest() });
+          pending.push(o);
+          if (pending.length % 3 === 0) cashRevenue += o.totalAmount;
+        }
+      }
+    } else {
+      // Flat demo: a fixed handful of history, evenly fanned across the window.
+      for (let d = 0; d < vol.historyOrders; d++) {
+        const dayAgo = 1 + Math.floor((d / vol.historyOrders) * (vol.historyDays - 1));
+        const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), guestIdx: d % GUESTS.length });
+        pending.push(o);
+        if (d % 3 === 0) cashRevenue += o.totalAmount;
+      }
     }
+    // Recent completed orders (today's throughput) + a live KDS rush.
+    const todayOrders: Order[] = [];
     for (let i = 0; i < vol.recentOrders; i++) {
-      const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7) });
-      pending.push(o);
+      const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7), customer: base?.pickGuest() });
+      pending.push(o); todayOrders.push(o);
       if (i % 2 === 0) cashRevenue += o.totalAmount;
     }
     const activeMix: OrderStatus[] = ["preparing", "preparing", "confirmed", "ready", "confirmed"];
     const activeOrders: Order[] = [];
     for (let i = 0; i < activeMix.length; i++) {
-      const o = buildOrder(slug, menu, { status: activeMix[i], ageMs: min(1 + i * 3) });
-      activeOrders.push(o);
-      pending.push(o);
+      const o = buildOrder(slug, menu, { status: activeMix[i], ageMs: min(1 + i * 3), customer: base?.pickGuest() });
+      activeOrders.push(o); pending.push(o); todayOrders.push(o);
     }
     // Land every order for this location in ONE locked write, then fire KDS for
     // the live ones (awaited, so no race on the kv blob).
@@ -292,9 +361,20 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
       }
     }
 
-    // Stock movements (receipts tied to suppliers + ingredients) + a waste row.
+    // Stock movements: a baseline receipt for a few catalogue ingredients, then
+    // draw stock down through the REAL recipe math for today's service — receive
+    // ~1.8× each ingredient's consumption, then consume it — so on-hand reflects
+    // sales (not a static count) and lands positive instead of deep-negative.
     for (let i = 0; i < Math.min(5, ingredients.length); i++) {
       await createStockMovement({ ingredientId: ingredients[i].id, locationSlug: slug, type: "receive", quantity: 20 + i * 5, costImpact: (1500 + i * 300), reason: `PO receipt — ${pick(suppliers).name}`, occurredAt: iso(days(2)) });
+    }
+    const draw = new Map<string, number>();
+    for (const o of todayOrders) {
+      for (const d of buildDraws(o, recipes)) draw.set(d.ingredientId, (draw.get(d.ingredientId) ?? 0) + d.quantity);
+    }
+    for (const [ingredientId, qty] of draw) {
+      await createStockMovement({ ingredientId, locationSlug: slug, type: "receive", quantity: Math.ceil(qty * 1.8), reason: "PO receipt — opening stock", occurredAt: iso(days(1)) });
+      await createStockMovement({ ingredientId, locationSlug: slug, type: "consume", quantity: -qty, reason: "today's service (seed)", byUser: "system:seed", occurredAt: iso(hours(2)) });
     }
     if (ingredients[0]) {
       await createStockMovement({ ingredientId: ingredients[0].id, locationSlug: slug, type: "waste", quantity: -2, costImpact: 300, reason: "spoilage", occurredAt: iso(hours(20)) });
@@ -368,8 +448,12 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
   }
 
   // Build the CRM rollups once, now that every order across all locations
-  // exists — awaited, so the customer projection is complete and race-free.
-  for (const g of GUESTS) await recomputeCustomerRollup(g.phone);
+  // exists — awaited, so the customer projection is complete and race-free. In
+  // realistic mode this covers the regulars + heaviest tail guests (capped so
+  // the per-phone re-reads stay cheap); the long tail still surfaces in
+  // order-derived CRM + cohort analytics, which read orders directly.
+  const rollupPhones = base ? base.rollupPhones : GUESTS.map((g) => g.phone);
+  for (const phone of rollupPhones) await recomputeCustomerRollup(phone);
 }
 
 /** Seed the `sandbox:` demo dataset (explore / train / screenshot). */
