@@ -1,13 +1,18 @@
 /**
- * Sandbox seeder — populates the `sandbox:`-namespaced demo dataset with rich,
- * internally-consistent data across every sandboxed domain, using the real
- * store functions (so it lands in the sandbox namespace via the store's
- * key-prefixing). Runs ONLY while sandbox mode is active (the /api/admin/sandbox
- * route enables + busts the cache before calling). It never writes a shared key
- * — the menu, recipes and ingredients stay real.
+ * Isolated-dataset seeder — populates the active test namespace (`sandbox:` or
+ * `sim:`) with rich, internally-consistent data across every namespaced domain,
+ * using the real store functions (so it lands in the active namespace via the
+ * store's key-prefixing). Runs ONLY while the matching mode is active (the
+ * toggle routes enable + bust the cache before calling). It never writes a
+ * shared key — the menu, recipes and ingredients stay real.
  *
- * createOrder() already cascades into the customer rollup + KDS tickets, so
- * seeding orders also populates CRM and the kitchen board automatically.
+ * `seedDataset(mode)` is the shared body; `seedSandbox()` / `seedSimulation()`
+ * are the mode-bound entry points. Both produce the same full CORE picture
+ * (orders → KDS + CRM + analytics + loyalty, tables, slots, staff, schedule,
+ * cash, waste, HACCP, feedback, bookings) so every operational surface shows a
+ * working business the moment the mode is enabled. createOrder() already
+ * cascades into the customer rollup + KDS tickets, so seeding orders also
+ * populates CRM and the kitchen board automatically.
  */
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
@@ -54,7 +59,11 @@ const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString();
 const min = (m: number) => m * 60_000;
 const hours = (h: number) => h * 3_600_000;
 const days = (d: number) => d * 86_400_000;
-const rid = (p: string) => `sb-${p}-${Math.random().toString(36).slice(2, 8)}`;
+// Id prefix for seeded rows — set per run by seedDataset(). The two modes are
+// mutually exclusive and seeding is serial, so a module-level switch is safe and
+// keeps every helper's ids namespaced-by-mode (sb-… vs sim-…) for legibility.
+let idp = "sb";
+const rid = (p: string) => `${idp}-${p}-${Math.random().toString(36).slice(2, 8)}`;
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const today = new Date(NOW).toISOString().slice(0, 10);
 
@@ -128,7 +137,7 @@ async function seedTables(locationSlug: string): Promise<string[]> {
   const ids: string[] = [];
   for (const t of layout) {
     const saved = await saveTable({
-      id: `sb-tbl-${locationSlug}-${t.number}`,
+      id: `${idp}-tbl-${locationSlug}-${t.number}`,
       locationSlug, number: t.number, seats: t.seats, zone: t.zone,
       status: ["1", "3", "9"].includes(t.number) ? "seated" : "available",
     });
@@ -144,7 +153,7 @@ async function seedSlots(locationSlug: string): Promise<void> {
   ];
   for (const w of windows) {
     const slot: TimeSlot = {
-      id: `sb-slot-${locationSlug}-${w.time.replace(":", "")}`,
+      id: `${idp}-slot-${locationSlug}-${w.time.replace(":", "")}`,
       locationSlug, date: today, time: w.time, maxOrders: w.max, currentOrders: w.cur,
       fulfillmentTypes: ["dine-in", "takeout"], status: "active",
     };
@@ -157,10 +166,13 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
   { role: "waiter", rate: 2800 }, { role: "waiter", rate: 2800 }, { role: "driver", rate: 2900 },
 ];
 
-export async function seedSandbox(): Promise<void> {
-  if ((await getActiveDataMode()) !== "sandbox") {
-    throw new Error("seedSandbox refused: sandbox mode is not active");
+/** Seed the active test namespace. `mode` MUST be the live data mode — the
+ *  guard refuses to run otherwise so a seed can never land in real data. */
+export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void> {
+  if ((await getActiveDataMode()) !== mode) {
+    throw new Error(`seedDataset refused: ${mode} mode is not active`);
   }
+  idp = mode === "simulation" ? "sim" : "sb";
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
 
@@ -328,4 +340,15 @@ export async function seedSandbox(): Promise<void> {
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free.
   for (const g of GUESTS) await recomputeCustomerRollup(g.phone);
+}
+
+/** Seed the `sandbox:` demo dataset (explore / train / screenshot). */
+export async function seedSandbox(): Promise<void> {
+  return seedDataset("sandbox");
+}
+
+/** Seed the `sim:` dry-run dataset with the same full CORE picture, so every
+ *  operational surface is testable the moment Simulation mode is enabled. */
+export async function seedSimulation(): Promise<void> {
+  return seedDataset("simulation");
 }

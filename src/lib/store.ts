@@ -131,10 +131,12 @@ async function ensureDataDir() {
 //   ""          live / real operations
 //   "sandbox:"  Sandbox mode — a rich demo dataset auto-seeded by seedSandbox()
 //               so every screen shows a full picture for exploring/demoing.
-//   "sim:"      Simulation mode — starts EMPTY; the owner pushes their own test
-//               orders/waste/costs/customers by hand as a dry-run before opening.
-//               Toggling it off hides every test row instantly (data is kept so
-//               you can resume; "wipe" clears it).
+//   "sim:"      Simulation mode — seeded with the same full CORE picture as
+//               sandbox on first enable (seedSimulation) so every surface is
+//               testable as a pre-launch dry-run; the owner then layers their own
+//               test orders/waste/costs on top. Toggling it off hides every test
+//               row instantly (data is kept so you can resume; "reset" re-seeds a
+//               clean run, "wipe" clears it to empty for hand-entry).
 //
 // Both modes suppress real-world side-effects (payments, SMS, WhatsApp, cron) —
 // see isSandboxActive(). Driven by the `sandboxModeEnabled` / `simulationModeEnabled`
@@ -3115,10 +3117,11 @@ export interface AppSettings {
    *  Distinct from simulationEnabled (which only gates the Calculator).
    *  Toggled owner-only via /api/admin/sandbox. */
   sandboxModeEnabled?: boolean;
-  /** Whole-business simulation: like sandbox but starts EMPTY — the owner pushes
-   *  their own test orders/waste/costs/customers by hand as a pre-launch dry-run,
-   *  isolated behind a `sim:` namespace. Toggling off hides every test row. Mutually
-   *  exclusive with sandboxModeEnabled. Toggled owner-only via /api/admin/simulation. */
+  /** Whole-business simulation: like sandbox, seeded with the same full CORE
+   *  picture on first enable as a pre-launch dry-run, the owner then layers their
+   *  own test orders/waste/costs on top — isolated behind a `sim:` namespace.
+   *  Toggling off hides every test row. Mutually exclusive with sandboxModeEnabled.
+   *  Toggled owner-only via /api/admin/simulation-mode. */
   simulationModeEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
