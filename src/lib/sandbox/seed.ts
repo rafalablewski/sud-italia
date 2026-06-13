@@ -18,7 +18,7 @@ import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 import {
   getActiveDataMode,
-  createOrder,
+  bulkAppendOrders,
   saveTable,
   createSlot,
   getSlots,
@@ -93,19 +93,19 @@ function buildCart(menu: MenuItem[], locationSlug: string): CartItem[] {
 }
 const cartTotal = (cart: CartItem[]) => cart.reduce((s, c) => s + c.menuItem.price * c.quantity, 0);
 
-/** Create one demo order. Cascades (rollup + KDS) are suppressed — the seeder
- *  runs them once, awaited, afterward (the fire-and-forget versions race on the
- *  shared kv blob at seeding speed and lose writes). Returns the created order. */
-async function makeOrder(
+/** Build one demo order object WITHOUT persisting it. The seeder collects these
+ *  and lands them via bulkAppendOrders (one locked write per location) so a deep
+ *  dataset stays cheap, then fires KDS + rebuilds CRM rollups once afterward. */
+function buildOrder(
   locationSlug: string,
   menu: MenuItem[],
-  opts: { status: OrderStatus; ageMs: number; channel?: FulfillmentType; guestIdx?: number },
-): Promise<Order> {
+  opts: { status: OrderStatus; ageMs?: number; atIso?: string; channel?: FulfillmentType; guestIdx?: number },
+): Order {
   const cart = buildCart(menu, locationSlug);
   const channel = opts.channel ?? pick(CHANNELS);
   const guest = opts.guestIdx != null ? GUESTS[opts.guestIdx] : pick(GUESTS);
-  const createdAt = iso(opts.ageMs);
-  const order: Order = {
+  const createdAt = opts.atIso ?? iso(opts.ageMs ?? 0);
+  return {
     id: rid("ord"),
     locationSlug,
     items: cart,
@@ -124,7 +124,6 @@ async function makeOrder(
     channel: Math.random() > 0.7 ? "whatsapp" : "web",
     simulated: false,
   };
-  return createOrder(order, { suppressNotifications: true, suppressCascades: true });
 }
 
 async function seedTables(locationSlug: string): Promise<string[]> {
@@ -165,6 +164,25 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
   { role: "manager", rate: 4200 }, { role: "pizzaiolo", rate: 3400 }, { role: "chef", rate: 3600 },
   { role: "waiter", rate: 2800 }, { role: "waiter", rate: 2800 }, { role: "driver", rate: 2900 },
 ];
+
+// Per-mode order volume. Sandbox stays a compact demo; Simulation is a deep
+// pre-launch dataset — ~90 days of trading at a few orders/day — so Reports,
+// Cohort/LTV, SSSG, Dayparts and Hourly throughput all have real signal to test
+// against. Both spread historical orders across the service window (see
+// makeHistorical) so daypart/hourly analytics aren't bunched at one hour.
+const VOLUME: Record<"sandbox" | "simulation", { historyDays: number; historyOrders: number; recentOrders: number }> = {
+  sandbox: { historyDays: 28, historyOrders: 24, recentOrders: 6 },
+  simulation: { historyDays: 90, historyOrders: 240, recentOrders: 12 },
+};
+
+/** Place a completed order `dayAgo` days back at a random service-window hour
+ *  (11:00–21:59), so 90 days of seeded orders fan out across dayparts/hours
+ *  the way real trading does. */
+function serviceHourIso(dayAgo: number): string {
+  const at = new Date(NOW - days(dayAgo));
+  at.setUTCHours(11 + Math.floor(Math.random() * 11), Math.floor(Math.random() * 60), 0, 0);
+  return at.toISOString();
+}
 
 /** Seed the active test namespace. `mode` MUST be the live data mode — the
  *  guard refuses to run otherwise so a seed can never land in real data. */
@@ -221,22 +239,34 @@ export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void>
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
 
-    // Orders — 30d history + recent + a live KDS rush. Track cash revenue.
+    // Orders — history (spread across the window + service hours) + recent +
+    // a live KDS rush. Volume is per-mode (VOLUME). Build them all, then land
+    // them in one write per location. Track cash revenue.
+    const vol = VOLUME[mode];
+    const pending: Order[] = [];
     let cashRevenue = 0;
-    for (let d = 0; d < 24; d++) {
-      const o = await makeOrder(slug, menu, { status: "completed", ageMs: days(1 + (d % 28)) + min(d * 11), guestIdx: d % GUESTS.length });
+    for (let d = 0; d < vol.historyOrders; d++) {
+      // Fan d across the whole window so deep history has daily coverage.
+      const dayAgo = 1 + Math.floor((d / vol.historyOrders) * (vol.historyDays - 1));
+      const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), guestIdx: d % GUESTS.length });
+      pending.push(o);
       if (d % 3 === 0) cashRevenue += o.totalAmount;
     }
-    for (let i = 0; i < 6; i++) {
-      const o = await makeOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7) });
+    for (let i = 0; i < vol.recentOrders; i++) {
+      const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7) });
+      pending.push(o);
       if (i % 2 === 0) cashRevenue += o.totalAmount;
     }
     const activeMix: OrderStatus[] = ["preparing", "preparing", "confirmed", "ready", "confirmed"];
     const activeOrders: Order[] = [];
     for (let i = 0; i < activeMix.length; i++) {
-      activeOrders.push(await makeOrder(slug, menu, { status: activeMix[i], ageMs: min(1 + i * 3) }));
+      const o = buildOrder(slug, menu, { status: activeMix[i], ageMs: min(1 + i * 3) });
+      activeOrders.push(o);
+      pending.push(o);
     }
-    // Fire KDS tickets for the live orders — awaited, so no race on the blob.
+    // Land every order for this location in ONE locked write, then fire KDS for
+    // the live ones (awaited, so no race on the kv blob).
+    await bulkAppendOrders(pending);
     for (const o of activeOrders) await fireKdsTickets(o);
 
     // Staff + schedule + time-punches.
