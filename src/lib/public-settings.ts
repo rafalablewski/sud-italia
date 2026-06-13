@@ -76,6 +76,8 @@ export interface PublicSettings {
   /** Global minimum order value (grosze) — see /admin/settings. The cart
    *  gates checkout against it client-side; createOrder enforces it server-side. */
   minOrderAmount?: number;
+  /** Suggested tip percentages (fractions, e.g. [0.1,0.15,0.2]) for the cart. */
+  tipPresets?: number[];
   /** Speed-guarantee SLA shown on the menu page ("X minutes guaranteed").
    *  Sourced from `LoyaltySettings.speedGuarantee` so the operator controls
    *  the promised minutes + copy — and can switch it OFF when the kitchen

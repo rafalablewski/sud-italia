@@ -105,6 +105,8 @@ export async function GET(req: NextRequest) {
      *  uses it to gate checkout + show an "add X more" hint so the soft block
      *  matches the server's hard enforcement in createOrder. 0 = no minimum. */
     minOrderAmount: appSettings.minOrderAmount,
+    /** Suggested tip percentages (fractions) for the cart's tip picker. */
+    tipPresets: appSettings.tipPresets,
     /** Customer display-currency config: switcher options + rates.
      *  The customer site hydrates the currency module from this so a
      *  switch from PLN → SGD reflects operator-set rates, not the
