@@ -16,7 +16,6 @@ interface Settings {
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
   simulationEnabled?: boolean;
-  sandboxModeEnabled?: boolean;
   simulationModeEnabled?: boolean;
   layout?: Layout;
 }
@@ -92,21 +91,9 @@ export function SettingsV3() {
     await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
   };
 
-  // Sandbox mode flips the WHOLE app onto demo data — so after a change we
-  // hard-reload to refresh the banner + every data surface at once.
-  const [sandboxBusy, setSandboxBusy] = useState<null | "toggle" | "reset">(null);
-  const sandboxCall = async (kind: "toggle" | "reset", body: Record<string, unknown>) => {
-    setSandboxBusy(kind);
-    try {
-      const res = await fetch("/api/admin/sandbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) window.location.reload();
-      else setSandboxBusy(null);
-    } catch { setSandboxBusy(null); }
-  };
-
-  // Simulation mode mirrors sandbox but writes to an isolated `sim:` namespace
-  // (seeded with the same full CORE picture on first enable) — same whole-app
-  // reload so banner + every surface refresh.
+  // Simulation mode flips the WHOLE app onto an isolated `sim:` namespace
+  // (seeded with a realistic CORE picture on first enable) — so after a change
+  // we hard-reload to refresh the banner + every data surface at once.
   const [simBusy, setSimBusy] = useState<null | "toggle" | "reset" | "wipe">(null);
   const simCall = async (kind: "toggle" | "reset" | "wipe", body: Record<string, unknown>) => {
     setSimBusy(kind);
@@ -236,48 +223,17 @@ export function SettingsV3() {
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>Sandbox mode</span>
-                    {s.sandboxModeEnabled && <Badge tone="warn" dot>ON · demo data</Badge>}
-                  </div>
-                  <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 4 }}>
-                    Flips the <strong>whole business</strong> — admin and the customer storefront — onto an isolated demo dataset (orders, customers, KDS, cash, staff, schedule, suppliers, waste, HACCP, feedback… everything except the menu). Real data is untouched and restored the instant you switch it off. While on, no real payments, SMS, WhatsApp or scheduled jobs fire. First enable seeds rich demo data; your sandbox edits persist until you reset.
-                  </div>
-                </div>
-                <Switch
-                  aria-label="Sandbox mode"
-                  checked={!!s.sandboxModeEnabled}
-                  disabled={sandboxBusy != null}
-                  onChange={() => sandboxCall("toggle", { enabled: !s.sandboxModeEnabled })}
-                />
-              </div>
-              {sandboxBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… seeding demo data on first enable. The page will reload.</div>}
-              {s.sandboxModeEnabled && (
-                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                  <Button variant="secondary" size="sm" loading={sandboxBusy === "reset"} onClick={() => sandboxCall("reset", { action: "reset" })}>
-                    Reset sandbox data
-                  </Button>
-                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Wipe the demo dataset and re-seed a clean one.</span>
-                </div>
-              )}
-            </CardBody>
-          )}
-
-          {me?.role === "owner" && (
-            <CardBody style={{ borderTop: "2px solid var(--av3-line)", paddingTop: 16 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700 }}>Simulation mode</span>
                     {s.simulationModeEnabled && <Badge tone="info" dot>ON · your test data</Badge>}
                   </div>
                   <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 4 }}>
-                    A pre-launch <strong>dry-run</strong>. Like Sandbox it flips the <strong>whole business</strong> — admin and storefront — onto an isolated dataset, real data untouched. First enable <strong>seeds a realistic, deep CORE picture</strong> — ~10 months of trading (orders, KDS, tables, slots, staff, schedule, cash, bookings, loyalty) with lunch/dinner peaks and a real customer base, so Reports, Cohorts, Dayparts, Hourly and Menu engineering all show genuine signal and every operational screen is testable straight away; from there you push your own test orders, waste and costs by hand to rehearse the flow before go-live. Your <strong>AI agents keep working</strong> — they analyse this data (daily briefings, customer segments, summaries) so they learn and you can check their output. No real payments, SMS, WhatsApp, billing or backups fire. Switch it off and every test row disappears instantly (it&apos;s kept, so you can switch back on and continue). Enabling it turns Sandbox mode off.
+                    A pre-launch <strong>dry-run</strong>. Flips the <strong>whole business</strong> — admin and storefront — onto an isolated dataset, real data untouched. First enable <strong>seeds a realistic, deep CORE picture</strong> — ~10 months of trading (orders, KDS, tables, slots, staff, schedule, cash, bookings, loyalty) with lunch/dinner peaks and a real customer base, so Reports, Cohorts, Dayparts, Hourly and Menu engineering all show genuine signal and every operational screen is testable straight away; from there you push your own test orders, waste and costs by hand to rehearse the flow before go-live. Your <strong>AI agents keep working</strong> — they analyse this data (daily briefings, customer segments, summaries) so they learn and you can check their output. No real payments, SMS, WhatsApp, billing or backups fire. Switch it off and every test row disappears instantly (it&apos;s kept, so you can switch back on and continue).
                   </div>
                 </div>
                 <Switch
                   aria-label="Simulation mode"
                   checked={!!s.simulationModeEnabled}
-                  disabled={simBusy != null || sandboxBusy != null}
+                  disabled={simBusy != null}
                   onChange={() => simCall("toggle", { enabled: !s.simulationModeEnabled })}
                 />
               </div>

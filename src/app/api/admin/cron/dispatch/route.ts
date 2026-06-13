@@ -28,8 +28,6 @@ import { getActiveDataMode } from "@/lib/store";
  * have no dispatcher-specific code so the move is free.
  *
  * Data modes (see src/lib/store.ts):
- *   - Sandbox    → skip everything (a throwaway demo; no point spending
- *                  AI budget or running ops on seeded data).
  *   - Simulation → run the analysis / AI jobs so they learn from and report
  *                  on the owner's hand-entered dry-run data (the operator can
  *                  then check their output), but skip jobs with real-world
@@ -96,16 +94,11 @@ export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
 
-  // Sandbox mode pauses the whole business — skip every scheduled job (it's a
-  // throwaway demo). Simulation mode is a genuine pre-launch dry-run: let the
-  // analysis / AI jobs run so they learn from and report on the owner's
-  // hand-entered data, but still skip every job with real-world reach
-  // (customer sends, billing, infra backups/trims) — see `realWorld` above.
-  const mode = await getActiveDataMode();
-  if (mode === "sandbox") {
-    return NextResponse.json({ skipped: "sandbox" });
-  }
-  const simulation = mode === "simulation";
+  // Simulation mode is a genuine pre-launch dry-run: let the analysis / AI jobs
+  // run so they learn from and report on the owner's data, but still skip every
+  // job with real-world reach (customer sends, billing, infra backups/trims) —
+  // see `realWorld` above.
+  const simulation = (await getActiveDataMode()) === "simulation";
 
   const now = new Date();
   const origin = req.nextUrl.origin;

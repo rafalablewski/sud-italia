@@ -18,7 +18,7 @@ import { deriveSteeringPlan } from "@/lib/pace-steering";
  *
  * Staff+ with per-location scope enforced by withAdmin (the till sits at one
  * truck). Real orders only — getOrders() strips simulated KDS demo tickets, so
- * a training sandbox never steers the real sell side.
+ * test data never steers the real sell side.
  */
 
 const ACTIVE = new Set(["confirmed", "preparing", "ready"]);

@@ -1,18 +1,14 @@
 /**
- * Isolated-dataset seeder — populates the active test namespace (`sandbox:` or
- * `sim:`) with rich, internally-consistent data across every namespaced domain,
- * using the real store functions (so it lands in the active namespace via the
- * store's key-prefixing). Runs ONLY while the matching mode is active (the
- * toggle routes enable + bust the cache before calling). It never writes a
- * shared key — the menu, recipes and ingredients stay real.
+ * Simulation-dataset seeder — populates the `sim:` namespace with rich,
+ * internally-consistent data across every namespaced domain, using the real
+ * store functions (so it lands in the namespace via the store's key-prefixing).
+ * Runs ONLY while Simulation mode is active (the toggle route enables it first).
+ * It never writes a shared key — the menu, recipes and ingredients stay real.
  *
- * `seedDataset(mode)` is the shared body; `seedSandbox()` / `seedSimulation()`
- * are the mode-bound entry points. Both produce the same full CORE picture
- * (orders → KDS + CRM + analytics + loyalty, tables, slots, staff, schedule,
- * cash, waste, HACCP, feedback, bookings) so every operational surface shows a
- * working business the moment the mode is enabled. createOrder() already
- * cascades into the customer rollup + KDS tickets, so seeding orders also
- * populates CRM and the kitchen board automatically.
+ * `seedSimulation()` lays down the full CORE picture (orders → KDS + CRM +
+ * analytics + loyalty, tables, slots, staff, schedule, cash, waste, HACCP,
+ * feedback, bookings) as a realistic, deep pre-launch dry-run so every
+ * operational surface shows a working business the moment the mode is enabled.
  */
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
@@ -64,12 +60,11 @@ const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString();
 const min = (m: number) => m * 60_000;
 const hours = (h: number) => h * 3_600_000;
 const days = (d: number) => d * 86_400_000;
-// Id prefix for seeded rows, namespaced-by-mode (sb-… vs sim-…) for legibility.
-// Bound to each seedDataset() call's async context via AsyncLocalStorage so two
-// interleaving seeds (rapid mode switches) can't clobber a shared mutable and
-// mix prefixes — `idp.toString()` resolves per execution context, not globally.
+// Id prefix for seeded rows (sim-…) for legibility. Bound to each seed call's
+// async context via AsyncLocalStorage so two interleaving seeds can't clobber a
+// shared mutable — `idp.toString()` resolves per execution context, not globally.
 const idpStorage = new AsyncLocalStorage<string>();
-const idp = { toString: () => idpStorage.getStore() ?? "sb" };
+const idp = { toString: () => idpStorage.getStore() ?? "sim" };
 const rid = (p: string) => `${idp}-${p}-${Math.random().toString(36).slice(2, 8)}`;
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const today = new Date(NOW).toISOString().slice(0, 10);
@@ -223,42 +218,24 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
   { role: "waiter", rate: 2800 }, { role: "waiter", rate: 2800 }, { role: "driver", rate: 2900 },
 ];
 
-// Per-mode order volume. Sandbox stays a COMPACT FLAT demo (a fixed handful of
-// history — enough to fill every screen). Simulation is a DEEP REALISTIC
-// rehearsal: ~90 days of trading at a real daily rate, weekend-weighted, spread
-// across service hours and a long guest tail — so Reports, Cohort/LTV-CAC, SSSG,
-// Dayparts, Hourly throughput and Menu engineering all have genuine signal. This
-// data shape is the real line between the two modes.
-type Volume =
-  | { kind: "flat"; historyDays: number; historyOrders: number; recentOrders: number }
-  | { kind: "realistic"; historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
-const VOLUME: Record<"sandbox" | "simulation", Volume> = {
-  sandbox: { kind: "flat", historyDays: 28, historyOrders: 24, recentOrders: 6 },
-  // ~10 months deep so cohort RETENTION (returning vs new) has a real prior
-  // period at every UI window preset (30/90/180d), and SSSG/seasonality too.
-  simulation: { kind: "realistic", historyDays: 300, ordersPerDay: 8, syntheticGuests: 2500, recentOrders: 14 },
-};
+// Order volume for the deep, realistic rehearsal: a real daily rate across
+// ~10 months, weekend-weighted, spread across service hours and a long guest
+// tail — so Reports, Cohort/LTV-CAC, SSSG, Dayparts, Hourly throughput and Menu
+// engineering all have genuine signal.
+// ~10 months deep so cohort RETENTION (returning vs new) has a real prior
+// period at every UI window preset (30/90/180d), and SSSG/seasonality too.
+type Volume = { historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
+const SIM_VOLUME: Volume = { historyDays: 300, ordersPerDay: 8, syntheticGuests: 2500, recentOrders: 14 };
 
-/** Seed the active test namespace. `mode` MUST be the live data mode — the
- *  guard refuses to run otherwise so a seed can never land in real data. */
-export async function seedDataset(mode: "sandbox" | "simulation"): Promise<void> {
-  if ((await getActiveDataMode()) !== mode) {
-    throw new Error(`seedDataset refused: ${mode} mode is not active`);
-  }
-  // Bind the id prefix to this call's async context for the whole seed run.
-  return idpStorage.run(mode === "simulation" ? "sim" : "sb", () => seedActiveDataset(mode));
-}
-
-/** The seed body — always runs inside the idpStorage context set by
- *  seedDataset(), so rid() resolves the right per-mode prefix. */
-async function seedActiveDataset(mode: "sandbox" | "simulation"): Promise<void> {
-  const vol = VOLUME[mode];
+/** The seed body — always runs inside the idpStorage("sim") context set by
+ *  seedSimulation(), so rid() resolves the sim- prefix. */
+async function seedActiveDataset(): Promise<void> {
+  const vol = SIM_VOLUME;
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
   const recipes = await getRecipes(); // shared formulas — for the stock draw-down
-  // Realistic mode trades against a long guest tail; flat mode reuses the 6
-  // named regulars by index (its original, deterministic feel).
-  const base = vol.kind === "realistic" ? buildGuestBase(vol.syntheticGuests) : null;
+  // Simulation trades against a long guest tail (mostly one-timers + a core).
+  const base = buildGuestBase(vol.syntheticGuests);
 
   // Loyalty members (drive CRM tiers + points) — chain-wide.
   for (let i = 0; i < GUESTS.length; i++) {
@@ -305,28 +282,17 @@ async function seedActiveDataset(mode: "sandbox" | "simulation"): Promise<void> 
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
 
-    // Orders — history + recent + a live KDS rush. Volume/shape is per-mode
-    // (VOLUME). Build them all, then land them in one write per location.
+    // Orders — a real trading curve: ordersPerDay (weekend-weighted) across
+    // every day of the window, each at a weighted service hour, from the long
+    // guest tail. Build them all, then land them in one write per location.
     const pending: Order[] = [];
     let cashRevenue = 0;
-    if (vol.kind === "realistic") {
-      // A real trading curve: ordersPerDay (weekend-weighted) across every day
-      // of the window, each at a weighted service hour, from the long guest tail.
-      for (let dayAgo = 1; dayAgo <= vol.historyDays; dayAgo++) {
-        const n = dayVolume(vol.ordersPerDay, dayAgo);
-        for (let k = 0; k < n; k++) {
-          const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), customer: base!.pickGuest() });
-          pending.push(o);
-          if (pending.length % 3 === 0) cashRevenue += o.totalAmount;
-        }
-      }
-    } else {
-      // Flat demo: a fixed handful of history, evenly fanned across the window.
-      for (let d = 0; d < vol.historyOrders; d++) {
-        const dayAgo = 1 + Math.floor((d / vol.historyOrders) * (vol.historyDays - 1));
-        const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), guestIdx: d % GUESTS.length });
+    for (let dayAgo = 1; dayAgo <= vol.historyDays; dayAgo++) {
+      const n = dayVolume(vol.ordersPerDay, dayAgo);
+      for (let k = 0; k < n; k++) {
+        const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), customer: base.pickGuest() });
         pending.push(o);
-        if (d % 3 === 0) cashRevenue += o.totalAmount;
+        if (pending.length % 3 === 0) cashRevenue += o.totalAmount;
       }
     }
     // Recent completed orders (today's throughput) + a live KDS rush.
@@ -465,13 +431,13 @@ async function seedActiveDataset(mode: "sandbox" | "simulation"): Promise<void> 
   for (const phone of rollupPhones) await recomputeCustomerRollup(phone);
 }
 
-/** Seed the `sandbox:` demo dataset (explore / train / screenshot). */
-export async function seedSandbox(): Promise<void> {
-  return seedDataset("sandbox");
-}
-
-/** Seed the `sim:` dry-run dataset with the same full CORE picture, so every
- *  operational surface is testable the moment Simulation mode is enabled. */
+/** Seed the `sim:` dry-run dataset (the full CORE picture), so every operational
+ *  surface is testable the moment Simulation mode is enabled. Refuses to run
+ *  unless Simulation mode is active, so a seed can never land in real data. */
 export async function seedSimulation(): Promise<void> {
-  return seedDataset("simulation");
+  if ((await getActiveDataMode()) !== "simulation") {
+    throw new Error("seedSimulation refused: simulation mode is not active");
+  }
+  // Bind the id prefix to this call's async context for the whole seed run.
+  return idpStorage.run("sim", seedActiveDataset);
 }
