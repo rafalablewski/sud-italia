@@ -11,7 +11,7 @@ interface Layout {
   showFeedbackSurvey: boolean; showNpsSurvey: boolean; showPostOrderUpsell: boolean; showChatWidget: boolean;
 }
 interface Settings {
-  deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; businessPhone?: string; businessEmail?: string;
+  deliveryFee?: number; minOrderAmount?: number; businessName?: string; tipPresets?: number[]; processorFee?: { pct: number; fixedGrosze: number }; businessPhone?: string; businessEmail?: string;
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
@@ -66,6 +66,7 @@ export function SettingsV3() {
 
   const [bizName, setBizName] = useState("");
   const [tips, setTips] = useState("");
+  const [feePct, setFeePct] = useState(""); const [feeFixed, setFeeFixed] = useState("");
   const [phone, setPhone] = useState(""); const [email, setEmail] = useState("");
   const [fee, setFee] = useState(""); const [minOrder, setMinOrder] = useState("");
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
@@ -80,6 +81,7 @@ export function SettingsV3() {
     setS(d); setMe(m);
     setBizName(d.businessName ?? "");
     setTips((d.tipPresets ?? [0.1, 0.15, 0.2]).map((p) => Math.round(p * 100)).join(", "));
+    setFeePct(String((d.processorFee?.pct ?? 0.014) * 100)); setFeeFixed(zl(d.processorFee?.fixedGrosze ?? 40));
     setPhone(d.businessPhone ?? ""); setEmail(d.businessEmail ?? "");
     setFee(zl(d.deliveryFee)); setMinOrder(zl(d.minOrderAmount));
     setIg(d.socialLinks?.instagram ?? ""); setFb(d.socialLinks?.facebook ?? ""); setTt(d.socialLinks?.tiktok ?? "");
@@ -120,6 +122,7 @@ export function SettingsV3() {
         businessName: bizName.trim(), businessPhone: phone.trim(), businessEmail: email.trim(),
         deliveryFee: Math.round((Number(fee) || 0) * 100), minOrderAmount: Math.round((Number(minOrder) || 0) * 100),
         tipPresets,
+        processorFee: { pct: (Number(feePct) || 0) / 100, fixedGrosze: Math.round((Number(feeFixed) || 0) * 100) },
         socialLinks: { instagram: ig.trim(), facebook: fb.trim(), tiktok: tt.trim() },
       });
     } finally { setSavingBiz(false); }
@@ -177,6 +180,8 @@ export function SettingsV3() {
             <div className="av3-formrow" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Business name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={bizName} onChange={(e) => setBizName(e.target.value)} placeholder="Shown in SMS, receipts & chat" /></label>
               <label className="av3-field"><span className="av3-field-label">Tip presets (%)</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={tips} onChange={(e) => setTips(e.target.value)} placeholder="10, 15, 20" /></label>
+              <label className="av3-field"><span className="av3-field-label">Card fee (%)</span><input className="av3-input" type="number" step="0.01" value={feePct} onChange={(e) => setFeePct(e.target.value)} placeholder="1.4" /></label>
+              <label className="av3-field"><span className="av3-field-label">Card fee fixed (zł)</span><input className="av3-input" type="number" step="0.01" value={feeFixed} onChange={(e) => setFeeFixed(e.target.value)} placeholder="0.40" /></label>
             </div>
             <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 12 }}>
               <label className="av3-field"><span className="av3-field-label">Phone</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>

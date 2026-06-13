@@ -3125,6 +3125,10 @@ export interface AppSettings {
    *  [0.1, 0.15, 0.2]). Operator-tunable so gratuity prompts match the
    *  market without a deploy. Empty array hides the preset buttons. */
   tipPresets?: number[];
+  /** Card-processing fee — the SINGLE source for the card fee, read by the
+   *  delivery P&L report and used as the default for the Calculator scenario.
+   *  `pct` is a fraction (0.014 = 1.4%); `fixedGrosze` is the flat per-txn fee. */
+  processorFee?: { pct: number; fixedGrosze: number };
   /** Operator-managed social handles, rendered in the public footer.
    *  Empty string = the corresponding link is hidden. Editable from
    *  /admin/settings → General. */
@@ -3329,6 +3333,11 @@ export function resolveLocationCompliance(
   return { zone: config?.defaultZone ?? "EU" };
 }
 
+/** Default card-processing fee (Stripe's PL card rate: 1.4% + 0.40 zł). The
+ *  single source for the fee's default — referenced by DEFAULT_SETTINGS and the
+ *  Calculator's default scenario so the rate isn't duplicated as a bare literal. */
+export const DEFAULT_PROCESSOR_FEE = { pct: 0.014, fixedGrosze: 40 };
+
 const DEFAULT_SETTINGS: AppSettings = {
   // Matches the pre-Phase-8 hardcoded DELIVERY_FEE_GROSZE in lib/upsell.ts
   // so first-deploy / unedited installs see no customer-visible price
@@ -3338,6 +3347,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   minOrderAmount: 3000, // 30.00 PLN
   businessName: SITE_NAME,
   tipPresets: [0.1, 0.15, 0.2],
+  processorFee: DEFAULT_PROCESSOR_FEE,
   businessPhone: "+48 123 456 789",
   businessEmail: "hello@ottaviano.pl",
   socialLinks: {
@@ -11995,7 +12005,7 @@ export function defaultSimulationScenario(): SimulationScenario {
     fixedCosts,
     wageInflationPct: 0.07,
     ingredientInflationPct: 0.04,
-    paymentProcessorPct: 0.019,
+    paymentProcessorPct: DEFAULT_PROCESSOR_FEE.pct,
     // Operational leakage the previous model silently ignored. QSR norms:
     // - waste 1-3% of revenue (spoilage, recipe over-portioning)
     // - refunds/comps/theft 1-2% of revenue
@@ -12214,10 +12224,14 @@ function forceAllAssumptionsOff(a: SimulationAssumptions): SimulationAssumptions
 
 export async function getSimulationScenario(): Promise<SimulationScenario> {
   const saved = await readJSON<Partial<SimulationScenario> | null>(SIMULATION_KEY, null);
+  // The card-processing fee has one source (AppSettings.processorFee); seed a
+  // fresh scenario's processor rate from it so the Calculator and the delivery
+  // P&L report agree instead of carrying two different literals.
+  const operatorProcessorPct = (await getSettings()).processorFee?.pct ?? DEFAULT_PROCESSOR_FEE.pct;
   if (!saved || !Array.isArray(saved.labor) || typeof saved.ordersPerDay !== "number") {
-    return defaultSimulationScenario();
+    return { ...defaultSimulationScenario(), paymentProcessorPct: operatorProcessorPct };
   }
-  const defaults = defaultSimulationScenario();
+  const defaults = { ...defaultSimulationScenario(), paymentProcessorPct: operatorProcessorPct };
   const hydratedAssumptions = hydrateAssumptions(saved.assumptions, defaults.assumptions);
   const hydratedWeather = hydrateWeather(saved.weather, defaults.weather);
   // Migration: force every behavior assumption + weather lever off on first

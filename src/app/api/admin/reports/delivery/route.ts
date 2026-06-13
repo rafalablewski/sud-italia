@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getOrders } from "@/lib/store";
+import { getOrders, getSettings, DEFAULT_PROCESSOR_FEE } from "@/lib/store";
+import { formatPricePLN } from "@/lib/utils";
 
 /**
  * Delivery profitability report (m2_14). Per-day per-location margin for
@@ -8,7 +9,7 @@ import { getOrders } from "@/lib/store";
  *
  * Margin model (grosze):
  *   revenue        = totalAmount (items + delivery_fee + tip)
- *   stripeFee      ≈ 1.4% + 40 grosze (Stripe's PL card rate)
+ *   stripeFee      = operator-set processor fee (AppSettings.processorFee)
  *   foodCost       = sum(menuItem.cost × qty) — menu data
  *   driverPay      = 0 today; m2_14b adds courier hourly + per-order
  *                    when staff.hourly_rate × time-on-route lands
@@ -20,10 +21,12 @@ import { getOrders } from "@/lib/store";
  *
  * Manager+ only.
  */
-function estimateStripeFeeGrosze(totalGrosze: number): number {
-  // 1.4% + 40 grosze on PL cards; rounded up to be honest about
-  // worst-case cost.
-  return Math.ceil(totalGrosze * 0.014) + 40;
+function estimateProcessorFeeGrosze(
+  totalGrosze: number,
+  fee: { pct: number; fixedGrosze: number },
+): number {
+  // Operator-set rate (single source); rounded up to be honest about cost.
+  return Math.ceil(totalGrosze * fee.pct) + fee.fixedGrosze;
 }
 
 interface DayRollup {
@@ -59,6 +62,7 @@ export const GET = withAdmin(
         o.status !== "pending" &&
         o.status !== "cancelled",
     );
+    const processorFee = (await getSettings()).processorFee ?? DEFAULT_PROCESSOR_FEE;
 
     const byKey = new Map<string, DayRollup>();
     for (const o of orders) {
@@ -81,7 +85,7 @@ export const GET = withAdmin(
         (acc, i) => acc + (i.menuItem.cost ?? 0) * i.quantity,
         0,
       );
-      const stripeFee = estimateStripeFeeGrosze(o.totalAmount);
+      const stripeFee = estimateProcessorFeeGrosze(o.totalAmount, processorFee);
       row.orderCount += 1;
       row.revenueGrosze += o.totalAmount;
       row.deliveryFeeGrosze += o.deliveryFee ?? 0;
@@ -126,7 +130,7 @@ export const GET = withAdmin(
       days,
       totals,
       assumptions: {
-        stripeRate: "1.4% + 40 grosze (PL cards)",
+        stripeRate: `${(processorFee.pct * 100).toFixed(2)}% + ${formatPricePLN(processorFee.fixedGrosze)} (operator-set)`,
         driverPayGrosze: 0,
         note: "marginCeiling assumes driver pay = 0. Real margin lands when staff hourly rates + time-on-route are wired in m2_14b.",
       },
