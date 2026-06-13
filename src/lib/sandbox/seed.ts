@@ -39,7 +39,7 @@ import {
   saveTask,
   getIngredients,
   fireKdsTickets,
-  recomputeCustomerRollup,
+  recomputeCustomerRollupsBulk,
   appendAgentEvent,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
@@ -76,6 +76,12 @@ const idp = { toString: () => idpStorage.getStore() ?? "sim" };
 const rid = (p: string) => `${idp}-${p}-${Math.random().toString(36).slice(2, 8)}`;
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const today = new Date(NOW).toISOString().slice(0, 10);
+
+/** Live progress sink for the Settings → Simulations seed console. The seeder
+ *  emits a monotonic percent (0–99; the route caps the final 100) plus a
+ *  one-line description of the phase it is *about* to run, so the operator sees
+ *  what the deep dry-run is doing instead of a blind spinner. */
+export type SeedProgress = (e: { pct: number; msg: string }) => void;
 
 const GUESTS = [
   { name: "Lucia Bianchi", phone: "+48600200412" },
@@ -413,14 +419,26 @@ const SIM_VOLUME: Volume = { historyDays: 300, ordersPerDay: 70, syntheticGuests
 
 /** The seed body — always runs inside the idpStorage("sim") context set by
  *  seedSimulation(), so rid() resolves the sim- prefix. */
-async function seedActiveDataset(): Promise<void> {
+async function seedActiveDataset(progress?: SeedProgress): Promise<void> {
   const vol = SIM_VOLUME;
   const locations = await getActiveLocationsAsync();
   const ingredients = await getIngredients(); // shared catalogue
   // Simulation trades against a long guest tail (mostly one-timers + a core).
   const base = buildGuestBase(vol.syntheticGuests);
 
+  // Live progress for the seed console. `total` is the count of tick() calls
+  // below: 4 global + 11 per location + 7 finalize. Keep these in sync if you
+  // add or remove a milestone, or the bar will drift.
+  let step = 0;
+  const total = 4 + locations.length * 11 + 7;
+  const tick = (msg: string) => {
+    step += 1;
+    progress?.({ pct: Math.min(99, Math.round((step / total) * 100)), msg });
+  };
+  tick("Preparing menu, ingredients & guest base");
+
   // Loyalty members (drive CRM tiers + points) — chain-wide.
+  tick("Enrolling loyalty members");
   for (let i = 0; i < GUESTS.length; i++) {
     const g = GUESTS[i];
     const [first, ...rest] = g.name.split(" ");
@@ -435,6 +453,7 @@ async function seedActiveDataset(): Promise<void> {
   // HQ aren't empty. Actors meeting:/schedule: are the off-ledger rows the spend
   // helpers sum. d=1 is yesterday, d=2 the prior day — both are populated so the
   // day-over-day change has a denominator. All offsets stay inside the 30d window.
+  tick("Seeding AI agent activity");
   const aiPersonas = ["coo", "cfo", "cmo", "ceo"];
   for (let d = 1; d <= 14; d++) {
     await appendAgentEvent({
@@ -453,6 +472,7 @@ async function seedActiveDataset(): Promise<void> {
   }
 
   // Suppliers (chain-wide) + a couple of POs.
+  tick("Adding suppliers");
   const suppliers = [
     await saveSupplier({ name: "Latteria Napoli", contactName: "Paolo Russo", email: "orders@latterianapoli.it", phone: "+390811234567", leadTimeDays: 3 }),
     await saveSupplier({ name: "Mulino Caputo", contactName: "Anna Caputo", email: "sales@mulinocaputo.it", leadTimeDays: 5 }),
@@ -472,10 +492,13 @@ async function seedActiveDataset(): Promise<void> {
 
   for (const loc of locations) {
     const slug = loc.slug;
+    const locName = loc.city;
+    tick(`${locName} — tables & slots`);
     const menu = await getMenuWithOverrides(slug);
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
 
+    tick(`${locName} — building order history (${vol.historyDays} days)`);
     // Orders — a real trading curve: ordersPerDay (weekend-weighted) across
     // every day of the window, each at a weighted service hour, from the long
     // guest tail. Build them all, then land them in one write per location.
@@ -505,11 +528,13 @@ async function seedActiveDataset(): Promise<void> {
     }
     // Land every order for this location in ONE locked write, then fire KDS for
     // the live ones (awaited, so no race on the kv blob).
+    tick(`${locName} — landing ${pending.length.toLocaleString("en-US")} orders & live KDS`);
     await bulkAppendOrders(pending);
     for (const o of activeOrders) await fireKdsTickets(o);
 
     // Staff (the per-location roster, in STAFF_ROLES order so the rota template
     // can index it) + a recurring weekly rota across the visible window.
+    tick(`${locName} — staff & weekly rota`);
     const roster: { id: string; role: StaffRole }[] = [];
     for (let i = 0; i < STAFF_ROLES.length; i++) {
       const s = await saveStaff({
@@ -537,16 +562,19 @@ async function seedActiveDataset(): Promise<void> {
     // Inventory — a par/reorder + onHand stock row per catalogue ingredient with
     // a ~3-week movement history (net == onHand). Built here, landed once after
     // the loop. No-op when the (real, shared) ingredient catalogue is empty.
+    tick(`${locName} — inventory levels`);
     const inv = buildInventory(slug, ingredients);
     allStock.push(...inv.stock);
     allMovements.push(...inv.movements);
 
     // HACCP + waste — a deep, dated history (built here, landed once after the
     // loop) so both compliance screens show a real record, not a couple of rows.
+    tick(`${locName} — HACCP & waste history`);
     allTempLogs.push(...buildTempHistory(slug));
     allWasteLogs.push(...buildWasteHistory(slug));
 
     // Feedback + survey responses (tied to seeded guests).
+    tick(`${locName} — guest feedback & surveys`);
     for (let i = 0; i < 4; i++) {
       const g = pick(GUESTS);
       await saveFeedback({
@@ -566,6 +594,7 @@ async function seedActiveDataset(): Promise<void> {
     // sales MUST be recorded here, not just added to the counted total), bank a
     // mid-shift safe drop when the till runs heavy, then close with a small
     // realistic variance (the EOD shrink signal stays ±a few złoty, not +900).
+    tick(`${locName} — cash drawer session`);
     const opened = await openCashSession({ locationSlug: slug, openingFloat: 30000, openedBy: "manager", notes: "Morning float" });
     if (!("error" in opened)) {
       await appendCashDrop(opened.id, { amountGrosze: cashRevenue, kind: "sale", actor: "manager", notes: "Cash sales (today)" });
@@ -580,6 +609,7 @@ async function seedActiveDataset(): Promise<void> {
     }
 
     // Bookings tonight against the 20:00 slot.
+    tick(`${locName} — tonight's bookings`);
     const slots = await getSlots(slug, today);
     const dinner = slots.find((s) => s.time === "20:00");
     if (dinner) {
@@ -596,6 +626,7 @@ async function seedActiveDataset(): Promise<void> {
     // Purchase orders — a spread across suppliers and every status, referencing
     // the shared ingredient catalogue, dated across the past few weeks so the PO
     // board shows a real pipeline (draft → sent → received, plus a cancellation).
+    tick(`${locName} — purchase orders`);
     if (ingredients.length > 0) {
       const poPlan: { status: PurchaseOrderStatus; createdAgo: number }[] = [
         { status: "received", createdAgo: days(18) },
@@ -622,6 +653,7 @@ async function seedActiveDataset(): Promise<void> {
     }
 
     // A couple of ops tasks + notifications so those panels aren't empty.
+    tick(`${locName} — ops tasks & alerts`);
     await saveTask({
       title: "Restock buffalo mozzarella", detail: "Below reorder point at this location.",
       assigneeId: "owner", assigneeName: "Rafał", createdBy: "owner", createdByName: "Rafał",
@@ -633,12 +665,18 @@ async function seedActiveDataset(): Promise<void> {
   // Land the deep histories in one write each (single locked read-modify-write
   // per cross-location blob) — mirrors bulkAppendOrders so the deep dry-run
   // stays cheap on Neon instead of thousands of round-trips.
+  tick(`Landing staff rota (${allShifts.length} shifts)`);
   await bulkAppendShifts(allShifts);
+  tick(`Landing inventory stock (${allStock.length} rows)`);
   await bulkUpsertIngredientStock(allStock);
+  tick(`Landing stock movements (${allMovements.length})`);
   await bulkAppendStockMovements(allMovements);
+  tick(`Landing HACCP readings (${allTempLogs.length})`);
   await bulkAppendTempLogs(allTempLogs);
+  tick(`Landing waste log (${allWasteLogs.length})`);
   await bulkAppendWasteLogs(allWasteLogs);
   // Time-punches for recently-worked shifts (small volume, after the rota lands).
+  tick(`Recording ${punches.length} time punches`);
   for (const p of punches) {
     await recordTimePunch({ staffId: p.staffId, type: "clock-in", occurredAt: p.startAt, shiftId: p.shiftId });
     if (p.done) await recordTimePunch({ staffId: p.staffId, type: "clock-out", occurredAt: p.endAt, shiftId: p.shiftId });
@@ -646,20 +684,24 @@ async function seedActiveDataset(): Promise<void> {
 
   // Build the CRM rollups once, now that every order across all locations
   // exists — awaited, so the customer projection is complete and race-free. In
-  // realistic mode this covers the regulars + heaviest tail guests (capped so
-  // the per-phone re-reads stay cheap); the long tail still surfaces in
-  // order-derived CRM + cohort analytics, which read orders directly.
+  // realistic mode this covers the regulars + heaviest tail guests; the long
+  // tail still surfaces in order-derived CRM + cohort analytics, which read
+  // orders directly. recomputeCustomerRollupsBulk reads the (large) order blob
+  // ONCE for the whole set — a per-phone loop re-read it once per phone, which
+  // is what made "Reset & re-seed" hang past the serverless timeout.
   const rollupPhones = base ? base.rollupPhones : GUESTS.map((g) => g.phone);
-  for (const phone of rollupPhones) await recomputeCustomerRollup(phone);
+  tick(`Rebuilding CRM rollups (${rollupPhones.length} customers)`);
+  await recomputeCustomerRollupsBulk(rollupPhones);
 }
 
 /** Seed the `sim:` dry-run dataset (the full CORE picture), so every operational
  *  surface is testable the moment Simulation mode is enabled. Refuses to run
- *  unless Simulation mode is active, so a seed can never land in real data. */
-export async function seedSimulation(): Promise<void> {
+ *  unless Simulation mode is active, so a seed can never land in real data.
+ *  Pass `progress` to stream phase updates to the Settings seed console. */
+export async function seedSimulation(progress?: SeedProgress): Promise<void> {
   if ((await getActiveDataMode()) !== "simulation") {
     throw new Error("seedSimulation refused: simulation mode is not active");
   }
   // Bind the id prefix to this call's async context for the whole seed run.
-  return idpStorage.run("sim", seedActiveDataset);
+  return idpStorage.run("sim", () => seedActiveDataset(progress));
 }

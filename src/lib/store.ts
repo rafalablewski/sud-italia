@@ -997,6 +997,138 @@ export async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
   }
 }
 
+/**
+ * Single-pass bulk variant of {@link recomputeCustomerRollup}. Reads the order
+ * history, point adjustments and loyalty roster ONCE, indexes them by canonical
+ * phone, then computes and persists every requested phone's rollup from those
+ * in-memory sets.
+ *
+ * The simulation seeder rolls up dozens of phones at the end of a deep seed.
+ * Calling the per-phone function in a loop re-read the entire (large) order blob
+ * once per phone — with ~46k seeded orders that's ~24 full-history reads
+ * back-to-back, which is what made "Reset & re-seed" blow the serverless
+ * timeout. This collapses those to a single read + one customers write.
+ */
+export async function recomputeCustomerRollupsBulk(rawPhones: string[]): Promise<void> {
+  if (rawPhones.length === 0) return;
+  const db = await getDomainDb();
+  // De-dupe on the canonical phone so we never compute/write the same row twice.
+  const phones = Array.from(
+    new Set(rawPhones.map((p) => normalizePlPhoneE164(p) ?? p)),
+  );
+  try {
+    const [allOrders, adjustments, members] = await Promise.all([
+      getOrders(),
+      getPointAdjustments(),
+      getLoyaltyMembers(),
+    ]);
+
+    // Index the source data by canonical phone once (O(orders + adjustments +
+    // members)) so each phone's rollup is a map lookup instead of an O(orders)
+    // scan — the whole point of the bulk path.
+    const ordersByPhone = new Map<string, Order[]>();
+    for (const o of allOrders) {
+      if (!o.customerPhone || o.status === "pending") continue;
+      const key = normalizePlPhoneE164(o.customerPhone) ?? o.customerPhone;
+      const arr = ordersByPhone.get(key);
+      if (arr) arr.push(o);
+      else ordersByPhone.set(key, [o]);
+    }
+    const adjByPhone = new Map<string, number>();
+    for (const a of adjustments) {
+      const key = normalizePlPhoneE164(a.phone) ?? a.phone;
+      adjByPhone.set(key, (adjByPhone.get(key) ?? 0) + a.amount);
+    }
+    const memberByPhone = new Map<string, LoyaltyMember>();
+    for (const m of members) {
+      const key = normalizePlPhoneE164(m.phone) ?? m.phone;
+      memberByPhone.set(key, m);
+    }
+
+    // The per-phone aggregation — identical math to recomputeCustomerRollup,
+    // just fed from the pre-built indexes.
+    const compute = (phone: string) => {
+      const myOrders = ordersByPhone.get(phone) ?? [];
+      const totalSpentGrosze = myOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+      const orderCount = myOrders.length;
+      let firstOrderAt: Date | null = null;
+      let lastOrderAt: Date | null = null;
+      let latestName: string | undefined;
+      for (const o of myOrders) {
+        const t = new Date(o.paidAt || o.createdAt);
+        if (!Number.isFinite(t.getTime())) continue;
+        if (!firstOrderAt || t < firstOrderAt) firstOrderAt = t;
+        if (!lastOrderAt || t > lastOrderAt) {
+          lastOrderAt = t;
+          latestName = o.customerName;
+        }
+      }
+      const manualPointsAdjust = adjByPhone.get(phone) ?? 0;
+      const loyaltyPointsBalance = Math.floor(totalSpentGrosze / 100) + manualPointsAdjust;
+      const member = memberByPhone.get(phone);
+      const memberName = member
+        ? [member.name, member.lastName].filter(Boolean).join(" ").trim() || member.nickname || null
+        : null;
+      return {
+        phone,
+        name: memberName || latestName || null,
+        email: member?.email ?? null,
+        birthday: member?.dob ?? null,
+        totalSpentGrosze,
+        orderCount,
+        firstOrderAt,
+        lastOrderAt,
+        loyaltyPointsBalance,
+        manualPointsAdjust,
+      };
+    };
+
+    if (!db) {
+      // Test mode: the customers table is DB-only, so persist to the
+      // customers.json kv blob (namespaced to sim:) in ONE write. Preserve any
+      // consent/notes a prior test row carried (recompute never owns those).
+      const all = await readJSON<CustomerRollup[]>("customers.json", []);
+      const prevByPhone = new Map(all.map((c) => [c.phone, c]));
+      const updated = new Set(phones);
+      const rollups: CustomerRollup[] = phones.map((phone) => {
+        const c = compute(phone);
+        const prev = prevByPhone.get(phone);
+        return {
+          ...c,
+          firstOrderAt: c.firstOrderAt ? c.firstOrderAt.toISOString() : null,
+          lastOrderAt: c.lastOrderAt ? c.lastOrderAt.toISOString() : null,
+          smsOptout: prev?.smsOptout ?? false,
+          emailOptout: prev?.emailOptout ?? false,
+          notes: prev?.notes ?? null,
+        };
+      });
+      await writeJSON("customers.json", [
+        ...all.filter((c) => !updated.has(c.phone)),
+        ...rollups,
+      ]);
+      return;
+    }
+
+    // DB mode (not hit during the sim seed, since getDomainDb() is null there,
+    // but kept correct): upsert each computed row. Still a single order read.
+    await ensureCustomersTable();
+    for (const phone of phones) {
+      const c = compute(phone);
+      const values = { ...c, updatedAt: new Date() };
+      await db
+        .insert(customersTable)
+        .values(values)
+        .onConflictDoUpdate({ target: customersTable.phone, set: values });
+    }
+  } catch (err) {
+    logger.warn(
+      "recomputeCustomerRollupsBulk failed",
+      { count: phones.length, layer: "store.customers" },
+      err,
+    );
+  }
+}
+
 /** Point lookup for the customer rollup. Returns null when no row exists yet. */
 export async function getCustomer(rawPhone: string): Promise<CustomerRollup | null> {
   const db = await getDomainDb();
