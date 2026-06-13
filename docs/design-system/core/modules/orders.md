@@ -1,4 +1,4 @@
-# Core v2 · Orders
+# Core · Orders
 
 ← back to [core README](../README.md)
 

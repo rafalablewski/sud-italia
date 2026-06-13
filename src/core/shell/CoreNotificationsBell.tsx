@@ -33,7 +33,7 @@ const ago = (iso: string) => {
 };
 
 /**
- * Core v2 notifications center — a bell in the shell command bar with an
+ * Core notifications center — a bell in the shell command bar with an
  * unread badge and a dropdown panel over the real notifications store
  * (/api/admin/notifications). Polls the unread count every 20s; loads the
  * list on open. Mark one / mark all read.

@@ -1,4 +1,4 @@
-# Core v2 · Service
+# Core · Service
 
 The merged Floor + Slots surface. `/core/service` (redirects to Floor).
 Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
@@ -55,7 +55,7 @@ Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
   `DELETE /api/admin/slots?id=`; apply = `POST /api/admin/demand-exchange`
   (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
-Parity target: today's `/core/service`. The booking console (slot + table
+Wired 1:1 to the same shared server engine. The booking console (slot + table
 in one move) lives in the Guest hub's **Book** view (`CoreBook`), shared.
 
 ## Floor — live orders, lookup & notes

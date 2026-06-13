@@ -25,7 +25,7 @@ interface Props {
 }
 
 /**
- * Core v2 · Guest · Concierge — the AI capability layer + EU-14 allergen matrix.
+ * Core · Guest · Concierge — the AI capability layer + EU-14 allergen matrix.
  * Wired to the same engine as today's /core/guest/concierge: server builds the
  * capability meta + per-location samples + matrix; exposure toggles PATCH
  * /api/admin/concierge. Own core- UI.

@@ -17,7 +17,7 @@ function todayLocal(): string {
 }
 
 /**
- * Core v2 · Guest · Book — slot + table in one move, wired to the same engine
+ * Core · Guest · Book — slot + table in one move, wired to the same engine
  * as today's /core/guest/book (shared with Service): GET slots / floor tables /
  * reservations, create via POST /api/admin/booking, cancel via DELETE
  * /api/admin/floor/reservations. Conflicts via the pure findReservationConflicts.

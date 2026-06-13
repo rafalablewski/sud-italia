@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /**
- * Core v2's OWN modal dialog — no dependency on the admin `src/ui` kit. Portaled
+ * Core's OWN modal dialog — no dependency on the admin `src/ui` kit. Portaled
  * into the `.core` theme root (so it inherits core tokens + fonts) and covers
  * the viewport with a fixed scrim. Esc + scrim-click close. Styled by
  * `.core-scrim` / `.core-modal*` in themes/core/index.css.

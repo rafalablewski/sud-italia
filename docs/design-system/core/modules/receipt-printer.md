@@ -19,7 +19,7 @@ configured, a simulator + browser-print fallback when not.
 
 The trigger previously lived on the `/admin/orders` order-detail footer; that
 page became a read-only order-history list, so the action moved to the
-Core v2 Orders surface, which is now the operator's one place for every order.
+Core Orders surface, which is now the operator's one place for every order.
 
 ## Pipeline
 

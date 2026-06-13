@@ -45,7 +45,7 @@ function browserPrintReceipt(preview: string, orderId: string): boolean {
 }
 
 /**
- * Core v2 · Orders — one place for every order at the location: live (current)
+ * Core · Orders — one place for every order at the location: live (current)
  * and paid history. Scope tabs + channel filter + search (id / guest / phone /
  * table), a KPI strip, and a detail dialog with the full ticket + Mark paid +
  * Print receipt. Reads /api/admin/orders (all orders) + /api/admin/floor/tables

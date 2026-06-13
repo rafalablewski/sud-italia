@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { createPortal } from "react-dom";
 
 /**
- * Core v2's OWN toast primitive — no dependency on the admin `src/ui` kit.
+ * Core's OWN toast primitive — no dependency on the admin `src/ui` kit.
  * A small bottom-centre stack, portaled into the `.core` theme root so it picks
  * up the core tokens + fonts. `useCoreToast()` returns a `toast(msg, tone?)`
  * function. Styled by `.core-toast*` in themes/core/index.css.

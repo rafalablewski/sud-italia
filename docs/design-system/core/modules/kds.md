@@ -1,4 +1,4 @@
-# Core v2 · KDS
+# Core · KDS
 
 The kitchen wall. `/core/kds`.
 
@@ -7,7 +7,7 @@ The kitchen wall. `/core/kds`.
   `.core-kds` scope **re-declares the surface/ink + tone tokens to a dark
   palette by default** (the wall look). The **in-shell board** follows the
   app theme: `.core[data-theme="light"] .core-body .core-kds` re-declares a light
-  palette + light tones, so a light Core v2 gets a light KDS. The
+  palette + light tones, so a light Core gets a light KDS. The
   **fullscreen kiosk** (`.core-kiosk`, outside `.core-body`) stays a dark wall
   regardless of theme — that's the mounted night-trucks / glare display.
   Translucent fills use `--kds-veil` / `--kds-track` tokens so they invert
@@ -71,7 +71,7 @@ warn · risk · late · ready`.
 
 ## Engine + API contract
 
-Wired 1:1 to the same engine as today's `/core/kds`:
+Wired 1:1 to the shared live engine:
 
 - **Stream** — `useAdminOrdersStream(location, { paused, includeSimulated })`
   (SSE `/api/admin/orders/stream` + REST fallback).
@@ -92,5 +92,4 @@ refresh, pause/resume, recall (`POST /api/admin/orders/{id}/recall`,
 tray persisted per location in `localStorage` so a refresh keeps the undo
 window), two opt-in chimes (bright bell on a new ticket, lower alarm the
 instant a ticket breaches SLA), and the 86 control
-(`/api/admin/kds/eighty-six`) are all wired — feature-for-feature with
-today's `/core/kds`.
+(`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.

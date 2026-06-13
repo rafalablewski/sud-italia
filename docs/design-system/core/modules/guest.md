@@ -1,11 +1,11 @@
-# Core v2 · Guest
+# Core · Guest
 
 The guest engagement hub. `/core/guest`.
 
 - **Routes:** five nested views under `/core/guest/*`; the bare hub
   redirects to **Inbox**. The view switcher is `guestTabs(active)`
   (`src/core/guest/guestTabs.ts`) on the CoreShell subbar.
-- **Filter glyphs:** `src/core/guest/glyphs.tsx` — `GuestGlyph`, Core v2's
+- **Filter glyphs:** `src/core/guest/glyphs.tsx` — `GuestGlyph`, Core's
   own 24-grid line icons (no lucide) for the compact **glyph-only** filter
   bars across the guest surfaces (Inbox header actions + conversation
   filters, the Loyalty bar, the CRM bar). The shared bar shell is
@@ -55,7 +55,7 @@ The guest engagement hub. `/core/guest`.
   flow + ordered step prompts, add/remove). Loads
   `GET /api/admin/whatsapp/settings`, writes the whole edited object back
   via `PATCH` (preserving `defaultLocation`).
-- **Engine + API** — same as today's `/core/guest/whatsapp`:
+- **Engine + API** — the WhatsApp engine + API:
   `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}`
   (visibility-aware 10s `usePolling`), `GET …/transcripts/{phone}` (6s on
   select, skipped while a reply is sending),
@@ -81,4 +81,4 @@ The guest engagement hub. `/core/guest`.
 
 `src/core/guest/CoreBook.tsx` (shared with Service). Pick a dine-in slot (`.core-pk`) + party size, then a table — live fit/conflict via the pure `findReservationConflicts` (booked/too-small tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and confirm. Today's bookings on the right with cancel. Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST /api/admin/booking`; cancel `DELETE /api/admin/floor/reservations`.
 
-The whole Guest hub is now wired — parity with today's `/core/guest`.
+The whole Guest hub is wired to the live engine.

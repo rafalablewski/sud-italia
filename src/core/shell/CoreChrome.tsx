@@ -45,7 +45,7 @@ export function CoreClock() {
 }
 
 /**
- * Light / dark toggle. Core v2 manages its OWN theme (independent of the admin
+ * Light / dark toggle. Core manages its OWN theme (independent of the admin
  * theme boot) by writing `data-theme` on the nearest `.core` wrapper. Dark is
  * the default; the choice persists to localStorage. KDS ignores this (its wall
  * is always dark) — it sets the attribute on its own scope.

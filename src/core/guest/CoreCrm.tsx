@@ -115,7 +115,7 @@ function inSeg(c: CrmCustomer, seg: string): boolean {
 }
 
 /**
- * Core v2 · Guest · Guests (CRM) — the customer book, wired to the same engine
+ * Core · Guest · Guests (CRM) — the customer book, wired to the same engine
  * as today's /core/guest/crm: GET /api/admin/crm, notes via customer-notes,
  * points via members/points, consent via …/consent. Roster + segments + health
  * + a profile drawer. Own core- UI.

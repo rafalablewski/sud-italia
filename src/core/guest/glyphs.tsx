@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Core v2 · Guest — header action glyphs. Core v2 draws its **own** line
+ * Core · Guest — header action glyphs. Core draws its **own** line
  * icons (24-grid, currentColor, 1.8 stroke) rather than pulling lucide, so the
  * guest headers (Inbox actions, Loyalty view-switcher) can read as compact
  * icon-only controls without a new dependency. Each glyph is paired with a

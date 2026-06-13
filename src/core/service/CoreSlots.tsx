@@ -68,7 +68,7 @@ const zl = (g: number) => (g / 100).toFixed(0);
 const zl0 = (g: number) => `${Math.round(g / 100)} zł`;
 
 /**
- * Core v2 · Service · Slots — capacity + the Demand Exchange, wired to today's
+ * Core · Service · Slots — capacity + the Demand Exchange, wired to today's
  * /core/service/slots engine: GET /api/admin/slots (capacity) +
  * /api/admin/demand-exchange (forecast). Toggle active/draft (PUT slots), apply
  * a demand lever (POST demand-exchange single / apply-all). Own core- UI.

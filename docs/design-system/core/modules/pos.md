@@ -1,4 +1,4 @@
-# Core v2 · POS
+# Core · POS
 
 The till. `/core/pos`.
 
@@ -51,7 +51,7 @@ inside the shell body: **rail · menu · ticket**.
 
 ## The ticket (open check)
 
-Wired 1:1 to the same server engine as today's `/core/pos` — fresh `core-`
+Wired 1:1 to the shared server engine — fresh `core-`
 UI, identical contract.
 
 The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
@@ -144,7 +144,7 @@ total and the `orderId` — the till only ever sends item ids + quantities.
 
 ## Own UI primitives
 
-POS uses Core v2's **own** kit (no `src/ui`): `CoreDialog`
+POS uses Core's **own** kit (no `src/ui`): `CoreDialog`
 (`src/core/ui/Dialog.tsx`, the tender / address modals) and
 `useCoreToast` (`src/core/ui/Toast.tsx`) — both portaled into the
 `.core` theme root. Classes: `.core-scrim` / `.core-modal*` / `.core-btn` /

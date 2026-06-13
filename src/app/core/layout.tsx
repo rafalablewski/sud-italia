@@ -5,7 +5,7 @@ import { CurrencyGuard } from "@/shared/CurrencyGuard";
 import { CoreProviders } from "./CoreProviders";
 
 /**
- * Core v2 (`/core/*`) — the clean-room rebuild of the Core operating system.
+ * Core (`/core/*`) — the clean-room rebuild of the Core operating system.
  *
  * A SEPARATE entity from /admin AND from the current /core: this layout loads
  * ONLY the core theme (no admin base, no suite.css) and its OWN next/font
@@ -26,7 +26,7 @@ const cvDisplay = Bricolage_Grotesque({
 const cvMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-core-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Core v2 | Ottaviano",
+  title: "Core | Ottaviano",
   robots: "noindex, nofollow",
 };
 

@@ -223,7 +223,7 @@ const TicketCard = memo(function TicketCard({
 });
 
 /**
- * Core v2 · KDS — the always-dark kitchen wall, wired to the live order stream.
+ * Core · KDS — the always-dark kitchen wall, wired to the live order stream.
  * Floor (New → Firing → Ready·Expo lanes) + Chef (station make-queue) run off
  * the same engine as today's /core/kds: useAdminOrdersStream → analyzeTruck →
  * buildKdsTicket → groupTicketsByColumn, bump via PUT /api/admin/orders. Fleet

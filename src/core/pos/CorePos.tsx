@@ -58,7 +58,7 @@ function Gly({ children }: { children: ReactNode }) {
 }
 
 /**
- * Core v2 · POS — the till, wired to the real engine 1:1. Multi-tab open checks
+ * Core · POS — the till, wired to the real engine 1:1. Multi-tab open checks
  * (`/api/admin/pos/tabs`), add-to-ticket with category coursing, combo discount
  * + cross-sell (`@/lib/upsell`), Send-to-KDS / Fire-course / Charge
  * (`/api/admin/pos/orders`). The server owns the total + the orderId; the till

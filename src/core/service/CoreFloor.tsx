@@ -39,7 +39,7 @@ export interface FloorOrderRow {
 const CHANNEL_LABEL: Record<string, string> = { web: "Web", whatsapp: "WhatsApp", qr: "QR", pos: "POS" };
 
 /**
- * Core v2 · Service · Floor — the live room, wired to the same engine as today's
+ * Core · Service · Floor — the live room, wired to the same engine as today's
  * /core/service/floor: GET /api/admin/floor-twin → { twin, kitchen }; seat/clear
  * via POST /api/admin/floor-twin; table CRUD via /api/admin/floor/tables. Zoned
  * tiles, a KPI strip incl. spend velocity, the kitchen-bottleneck banner, a

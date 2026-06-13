@@ -7,12 +7,12 @@ import { CoreToastProvider } from "@/core/ui/Toast";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**
- * Provider envelope for Core v2 (`/core/*`). Core v2 is a separate entity
+ * Provider envelope for Core (`/core/*`). Core is a separate entity
  * from /admin and from the current /core — but it keeps the same *technicals*
  * (location context + the client page-guard) so every functionality carries
  * over. Styling is 100% the core theme; these are data/infra only.
  *
- * Core v2 builds its OWN UI primitives (toasts, dialogs, buttons) under
+ * Core builds its OWN UI primitives (toasts, dialogs, buttons) under
  * `src/core/ui/` rather than importing the admin-styled `src/ui` kit — it
  * loads none of the admin CSS those rely on. `CoreToastProvider` is mounted
  * here so any surface can `useCoreToast()`.
@@ -49,7 +49,7 @@ export function CoreProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!gate || !gate.custom || !pathname) return;
     // Map /core/* onto the same permission keys the current Core uses.
-    const need = permissionForAdminPage(pathname.replace("/core", "/core"));
+    const need = permissionForAdminPage(pathname);
     if (need && !gate.keys.has(need)) {
       router.replace(gate.home);
     }

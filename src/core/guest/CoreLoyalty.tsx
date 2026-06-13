@@ -75,7 +75,7 @@ const riskTone = (r: string) => (r === "lost" ? "bad" : r === "watch" ? "warn" :
 const fmtDays = (d: number) => (d < 1 ? "today" : `${Math.round(d)}d ago`);
 
 /**
- * Core v2 · Guest · Loyalty — members, wallets, redemptions, win-back, wired to
+ * Core · Guest · Loyalty — members, wallets, redemptions, win-back, wired to
  * the same engine as today's /core/guest/loyalty: GET members/wallets/
  * wallet-redemptions/retention, points via members/points, wallet dissolve via
  * DELETE wallets, win-back approve via POST retention. Own core- UI.

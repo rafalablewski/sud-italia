@@ -12,12 +12,12 @@ export interface CoreTab {
 }
 
 /**
- * The one chrome every Core v2 surface shares — a fixed two-row header over a
+ * The one chrome every Core surface shares — a fixed two-row header over a
  * surface body, no sidebar. Row 1 = brand + the primary surface switcher
  * (CoreNav) + global actions (location · clock · theme · fullscreen). Row 2 =
  * the context subbar (eyebrow + the surface's view tabs + its own controls).
  *
- * Core v2 is a SEPARATE entity from /admin: this renders none of the admin
+ * Core is a SEPARATE entity from /admin: this renders none of the admin
  * shell. It loads only the core theme (see src/app/core/layout.tsx).
  */
 export function CoreShell({

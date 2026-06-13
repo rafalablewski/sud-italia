@@ -607,9 +607,9 @@ function WaBroadcastDialog({ open, onClose }: { open: boolean; onClose: () => vo
 }
 
 /**
- * Core v2 · Guest · Inbox — the WhatsApp till. A 3-pane console (conversation
- * list · thread · live context), wired 1:1 to the same engine as today's
- * /core/guest/whatsapp: sessions + transcripts + flags + metrics, send via
+ * Core · Guest · Inbox — the WhatsApp till. A 3-pane console (conversation
+ * list · thread · live context), wired 1:1 to the shared engine:
+ * sessions + transcripts + flags + metrics, send via
  * POST /sessions/{phone}/message, archive/pin via POST /flags. Own core- UI.
  */
 export function CoreInbox() {

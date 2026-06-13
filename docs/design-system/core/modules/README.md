@@ -1,4 +1,4 @@
-# Core v2 — Modules
+# Core — Modules
 
 Per-surface anatomy for the five surfaces the truck runs on — **all wired**.
 POS · KDS · Orders · Guest · Service are live on the new theme.

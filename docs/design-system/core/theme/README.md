@@ -1,4 +1,4 @@
-# Core v2 — Theme
+# Core — Theme
 
 The clean-room theme for `/core/*`. One stylesheet, one scope, zero
 admin inheritance.
@@ -7,8 +7,7 @@ admin inheritance.
   `tokens.css`). Loaded **only** by `src/app/core/layout.tsx` — no
   admin `base/index.css`, no `suite.css`.
 - **Scope:** everything sits under `.core` (the layout wrapper) or the
-  `core-` class prefix, so it can never leak into Admin, Homepage, or the
-  current `/core`.
+  `core-` class prefix, so it can never leak into Admin or Homepage.
 - **Fonts:** the layout's own `next/font` instances — `--font-core-display`
   (Bricolage Grotesque, `opsz` axis) · `--font-core-ui` (Inter) ·
   `--font-core-mono` (JetBrains Mono). No `--font-admin-*`.
@@ -122,7 +121,7 @@ Add a token? Put it in `tokens.css` under **both** `data-theme` blocks
 (or just the dark default if mode-invariant) and document the row above.
 Add a component class? Prefix it `core-`, build it from tokens (never
 hard-coded hex), and add it to the reference here in the same commit
-(Rule #11). Never reach into admin or suite.css classes — Core v2 owns
+(Rule #11). Never reach into admin or suite.css classes — Core owns
 its whole surface.
 
 ## Chrome — command bar + bottom switcher
