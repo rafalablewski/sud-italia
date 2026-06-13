@@ -401,10 +401,10 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 ];
 
 // Order volume for the deep, realistic rehearsal: a real daily rate across
-// ~10 months, weekend-weighted, spread across service hours and a long guest
+// ~6 months, weekend-weighted, spread across service hours and a long guest
 // tail — so Reports, Cohort/LTV-CAC, SSSG, Dayparts, Hourly throughput and Menu
 // engineering all have genuine signal.
-// ~10 months deep so cohort RETENTION (returning vs new) has a real prior
+// ~6 months deep so cohort RETENTION (returning vs new) has a real prior
 // period at every UI window preset (30/90/180d), and SSSG/seasonality too.
 //
 // ordersPerDay is sized so the business is ECONOMICALLY SOUND: a busy
@@ -414,8 +414,17 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 // syntheticGuests scales with volume so the long tail stays mostly one-timers
 // (≈ orders ÷ ~2) instead of everyone becoming a regular; recentOrders is
 // ~half a day's covers so "today" tracks the daily rate on the dashboards.
+//
+// HARD CEILING — do NOT raise historyDays back toward a year. In simulation
+// mode every domain is stored as ONE kv-blob value (no indexed table), and Neon
+// caps a single request at 64MB. At 70/day × 2 locations each order is ~1.2KB,
+// so the combined orders.json lands ~34MB at 180 days — comfortably under the
+// limit with headroom for production's richer menu. 300 days produced a ~54MB
+// blob that (doubled by the old upsert) hit Neon's 413 "request too large".
+// Keep the orders blob well under ~45MB: if you need more depth, shard the blob
+// or move sim orders to a namespaced table — don't just bump this number.
 type Volume = { historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
-const SIM_VOLUME: Volume = { historyDays: 300, ordersPerDay: 70, syntheticGuests: 20000, recentOrders: 36 };
+const SIM_VOLUME: Volume = { historyDays: 180, ordersPerDay: 70, syntheticGuests: 12000, recentOrders: 36 };
 
 /** The seed body — always runs inside the idpStorage("sim") context set by
  *  seedSimulation(), so rid() resolves the sim- prefix. */

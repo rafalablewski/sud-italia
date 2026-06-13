@@ -319,9 +319,15 @@ async function rawWriteJSON<T>(key: string, data: T): Promise<void> {
   if (useDB) {
     await ensureDB();
     const db = sql();
+    // Reference the proposed row via EXCLUDED.value on conflict instead of
+    // interpolating JSON.stringify(data) a SECOND time — the value is then
+    // transmitted ONCE per request, not twice. Neon caps a single request at
+    // 64MB, and the doubled value pushed the big simulation blobs (orders.json)
+    // over that ceiling. Same result, half the wire size.
+    const payload = JSON.stringify(data);
     await db`
-      INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
-      ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
+      INSERT INTO kv_store (key, value) VALUES (${key}, ${payload}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
     `;
     return;
   }
