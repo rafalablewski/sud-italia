@@ -269,8 +269,11 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
   pages** — every `.av3-loading` spinner was replaced (full-page returns →
   `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
-  where the generic shape misled: Cash leads with a `SkeletonKpiRail` since its
-  loaded view does. (`SkeletonKanban` still ships for the CORE KDS/POS surfaces;
+  where the generic shape misled: Cash, HACCP, and Waste lead with a
+  `SkeletonKpiRail` (then a card of `SkeletonRows`) since their loaded view
+  opens on a KPI rail — without it the rail's counts flash `0` before the
+  first fetch resolves and then jump to the real number. (`SkeletonKanban`
+  still ships for the CORE KDS/POS surfaces;
   the admin Orders history is a plain `SkeletonRows` table now.)
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
