@@ -353,12 +353,12 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
 
 Reskinned to V8 while keeping the audit §2.1 animations:
 
-- **Below threshold:** `.v8-cart-delivery` — italic Cormorant
-  "Consegna a casa — N% verso la gratuità" headline + terracotta
-  rail + the cyclist SVG rides the fill (the rider is positioned
-  with `left: {pct}%`). The fill carries
+- **Below threshold:** `.v8-cart-delivery` — a clean "Free delivery at
+  {threshold} / {remaining} to go" row over a **thin** basil→ochre
+  (green→gold) progress bar (matches the mockup). The fill carries
   `.v8-cart-delivery-shimmer` running the `--animate-delivery-shimmer`
-  keyframe so motion still catches the eye.
+  keyframe so motion still catches the eye. (The old tall-track cyclist +
+  "rider Marco" foot line were dropped to match the mockup.)
 - **At threshold:** `.v8-cart-delivery.is-unlocked` — the celebratory
   card with the gold→basil `.v8-cart-delivery-medallion` and the
   one-shot `--animate-delivery-sweep` overlay. The animations are the

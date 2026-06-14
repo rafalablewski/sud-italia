@@ -3536,8 +3536,8 @@ body.v8-cart-open { overflow: hidden; }
 }
 .v8-cart-delivery-track {
   position: relative;
-  height: 28px;
-  margin: 10px 0 4px;
+  height: 8px;
+  margin: 12px 0 2px;
 }
 .v8-cart-delivery-rail {
   position: absolute;

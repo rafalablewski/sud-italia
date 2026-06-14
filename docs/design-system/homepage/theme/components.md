@@ -1103,13 +1103,14 @@ that drops 35 portalled drawers + 35 useEffect chains from the DOM.
 
 V8 free-delivery shimmer-sweep-unlock micro-flow.
 
-- Below threshold: `.v8-cart-delivery` italic Cormorant
-  "Consegna a casa — N% verso la gratuità" headline +
+- Below threshold: `.v8-cart-delivery` clean "Free delivery at
+  {threshold} / {remaining} to go" row over a **thin** (8px track)
   `.v8-cart-delivery-rail` neutral rail + `.v8-cart-delivery-fill`
   basil→ochre (green→gold) gradient on a basil-tinted box (matches the
   mockup — green reads as "go") + `.v8-cart-delivery-shimmer` running
-  `--animate-delivery-shimmer` + `.v8-cart-cyclist` SVG that rides
-  the fill (`left: {pct}%`).
+  `--animate-delivery-shimmer`. (The earlier tall-track cyclist `.v8-cart-cyclist`
+  + the "rider Marco" foot line were dropped to match the mockup's clean
+  bar; the `.v8-cart-cyclist` style is now unused.)
 - At threshold: `.v8-cart-delivery.is-unlocked` gold→basil-tinted
   card + `.v8-cart-delivery-medallion` with the gold-to-basil radial
   + the one-shot `.v8-cart-delivery-sweep` overlay. Uses the same
