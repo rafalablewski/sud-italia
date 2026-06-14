@@ -6,6 +6,36 @@ The primitive vocabulary the storefront composes from. Same rule as
 the other themes: **don't add casually**. Every Homepage primitive
 lands on a brand surface where the guest is judging the operation.
 
+## Liquid-glass surface — `.v8-surface` / `.v8-sheen`
+
+The material primitive every panel opts into — a translucent parchment
+surface over the body aurora. CSS-only (no component), declared in
+`themes/homepage/index.css`.
+
+- **`.v8-surface`** — `--glass-fill` (parchment @50%) + `backdrop-filter:
+  blur(--glass-blur) saturate(--glass-saturate)` + `--glass-stroke` border +
+  a refraction top-edge highlight (`::before`) + the warm `--glass-shadow`
+  drop. This is the storefront's elevation; a panel reads as raised because
+  the aurora blooms through it, not because of a tone gap.
+- **`.v8-surface-strong`** — higher-opacity fill (`--glass-fill-strong`) for
+  drawers + sticky foot bars where dense copy needs more backing.
+- **`.v8-surface-dark`** — espresso-tinted glass (`--glass-fill-dark`) with
+  parchment text, for the loyalty / Soci surfaces that were solid blocks.
+- **`.v8-sheen`** — opt-in specular sweep on hover (a diagonal light band
+  glides across). Needs `position` + `overflow: hidden`, both of which
+  `.v8-surface` provides.
+
+Two fallbacks are mandatory and ship with the primitive (see
+[`material.md`](./material.md) rule #3): an `@supports not (backdrop-filter)`
+opaque-parchment path, and the global `prefers-reduced-motion` freeze of the
+aurora + sheen. To add a new glass surface, follow
+[`extend.md`](./extend.md) → "Add a glass surface" — reach for `.v8-surface`,
+point any custom card rule at the `--glass-*` vars, and never hand-roll a
+one-off translucent fill.
+
+Live code: the `.v8-surface` / `.v8-sheen` block + the `--glass-*` vars +
+`body::before` aurora in `src/app/themes/homepage/index.css`.
+
 ## Operator-controlled visibility — `<LayoutGate />`
 
 `src/components/layout/LayoutGate.tsx`. The client wrapper that lets

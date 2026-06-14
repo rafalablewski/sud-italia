@@ -1,7 +1,29 @@
 # Liquid Glass — Production Migration Scope
 
-**Status:** scoping / not yet started
+**Status:** P0 (foundation) shipped · P1–P5 not started
 **Decisions (2026-06-14):** clean replacement · full storefront in phase 1 · this doc committed
+
+### P0 — Foundation — ✅ DONE
+Shipped: glass material `:root` vars + `body::before` aurora (`v8-aurora`) +
+`.v8-surface` / `.v8-surface-strong` / `.v8-surface-dark` / `.v8-sheen`
+primitives + `@supports not (backdrop-filter)` fallback in
+`themes/homepage/index.css`. Docs: rewrote `theme/material.md` (canvas /
+elevation / shadows / rules / "what this is not"), updated `theme/color.md`
+(rules #2–3, parchment-rule, shadow row), added **`theme/extend.md`** (new),
+documented the primitive in `theme/components.md`, refreshed both READMEs.
+
+**Refinements vs. the original plan (§3):**
+- Glass vars live as **plain `:root` vars in `index.css`** (next to
+  `--shadow-*`), **not** in `tokens.css` `@theme` — they're read by raw CSS,
+  not minted as Tailwind utilities. Same pattern as the shadow ramp.
+- **`theme.ts` untouched** — no new *colours* (the aurora reuses ochre/
+  terracotta/basil/oxblood); glass fills are material alphas, not palette
+  hues, so the JS mirror doesn't need them.
+- `color.md` got **rule rewrites**, not new token-table rows (consistent with
+  the above — glass fills aren't palette colours).
+- Aurora moved the parchment base to **`<html>`** + a **fixed `body::before`**
+  layer (z-index −1) to guarantee it shows through the transparent body —
+  avoids the opaque-body / negative-z-index invisibility trap.
 **Mockups this is based on:**
 - `tests/sketches/sud-italia-liquid-glass.html` (hero · locations · famiglia, before/after)
 - `tests/sketches/sud-italia-liquid-glass-pages.html` (location · cart · confirmation, parchment⇄glass toggle)

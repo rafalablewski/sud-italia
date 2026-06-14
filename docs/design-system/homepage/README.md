@@ -14,7 +14,7 @@ a font here and only the storefront moves.
 ```
 homepage/
 ├── README.md          ← you are here
-├── theme/             ← Homepage-only tokens: color, type, material, components
+├── theme/             ← Homepage-only tokens: color, type, material, components, extend
 └── pages/
     ├── home.md        ✅ landing — hero, locations grid, bundles, about, loyalty, CTA
     ├── menu.md        ✅ /locations/[slug] — hero, menu sections, info, floating cart
@@ -29,7 +29,9 @@ homepage/
   block — ~50 lines, @import-ed by `globals.css` so Tailwind v4
   generates the `bg-italia-*` / `text-italia-*` utilities).
 - **Custom CSS:** `src/app/themes/homepage/index.css` (`.pub-*` forms,
-  body styling, delivery keyframes). JS-imported by
+  the liquid-glass material — `--glass-*` vars, the `body::before` aurora,
+  the `.v8-surface` / `.v8-sheen` primitives + `@supports` fallback —
+  `html` / `body` canvas, delivery keyframes). JS-imported by
   `src/app/(public)/layout.tsx` so it ships only on storefront routes.
 - **JS-side mirror:** `src/app/themes/homepage/theme.ts` — typed
   constants for future Recharts / canvas / inline-SVG.

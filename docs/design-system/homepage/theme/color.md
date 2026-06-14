@@ -131,18 +131,20 @@ parchment. Why:
 - A pure-white storefront reads as Stripe / Shopify / generic SaaS.
   Ottaviano is a Neapolitan pizza brand — the surface needs to feel
   like the menu paper at a real café, with the same warm tooth.
-- Cards on parchment use either the same parchment (no border, just
-  hairline `--color-line-soft` separation), parchment-deep for
-  alternating elevation, or `#fff` (truly white card on parchment, for
-  emphasis — used on the item card, the order summary, the rewards
-  card).
-- **Never reverse the contrast** — dark headings on parchment is the
-  whole brand. A reversed parchment-on-dark section is not a Homepage
-  pattern (that's an Admin / Core treatment).
+- Under liquid glass, cards are **translucent parchment** — the
+  `--glass-fill` (parchment @50%) of `.v8-surface` — letting the aurora
+  bloom through, rather than an opaque white/parchment tone gap. The dark
+  loyalty / Soci surfaces use `--glass-fill-dark` (espresso tint) with
+  parchment text. The opaque white/parchment card survives as the
+  no-backdrop-filter fallback.
+- **Never reverse the contrast** in copy — dark headings on the warm
+  canvas is the whole brand. The dark-glass loyalty surface is the one
+  intentional inversion, and it keeps parchment text at AA.
 
-The body also carries a **paper-grain SVG noise overlay** + two warm
-radial washes (ochre top-left + terracotta bottom-right on mobile;
-oxblood + basil on desktop). See `material.md` for the material spec.
+The body carries a **living aurora** — four warm radial pools (ochre,
+terracotta, basil, oxblood at low alpha) drifting behind the glass — over a
+**paper-grain SVG noise overlay** for tooth. The parchment is unchanged; it's
+now the base *behind* the aurora rather than a flat fill. See `material.md`.
 
 ## The ochre accent rule
 
@@ -170,7 +172,7 @@ separately in `themes/base/index.css` — Homepage doesn't read them):
 | Need                          | Homepage uses                                                |
 | ----------------------------- | ------------------------------------------------------------ |
 | Default hairline / borders    | `--color-line-soft` (`#E0CFA8`) on parchment, `#e5e7eb` on white cards |
-| Soft shadow on cards          | `--shadow-card` (V8 inset highlight + warm brown drop) — see `material.md` |
+| Soft shadow on cards          | `--glass-shadow` warm-brown drop + inset refraction highlight on glass surfaces; `--shadow-card` on the no-backdrop-filter fallback — see `material.md` |
 | Focus ring                    | `--color-italia-red` (oxblood) at 2px (per the BASE rule in `globals.css`) |
 | Disabled overlay              | `--color-italia-light-gray` background, 0.6 opacity          |
 
@@ -179,16 +181,17 @@ separately in `themes/base/index.css` — Homepage doesn't read them):
 1. **No bright-red as a UI colour.** Oxblood is brand; bright red is
    reserved for the Italian flag in the Famiglia strip. Errors use
    oxblood, not flag-red.
-2. **Two warm gradients on the body, nowhere else.** The radial washes
-   on `body` are part of the V8 paper canvas. Section backgrounds stay
-   flat parchment / parchment-deep / white. The delivery-shimmer
-   keyframe is the lone exception inside a section, and it's a shimmer
-   *across* a flat surface, not a static gradient.
-3. **No glow shadows.** Neutral warm-brown shadows for elevation
-   (see `--shadow-paper` / `--shadow-card`); never a brand-tinted blur
-   ring. A `text-italia-red` headline doesn't get an `oxblood` halo —
-   `--shadow-cta` is the only branded shadow (warm terracotta drop on
-   the hero CTA only).
+2. **The aurora is the body's job, not a section's.** The four drifting
+   radial pools live on the `body::before` canvas layer (see `material.md`).
+   A *section* doesn't paint its own background gradient — it sits on the
+   shared aurora and floats `.v8-surface` glass over it. The
+   delivery-shimmer keyframe is still the lone in-section gradient, and it's
+   a shimmer *across* a surface, not a static fill.
+3. **Glows are rationed, not banned.** Glass surfaces use the neutral
+   warm-brown `--glass-shadow`; the hero CTA (terracotta `--shadow-cta`) and
+   floating cart (oxblood) are the *named* brand-tinted shadows. Don't give
+   every panel a coloured halo — a `text-italia-red` headline still doesn't
+   get an oxblood ring.
 4. **Parchment + parchment-deep + white alternate** to create rhythm on
    a long landing page. Never three consecutive sections at the same
    tone.
