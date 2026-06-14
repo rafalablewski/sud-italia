@@ -119,15 +119,20 @@ export function CorePos({
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
   // with a newer updatedAt wins, so a poll that was already in flight when we
-  // wrote can't clobber the fresher edit.
+  // wrote can't clobber the fresher edit. Optimistic `tmp-` checks (a create
+  // whose POST hasn't returned) are never on the server yet, so carry them over
+  // rather than let a poll drop a check that's still being opened.
   const mergeTabs = useCallback((incoming: PosTab[]) => {
     setTabs((local) => {
       const byId = new Map(local.map((t) => [t.id, t] as const));
-      return incoming.map((inc) => {
+      const serverIds = new Set(incoming.map((t) => t.id));
+      const merged = incoming.map((inc) => {
         const mine = byId.get(inc.id);
         if (mine && mine.updatedAt && inc.updatedAt && mine.updatedAt > inc.updatedAt) return mine;
         return inc;
       });
+      for (const t of local) if (t.id.startsWith("tmp-") && !serverIds.has(t.id)) merged.push(t);
+      return merged;
     });
   }, []);
 
@@ -138,8 +143,17 @@ export function CorePos({
       if (!res.ok) return;
       const data: { tabs?: PosTab[] } = await res.json();
       const list = Array.isArray(data.tabs) ? data.tabs : [];
-      setTabs(list);
-      setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
+      // Initial hydrate, but never drop a check the user opened WHILE this fetch
+      // was in flight: at hydrate time any local tab the server response omits is
+      // an optimistic check still being created (its POST hasn't landed in this
+      // stale read), so carry it over instead of clobbering with a blind replace.
+      setTabs((local) => {
+        const serverIds = new Set(list.map((t) => t.id));
+        return [...list, ...local.filter((t) => !serverIds.has(t.id))];
+      });
+      // Keep the active selection if it's a check we still hold (the one just
+      // opened); otherwise default to the first server tab.
+      setActiveTabId((cur) => cur ?? list[0]?.id ?? null);
     } catch {
       /* non-fatal */
     } finally {
