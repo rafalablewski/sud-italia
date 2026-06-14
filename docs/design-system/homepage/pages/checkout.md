@@ -244,14 +244,20 @@ state.
 
 ### Items list — `CartItem.tsx`
 
-Each row is `.v8-cart-item` and carries:
+Each row is `.v8-cart-item` — its own **raised glass tile** (translucent
+white fill `rgba(255,255,255,0.32)` + `--glass-stroke` border + inset top
+highlight, no blur of its own since it's inside the frosted sheet, 14px
+radius, 12px padding, 10px gap between tiles), matching the mockup's
+card-per-line treatment rather than the old borderless hairline rows. Each
+carries:
 
 - **`.v8-cart-item-illus`** — 64×64 translucent warm-wash tile (so the
   frosted sheet reads through) with an
   inline hand-sketched glyph per category (pizza, pasta, dessert,
   drinks, coffee, antipasti, panini). Glyphs come from the
   `DishGlyph` helper inside `CartItem.tsx` — pencil-style SVG that
-  matches the V8 mockup's per-item illustrations.
+  matches the menu's `CategoryIllus` + the mockup (e.g. pizza is the round
+  red-dot sketch, not a slice).
 - **`.v8-cart-item-name`** — italic Cormorant 20px espresso. The
   dish name reads like a menu entry, not a UI label.
 - **`.v8-cart-item-price`** — Cormorant 600 tabular ink, line total
@@ -263,7 +269,9 @@ Each row is `.v8-cart-item` and carries:
   (`.v8-cart-item-mod`) listing the line's chosen modifiers ("48h
   sourdough", "Half Diavola +6,00") resolved from
   `menuItem.modifierGroups`. Absent when the line has no modifiers.
-- **`.v8-cart-qty`** — terracotta-tinted pill stepper (`− 1 +`).
+- **`.v8-cart-qty`** — circular stepper: two round terracotta-outlined
+  `−` / `+` buttons flanking the count (`.v8-cart-qty-n`), matching the
+  mockup (replaces the old joined rectangular pill).
   Decrement at 1 removes the line entirely (preserved behaviour). The
   stepper / remove / note all address the line by `cartLineKey` (item
   id + chosen options), so editing one modifier variant never touches
