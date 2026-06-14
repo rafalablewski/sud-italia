@@ -124,6 +124,14 @@ export function CorePos({
   // still reconcile back to reality.
   const recentlyDeleted = useRef<Map<string, number>>(new Map());
   const TOMBSTONE_MS = 12_000;
+  // Temp ids voided WHILE their create-POST is still on the wire. Voiding a `tmp-`
+  // check can't hit the server (it has no real id yet), so without this the POST
+  // lands a beat later, creates the check server-side, and the next cross-till
+  // poll resurrects it — a check the operator already voided comes back seconds
+  // later (the wider the POST round-trip, e.g. a cold serverless instance, the
+  // more reliably it happens). newTab consults this once the POST returns and
+  // deletes the real check instead of surfacing it.
+  const pendingCreateVoids = useRef<Set<string>>(new Set());
   // Drop tombstoned (just-voided) ids from a server list, self-cleaning as we go:
   // a tombstone whose id the server no longer returns is confirmed deleted, and
   // any tombstone older than the TTL expires so reality can win again.
@@ -402,6 +410,7 @@ export function CorePos({
       if (!res.ok) {
         setTabs((prev) => prev.filter((t) => t.id !== tempId));
         setActiveTabId((cur) => (cur === tempId ? null : cur));
+        pendingCreateVoids.current.delete(tempId);
         return;
       }
       const data: { tab?: PosTab } = await res.json();
@@ -409,6 +418,24 @@ export function CorePos({
       if (!real) {
         setTabs((prev) => prev.filter((t) => t.id !== tempId));
         setActiveTabId((cur) => (cur === tempId ? null : cur));
+        pendingCreateVoids.current.delete(tempId);
+        return;
+      }
+      // Voided while this POST was in flight: the check now exists server-side
+      // but the operator already dropped it. Delete the real check (tombstoned so
+      // an in-flight poll can't re-add it) and never surface it — don't swap it
+      // into state. This is what stops a just-voided new check from reappearing.
+      if (pendingCreateVoids.current.has(tempId)) {
+        pendingCreateVoids.current.delete(tempId);
+        recentlyDeleted.current.set(real.id, Date.now());
+        pendingSaves.current += 1;
+        void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(real.id)}`, {
+          method: "DELETE",
+        })
+          .catch(() => {})
+          .finally(() => {
+            pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+          });
         return;
       }
       // Swap temp → real id, keeping anything rung onto the optimistic check.
@@ -422,9 +449,11 @@ export function CorePos({
       // by the reconcile effect, once the swap above has committed to state.
       reconciledTabsRef.current.push(real.id);
     } catch {
-      // Offline / network error — drop the optimistic check.
+      // Offline / network error — drop the optimistic check. The POST never
+      // landed, so there's no server-side check to delete; just forget the void.
       setTabs((prev) => prev.filter((t) => t.id !== tempId));
       setActiveTabId((cur) => (cur === tempId ? null : cur));
+      pendingCreateVoids.current.delete(tempId);
     } finally {
       pendingSaves.current = Math.max(0, pendingSaves.current - 1);
     }
@@ -609,7 +638,13 @@ export function CorePos({
       // Drop from the persist queue too, so the flush effect can't re-PUT a check
       // we're voiding.
       pendingPersistRef.current.delete(id);
-      if (id.startsWith("tmp-")) return; // never hit the server
+      if (id.startsWith("tmp-")) {
+        // No real id yet — the create-POST is still in flight. Record the void
+        // so newTab deletes the real check the moment its POST returns, instead
+        // of leaving a server-side orphan the poll would resurrect.
+        pendingCreateVoids.current.add(id);
+        return;
+      }
       // Tombstone the id so an in-flight cross-till poll that predates this void
       // can't resurrect the check when its stale list resolves (see withoutDeleted).
       recentlyDeleted.current.set(id, Date.now());
