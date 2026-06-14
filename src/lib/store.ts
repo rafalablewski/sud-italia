@@ -14138,27 +14138,40 @@ function sanitizeFiredCourses(input: unknown): PosTab["firedCourses"] {
 const POS_TABS_LEGACY = "pos-tabs.json";
 const posTabsKey = (loc: string): string => `pos-tabs.${loc}.json`;
 
-// Per-instance latch: the legacy blob can only ever shrink (no code adds to it),
-// so once observed empty we stop reading it.
-let posTabsLegacyDrained = false;
+// Per-instance "drained" latch, keyed by the RESOLVED legacy key. The legacy
+// blob can only ever shrink (no code adds to it), so once observed empty we stop
+// reading it. It MUST be namespace-aware: the live legacy blob (`pos-tabs.json`)
+// and the simulation one (`sim:pos-tabs.json`) are different rows, and the sim
+// one is typically empty. A single boolean latch let an instance that read the
+// empty sim legacy mark legacy "drained" for ALL namespaces — so the live legacy
+// checks then went invisible AND undeletable on that instance (getPosTab missed
+// them → the DELETE route 404'd → the check survived and the next poll, served
+// by a non-latched instance, showed it again). Keying by resolved key fixes that.
+const posTabsLegacyDrained = new Set<string>();
 
 async function readLegacyPosTabs(): Promise<PosTab[]> {
-  if (posTabsLegacyDrained) return [];
+  await refreshDataMode();
+  const resolved = resolveKey(POS_TABS_LEGACY);
+  if (posTabsLegacyDrained.has(resolved)) return [];
   const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
-  if (list.length === 0) posTabsLegacyDrained = true;
+  if (list.length === 0) posTabsLegacyDrained.add(resolved);
   return list;
 }
 
 /** Remove ids from the legacy blob (on promote / pre-split delete). Best-effort
- *  under the legacy lock; a no-op once drained. Returns how many were removed. */
+ *  under the legacy lock; a no-op once that namespace's legacy is drained.
+ *  Returns how many were removed. */
 async function dropFromLegacyPosTabs(ids: Set<string>): Promise<number> {
-  if (posTabsLegacyDrained || ids.size === 0) return 0;
+  if (ids.size === 0) return 0;
+  await refreshDataMode();
+  const resolved = resolveKey(POS_TABS_LEGACY);
+  if (posTabsLegacyDrained.has(resolved)) return 0;
   return withLock(POS_TABS_LEGACY, async () => {
     const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
     const next = list.filter((t) => !ids.has(t.id));
     const removed = list.length - next.length;
     if (removed > 0) await writeJSON(POS_TABS_LEGACY, next);
-    if (next.length === 0) posTabsLegacyDrained = true;
+    if (next.length === 0) posTabsLegacyDrained.add(resolved);
     return removed;
   });
 }
