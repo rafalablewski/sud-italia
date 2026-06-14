@@ -14523,20 +14523,59 @@ export async function linkPosTabOrder(
   });
 }
 
+/** Atomically remove one tab from the legacy global blob in a single statement —
+ *  no `withLock`, so it works even when Upstash (the lock backend) is down. The
+ *  old lock-based `dropFromLegacyPosTabs` would, with Upstash unreachable, eat a
+ *  multi-second timeout per call and then fall back to a per-instance mutex that
+ *  can't serialize across Vercel instances — the path that left voided checks in
+ *  the legacy blob so the next poll resurrected them. */
+async function dbRemoveLegacyPosTab(id: string): Promise<boolean> {
+  await refreshDataMode();
+  await ensureDB();
+  const key = resolveKey(POS_TABS_LEGACY);
+  const db = sql();
+  const idMatch = JSON.stringify([{ id }]);
+  const rows = await db`
+    UPDATE kv_store SET value = COALESCE(
+      (SELECT jsonb_agg(e) FROM jsonb_array_elements(value) e WHERE e->>'id' <> ${id}),
+      '[]'::jsonb
+    )
+    WHERE key = ${key} AND value @> ${idMatch}::jsonb
+    RETURNING key
+  `;
+  if (rows.length > 0) {
+    invalidateKvCache(POS_TABS_LEGACY);
+    return true;
+  }
+  return false;
+}
+
 export async function deletePosTab(id: string, locationSlug?: string): Promise<boolean> {
   const loc = locationSlug ?? (await locationForPosTab(id));
+  if (useDB) {
+    // Remove from BOTH the per-location key AND the legacy blob, atomically and
+    // lock-free (single SQL statement each). Two reasons this must not
+    // short-circuit on the per-location hit:
+    //   1) a check can exist in both blobs if an earlier promote's legacy-drop
+    //      failed (which is exactly what happens when the Upstash-backed lock is
+    //      down) — deleting only the per-location copy lets the GET union the
+    //      legacy copy straight back in, and the check "reappears";
+    //   2) being lock-free, the delete no longer depends on Upstash at all, so an
+    //      Upstash outage can't stop a void from persisting.
+    let removed = false;
+    if (loc) removed = (await dbRemovePosTab(loc, id)) || removed;
+    removed = (await dbRemoveLegacyPosTab(id)) || removed;
+    return removed;
+  }
+  // Filesystem (single process) — the per-location lock is correct and cheap.
   if (loc) {
-    // DB mode: atomic single-statement remove so concurrent voids can't clobber
-    // each other (the cross-instance lost-update that made voided checks return).
-    const removedOwn = useDB
-      ? await dbRemovePosTab(loc, id)
-      : await withLockScoped("pos-tabs", loc, async () => {
-          const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
-          const next = own.filter((t) => t.id !== id);
-          if (next.length === own.length) return false;
-          await writeJSON(posTabsKey(loc), next);
-          return true;
-        });
+    const removedOwn = await withLockScoped("pos-tabs", loc, async () => {
+      const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+      const next = own.filter((t) => t.id !== id);
+      if (next.length === own.length) return false;
+      await writeJSON(posTabsKey(loc), next);
+      return true;
+    });
     if (removedOwn) return true;
   }
   // Not in any per-location key — maybe a pre-split check still in legacy.
