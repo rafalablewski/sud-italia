@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import { logger } from "@/lib/logger";
 
+// Fail-fast against a dead/unreachable Upstash: cap each Redis op, and once one
+// fails open a short circuit so subsequent requests skip Redis entirely (the
+// in-process fallback) rather than each re-paying the timeout.
+const RL_REDIS_TIMEOUT_MS = 1_000;
+const RL_REDIS_COOLDOWN_MS = 30_000;
+let rlRedisDownUntil = 0;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 /**
  * Fixed-window rate limiter backed by Upstash Redis.
  *
@@ -56,7 +79,12 @@ export async function rateLimit(
   const resetInSec = Math.max(1, resetAt - now);
   const storageKey = `rl:${key}:${id}:${window}`;
 
-  const redis = getUpstashRedis();
+  // Fail-fast against a dead Upstash: treat it as "no redis" while the circuit is
+  // open (set on the last failure), so we don't re-pay a multi-second timeout on
+  // EVERY admin request — which both lags the UI and can push a serverless
+  // function past its limit before its real work runs (the void DELETE that
+  // never reached its handler). Circuit half-opens after the cooldown.
+  const redis = Date.now() < rlRedisDownUntil ? null : getUpstashRedis();
   if (!redis) {
     if (!warnedNoRedis && process.env.NODE_ENV === "production") {
       logger.warn(
@@ -82,20 +110,22 @@ export async function rateLimit(
   }
 
   try {
-    const count = await redis.incr(storageKey);
+    const count = await withTimeout(redis.incr(storageKey), RL_REDIS_TIMEOUT_MS, "redis.incr");
     if (count === 1) {
       // First hit in this window — pin the TTL.
-      await redis.expire(storageKey, windowSec);
+      await withTimeout(redis.expire(storageKey, windowSec), RL_REDIS_TIMEOUT_MS, "redis.expire");
     }
     if (count > limit) {
       return { allowed: false, remaining: 0, resetInSec, retryAfterSec: resetInSec };
     }
     return { allowed: true, remaining: Math.max(0, limit - count), resetInSec };
   } catch (err) {
-    // Fail-open: if Upstash itself is down we don't want every request to
-    // 429. Log loudly so the operator notices.
+    // Fail-open AND open the circuit so the next 30s of requests skip Upstash
+    // up-front (no repeated timeout). If Upstash is down we don't want every
+    // request to 429 — or to hang.
+    rlRedisDownUntil = Date.now() + RL_REDIS_COOLDOWN_MS;
     logger.error(
-      "rateLimit: redis failure — failing open",
+      "rateLimit: redis failure — failing open + opening circuit",
       { key, id, layer: "rate-limit" },
       err,
     );
