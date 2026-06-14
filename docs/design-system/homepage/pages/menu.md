@@ -105,7 +105,9 @@ filter the grid in place.
   with the shared `shadow-paper`, `margin: 0 auto`, 22/28px padding ramp.
   It carries **no backdrop-filter on purpose** — the `.v8-mi` item cards do
   the blurring, so each pixel under the grid is frosted at most once (the
-  long-list perf guard). **Full-bleed** — no `max-width`, no border, no
+  long-list perf guard). And on `≤768px` the item cards drop their blur
+  entirely for a near-opaque fill, so mid-tier mobile GPUs never pay for
+  dozens of simultaneous blur layers. **Full-bleed** — no `max-width`, no border, no
   border-radius — the menu reads as a continuous band across the viewport,
   the aurora glowing through the veil. Zero
   vertical margin keeps the band flush against the location-info

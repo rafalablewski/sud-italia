@@ -801,7 +801,10 @@ countdown, compliance pills — only the markup changed.
   the aurora, `--glass-stroke` border, 14px radius, `--glass-shadow` drop.
   Uses the **capped 14px blur** (`--glass-blur-chrome`) since the grid can
   run 20–40 cards; the wrapping `.v8-menu-card` carries no blur so the
-  layer is frosted once. Hover lifts 4px with a deeper drop.
+  layer is frosted once. **Perf guard:** on `≤768px` (touch / mid-tier
+  mobile GPUs) the per-card `backdrop-filter` is dropped entirely for a
+  near-opaque parchment fill — desktop keeps the frosted card. Hover lifts
+  4px with a deeper drop.
   `.is-unavailable` → 0.55 opacity + slight greyscale, no hover lift.
   `.is-incart` → basil border + soft basil ring. Falls back to the opaque
   parchment card under `@supports not (backdrop-filter)`.

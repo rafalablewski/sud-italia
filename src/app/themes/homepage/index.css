@@ -2349,6 +2349,21 @@ body::before {
   }
 }
 
+/* Perf guard — the menu grid can render 20-40 cards. On narrow / touch
+   viewports (mid-tier mobile GPUs, the documented risk) drop the per-card
+   backdrop blur entirely and use a near-opaque parchment fill instead, so
+   the long list never pays for dozens of simultaneous blur layers. Desktop
+   keeps the full frosted-glass cards. Combo cards (few, in the same chrome)
+   get the same treatment for consistency. */
+@media (max-width: 768px) {
+  .v8-mi,
+  .v8-combo-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: linear-gradient(180deg, rgba(251, 244, 225, 0.92) 0%, rgba(248, 239, 222, 0.88) 100%);
+  }
+}
+
 /* ---- Top row: illustration + info -------------------------------- */
 .v8-mi-top {
   display: flex;

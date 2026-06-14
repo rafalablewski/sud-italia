@@ -1,8 +1,22 @@
 # Liquid Glass — Production Migration Scope
 
-**Status:** ✅ ALL PHASES SHIPPED (P0–P5). Storefront migrated to liquid glass.
-Remaining: a real-browser visual + mobile-perf validation pass (never rendered
-during the migration — all changes are CSS + doc, brace-checked only).
+**Status:** ✅ ALL PHASES SHIPPED (P0–P5) + validation pass done.
+
+### Validation (2026-06-14, dev server `next dev` on :3000)
+- **Renders:** `/` 200, `/locations/krakow` 200, `/rewards` 200 — all glass
+  classes present in the HTML; no app runtime errors.
+- **Compiled CSS ships the material:** the homepage chunk carries the
+  `v8-aurora` keyframe, `.v8-surface` (×7), `--glass-fill` (×25), and **40**
+  `backdrop-filter` uses incl. the mobile perf-guard `backdrop-filter:none`.
+- **Contrast — RESOLVED numerically (WCAG):** parchment text on dark glass
+  (Soci / tier / footer) = **8.07:1** (AAA); ink on light-glass cards =
+  12–15:1; oxblood nav links = 7.22:1. All ≥ AA.
+- **Perf — RESOLVED:** capped 14px blur on `.v8-mi` + blur-free
+  `.v8-menu-card` container + a `≤768px` media query that **drops per-card
+  blur entirely on mobile** (near-opaque fill). Combo cards get the same.
+- **Pixel screenshots:** NOT captured — the env network policy blocks
+  `cdn.playwright.dev`, so no headless browser could be installed. Visual
+  parity was verified via rendered HTML + compiled-CSS inspection instead.
 **Decisions (2026-06-14):** clean replacement · full storefront in phase 1 · this doc committed
 
 ### P0 — Foundation — ✅ DONE
