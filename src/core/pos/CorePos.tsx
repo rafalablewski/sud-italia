@@ -107,6 +107,14 @@ export function CorePos({
   // `setTabs` updater (its return value isn't readable synchronously), so we
   // record the id and flush it from an effect once the swap has committed.
   const reconciledTabsRef = useRef<string[]>([]);
+  // Ids of tabs mutated locally this commit, awaiting persist. `mutateActive`
+  // computes the new tab *inside* the functional setState updater (off the
+  // freshest `prev`, never a stale render closure), so it can't read the result
+  // back synchronously — it records the id here and the flush effect persists
+  // the committed value. This is what stops rapid taps from losing increments
+  // (ring 3, the till must keep 3) — the old code computed off a stale `tabs`
+  // snapshot, so back-to-back taps overwrote each other's count.
+  const pendingPersistRef = useRef<Set<string>>(new Set());
 
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
@@ -221,17 +229,35 @@ export function CorePos({
 
   const mutateActive = useCallback(
     (mutator: (t: PosTab) => PosTab) => {
-      // Compute the next tab outside setTabs so the state updater stays pure —
-      // persisting (a fetch) inside it would double-fire under StrictMode /
-      // concurrent rendering. The functional update applies the precomputed value.
-      const current = tabs.find((t) => t.id === activeTabId);
-      if (!current) return;
-      const changed = { ...mutator(current), updatedAt: new Date().toISOString() };
-      setTabs((prev) => prev.map((t) => (t.id === activeTabId ? changed : t)));
-      persistTab(changed);
+      const id = activeTabId;
+      if (!id) return;
+      // Compute the next tab *inside* the functional updater so it always builds
+      // off the freshest committed state — never a stale render closure. This is
+      // the fix for "rang 3, only 2 stuck": back-to-back taps used to each read
+      // the same stale `tabs` snapshot and overwrite one another's count. The
+      // persist (a fetch) can't run in here — it would double-fire under
+      // StrictMode / concurrent rendering and can't read the result back — so we
+      // just mark the id dirty and let the flush effect persist the committed value.
+      setTabs((prev) =>
+        prev.map((t) => (t.id === id ? { ...mutator(t), updatedAt: new Date().toISOString() } : t)),
+      );
+      pendingPersistRef.current.add(id);
     },
-    [tabs, activeTabId, persistTab],
+    [activeTabId],
   );
+
+  // Flush locally-mutated tabs once their edit has committed to `tabs`. Reading
+  // the committed value here (rather than from a stale closure in mutateActive)
+  // guarantees we persist the accumulated quantity, not a stale interim one.
+  useEffect(() => {
+    if (pendingPersistRef.current.size === 0) return;
+    const ids = [...pendingPersistRef.current];
+    pendingPersistRef.current.clear();
+    for (const id of ids) {
+      const tab = tabs.find((t) => t.id === id);
+      if (tab) persistTab(tab);
+    }
+  }, [tabs, persistTab]);
 
   const addLine = useCallback(
     (id: string) =>

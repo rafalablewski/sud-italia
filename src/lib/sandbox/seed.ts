@@ -103,9 +103,23 @@ const HOUR_WEIGHTS: ReadonlyArray<readonly [number, number]> = [
 ];
 const HOUR_POOL: number[] = HOUR_WEIGHTS.flatMap(([h, w]) => Array(w).fill(h));
 
-/** A completed order placed `dayAgo` days back at a weighted service hour. */
+/** A completed order placed `dayAgo` days back at a weighted service hour.
+ *  For today (`dayAgo === 0`) we never write a future-dated "completed" order:
+ *  pick only among service hours that have already begun, clamping the minute to
+ *  "now" in the current hour. Before service opens we fall back to the current
+ *  hour so today is still populated (the seed may run any time of day, and a day
+ *  with zero orders is exactly the "today was empty" bug we're fixing). */
 function serviceHourIso(dayAgo: number): string {
   const at = new Date(NOW - days(dayAgo));
+  if (dayAgo === 0) {
+    const now = new Date(NOW);
+    const nowHour = now.getUTCHours();
+    const passed = HOUR_POOL.filter((h) => h <= nowHour);
+    const hour = passed.length ? pick(passed) : nowHour;
+    const maxMin = hour === nowHour ? now.getUTCMinutes() : 59;
+    at.setUTCHours(hour, maxMin > 0 ? Math.floor(Math.random() * maxMin) : 0, 0, 0);
+    return at.toISOString();
+  }
   at.setUTCHours(pick(HOUR_POOL), Math.floor(Math.random() * 60), 0, 0);
   return at.toISOString();
 }
@@ -413,8 +427,9 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 // ~180k zł/month, which puts the full-week 6-person rota (~48.5k zł/month) at a
 // healthy ~27% labor cost — not the bankrupt 200%+ a token volume produced.
 // syntheticGuests scales with volume so the long tail stays mostly one-timers
-// (≈ orders ÷ ~2) instead of everyone becoming a regular; recentOrders is
-// ~half a day's covers so "today" tracks the daily rate on the dashboards.
+// (≈ orders ÷ ~2) instead of everyone becoming a regular. Today is seeded as a
+// full day in the main history loop (same daily rate as every other day), so
+// "today" tracks the trading curve on the dashboards instead of coming up empty.
 //
 // HARD CEILING — do NOT raise historyDays back toward a year. In simulation
 // mode every domain is stored as ONE kv-blob value (no indexed table), and Neon
@@ -424,8 +439,8 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 // blob that (doubled by the old upsert) hit Neon's 413 "request too large".
 // Keep the orders blob well under ~45MB: if you need more depth, shard the blob
 // or move sim orders to a namespaced table — don't just bump this number.
-type Volume = { historyDays: number; ordersPerDay: number; syntheticGuests: number; recentOrders: number };
-const SIM_VOLUME: Volume = { historyDays: 180, ordersPerDay: 70, syntheticGuests: 12000, recentOrders: 36 };
+type Volume = { historyDays: number; ordersPerDay: number; syntheticGuests: number };
+const SIM_VOLUME: Volume = { historyDays: 180, ordersPerDay: 70, syntheticGuests: 12000 };
 
 /** The seed body — always runs inside the idpStorage("sim") context set by
  *  seedSimulation(), so rid() resolves the sim- prefix. */
@@ -519,19 +534,19 @@ async function seedActiveDataset(progress?: SeedProgress): Promise<void> {
     // cash) — a single till can't hold cumulative history, which would show a
     // nonsensical five-figure expected count on the Cash screen.
     let cashRevenue = 0;
-    for (let dayAgo = 1; dayAgo <= vol.historyDays; dayAgo++) {
+    // Include today (dayAgo === 0) so EVERY day of the window has a full trading
+    // curve — today used to be skipped here and seeded only by a thin "recent"
+    // block that could land on yesterday's UTC date, leaving today empty.
+    // `serviceHourIso` keeps today's orders in the past (no future-dated sales).
+    for (let dayAgo = 0; dayAgo <= vol.historyDays; dayAgo++) {
       const n = dayVolume(vol.ordersPerDay, dayAgo);
       for (let k = 0; k < n; k++) {
         const o = buildOrder(slug, menu, { status: "completed", atIso: serviceHourIso(dayAgo), customer: base.pickGuest() });
         pending.push(o);
+        if (dayAgo === 0 && k % 3 === 0) cashRevenue += o.totalAmount; // today's cash share
       }
     }
-    // Recent completed orders (today's throughput) + a live KDS rush.
-    for (let i = 0; i < vol.recentOrders; i++) {
-      const o = buildOrder(slug, menu, { status: "completed", ageMs: min(8 + i * 7), customer: base?.pickGuest() });
-      pending.push(o);
-      if (i % 3 === 0) cashRevenue += o.totalAmount; // today's cash share
-    }
+    // A live KDS rush on top of today's completed curve.
     const activeMix: OrderStatus[] = ["preparing", "preparing", "confirmed", "ready", "confirmed"];
     const activeOrders: Order[] = [];
     for (let i = 0; i < activeMix.length; i++) {
