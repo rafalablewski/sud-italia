@@ -66,7 +66,7 @@
   --glass-stroke-soft: rgba(201, 162, 62, 0.30);  /* ochre-tinted hairline */
   --glass-shadow: rgba(61, 40, 23, 0.30);         /* warm-brown drop */
   --glass-blur: 22px;                             /* surface backdrop blur */
-  --glass-blur-chrome: 14px;                      /* nav + sticky bars */
+  --glass-blur-chrome: 14px;                      /* nav, sticky bars + long-list cards (capped for perf) */
   --glass-saturate: 160%;                         /* bloom the aurora behind the glass */
   --aurora-ochre: rgba(201, 162, 62, 0.42);
   --aurora-terracotta: rgba(184, 92, 56, 0.40);
@@ -1646,10 +1646,10 @@ body::before {
   position: relative;
   padding: 18px 20px 36px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.45) 100%),
-    var(--color-parchment);
-  border-bottom: 1px solid var(--color-line-soft);
+  /* Translucent veil (no opaque parchment base) so the location hero band
+     sits on the aurora like the rest of the storefront. */
+  background: linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.30) 100%);
+  border-bottom: 1px solid var(--glass-stroke);
 }
 @media (min-width: 768px) {
   .v8-loc-hero { padding: 24px 36px 48px; }
@@ -1783,7 +1783,10 @@ body::before {
    <MenuItemCard /> for now — Step 10 ports the per-item V8 card. */
 
 .v8-menu-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
+  /* A soft translucent-parchment veil with NO backdrop-filter, so the item
+     cards' own blur isn't stacked on a second blurred layer (perf). The
+     aurora reads through; the .v8-mi cards float as glass over it. */
+  background: linear-gradient(180deg, rgba(248, 239, 222, 0.34) 0%, rgba(232, 214, 181, 0.30) 100%);
   box-shadow: var(--shadow-paper);
   margin: 0 auto;
   padding: 22px 18px 28px;
@@ -2029,7 +2032,9 @@ body::before {
 .v8-guarantee {
   margin: 22px 0;
   padding: 16px 18px;
-  background: linear-gradient(180deg, rgba(201, 162, 62, 0.18), rgba(201, 162, 62, 0.06));
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.20), rgba(201, 162, 62, 0.08));
+  backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
   border: 1px solid rgba(201, 162, 62, 0.5);
   border-radius: 12px;
   display: flex;
@@ -2239,22 +2244,30 @@ body::before {
    countdown, detail-drawer trigger) — only the markup changed. */
 
 .v8-mi {
-  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
-  border: 1px solid var(--color-line);
+  position: relative;
+  background: var(--glass-fill);
+  /* Capped blur (--glass-blur-chrome, 14px) — these are the long-list menu
+     cards, so the lighter blur keeps the grid affordable on mid-tier mobile.
+     The menu container (.v8-menu-card) deliberately carries NO blur, so each
+     pixel under the grid is blurred at most once. */
+  backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: 14px;
   padding: 22px 20px 20px;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 16px 40px -20px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
-  position: relative;
   transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.3s ease;
   height: 100%;
 }
 .v8-mi:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 22px 40px -22px rgba(61, 40, 23, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 26px 46px -22px var(--glass-shadow);
 }
 .v8-mi.is-unavailable {
   opacity: 0.55;
@@ -2262,8 +2275,39 @@ body::before {
 }
 .v8-mi.is-unavailable:hover { transform: none; }
 .v8-mi.is-incart {
-  border-color: rgba(74, 124, 89, 0.45);
-  box-shadow: 0 0 0 1px rgba(74, 124, 89, 0.12) inset, var(--shadow-card);
+  border-color: rgba(74, 124, 89, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(74, 124, 89, 0.25) inset,
+    0 16px 40px -20px var(--glass-shadow);
+}
+
+/* Fallback for the P2 glass surfaces — opaque pre-glass look where
+   backdrop-filter is unsupported, so the menu grid stays legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .v8-mi {
+    background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+    border-color: var(--color-line);
+    box-shadow: var(--shadow-card);
+  }
+  .v8-mi-illus {
+    background: var(--color-parchment-deep);
+    border-color: var(--color-line-soft);
+  }
+  .v8-menu-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
+  }
+  .v8-guarantee {
+    background: linear-gradient(180deg, rgba(201, 162, 62, 0.18), rgba(201, 162, 62, 0.06));
+  }
+  .v8-loc-hero {
+    background:
+      linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.45) 100%),
+      var(--color-parchment);
+  }
+  .v8-float-cart {
+    background: linear-gradient(180deg, #FBF4E1, var(--color-parchment-deep));
+    border-color: var(--color-line);
+  }
 }
 
 /* ---- Top row: illustration + info -------------------------------- */
@@ -2277,8 +2321,9 @@ body::before {
   flex: 0 0 84px;
   width: 84px;
   height: 84px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  /* Translucent warm wash so the aurora reads through the sketch tile. */
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.14), rgba(201, 162, 62, 0.16));
+  border: 1px solid var(--glass-stroke);
   border-radius: 12px;
   display: grid;
   place-items: center;
@@ -5195,8 +5240,10 @@ body.v8-cart-open { overflow: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment-deep));
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   color: var(--color-espresso);
   padding: 12px 18px 12px 14px;
   border-radius: 999px;

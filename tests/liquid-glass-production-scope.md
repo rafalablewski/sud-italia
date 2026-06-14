@@ -132,8 +132,16 @@ Each phase = code + design-system doc edit + verify, in one reviewable unit.
   (0.86 espresso for AA), `v8-ps-alt` → translucent veil, P1 `@supports`
   fallback. Hero left as-is — it already sits on the aurora. Docs:
   `pages/home.md` (locations / bundles / Soci / alt-band notes).
-- **P2 — Location / menu.** `v8-mi` (perf pass), `v8-menu`, `v8-cat`,
-  location hero, `v8-guarantee`, `v8-float`. Docs: `pages/menu.md`.
+- **P2 — Location / menu.** ✅ DONE — `v8-mi` item cards → glass with the
+  **capped 14px blur** (`--glass-blur-chrome`); `.v8-menu-card` wrapper kept
+  **blur-free** so the grid is frosted once (the long-list perf guard);
+  `.v8-mi-illus` → translucent wash; `v8-loc-hero` → translucent veil;
+  `v8-guarantee` → frosted ochre glass; `v8-float-cart` → frosted chrome
+  pill (keeps its oxblood shadow); P2 `@supports` fallback. `content-
+  visibility:auto` deferred — revisit only if mobile perf testing shows the
+  capped blur isn't enough. Docs: `pages/menu.md` + `theme/components.md`
+  (item card, menu chrome, loc hero, floating cart, + the P1
+  locations/bundles lines that had drifted).
 - **P3 — Cart / checkout.** `v8-cart*`, `v8-detail`, `v8-combo`,
   `v8-address`, `v8-composer`. Docs: `pages/checkout.md`.
 - **P4 — Order + rewards.** `v8-order`, `v8-rewards`. Docs: `pages/order.md`,

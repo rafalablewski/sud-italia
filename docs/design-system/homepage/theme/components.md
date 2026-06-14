@@ -510,7 +510,7 @@ The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#her
 ### `<LocationsGrid />`
 
 V8 Trattoria — `.v8-ps.v8-ps-alt` section with a 1 → 2-column grid
-of paper cards. Full layout spec in
+of liquid-glass cards. Full layout spec in
 [`../pages/home.md`](../pages/home.md#locations-grid--locationsgrid).
 
 - **Layout:** `.v8-ps.v8-ps-alt` (warm-paper section primitive) wrapping
@@ -587,7 +587,7 @@ typographic gesture, not a content block.
 
 ### `<BundlesShowcase />`
 
-V8 Trattoria — four paper cards in the wider `.v8-bundles-section`
+V8 Trattoria — four liquid-glass cards in the wider `.v8-bundles-section`
 (breaks out to 1500px max, leaves a parchment gutter at the iframe
 edges). Layout spec in
 [`../pages/home.md`](../pages/home.md#bundles-showcase--bundlesshowcase).
@@ -707,8 +707,8 @@ V8 Trattoria treatment — full spec in
 - **Composes against `.v8-loc-hero`** (a bespoke wrapper, not
   `.v8-ps` — the location hero predates the menu chrome by one
   block of vertical rhythm and uses its own padding ramp).
-  Parchment canvas with a soft fade to parchment-deep + line-soft
-  hairline border-bottom.
+  Translucent veil over the aurora (fade to ~30% parchment-deep, no
+  opaque base) + `--glass-stroke` hairline border-bottom.
 - **Per-slug pen-sketch illustration** at 360×180 — wider + more
   detailed than the LocationsGrid 220×140 card sketches. Add a
   function-per-slug + a switch in `LocationHeroIllus` to introduce
@@ -741,9 +741,10 @@ speed-guarantee banner, inline combo deals row, surprise-me pill,
 and the items grid. Full layout spec in
 [`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
 
-- **Single paper-band wrapper** — `.v8-menu-card` (parchment-deep
-  with the shared `shadow-paper`, full-bleed: no `max-width`, no
-  border, no border-radius). The whole menu surface is one
+- **Single translucent-veil wrapper** — `.v8-menu-card` (a soft
+  translucent parchment with the shared `shadow-paper`, **no
+  backdrop-filter** so the item cards' blur isn't doubled; full-bleed: no
+  `max-width`, no border, no border-radius). The whole menu surface is one
   continuous V8 band across the viewport instead of the pre-V8
   per-category sections, or the framed-rectangle "card" the earlier
   V8 build shipped (rounded radius + 1180px max-width + line-soft
@@ -791,12 +792,14 @@ state, justAdded post-add feedback, detail-drawer trigger,
 popularThisWeek flag, badges from `lib/upsell` (role + admin), LTO
 countdown, compliance pills — only the markup changed.
 
-- **Paper card** (`.v8-mi`) — parchment gradient, line border, 14px
-  radius, paper-card shadow. Hover lifts 3px with a deeper
-  warm-brown drop. `.is-unavailable` → 0.55 opacity + slight
-  greyscale, no hover lift. `.is-incart` → basil border + soft basil
-  ring so the visitor can see at a glance which items are already in
-  the cart.
+- **Glass card** (`.v8-mi`) — translucent parchment (`--glass-fill`) over
+  the aurora, `--glass-stroke` border, 14px radius, `--glass-shadow` drop.
+  Uses the **capped 14px blur** (`--glass-blur-chrome`) since the grid can
+  run 20–40 cards; the wrapping `.v8-menu-card` carries no blur so the
+  layer is frosted once. Hover lifts 4px with a deeper drop.
+  `.is-unavailable` → 0.55 opacity + slight greyscale, no hover lift.
+  `.is-incart` → basil border + soft basil ring. Falls back to the opaque
+  parchment card under `@supports not (backdrop-filter)`.
 
 - **Floating flag ribbon** (`.v8-mi-flags` at top:-10px left:16px) —
   bilingual italic-Cormorant uppercase pills that sit slightly above
@@ -944,9 +947,11 @@ rail.
 The V8 "Il tuo carrello" floating pill — bottom-right on every
 storefront route.
 
-- `.v8-float-cart` parchment-cream pill with the bag SVG +
-  "Cart · il tuo carrello" italic bilingual label + a
-  `.v8-float-cart-count` terracotta count badge inside. On hover the
+- `.v8-float-cart` frosted-glass pill (`--glass-fill-strong` + chrome
+  backdrop blur + `--glass-stroke` border, keeping its branded oxblood
+  shadow) with the bag SVG + "Cart · il tuo carrello" italic bilingual
+  label + a `.v8-float-cart-count` terracotta count badge inside; falls
+  back to the parchment-cream pill without backdrop-filter. On hover the
   whole pill flips to terracotta fill + parchment text + parchment
   count badge.
 - `data-bump="true"` toggles for ~360ms whenever the cart count
