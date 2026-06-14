@@ -115,6 +115,28 @@ export function CorePos({
   // (ring 3, the till must keep 3) — the old code computed off a stale `tabs`
   // snapshot, so back-to-back taps overwrote each other's count.
   const pendingPersistRef = useRef<Set<string>>(new Set());
+  // Tombstones for just-voided checks (id → when). The cross-till poll's GET can
+  // be in flight BEFORE a delete and resolve AFTER it — the pendingSaves guard
+  // only blocks NEW polls, so that stale list would resurrect every voided check
+  // (mergeTabs takes membership from `incoming`). Filtering incoming against
+  // these tombstones keeps a voided check gone until the server confirms it (the
+  // id drops out of `incoming`), or a short TTL lapses so a *failed* delete can
+  // still reconcile back to reality.
+  const recentlyDeleted = useRef<Map<string, number>>(new Map());
+  const TOMBSTONE_MS = 12_000;
+  // Drop tombstoned (just-voided) ids from a server list, self-cleaning as we go:
+  // a tombstone whose id the server no longer returns is confirmed deleted, and
+  // any tombstone older than the TTL expires so reality can win again.
+  const withoutDeleted = useCallback((incoming: PosTab[]): PosTab[] => {
+    const tomb = recentlyDeleted.current;
+    if (tomb.size === 0) return incoming;
+    const now = Date.now();
+    const incomingIds = new Set(incoming.map((t) => t.id));
+    for (const [id, at] of tomb) {
+      if (now - at > TOMBSTONE_MS || !incomingIds.has(id)) tomb.delete(id);
+    }
+    return tomb.size === 0 ? incoming : incoming.filter((t) => !tomb.has(t.id));
+  }, []);
 
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
@@ -122,7 +144,8 @@ export function CorePos({
   // wrote can't clobber the fresher edit. Optimistic `tmp-` checks (a create
   // whose POST hasn't returned) are never on the server yet, so carry them over
   // rather than let a poll drop a check that's still being opened.
-  const mergeTabs = useCallback((incoming: PosTab[]) => {
+  const mergeTabs = useCallback((incomingRaw: PosTab[]) => {
+    const incoming = withoutDeleted(incomingRaw);
     setTabs((local) => {
       const byId = new Map(local.map((t) => [t.id, t] as const));
       const serverIds = new Set(incoming.map((t) => t.id));
@@ -134,7 +157,7 @@ export function CorePos({
       for (const t of local) if (t.id.startsWith("tmp-") && !serverIds.has(t.id)) merged.push(t);
       return merged;
     });
-  }, []);
+  }, [withoutDeleted]);
 
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
@@ -142,7 +165,7 @@ export function CorePos({
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
       if (!res.ok) return;
       const data: { tabs?: PosTab[] } = await res.json();
-      const list = Array.isArray(data.tabs) ? data.tabs : [];
+      const list = withoutDeleted(Array.isArray(data.tabs) ? data.tabs : []);
       // Initial hydrate, but never drop a check the user opened WHILE this fetch
       // was in flight: at hydrate time any local tab the server response omits is
       // an optimistic check still being created (its POST hasn't landed in this
@@ -159,7 +182,7 @@ export function CorePos({
     } finally {
       setHydrated(true);
     }
-  }, [pageLoc]);
+  }, [pageLoc, withoutDeleted]);
 
   useEffect(() => {
     setTabs([]);
@@ -583,7 +606,13 @@ export function CorePos({
         clearTimeout(timer);
         persistTimers.current.delete(id);
       }
+      // Drop from the persist queue too, so the flush effect can't re-PUT a check
+      // we're voiding.
+      pendingPersistRef.current.delete(id);
       if (id.startsWith("tmp-")) return; // never hit the server
+      // Tombstone the id so an in-flight cross-till poll that predates this void
+      // can't resurrect the check when its stale list resolves (see withoutDeleted).
+      recentlyDeleted.current.set(id, Date.now());
       // Confirm to the operator **immediately** — the row is already gone, so
       // the toast must not wait on the DELETE round-trip. Server deletes
       // serialize on the per-location tab lock, so voiding several in a row
