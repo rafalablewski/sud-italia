@@ -115,15 +115,15 @@ export function CorePos({
   // (ring 3, the till must keep 3) — the old code computed off a stale `tabs`
   // snapshot, so back-to-back taps overwrote each other's count.
   const pendingPersistRef = useRef<Set<string>>(new Set());
-  // Tombstones for just-voided checks (id → when). The cross-till poll's GET can
-  // be in flight BEFORE a delete and resolve AFTER it — the pendingSaves guard
-  // only blocks NEW polls, so that stale list would resurrect every voided check
-  // (mergeTabs takes membership from `incoming`). Filtering incoming against
-  // these tombstones keeps a voided check gone until the server confirms it (the
-  // id drops out of `incoming`), or a short TTL lapses so a *failed* delete can
-  // still reconcile back to reality.
-  const recentlyDeleted = useRef<Map<string, number>>(new Map());
-  const TOMBSTONE_MS = 12_000;
+  // The cross-till poll's GET can be in flight BEFORE a void and resolve AFTER
+  // it; the `pendingSaves` guard only blocks NEW polls, so that already-running
+  // read would re-add the just-voided check (mergeTabs takes membership from
+  // `incoming`). Rather than mask it with a timed tombstone, we abort the
+  // in-flight read the instant we void — a cancelled fetch never reaches
+  // mergeTabs, so a stale snapshot can't resurrect the check. Deletes are now
+  // authoritative server-side (an edit/link can't re-create a voided check), so
+  // once the next poll runs the id is simply gone.
+  const readAbort = useRef<AbortController | null>(null);
   // Temp ids voided WHILE their create-POST is still on the wire. Voiding a `tmp-`
   // check can't hit the server (it has no real id yet), so without this the POST
   // lands a beat later, creates the check server-side, and the next cross-till
@@ -132,28 +132,13 @@ export function CorePos({
   // more reliably it happens). newTab consults this once the POST returns and
   // deletes the real check instead of surfacing it.
   const pendingCreateVoids = useRef<Set<string>>(new Set());
-  // Drop tombstoned (just-voided) ids from a server list, self-cleaning as we go:
-  // a tombstone whose id the server no longer returns is confirmed deleted, and
-  // any tombstone older than the TTL expires so reality can win again.
-  const withoutDeleted = useCallback((incoming: PosTab[]): PosTab[] => {
-    const tomb = recentlyDeleted.current;
-    if (tomb.size === 0) return incoming;
-    const now = Date.now();
-    const incomingIds = new Set(incoming.map((t) => t.id));
-    for (const [id, at] of tomb) {
-      if (now - at > TOMBSTONE_MS || !incomingIds.has(id)) tomb.delete(id);
-    }
-    return tomb.size === 0 ? incoming : incoming.filter((t) => !tomb.has(t.id));
-  }, []);
-
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
   // with a newer updatedAt wins, so a poll that was already in flight when we
   // wrote can't clobber the fresher edit. Optimistic `tmp-` checks (a create
   // whose POST hasn't returned) are never on the server yet, so carry them over
   // rather than let a poll drop a check that's still being opened.
-  const mergeTabs = useCallback((incomingRaw: PosTab[]) => {
-    const incoming = withoutDeleted(incomingRaw);
+  const mergeTabs = useCallback((incoming: PosTab[]) => {
     setTabs((local) => {
       const byId = new Map(local.map((t) => [t.id, t] as const));
       const serverIds = new Set(incoming.map((t) => t.id));
@@ -165,7 +150,7 @@ export function CorePos({
       for (const t of local) if (t.id.startsWith("tmp-") && !serverIds.has(t.id)) merged.push(t);
       return merged;
     });
-  }, [withoutDeleted]);
+  }, []);
 
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
@@ -173,7 +158,7 @@ export function CorePos({
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
       if (!res.ok) return;
       const data: { tabs?: PosTab[] } = await res.json();
-      const list = withoutDeleted(Array.isArray(data.tabs) ? data.tabs : []);
+      const list = Array.isArray(data.tabs) ? data.tabs : [];
       // Initial hydrate, but never drop a check the user opened WHILE this fetch
       // was in flight: at hydrate time any local tab the server response omits is
       // an optimistic check still being created (its POST hasn't landed in this
@@ -190,7 +175,7 @@ export function CorePos({
     } finally {
       setHydrated(true);
     }
-  }, [pageLoc, withoutDeleted]);
+  }, [pageLoc]);
 
   useEffect(() => {
     setTabs([]);
@@ -203,15 +188,22 @@ export function CorePos({
   usePolling(
     async () => {
       if (!pageLoc || persistTimers.current.size > 0 || pendingSaves.current > 0) return;
+      // Expose this read so a void mid-flight can abort it — an aborted fetch
+      // never reaches mergeTabs, so a snapshot taken before the void can't re-add
+      // the just-deleted check.
+      const ac = new AbortController();
+      readAbort.current = ac;
       try {
-        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { signal: ac.signal });
         if (!res.ok) return;
         const data: { tabs?: PosTab[] } = await res.json();
         const list = Array.isArray(data.tabs) ? data.tabs : [];
         mergeTabs(list);
         setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
       } catch {
-        /* non-fatal */
+        /* aborted (a concurrent void) or network blip — both non-fatal */
+      } finally {
+        if (readAbort.current === ac) readAbort.current = null;
       }
     },
     5000,
@@ -422,12 +414,12 @@ export function CorePos({
         return;
       }
       // Voided while this POST was in flight: the check now exists server-side
-      // but the operator already dropped it. Delete the real check (tombstoned so
-      // an in-flight poll can't re-add it) and never surface it — don't swap it
+      // but the operator already dropped it. Delete the real check (aborting any
+      // in-flight poll that may have seen it) and never surface it — don't swap it
       // into state. This is what stops a just-voided new check from reappearing.
       if (pendingCreateVoids.current.has(tempId)) {
         pendingCreateVoids.current.delete(tempId);
-        recentlyDeleted.current.set(real.id, Date.now());
+        readAbort.current?.abort(); // drop any in-flight poll that may have seen the new check
         pendingSaves.current += 1;
         void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(real.id)}`, {
           method: "DELETE",
@@ -645,9 +637,11 @@ export function CorePos({
         pendingCreateVoids.current.add(id);
         return;
       }
-      // Tombstone the id so an in-flight cross-till poll that predates this void
-      // can't resurrect the check when its stale list resolves (see withoutDeleted).
-      recentlyDeleted.current.set(id, Date.now());
+      // Abort any cross-till poll read already on the wire: it may have snapshotted
+      // this check before we voided it, and applying that stale list would re-add
+      // it. New polls are blocked by `pendingSaves` for the DELETE round-trip, so
+      // by the time one runs again the id is gone server-side.
+      readAbort.current?.abort();
       // Confirm to the operator **immediately** — the row is already gone, so
       // the toast must not wait on the DELETE round-trip. Server deletes
       // serialize on the per-location tab lock, so voiding several in a row
