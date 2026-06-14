@@ -662,6 +662,12 @@ export function CorePos({
       // failure surfaces a toast now.
       toast(`Voided ${name}`, "default");
       pendingSaves.current += 1;
+      // TEMP DIAGNOSTIC: beacon (a GET, which we know works) fired right before
+      // the DELETE. If the diag shows this beacon but lastVoidRoute stays null,
+      // the browser runs the void but the DELETE never reaches the server.
+      void fetch(`/api/admin/pos/diag?beacon=${encodeURIComponent(id)}&loc=${encodeURIComponent(pageLoc)}`, {
+        cache: "no-store",
+      }).catch(() => {});
       try {
         const url = `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`;
         const res = await fetch(url, { method: "DELETE" });

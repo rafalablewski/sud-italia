@@ -41,6 +41,21 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
   }
   const mode = await getActiveDataMode();
   const voidId = req.nextUrl.searchParams.get("void");
+  const beacon = req.nextUrl.searchParams.get("beacon");
+
+  // Client beacon: deleteTab fires this GET right before its DELETE. If this
+  // arrives but lastVoidRoute stays null, the browser runs the void but the
+  // non-GET DELETE is being dropped before it reaches the server.
+  if (beacon) {
+    const sql = neon(process.env.DATABASE_URL!);
+    const loc = req.nextUrl.searchParams.get("loc");
+    await sql`
+      INSERT INTO kv_store (key, value)
+      VALUES ('pos-void-client', ${JSON.stringify({ at: new Date().toISOString(), id: beacon, loc })}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `.catch(() => {});
+    return NextResponse.json({ ok: true, beacon }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   if (voidId) {
     const before = await dumpBlobs();
@@ -54,16 +69,19 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
   }
 
   const sql = neon(process.env.DATABASE_URL!);
-  const [krakow, warszawa, blobs, dbg] = await Promise.all([
+  const [krakow, warszawa, blobs, dbg, clientBeacon] = await Promise.all([
     getPosTabs("krakow"),
     getPosTabs("warszawa"),
     dumpBlobs(),
     sql`SELECT value FROM kv_store WHERE key = 'pos-void-debug'`.then((r) => r[0]?.value ?? null).catch(() => null),
+    sql`SELECT value FROM kv_store WHERE key = 'pos-void-client'`.then((r) => r[0]?.value ?? null).catch(() => null),
   ]);
   return NextResponse.json(
     {
       useDB: true,
       mode,
+      // Did the BROWSER fire the void (beacon, a GET)? vs did the DELETE route run?
+      lastClientBeacon: clientBeacon,
       // What the actual DELETE route last recorded (the void button's decision).
       lastVoidRoute: dbg,
       // What the POS actually shows (id + which check), so we can see which blob
