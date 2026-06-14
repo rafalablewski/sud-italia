@@ -648,25 +648,24 @@ export function CorePos({
   // never-saved optimistic check (`tmp-` id) is removed locally only.
   const deleteTab = useCallback(
     async (id: string) => {
+      // Look the check up from the CURRENT render's `tabs` — NOT via a flag set
+      // inside the setTabs updater below. React 18 only runs a state updater
+      // *eagerly* (synchronously) when no other update is already pending; the
+      // void-confirm dialog calls setVoidOpen(false) first, so the updater is
+      // deferred and a `found` flag read right after it would still be false.
+      // That silently bailed the entire void (no DELETE, no beacon, no toast)
+      // while the optimistic removal still applied later — so the check vanished
+      // and the 5s poll re-added it: the "void does nothing / comes back
+      // instantly" bug. A closure lookup is reliable; the functional removal
+      // below still guards rapid consecutive voids.
+      const hit = tabs.find((x) => x.id === id);
+      if (!hit) return;
+      const name = hit.name;
       // Optimistic, **functional** removal — robust to rapid consecutive voids
-      // that would otherwise read a stale `tabs` closure and re-add a check
-      // already voided a tap earlier. Capture the name + the post-removal
-      // fallback active id from inside the updater.
-      let name = "check";
-      let found = false;
-      let nextActive: string | null = null;
-      setTabs((prev) => {
-        const hit = prev.find((x) => x.id === id);
-        if (hit) {
-          found = true;
-          name = hit.name;
-        }
-        const left = prev.filter((x) => x.id !== id);
-        nextActive = left[0]?.id ?? null;
-        return left;
-      });
-      if (!found) return;
-      setActiveTabId((cur) => (cur === id ? nextActive : cur));
+      // that would otherwise read a stale snapshot and re-add a check voided a
+      // tap earlier.
+      setTabs((prev) => prev.filter((x) => x.id !== id));
+      setActiveTabId((cur) => (cur === id ? (tabs.filter((x) => x.id !== id)[0]?.id ?? null) : cur));
       // Cancel any debounced PUT still queued for this check.
       const timer = persistTimers.current.get(id);
       if (timer) {
@@ -700,7 +699,7 @@ export function CorePos({
       // stacks toasts behind the taps.
       toast(`Voided ${name}`, "default");
     },
-    [pageLoc, voidCheckOnServer, toast],
+    [tabs, pageLoc, voidCheckOnServer, toast],
   );
   // Empty checks vanish on tap; a check with rung items asks first.
   const requestVoid = useCallback(() => {
