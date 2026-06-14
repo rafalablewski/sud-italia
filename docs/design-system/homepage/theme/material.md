@@ -4,89 +4,105 @@
 
 Depth, hairlines, radius, motion — for a hospitality surface that
 breathes. Where Core's material is tight + quiet and Admin's is
-flat-glass utilitarian, Homepage allows shadows, rounder corners, and
-delightful animation moments.
+flat-glass utilitarian, Homepage is **warm liquid glass**: translucent
+parchment surfaces floating over a living aurora, with rounder corners
+and delightful animation moments. The Tuscan palette is unchanged — the
+*material* is what evolved from flat parchment-on-cream to glass-on-aurora.
 
-## The paper canvas
+> **Migration status.** The canvas (aurora) and the glass surface
+> primitives (`.v8-surface` / `.v8-sheen`) ship now (P0). Individual
+> surface families (`.v8-loc-card`, `.v8-mi`, `.v8-cart`, …) adopt the
+> primitive across phases P1–P5 — see the per-surface "Live code" notes in
+> `pages/*.md`. The opaque-parchment look survives **only** as the
+> `@supports not (backdrop-filter)` / `prefers-reduced-motion` fallback.
 
-The V8 Trattoria treatment is a **paper canvas**, not a flat colour.
-The `body` in `themes/homepage/index.css` carries three layered
-backgrounds:
+## The liquid-glass canvas
 
-1. **Parchment ground** — `--color-background` (`#F8EFDE`), the flat
-   base tone.
-2. **Two warm radial washes** — ochre top-left + terracotta
-   bottom-right on mobile; oxblood + basil on desktop (the @768px
-   breakpoint swaps the colour pair to suit the wider canvas).
-3. **SVG paper-grain noise overlay** — an inline `feTurbulence`
-   fractal-noise filter at `baseFrequency=0.85`, recoloured to a
-   sub-6%-alpha warm-brown via `feColorMatrix`. Tiled (240×240). The
-   data URI is inline in `index.css` so no extra request.
+The page canvas is a **living aurora**, not a flat colour. It's built from
+three layers (`themes/homepage/index.css`):
 
-Together they give the page the same tooth as menu paper at a café —
-the warm tint isn't uniform, the grain reads under low light. **This
-is the only place on the storefront where the body is anything other
-than a flat colour.** Section backgrounds stay flat parchment /
-parchment-deep / white.
+1. **Parchment base** — `--color-background` (`#F8EFDE`) on `<html>`, the
+   opaque ground painted behind everything. It lives on `<html>` (not
+   `<body>`) so the body can stay transparent and the aurora pseudo shows
+   through reliably.
+2. **The aurora** — a fixed, inert `body::before` layer: four warm radial
+   pools (ochre top-left, terracotta top-right, basil bottom-right, oxblood
+   bottom-left) at low alpha — `--aurora-ochre` / `-terracotta` / `-basil` /
+   `-oxblood`, reusing the palette, **no new hues**. `background-size: 200%`
+   lets them drift via `background-position` over a slow 26s
+   `v8-aurora` ease, so every translucent surface has warm Tuscan light
+   moving behind it. `z-index: -1` keeps it behind all content.
+3. **SVG paper-grain noise** — the inline `feTurbulence` fractal-noise
+   filter (`baseFrequency=0.85`, recoloured to a sub-5%-alpha warm-brown via
+   `feColorMatrix`, tiled 240×240) stays on `body` for tooth *beneath* the
+   glass. The data URI is inline so there's no extra request.
+
+Together they give the page warm depth that *moves* — the light isn't
+uniform, the grain still reads under the glass. Sections no longer need to
+stay flat: a `.v8-surface` panel is read as raised because the aurora blooms
+through it, brighter and blurred against the ground.
 
 ## The elevation ramp
 
-Three steps, every Homepage surface picks one:
+Elevation is now **blur depth + refraction + warm shadow**, not a
+parchment/white tone change. The glass primitive (`.v8-surface`) is the one
+recipe every surface family opts into:
 
-| Step | Surface                                  | Used by                                                  |
-| ---- | ---------------------------------------- | -------------------------------------------------------- |
-| 0    | `--color-background` (parchment)         | Page canvas, base sections (over the paper-grain layer)  |
-| 1    | `#fff` (true white)                      | Cards on parchment — item cards, location cards, the rewards tier card, the order-confirmation summary block. Resting `--shadow-card` or `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`. |
-| 2    | `#fff` with stronger shadow              | Portalled overlays — cart drawer, item detail drawer, modals. `box-shadow: 0 8px 32px rgba(0,0,0,0.12)` + the portal backdrop scrim. |
+| Step | Surface | Recipe | Used by |
+| ---- | ------- | ------ | ------- |
+| 0 | Aurora canvas | `<html>` parchment + `body::before` aurora + grain | Page ground, base sections |
+| 1 | `.v8-surface` | `--glass-fill` (parchment @50%) + `backdrop-filter: blur(--glass-blur) saturate(--glass-saturate)` + `--glass-stroke` border + refraction top-edge + `0 18px 50px -18px --glass-shadow` | Cards on the canvas — item cards, location cards, the rewards tier card, the order-confirmation summary |
+| 2 | `.v8-surface-strong` | as Step 1 with `--glass-fill-strong` (parchment @62%) | Portalled overlays + sticky foot bars — cart drawer, item detail drawer, the checkout foot. Plus the portal backdrop scrim. |
+| — | `.v8-surface-dark` | `--glass-fill-dark` (espresso @86%) + parchment text | The dark loyalty surfaces that were solid espresso blocks — the Soci closer + the rewards tier card. High alpha so parchment text holds AA over the *light* aurora. |
 
-The parchment / white alternation IS the elevation. A card on
-parchment is clearly raised because it's brighter than the background;
-no border needed unless the card needs containment (the `.pub-card`
-form container takes a `#f3f4f6` hairline border for definition).
+The **refraction top-edge** (`.v8-surface::before` — a bright 1px highlight
+across the top) is what reads as "light catching glass"; keep it on every
+surface. A card no longer needs the parchment/white brightness gap to feel
+raised — the blur + shadow + edge do the work.
 
-The intermediate `--color-parchment-deep` (`#F2E2C2`) is used on
-alternating *sections* (not cards) to add rhythm without breaking the
-canvas — see `--color-italia-cream-dark` in `color.md`.
+`--color-parchment-deep` (`#F2E2C2`) survives only as the **fallback** fill
+(see Shadows) and on the rare fully-opaque section that intentionally opts
+out of glass.
 
 ## Shadows
 
-The shadow ramp is small and neutral — no brand-tinted glows, no
-multi-layer drop shadows.
+The shadow ramp gained the glass drop and **brand-tinted glows are now
+allowed** as part of the material — but still disciplined: warm, layered,
+never neon.
 
-| Use                                | Spec                                              |
-| ---------------------------------- | ------------------------------------------------- |
-| Card at rest                       | `--shadow-card` (inset highlight + warm brown drop) or `0 1px 3px rgba(0,0,0,0.04)` for the lightest cards |
-| Card hover                         | `0 4px 12px rgba(0,0,0,0.08)` + translateY(-1px)  |
-| Paper edges (location cards, menu) | `--shadow-paper` — softer than `--shadow-card`, used to lift the parchment-on-parchment surfaces |
-| Portalled overlay backdrop         | A scrim — `rgba(0,0,0,0.4)` over the page         |
-| Portalled overlay surface          | `0 8px 32px rgba(0,0,0,0.12)`                     |
-| Sticky header on scroll            | `0 1px 0 rgba(0,0,0,0.04)` (hairline-as-shadow)   |
-| Hero CTA                           | `--shadow-cta` — warm terracotta drop, the **one** brand-tinted shadow exception, because the hero CTA needs to feel like part of the brand at all times |
-| Floating cart button               | `0 4px 16px rgba(122,43,43,0.15)` — oxblood-tinted shadow, the second documented brand-tint, kept consistent with the brand burgundy |
+| Use | Spec |
+| --- | ---- |
+| Glass surface at rest | `0 18px 50px -18px --glass-shadow` (warm-brown) + `inset 0 1px 0 rgba(255,255,255,0.55)` (the inner refraction highlight) |
+| Glass surface hover | deepen the drop + `translateY(-4px to -8px)`; pair with `.v8-sheen` for the light sweep |
+| Fallback card (no backdrop-filter) | `--shadow-card` (inset highlight + warm brown drop) — the pre-glass look |
+| Portalled overlay backdrop | A scrim — `rgba(44,40,31,0.45)` over the page |
+| Sticky header on scroll | hairline-as-shadow + the chrome blur (`--glass-blur-chrome`) |
+| Hero CTA | `--shadow-cta` — warm terracotta drop, still the signature branded action shadow |
+| Floating cart button | `0 4px 16px rgba(122,43,43,0.15)` — oxblood-tinted, kept |
 
-`--shadow-paper`, `--shadow-card`, `--shadow-cta` are declared as
-plain CSS vars on `:root` in `themes/homepage/index.css` (they
-intentionally bypass Tailwind's `--shadow-*` token slot to stay V8-only
-and not override Tailwind defaults). The hero CTA + floating cart
-button are the documented brand-tinted-shadow exceptions — every
-other elevation uses neutral shadows.
+`--shadow-paper`, `--shadow-card`, `--shadow-cta` and the new `--glass-*`
+vars are declared as plain CSS vars on `:root` in `index.css` (they
+intentionally bypass Tailwind's `--shadow-*` slot to stay V8-only). The hero
+CTA's terracotta drop and the floating-cart oxblood tint remain the *named*
+brand-shadow moments; glass surfaces use the neutral warm-brown
+`--glass-shadow`, so the page reads warm without every panel glowing.
 
 ## Radius
 
 | Element                              | Radius |
 | ------------------------------------ | ------ |
-| Section containers, large cards      | 16px   |
-| Item cards, location cards           | 12px   |
+| Section containers, large cards      | 16–18px |
+| Item cards, location cards           | 12–14px |
 | Buttons, the floating cart button    | 12px (square buttons rounded fully — `border-radius: 9999px` for the CTA hero button) |
 | `.pub-input`, `.pub-select`          | 12px   |
 | `.pub-card`                          | 16px   |
 | Tier badges, chips, status pills     | 9999px (pill) |
 | The hero image / video frame        | 24px (the lone generous radius — the hero gets it) |
 
-12px is the workhorse radius. 16px is for the bigger container
-surfaces. The pill radius for buttons + chips is a brand cue —
-fully-rounded affordances read as more inviting than 8px-radius
-"techy" buttons.
+12–14px is the workhorse radius (glass surfaces lean to the upper end —
+softer corners suit the translucency). The pill radius for buttons + chips
+is a brand cue — fully-rounded affordances read as more inviting than
+8px-radius "techy" buttons.
 
 ## Padding rhythm
 
@@ -107,14 +123,17 @@ reads as cheap.
 ## Motion
 
 **Animation is allowed to delight** — the storefront's distinguishing
-material trait. The full keyframe library lives in
-`themes/homepage/index.css` (the delivery family) and `globals.css`
-(the shared library: `fade-in`, `slide-up`, `scale-in`,
-`slide-up-sheet`, `shimmer`, `pulse-soft`, `bounce-in`, `count-up`).
+material trait, now including the ambient aurora + the glass sheen. The full
+keyframe library lives in `themes/homepage/index.css` (the delivery family +
+`v8-aurora`) and `globals.css` (the shared library: `fade-in`, `slide-up`,
+`scale-in`, `slide-up-sheet`, `shimmer`, `pulse-soft`, `bounce-in`,
+`count-up`).
 
 | Pattern                                 | Spec                                                                  |
 | --------------------------------------- | --------------------------------------------------------------------- |
-| Hover lifts (cards, buttons)            | `transition: all 0.2s ease`                                          |
+| Ambient canvas aurora                   | `v8-aurora` (26s ease-in-out infinite alternate, `body::before` background-position drift) |
+| Glass sheen sweep on hover              | `.v8-sheen::after` (0.9s cubic-bezier(0.22, 1, 0.36, 1) transform) |
+| Hover lifts (cards, buttons)            | `transition: all 0.2s ease` + `translateY`                          |
 | Cart drawer / item detail drawer open   | `--animate-slide-up-sheet` (350ms cubic-bezier(0.32, 0.72, 0, 1))    |
 | `AddToCartToast` enter                  | `--animate-slide-up` (400ms)                                         |
 | Free-delivery progress shimmer          | `--animate-delivery-shimmer` (1.8s linear infinite while below threshold) |
@@ -131,6 +150,9 @@ simultaneous tickets is chaos), the storefront's spring moments are
 discrete celebratory events — one-shot reward unlocks, the cart-add
 toast, the tier-up. These are intentional moments.
 
+The aurora + sheen are **ambient, not spring** — slow, continuous, low
+contrast. They must never compete with a celebratory one-shot.
+
 ## Focus
 
 Keyboard focus on Homepage uses the BASE rule from `globals.css`:
@@ -144,30 +166,44 @@ admin's brand-red focus would clash with `[data-admin-theme]` chrome
 
 ## The rules
 
-1. **Cream / white alternation IS the elevation.** Don't add a
-   `--surface-1` token; the colour change does the work.
-2. **One brand-tinted shadow only.** The floating cart button. Every
-   other elevation uses neutral shadows.
-3. **Spring physics are for one-shot celebrations.** Never apply
-   spring to a continuous interaction (scroll, drag, hover) — it
-   reads as gimmicky.
-4. **`prefers-reduced-motion` is respected globally** (the BASE
-   `@media (prefers-reduced-motion: reduce)` block in `globals.css`
-   reduces every animation to 0.01ms). Don't override per-component.
-5. **Generous padding is a discipline.** A request to "make this
-   denser to fit more above the fold" usually means we should cut
-   content, not pad.
+1. **Blur + refraction + warm shadow IS the elevation.** Surfaces opt into
+   `.v8-surface`; don't hand-roll a one-off translucent fill or invent a
+   `--surface-1` token. Keep the refraction top-edge on every glass panel.
+2. **Translucency must never cost contrast.** `--glass-fill` floors at ~0.5
+   alpha; body copy stays `--espresso` / `--ink`. If text over a surface
+   can't hold WCAG AA, raise the fill (`--glass-fill-strong`), don't dim the
+   text.
+3. **Every glass surface needs a fallback.** It must read correctly under
+   `@supports not (backdrop-filter)` (opaque parchment) and
+   `prefers-reduced-motion` (no aurora drift / sheen). Don't ship a panel
+   whose legibility depends on the blur.
+4. **Brand glows are allowed but rationed.** The hero CTA (terracotta) and
+   floating cart (oxblood) are the *named* branded shadows; glass surfaces
+   use the neutral `--glass-shadow`. Don't give every panel a coloured halo.
+5. **Spring physics are for one-shot celebrations.** Never apply spring to a
+   continuous interaction (scroll, drag, hover); the aurora + sheen are
+   ambient, not spring.
+6. **`prefers-reduced-motion` is respected globally** (the BASE block in
+   `globals.css` reduces every animation — the aurora freezes, the sheen
+   stops). Don't override per-component.
+7. **Generous padding is a discipline.** A request to "make this denser to
+   fit more above the fold" usually means we should cut content, not pad.
 
 ## What this material is not
 
-- It is **not** the Admin material. Admin's glass-card uses
-  `backdrop-filter: blur(...)`; Homepage has no glassmorphism. The
-  storefront is opaque-card-on-cream, not glass-on-tinted-bg.
-- It is **not** the Core material. Core uses hairlines + tone change
-  for elevation; Homepage uses tone change + actual shadows.
-- It is **not** customisable per page. A location card on the landing
-  and a location card on /privacy use the same radius + shadow.
+- It is **not** the Admin glass. Admin's `glass-card` is a cool, flat,
+  utilitarian blur on a tinted operator chrome. Homepage glass is **warm** —
+  translucent parchment over a moving Tuscan aurora, with refraction edges
+  and the occasional sheen. Same technique (`backdrop-filter`), opposite
+  temperature and intent.
+- It is **not** the Core material. Core uses hairlines + tone change for
+  elevation; Homepage uses translucency + blur + warm shadow.
+- It is **not** customisable per page. A location card on the landing and a
+  location card on /privacy use the same surface primitive, radius + shadow.
+- It is **not** a recolour. The palette (parchment, terracotta, basil,
+  oxblood, ochre, espresso) is identical to the pre-glass storefront; only
+  the *material* changed.
 
-The Homepage material is the **hospitality treatment** — cards on
-cream, generous padding, deliberate animation moments, brand-red
+The Homepage material is the **hospitality treatment** — warm glass on a
+living aurora, generous padding, deliberate animation moments, brand-red
 focus ring as the persistent signal of interactivity.

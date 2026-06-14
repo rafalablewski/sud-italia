@@ -62,9 +62,11 @@ The signed-in surface is the tier card + 4 tabs (Overview · panoramica
 
 The visual centrepiece + permanent header across all four tabs.
 
-- **Espresso paper card** (`#3D2817` background with parchment text +
-  ochre accents + ochre/terracotta radial washes via the `::before`
-  and `::after` pseudo-elements). The **one** dark surface on the
+- **Dark frosted-glass card** (`--glass-fill-dark`, espresso @86% +
+  backdrop blur, parchment text + ochre accents + ochre/terracotta radial
+  washes via the `::before` and `::after` pseudo-elements; shares the
+  dark-glass fill with the Soci closer, and falls back to solid `#3D2817`
+  without backdrop-filter). The **one** dark surface on the
   storefront — used here to mark the "card"
   metaphor as something the customer carries.
 - **Top row** (`.v8-rewards-tier-top`): 44px round avatar circle
@@ -100,13 +102,16 @@ The "what's going on with my account" view.
 
 - `<FamilyWalletPanel />` (see below).
 - Two-column grid (collapses to 1 on mobile):
-  - **Profile card** (`.v8-rewards-card` with `<User />` glyph) —
-    2-col field grid (First name / Last name / Nickname / Phone). The
-    Edit link flips it into a form with parchment-cream inputs and a
-    terracotta "Save · salva" CTA.
-  - **Loyalty card** (`.v8-rewards-card` with `<Sparkles />`) —
-    parchment-deep dashed card with a 5×5 SVG QR placeholder
-    (`.v8-rewards-loyalty-qr` + center "SI" monogram) + italic Lora
+  - **Profile card** (`.v8-rewards-card` with `<User />` glyph) — a glass
+    container card (`--glass-fill` + backdrop blur over the aurora; falls
+    back to opaque parchment). 2-col field grid (First name / Last name /
+    Nickname / Phone). The Edit link flips it into a form with
+    parchment-cream inputs and a terracotta "Save · salva" CTA.
+  - **Loyalty card** (`.v8-rewards-card` with `<Sparkles />`) — glass
+    container holding a **parchment-deep dashed QR card that stays opaque
+    on purpose** (`.v8-rewards-loyalty-qr` — a scannable code needs solid
+    high-contrast, never a translucent fill) with a 5×5 SVG QR placeholder
+    (+ center "SI" monogram) + italic Lora
     "Show at pickup · mostra al ritiro" + an espresso "Add to Apple
     Wallet" disabled CTA with an ochre "Soon" ribbon.
 - `.v8-rewards-streak` — terracotta-ochre tinted card with a
@@ -114,7 +119,7 @@ The "what's going on with my account" view.
   settimane" + italic Lora "Order again this week to keep it going.
   **3 weeks = +30 bonus pts.**"
 - **Weekly challenges** (`.v8-rewards-challenges`) — 3-up grid of
-  parchment cards (1-up on mobile). Each `.v8-rewards-challenge` has
+  glass cards (1-up on mobile). Each `.v8-rewards-challenge` has
   the italic Cormorant title + oxblood clock chip ("Nd"), italic
   Lora description, terracotta progress rail
   (`.v8-rewards-challenge-rail` + `-fill`), and a foot row with
@@ -130,7 +135,8 @@ The "what's going on with my account" view.
   card hides itself when the operator sets `referral.active = false`
   in `/admin/growth → Referrals` — there's no static fallback copy.
 - **Tier roadmap** (`.v8-rewards-roadmap`) — 4-up grid of
-  `.v8-rewards-tier-tile` paper cards. Active tier gets the
+  `.v8-rewards-tier-tile` light-on-dark translucent tiles (they sit inside
+  the dark glass tier card). Active tier gets the
   ochre-fill name pill + "Current · attuale" green sublabel + the
   ochre→terracotta-soft tile background. Locked tiers dim to 55%.
   Each tile lists the multiplier, the unlock threshold, and the
@@ -163,11 +169,11 @@ The "what's going on with my account" view.
 
 #### Offers tab
 
-- **Combo deals** (`.v8-rewards-combos`) — 3-up grid of paper cards.
+- **Combo deals** (`.v8-rewards-combos`) — 3-up grid of glass cards.
   Each `.v8-rewards-combo` has the italic Cormorant deal name + the
   ochre `−12%` chip + italic Lora description + italic
   category-list "Add X + Y + Z — applies automatically."
-- **Tier perks** (`.v8-rewards-perks-card`) — paper card with the
+- **Tier perks** (`.v8-rewards-perks-card`) — glass card with the
   current tier badge + per-perk basil check rows + a dashed
   hairline "Reach {next}" block listing the next-tier perks as
   muted locked rows.

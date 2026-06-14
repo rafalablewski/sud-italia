@@ -56,10 +56,11 @@ pen-sketch illustration above the city name. Compact relative to the
 homepage hero (the visitor is here to order, not to be wowed) but
 keeps V8's hospitality voice.
 
-- **Parchment canvas** with a soft fade to parchment-deep at the
-  bottom (a vertical gradient that ramps from transparent → 45%
-  parchment-deep). Line-soft hairline border-bottom separates it
-  from the menu section below.
+- **Translucent veil** over the aurora — a vertical gradient ramping from
+  transparent → ~30% parchment-deep (no opaque parchment base), with a
+  `--glass-stroke` hairline border-bottom separating it from the menu
+  section below. The location hero now sits on the living aurora like the
+  rest of the storefront.
 - **Basil-sprig ornament** top-left (re-uses the `.v8-hero-orn-basil-tl`
   positioning from the landing hero) so the location page reads in
   the same brand family.
@@ -100,11 +101,15 @@ surprise button, item grid) sits inside a single soft paper card
 gone; the V8 design uses a single card with category tabs that
 filter the grid in place.
 
-- **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
-  `shadow-paper`, `margin: 0 auto`, 22/28px padding ramp).
-  **Full-bleed** — no `max-width`, no border, no border-radius — the
-  menu reads as a continuous parchment band across the viewport,
-  with only the shadow signalling the slab's elevation. Zero
+- **Wrapper** — `.v8-menu-card`, a soft **translucent-parchment veil**
+  with the shared `shadow-paper`, `margin: 0 auto`, 22/28px padding ramp.
+  It carries **no backdrop-filter on purpose** — the `.v8-mi` item cards do
+  the blurring, so each pixel under the grid is frosted at most once (the
+  long-list perf guard). And on `≤768px` the item cards drop their blur
+  entirely for a near-opaque fill, so mid-tier mobile GPUs never pay for
+  dozens of simultaneous blur layers. **Full-bleed** — no `max-width`, no border, no
+  border-radius — the menu reads as a continuous band across the viewport,
+  the aurora glowing through the veil. Zero
   vertical margin keeps the band flush against the location-info
   block above and the Soci rail below — earlier builds shipped
   `margin: 22/28px auto`, which stacked into the neighbours'
@@ -147,8 +152,9 @@ filter the grid in place.
     intentional addition to preserve the pre-V8 price-sort feature
     inside the V8 chrome. Removing the sort dropdown without an
     affordance would be a real feature regression.
-- **Speed-guarantee banner** (`.v8-guarantee`) — ochre-tinted
-  card with a 4px ochre→terracotta left rail, a sundial SVG icon,
+- **Speed-guarantee banner** (`.v8-guarantee`) — frosted ochre-glass
+  card (ochre-tinted fill + chrome backdrop blur) with a 4px
+  ochre→terracotta left rail, a sundial SVG icon,
   italic Cormorant title "{N} minutes guaranteed · {N} minuti
   garantiti", and a Lora sub. Operator-managed via
   `speedGuarantee` ({ `active`, `maxMinutes`, `guaranteeText` }, sourced

@@ -73,8 +73,9 @@ The default state when the drawer opens.
 
 ### Fulfilment — `<SlotPicker />`
 
-- **Mode toggle:** segmented control `Pickup` / `Delivery` (the latter
-  shown only for locations that deliver).
+- **Mode toggle:** three bordered pills `Pickup` / `Delivery` / `Dine-in`
+  (the active pill = terracotta fill with parchment text, matching the
+  mockup; Delivery shown only for locations that deliver).
 - **Date strip:** today + next 6 days as a horizontal scroll of pills;
   current day default.
 - **Slot grid:** time slots for the selected date pulled from
@@ -177,12 +178,23 @@ friction, maximum trust, one slide-over from the menu.
 
 ## V8 Trattoria visual — Step 11
 
-The drawer's chrome is the Tuscany-trattoria paper-card vocabulary
-introduced in Steps 1-10. The selector family lives under
+The drawer's chrome is the Tuscany-trattoria vocabulary introduced in
+Steps 1-10, now rendered in **liquid glass**: the panel is a translucent
+warm-cream frosted sheet (~0.58 cream + `blur · saturate(175%) ·
+brightness(1.1)` backdrop filter + `--glass-stroke` border, keeping its
+dramatic upward shadow), so the blur + refraction read as real glass. It
+stays **bright rather than muddy** because the modal scrim
+(`.v8-cart-overlay`) is a *lighter* warm dim (`rgba(61,40,23,0.34)`, not the
+old dark espresso) and the `brightness()` lift counteracts the dim the frost
+samples — earlier a darker scrim + a low-alpha fill made the scroll body
+read dull taupe. The selector family lives under
 `.v8-cart-*` in `src/app/themes/homepage/index.css` and is owned by
 `CartDrawer.tsx` (the drawer no longer composes through the generic
-`<Sheet />` primitive — it builds its own portalled sheet so the
-parchment-paper feel can extend edge-to-edge inside the panel).
+`<Sheet />` primitive — it builds its own portalled sheet so the glass feel
+can extend edge-to-edge inside the panel). Surfaces *inside* the sheet (item
+rows, loyalty rail, form fields) use translucent fills with **no** blur of
+their own, so the drawer is frosted once. Falls back to the opaque parchment
+sheet under `@supports not (backdrop-filter)`.
 
 ### The shell
 
@@ -238,13 +250,20 @@ state.
 
 ### Items list — `CartItem.tsx`
 
-Each row is `.v8-cart-item` and carries:
+Each row is `.v8-cart-item` — its own **raised glass tile** (translucent
+white fill `rgba(255,255,255,0.32)` + `--glass-stroke` border + inset top
+highlight, no blur of its own since it's inside the frosted sheet, 14px
+radius, 12px padding, 10px gap between tiles), matching the mockup's
+card-per-line treatment rather than the old borderless hairline rows. Each
+carries:
 
-- **`.v8-cart-item-illus`** — 64×64 parchment-deep tile with an
+- **`.v8-cart-item-illus`** — 64×64 translucent warm-wash tile (so the
+  frosted sheet reads through) with an
   inline hand-sketched glyph per category (pizza, pasta, dessert,
   drinks, coffee, antipasti, panini). Glyphs come from the
   `DishGlyph` helper inside `CartItem.tsx` — pencil-style SVG that
-  matches the V8 mockup's per-item illustrations.
+  matches the menu's `CategoryIllus` + the mockup (e.g. pizza is the round
+  red-dot sketch, not a slice).
 - **`.v8-cart-item-name`** — italic Cormorant 20px espresso. The
   dish name reads like a menu entry, not a UI label.
 - **`.v8-cart-item-price`** — Cormorant 600 tabular ink, line total
@@ -256,7 +275,9 @@ Each row is `.v8-cart-item` and carries:
   (`.v8-cart-item-mod`) listing the line's chosen modifiers ("48h
   sourdough", "Half Diavola +6,00") resolved from
   `menuItem.modifierGroups`. Absent when the line has no modifiers.
-- **`.v8-cart-qty`** — terracotta-tinted pill stepper (`− 1 +`).
+- **`.v8-cart-qty`** — circular stepper: two round terracotta-outlined
+  `−` / `+` buttons flanking the count (`.v8-cart-qty-n`), matching the
+  mockup (replaces the old joined rectangular pill).
   Decrement at 1 removes the line entirely (preserved behaviour). The
   stepper / remove / note all address the line by `cartLineKey` (item
   id + chosen options), so editing one modifier variant never touches
@@ -332,12 +353,12 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
 
 Reskinned to V8 while keeping the audit §2.1 animations:
 
-- **Below threshold:** `.v8-cart-delivery` — italic Cormorant
-  "Consegna a casa — N% verso la gratuità" headline + terracotta
-  rail + the cyclist SVG rides the fill (the rider is positioned
-  with `left: {pct}%`). The fill carries
+- **Below threshold:** `.v8-cart-delivery` — a clean "Free delivery at
+  {threshold} / {remaining} to go" row over a **thin** basil→ochre
+  (green→gold) progress bar (matches the mockup). The fill carries
   `.v8-cart-delivery-shimmer` running the `--animate-delivery-shimmer`
-  keyframe so motion still catches the eye.
+  keyframe so motion still catches the eye. (The old tall-track cyclist +
+  "rider Marco" foot line were dropped to match the mockup.)
 - **At threshold:** `.v8-cart-delivery.is-unlocked` — the celebratory
   card with the gold→basil `.v8-cart-delivery-medallion` and the
   one-shot `--animate-delivery-sweep` overlay. The animations are the
@@ -382,7 +403,7 @@ sommelier rail:
 
 | Element                  | Selector                                                |
 | ------------------------ | ------------------------------------------------------- |
-| 3-up segmented toggle    | `.v8-cart-fulfill` + `.v8-cart-fulfill-btn` (`.is-on`)  |
+| 3-up pill toggle (active = terracotta fill) | `.v8-cart-fulfill` + `.v8-cart-fulfill-btn` (`.is-on`)  |
 | Address / email field    | `.v8-cart-field` + `.v8-cart-field-label` + `.v8-cart-input` |
 | Delivery address autocomplete | `<AddressAutocomplete />` (`src/components/cart/AddressAutocomplete.tsx`) — `.v8-address-ac` wrapper + `.v8-address-ac-list` / `.v8-address-ac-option` (`.is-active`) dropdown. Wraps the same `.v8-cart-input`; suggestions come from `/api/address/autocomplete` (Google Places or OSM Nominatim, key server-side). Field stays free-text. |
 | Phone with +48 prefix    | `.v8-cart-phone` + `.v8-cart-phone-prefix`              |

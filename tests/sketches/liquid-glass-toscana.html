@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>La Pergola Toscana — Liquid Glass</title>
+
+<!--
+  ============================================================================
+  LA PERGOLA TOSCANA · "LIQUID GLASS" THEME MOCKUP
+  ============================================================================
+  A standalone homepage demonstrating an evolution of the old parchment theme
+  into a modern, luxurious "liquid glass" aesthetic — while staying firmly in
+  the Tuscan / Italian / olive / parchment visual category.
+
+  KEY LIQUID-GLASS TECHNIQUES USED (search the CSS for these markers):
+    [LG-1] Warm parchment base + flowing aurora gradients behind glass
+    [LG-2] Glassmorphism: backdrop-filter blur + saturate, translucent fills
+    [LG-3] Dual-edge "refraction" borders (bright top edge, soft inner glow)
+    [LG-4] Specular sheen sweep on hover (light gliding across the glass)
+    [LG-5] Liquid blob morphing (border-radius animation) for organic shapes
+    [LG-6] Caustic light shimmer — slowly drifting radial highlights
+  All colors stay in the warm Tuscan palette: olive greens, terracotta,
+  warm creams, deep burgundies, golden yellows, soft beiges.
+  ============================================================================
+-->
+
+<!-- Premium typography: elegant serif (Cormorant) + clean sans (Inter) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* ===================================================================
+     [LG-1] DESIGN TOKENS — warm Tuscan palette rendered for glass
+     =================================================================== */
+  :root {
+    /* Tuscan earth & harvest */
+    --olive-deep:    #4a5a32;
+    --olive:         #6b7a45;
+    --olive-light:   #97a86a;
+    --terracotta:    #c06a45;
+    --terracotta-lt: #d98a63;
+    --burgundy:      #6e2533;
+    --gold:          #d6a45c;
+    --gold-bright:   #e9c178;
+    --cream:         #f4ead6;
+    --cream-soft:    #efe2c9;
+    --beige:         #e3d3b3;
+    --ink:           #2c281f;     /* warm near-black for text */
+    --ink-soft:      #5a5142;
+
+    /* Glass surfaces — translucent warm whites */
+    --glass-fill:        rgba(247, 239, 222, 0.42);
+    --glass-fill-strong: rgba(247, 239, 222, 0.62);
+    --glass-fill-dark:   rgba(58, 52, 38, 0.30);
+    --glass-stroke:      rgba(255, 250, 238, 0.55);
+    --glass-stroke-soft: rgba(214, 164, 92, 0.30);
+    --glass-shadow:      rgba(60, 44, 24, 0.22);
+
+    --radius:    26px;
+    --radius-lg: 38px;
+    --blur:      22px;
+    --maxw:      1180px;
+    --ease:      cubic-bezier(.22, 1, .36, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--ink);
+    line-height: 1.65;
+    background: var(--cream);
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* -------------------------------------------------------------------
+     [LG-1] PARCHMENT BASE + FLOWING AURORA
+     A fixed background layer: warm parchment grain (via SVG noise data
+     URI) overlaid with large, slowly drifting radial gradients in olive,
+     terracotta and gold. This is the "liquid" colour that you see glowing
+     through every glass panel above it.
+     ------------------------------------------------------------------- */
+  .bg-stage {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(ellipse 60% 50% at 12% 18%, rgba(151,168,106,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 88% 12%, rgba(214,164,92,0.45), transparent 60%),
+      radial-gradient(ellipse 70% 60% at 78% 88%, rgba(192,106,69,0.40), transparent 62%),
+      radial-gradient(ellipse 60% 55% at 20% 95%, rgba(110,37,51,0.28), transparent 60%),
+      linear-gradient(160deg, var(--cream) 0%, var(--cream-soft) 45%, var(--beige) 100%);
+    background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+    animation: aurora 26s ease-in-out infinite alternate;
+  }
+  /* [LG-6] Caustic shimmer + parchment grain layered on top of the aurora */
+  .bg-stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* fine parchment grain via inline SVG fractal noise */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+    opacity: 0.06;
+    mix-blend-mode: multiply;
+  }
+  @keyframes aurora {
+    0%   { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0 0; }
+    50%  { background-position: 30% 40%, 70% 20%, 60% 70%, 20% 80%, 0 0; }
+    100% { background-position: 60% 20%, 40% 60%, 30% 40%, 60% 30%, 0 0; }
+  }
+
+  /* Floating liquid blobs of colour — extra depth behind the glass [LG-5] */
+  .blob {
+    position: fixed;
+    z-index: -1;
+    filter: blur(60px);
+    opacity: 0.5;
+    pointer-events: none;
+    border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+    animation: morph 18s ease-in-out infinite alternate, float 22s ease-in-out infinite alternate;
+  }
+  .blob.b1 { width: 460px; height: 460px; top: -120px; left: -100px;
+             background: radial-gradient(circle at 30% 30%, var(--olive-light), var(--olive-deep)); }
+  .blob.b2 { width: 380px; height: 380px; top: 40%; right: -120px;
+             background: radial-gradient(circle at 40% 40%, var(--gold-bright), var(--terracotta)); animation-delay: -6s; }
+  .blob.b3 { width: 420px; height: 420px; bottom: -140px; left: 30%;
+             background: radial-gradient(circle at 50% 30%, var(--terracotta-lt), var(--burgundy)); animation-delay: -11s; }
+  @keyframes morph {
+    0%   { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+    50%  { border-radius: 60% 40% 33% 67% / 55% 60% 40% 45%; }
+    100% { border-radius: 38% 62% 55% 45% / 63% 35% 65% 37%; }
+  }
+  @keyframes float {
+    0%   { transform: translate(0,0) scale(1); }
+    100% { transform: translate(40px,-30px) scale(1.08); }
+  }
+
+  /* ===================================================================
+     [LG-2] CORE GLASS SURFACE
+     The reusable glassmorphic recipe: translucent warm fill, heavy
+     backdrop blur + saturate (makes the aurora behind it bloom), a soft
+     warm shadow, and a layered border that fakes refraction [LG-3].
+     =================================================================== */
+  .glass {
+    position: relative;
+    background: var(--glass-fill);
+    backdrop-filter: blur(var(--blur)) saturate(165%);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(165%);
+    border: 1px solid var(--glass-stroke);
+    border-radius: var(--radius);
+    box-shadow:
+      0 18px 50px -18px var(--glass-shadow),
+      inset 0 1px 0 rgba(255,255,255,0.65),          /* bright top refraction edge */
+      inset 0 -18px 40px -22px rgba(110,37,51,0.18);  /* soft warm inner glow */
+    overflow: hidden;
+  }
+  /* [LG-3] A second, brighter highlight on the very top edge — light catching glass */
+  .glass::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 8%; right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+    pointer-events: none;
+  }
+
+  /* [LG-4] SPECULAR SHEEN — a diagonal band of light that sweeps across
+     any element with .sheen on hover, mimicking a reflection gliding over
+     real glass. Pure CSS, GPU-friendly transform. */
+  .sheen { position: relative; }
+  .sheen::after {
+    content: "";
+    position: absolute;
+    top: -120%; left: -60%;
+    width: 50%; height: 340%;
+    background: linear-gradient(115deg,
+      transparent 0%,
+      rgba(255,255,255,0.05) 40%,
+      rgba(255,255,255,0.55) 50%,
+      rgba(255,255,255,0.05) 60%,
+      transparent 100%);
+    transform: rotate(8deg) translateX(0);
+    transition: transform 0.9s var(--ease);
+    pointer-events: none;
+  }
+  .sheen:hover::after { transform: rotate(8deg) translateX(420%); }
+
+  /* ===================================================================
+     LAYOUT
+     =================================================================== */
+  .wrap { width: 92%; max-width: var(--maxw); margin: 0 auto; }
+  section { padding: 5.5rem 0; position: relative; }
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--terracotta);
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+  h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; line-height: 1.08; color: var(--ink); }
+  h2 { font-size: clamp(2.3rem, 5vw, 3.6rem); letter-spacing: -0.5px; }
+  .lead { font-size: 1.08rem; color: var(--ink-soft); max-width: 60ch; }
+
+  /* gold gradient text accent for key words */
+  .grad {
+    background: linear-gradient(100deg, var(--terracotta), var(--gold), var(--olive));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* ===================================================================
+     NAVIGATION — a floating glass pill
+     =================================================================== */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    padding: 0.9rem 0;
+    transition: padding 0.4s var(--ease);
+  }
+  header.scrolled { padding: 0.5rem 0; }
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 0.6rem 0.6rem 1.6rem;
+    border-radius: 999px;
+  }
+  .brand { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+  .brand .mark { width: 34px; height: 34px; flex: none; }
+  .brand b { font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 600; color: var(--ink); letter-spacing: 0.3px; }
+  .brand span { display: block; font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--terracotta); margin-top: -2px; }
+  .nav-links { display: flex; align-items: center; gap: 0.4rem; }
+  .nav-links a {
+    text-decoration: none; color: var(--ink-soft); font-size: 0.88rem; font-weight: 500;
+    padding: 0.55rem 1rem; border-radius: 999px; transition: all 0.3s var(--ease);
+  }
+  .nav-links a:hover { color: var(--ink); background: rgba(255,255,255,0.4); }
+
+  /* reusable glass button */
+  .btn {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.9rem;
+    border: none; cursor: pointer; text-decoration: none;
+    padding: 0.8rem 1.6rem; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+  }
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, var(--terracotta), var(--burgundy));
+    box-shadow: 0 10px 26px -10px rgba(110,37,51,0.7), inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 34px -10px rgba(110,37,51,0.8), inset 0 1px 0 rgba(255,255,255,0.45); }
+  .btn-ghost {
+    color: var(--ink);
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-stroke);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .btn-ghost:hover { transform: translateY(-3px); }
+  .menu-toggle { display: none; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+  .menu-toggle svg { width: 26px; height: 26px; stroke: var(--ink); }
+
+  /* ===================================================================
+     HERO
+     =================================================================== */
+  .hero { min-height: 100vh; display: flex; align-items: center; padding-top: 7rem; }
+  .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 3rem; align-items: center; width: 100%; }
+  .hero h1 { font-size: clamp(3.2rem, 8vw, 6rem); letter-spacing: -1.5px; }
+  .hero h1 em { font-style: italic; }
+  .hero .lead { margin: 1.6rem 0 2.4rem; font-size: 1.18rem; }
+  .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .hero-badges { display: flex; gap: 1.4rem; margin-top: 2.6rem; flex-wrap: wrap; }
+  .hero-badges div { font-size: 0.82rem; color: var(--ink-soft); }
+  .hero-badges b { display: block; font-family: 'Cormorant Garamond', serif; font-size: 1.7rem; color: var(--ink); font-weight: 600; }
+
+  /* Hero showcase: a tall glass panel with a liquid olive-branch motif */
+  .hero-card { padding: 2rem; min-height: 460px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; }
+  .hero-card .photo {
+    position: absolute; inset: 0;
+    /* layered warm gradient standing in for a villa-table photograph */
+    background:
+      radial-gradient(circle at 70% 25%, rgba(233,193,120,0.85), transparent 55%),
+      radial-gradient(circle at 25% 80%, rgba(110,37,51,0.7), transparent 55%),
+      linear-gradient(150deg, var(--olive) 0%, var(--olive-deep) 50%, var(--burgundy) 100%);
+  }
+  .hero-card .photo::after { /* caustic shimmer over the "photo" [LG-6] */
+    content:""; position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.25), transparent 45%);
+    animation: pulse 7s ease-in-out infinite alternate;
+  }
+  @keyframes pulse { from { opacity:0.4; transform: scale(1);} to { opacity:0.85; transform: scale(1.15);} }
+  .hero-card .quote {
+    position: relative; z-index: 2;
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-stroke);
+    border-radius: 20px; padding: 1.3rem 1.5rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .hero-card .quote p { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.25rem; color: var(--ink); }
+  .hero-card .quote small { color: var(--terracotta); letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.66rem; font-weight: 600; }
+
+  /* decorative olive branch floating over hero card */
+  .olive-float { position: absolute; z-index: 3; width: 130px; opacity: 0.95; top: -28px; right: -22px;
+                 filter: drop-shadow(0 8px 16px rgba(60,44,24,0.3)); animation: sway 6s ease-in-out infinite alternate; transform-origin: top right; }
+  @keyframes sway { from { transform: rotate(-4deg);} to { transform: rotate(5deg);} }
+
+  /* ===================================================================
+     SECTION HEADERS
+     =================================================================== */
+  .sec-head { max-width: 640px; margin-bottom: 3rem; }
+  .center { text-align: center; margin-left: auto; margin-right: auto; }
+
+  /* ===================================================================
+     ABOUT
+     =================================================================== */
+  .about-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 2.6rem; align-items: center; }
+  .about-visual { position: relative; min-height: 420px; border-radius: var(--radius-lg); overflow: hidden;
+                  background: linear-gradient(160deg, var(--olive-light), var(--olive-deep)); }
+  .about-visual .hills { position:absolute; inset:0; }
+  .about-stat { position: absolute; bottom: 1.4rem; left: 1.4rem; right: 1.4rem; padding: 1.2rem 1.4rem; }
+  .about-stat .row { display:flex; gap:2rem; }
+  .about-stat b { font-family:'Cormorant Garamond',serif; font-size: 2rem; color: var(--ink); display:block; }
+  .about-stat span { font-size: 0.74rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.15em; }
+  .about-text p { color: var(--ink-soft); margin-bottom: 1.1rem; }
+  .pillars { display:flex; gap: 1rem; margin-top: 1.6rem; flex-wrap: wrap; }
+  .pillar { flex:1; min-width: 150px; padding: 1.1rem 1.2rem; }
+  .pillar svg { width: 28px; height: 28px; margin-bottom: 0.5rem; }
+  .pillar h3 { font-size: 1.3rem; }
+  .pillar p { font-size: 0.85rem; margin: 0; }
+
+  /* ===================================================================
+     SIGNATURE DISHES
+     =================================================================== */
+  .dish-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem; }
+  .dish { padding: 0; transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease); }
+  .dish:hover { transform: translateY(-8px); box-shadow: 0 30px 60px -24px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.7); }
+  .dish .top { height: 170px; position: relative; overflow: hidden; }
+  .dish .top .g { position:absolute; inset:0; }
+  .dish.d1 .g { background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--olive) 70%); }
+  .dish.d2 .g { background: radial-gradient(circle at 60% 40%, var(--terracotta-lt), var(--burgundy) 75%); }
+  .dish.d3 .g { background: radial-gradient(circle at 40% 60%, var(--olive-light), var(--olive-deep) 75%); }
+  .dish .price {
+    position: absolute; top: 1rem; right: 1rem; z-index: 2;
+    font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 1.1rem; color: var(--ink);
+    background: var(--glass-fill-strong); backdrop-filter: blur(10px);
+    padding: 0.3rem 0.8rem; border-radius: 999px; border: 1px solid var(--glass-stroke);
+  }
+  .dish .body { padding: 1.4rem 1.5rem 1.7rem; }
+  .dish .tag { font-size: 0.66rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--terracotta); font-weight: 600; }
+  .dish h3 { font-size: 1.65rem; margin: 0.3rem 0 0.5rem; }
+  .dish p { font-size: 0.9rem; color: var(--ink-soft); }
+
+  /* ===================================================================
+     GALLERY / ATMOSPHERE
+     =================================================================== */
+  .gallery { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 150px; gap: 1rem; }
+  .tile { border-radius: 22px; overflow: hidden; position: relative; cursor: pointer; }
+  .tile .g { position:absolute; inset:0; transition: transform 0.7s var(--ease); }
+  .tile:hover .g { transform: scale(1.12); }
+  .tile .cap { position:absolute; left:0; right:0; bottom:0; z-index:2; padding: 0.9rem 1rem;
+               background: linear-gradient(transparent, rgba(44,40,31,0.55)); color: #fff;
+               font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; opacity: 0; transform: translateY(8px); transition: all 0.4s var(--ease); }
+  .tile:hover .cap { opacity: 1; transform: translateY(0); }
+  .tile.t1 { grid-column: span 2; grid-row: span 2; }
+  .tile.t1 .g { background: linear-gradient(150deg, var(--olive), var(--olive-deep)); }
+  .tile.t2 .g { background: linear-gradient(150deg, var(--gold-bright), var(--terracotta)); }
+  .tile.t3 .g { background: linear-gradient(150deg, var(--terracotta-lt), var(--burgundy)); }
+  .tile.t4 { grid-column: span 2; }
+  .tile.t4 .g { background: linear-gradient(150deg, var(--olive-light), var(--olive)); }
+  .tile.t5 .g { background: linear-gradient(150deg, var(--burgundy), var(--ink)); }
+  .tile.t6 .g { background: linear-gradient(150deg, var(--gold), var(--terracotta)); }
+
+  /* ===================================================================
+     RESERVATIONS / CONTACT
+     =================================================================== */
+  .reserve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-radius: var(--radius-lg); overflow: hidden; }
+  .reserve-info { padding: 3rem; position: relative; background: linear-gradient(160deg, var(--olive-deep), var(--burgundy)); color: var(--cream); }
+  .reserve-info h2 { color: var(--cream); }
+  .reserve-info .lead { color: rgba(244,234,214,0.82); }
+  .reserve-info .line { display:flex; align-items:center; gap: 0.8rem; margin-top: 1.1rem; font-size: 0.95rem; color: rgba(244,234,214,0.92); }
+  .reserve-info .line svg { width: 20px; height: 20px; stroke: var(--gold-bright); flex:none; }
+  .reserve-form { padding: 3rem; background: var(--glass-fill-strong); backdrop-filter: blur(var(--blur)); }
+  .field { margin-bottom: 1.1rem; }
+  .field label { display:block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; color: var(--ink-soft); margin-bottom: 0.4rem; }
+  .field input, .field select {
+    width: 100%; font-family: 'Inter', sans-serif; font-size: 0.95rem; color: var(--ink);
+    padding: 0.8rem 1rem; border-radius: 14px;
+    background: rgba(255,255,255,0.45); border: 1px solid var(--glass-stroke);
+    outline: none; transition: border 0.3s, box-shadow 0.3s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--terracotta); box-shadow: 0 0 0 3px rgba(192,106,69,0.18); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  /* ===================================================================
+     FOOTER
+     =================================================================== */
+  footer { padding: 3.5rem 0 2rem; margin-top: 2rem; }
+  .foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 2rem; padding: 2.6rem; }
+  .foot-grid h4 { font-family:'Inter',sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--terracotta); margin-bottom: 1rem; }
+  .foot-grid a { display:block; color: var(--ink-soft); text-decoration: none; font-size: 0.9rem; padding: 0.25rem 0; transition: color 0.3s; }
+  .foot-grid a:hover { color: var(--ink); }
+  .foot-grid p { font-size: 0.9rem; color: var(--ink-soft); }
+  .foot-bottom { display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 1rem;
+                 margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(90,81,66,0.18); font-size: 0.82rem; color: var(--ink-soft); }
+
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ===================================================================
+     RESPONSIVE
+     =================================================================== */
+  @media (max-width: 920px) {
+    .hero-grid, .about-grid, .reserve-grid { grid-template-columns: 1fr; }
+    .dish-grid { grid-template-columns: 1fr 1fr; }
+    .gallery { grid-template-columns: 1fr 1fr; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+    .nav-links { display: none; }
+    .menu-toggle { display: block; }
+    .nav-links.open {
+      display: flex; flex-direction: column; align-items: stretch;
+      position: absolute; top: 80px; left: 4%; right: 4%;
+      padding: 1rem; border-radius: var(--radius);
+      background: var(--glass-fill-strong); backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--glass-stroke); box-shadow: 0 18px 50px -18px var(--glass-shadow);
+    }
+    .reserve-info, .reserve-form { padding: 2rem; }
+  }
+  @media (max-width: 560px) {
+    .dish-grid, .gallery, .foot-grid { grid-template-columns: 1fr; }
+    .tile.t1, .tile.t4 { grid-column: span 1; }
+    .tile.t1 { grid-row: span 1; }
+    section { padding: 4rem 0; }
+    .hero-card { min-height: 360px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- [LG-1/LG-5/LG-6] Living background: parchment + aurora + liquid blobs -->
+<div class="bg-stage"></div>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+
+<!-- ====================== NAVIGATION ====================== -->
+<header id="header">
+  <div class="wrap">
+    <nav class="nav glass sheen">
+      <a class="brand" href="#top">
+        <!-- Olive-sprig logo mark -->
+        <svg class="mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 42C24 30 16 22 8 20c8-2 16 2 16 12" stroke="#6b7a45" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M24 42C24 26 32 18 40 16c-8-2-16 4-16 16" stroke="#6b7a45" stroke-width="2.2" stroke-linecap="round"/>
+          <ellipse cx="11" cy="17" rx="4" ry="2.6" transform="rotate(-30 11 17)" fill="#97a86a"/>
+          <ellipse cx="37" cy="13" rx="4" ry="2.6" transform="rotate(30 37 13)" fill="#4a5a32"/>
+          <circle cx="24" cy="40" r="2.4" fill="#c06a45"/>
+        </svg>
+        <span style="line-height:1.05">
+          <b>La Pergola Toscana</b>
+          <span>Cucina di Toscana</span>
+        </span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="#about">Storia</a>
+        <a href="#dishes">Menu</a>
+        <a href="#gallery">Atmosfera</a>
+        <a href="#reserve">Contatti</a>
+        <a class="btn btn-primary" href="#reserve">Prenota un tavolo</a>
+      </div>
+      <button class="menu-toggle" id="menuToggle" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ====================== HERO ====================== -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="reveal in">
+        <span class="eyebrow">Dal 1962 · Colline del Chianti</span>
+        <h1>Il sapore della <em class="grad">Toscana</em>, servito sotto la pergola.</h1>
+        <p class="lead">Olio nuovo, pasta tirata a mano e ricette di famiglia — l'anima calda della campagna italiana, presentata attraverso un design che scorre come vetro liquido.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#reserve">Prenota la tua serata</a>
+          <a class="btn btn-ghost sheen" href="#dishes">Scopri il menu →</a>
+        </div>
+        <div class="hero-badges">
+          <div><b>★ 4.9</b>1.200+ recensioni</div>
+          <div><b>62</b>anni di tradizione</div>
+          <div><b>100%</b>olio EVO toscano</div>
+        </div>
+      </div>
+
+      <!-- Hero showcase card -->
+      <div class="reveal in" style="position:relative;">
+        <!-- Floating olive branch accent -->
+        <svg class="olive-float" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M60 110C60 70 80 45 110 35" stroke="#6b7a45" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#97a86a">
+            <ellipse cx="98" cy="40" rx="9" ry="5" transform="rotate(28 98 40)"/>
+            <ellipse cx="84" cy="52" rx="9" ry="5" transform="rotate(28 84 52)"/>
+            <ellipse cx="72" cy="66" rx="9" ry="5" transform="rotate(28 72 66)"/>
+            <ellipse cx="64" cy="82" rx="8" ry="4.5" transform="rotate(28 64 82)"/>
+          </g>
+          <g fill="#4a5a32">
+            <ellipse cx="106" cy="52" rx="8" ry="4.5" transform="rotate(-18 106 52)"/>
+            <ellipse cx="92" cy="64" rx="8" ry="4.5" transform="rotate(-18 92 64)"/>
+            <ellipse cx="80" cy="78" rx="7" ry="4" transform="rotate(-18 80 78)"/>
+          </g>
+          <circle cx="103" cy="34" r="5" fill="#c06a45"/>
+          <circle cx="88" cy="46" r="4.5" fill="#6e2533"/>
+        </svg>
+
+        <div class="hero-card glass sheen">
+          <div class="photo"></div>
+          <div class="quote">
+            <small>La specialità della casa</small>
+            <p>"Pici cacio e pepe, mantecati al momento — semplici, come vuole la Toscana."</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== ABOUT / STORIA ====================== -->
+<section id="about">
+  <div class="wrap">
+    <div class="about-grid">
+      <div class="about-visual reveal">
+        <!-- Stylised Tuscan hills + cypress + sun, all in palette -->
+        <svg class="hills" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#e9c178"/><stop offset="1" stop-color="#d98a63"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="420" fill="url(#sky)"/>
+          <circle cx="300" cy="110" r="46" fill="#f4ead6" opacity="0.85"/>
+          <path d="M0 250 Q120 200 240 240 T400 230 V420 H0Z" fill="#97a86a"/>
+          <path d="M0 300 Q140 250 260 300 T400 290 V420 H0Z" fill="#6b7a45"/>
+          <path d="M0 350 Q160 310 300 355 T400 350 V420 H0Z" fill="#4a5a32"/>
+          <!-- cypress trees -->
+          <g fill="#3a4a2a">
+            <ellipse cx="70" cy="270" rx="10" ry="34"/>
+            <ellipse cx="96" cy="278" rx="8" ry="26"/>
+            <ellipse cx="330" cy="300" rx="11" ry="38"/>
+          </g>
+          <!-- villa -->
+          <g>
+            <rect x="170" y="276" width="60" height="44" fill="#e3d3b3"/>
+            <path d="M165 276 L200 256 L235 276Z" fill="#c06a45"/>
+            <rect x="186" y="294" width="12" height="26" fill="#6e2533"/>
+          </g>
+        </svg>
+        <div class="about-stat glass">
+          <div class="row">
+            <div><b>3</b><span>Generazioni</span></div>
+            <div><b>40+</b><span>Cantine partner</span></div>
+            <div><b>1</b><span>Frantoio di famiglia</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-text reveal">
+        <span class="eyebrow">La nostra storia</span>
+        <h2>Una <span class="grad">pergola</span>, una famiglia, sei decenni di cucina toscana.</h2>
+        <p>Nata tra gli ulivi delle colline del Chianti, La Pergola Toscana nasce dal frantoio di nonna Lucia. Ancora oggi pressiamo il nostro olio extravergine e tiriamo la pasta a mano ogni mattina.</p>
+        <p>La nostra nuova veste "vetro liquido" riflette la stessa filosofia: trasparenza, calore e materia genuina — l'eleganza moderna che lascia intravedere l'anima rustica.</p>
+        <div class="pillars">
+          <div class="pillar glass sheen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6b7a45" stroke-width="1.8" stroke-linecap="round"><path d="M12 22C12 14 7 10 3 9c4-1 9 1 9 7"/><path d="M12 22C12 12 17 8 21 7c-4-1-9 2-9 8"/></svg>
+            <h3>Olio EVO</h3>
+            <p>Spremuto a freddo dal nostro uliveto.</p>
+          </div>
+          <div class="pillar glass sheen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c06a45" stroke-width="1.8" stroke-linecap="round"><path d="M5 12c0-5 3-8 7-8s7 3 7 8-3 8-7 8"/><path d="M12 4v16"/></svg>
+            <h3>Pasta a mano</h3>
+            <p>Pici e pappardelle tirati ogni giorno.</p>
+          </div>
+          <div class="pillar glass sheen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6e2533" stroke-width="1.8" stroke-linecap="round"><path d="M7 21V10M7 10l-2-4M7 10l2-4"/><path d="M17 21v-7a4 4 0 0 0-4-4"/></svg>
+            <h3>Vini del Chianti</h3>
+            <p>Carta di 40 cantine selezionate.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SIGNATURE DISHES ====================== -->
+<section id="dishes">
+  <div class="wrap">
+    <div class="sec-head center reveal">
+      <span class="eyebrow">I nostri piatti</span>
+      <h2>Specialità della <span class="grad">casa</span></h2>
+      <p class="lead center" style="margin-top:0.6rem">Sapori toscani autentici, impiattati con la cura di un atelier moderno.</p>
+    </div>
+
+    <div class="dish-grid">
+      <article class="dish glass sheen reveal d1">
+        <div class="top"><div class="g"></div><span class="price">€18</span></div>
+        <div class="body">
+          <span class="tag">Antipasto · Olio nuovo</span>
+          <h3>Bruschetta al Frantoio</h3>
+          <p>Pane toscano, olio EVO appena spremuto, pomodoro del orto e basilico.</p>
+        </div>
+      </article>
+
+      <article class="dish glass sheen reveal d2">
+        <div class="top"><div class="g"></div><span class="price">€24</span></div>
+        <div class="body">
+          <span class="tag">Primo · Fatto a mano</span>
+          <h3>Pici Cacio e Pepe</h3>
+          <p>Pasta tirata a mano, pecorino di Pienza e pepe nero mantecati al momento.</p>
+        </div>
+      </article>
+
+      <article class="dish glass sheen reveal d3">
+        <div class="top"><div class="g"></div><span class="price">€32</span></div>
+        <div class="body">
+          <span class="tag">Secondo · Alla brace</span>
+          <h3>Tagliata di Chianina</h3>
+          <p>Manzo toscano, rucola, scaglie di pecorino e un filo d'olio del Chianti.</p>
+        </div>
+      </article>
+
+      <article class="dish glass sheen reveal d2">
+        <div class="top"><div class="g"></div><span class="price">€22</span></div>
+        <div class="body">
+          <span class="tag">Primo · Tartufo</span>
+          <h3>Pappardelle al Cinghiale</h3>
+          <p>Ragù di cinghiale del Chianti, sfumato al vino rosso e bacche di ginepro.</p>
+        </div>
+      </article>
+
+      <article class="dish glass sheen reveal d1">
+        <div class="top"><div class="g"></div><span class="price">€16</span></div>
+        <div class="body">
+          <span class="tag">Olive · Aperitivo</span>
+          <h3>Olive Taggiasche &amp; Burrata</h3>
+          <p>Olive in salamoia, burrata cremosa e crostini all'olio extravergine.</p>
+        </div>
+      </article>
+
+      <article class="dish glass sheen reveal d3">
+        <div class="top"><div class="g"></div><span class="price">€12</span></div>
+        <div class="body">
+          <span class="tag">Dolce · Della nonna</span>
+          <h3>Cantucci &amp; Vin Santo</h3>
+          <p>Biscotti alle mandorle, da intingere nel Vin Santo del Chianti.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== GALLERY / ATMOSFERA ====================== -->
+<section id="gallery">
+  <div class="wrap">
+    <div class="sec-head center reveal">
+      <span class="eyebrow">Atmosfera</span>
+      <h2>Una sera sotto la <span class="grad">pergola</span></h2>
+    </div>
+    <div class="gallery reveal">
+      <div class="tile t1"><div class="g"></div><div class="cap">Il pergolato al tramonto</div></div>
+      <div class="tile t2"><div class="g"></div><div class="cap">L'orto degli ulivi</div></div>
+      <div class="tile t3"><div class="g"></div><div class="cap">La cantina del Chianti</div></div>
+      <div class="tile t4"><div class="g"></div><div class="cap">La tavola di famiglia</div></div>
+      <div class="tile t5"><div class="g"></div><div class="cap">Sera tra le candele</div></div>
+      <div class="tile t6"><div class="g"></div><div class="cap">Il frantoio</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== RESERVATIONS / CONTACT ====================== -->
+<section id="reserve">
+  <div class="wrap">
+    <div class="reserve-grid glass reveal">
+      <div class="reserve-info">
+        <span class="eyebrow" style="color:var(--gold-bright)">Prenotazioni</span>
+        <h2>Riserva il tuo<br/>posto a tavola</h2>
+        <p class="lead">Vi accogliamo sette giorni su sette. Per gruppi e cene private, contattateci direttamente.</p>
+        <div class="line"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 3 1.6h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L7 9.1a16 16 0 0 0 6 6l1.1-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6A2 2 0 0 1 21 16.5z"/></svg> +39 055 123 4567</div>
+        <div class="line"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Via degli Ulivi 12, Greve in Chianti</div>
+        <div class="line"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Mar–Dom · 12:00–15:00, 19:00–23:00</div>
+      </div>
+      <form class="reserve-form" onsubmit="return false;">
+        <div class="field">
+          <label for="nm">Nome e cognome</label>
+          <input id="nm" type="text" placeholder="Es. Giulia Rossi" />
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="dt">Data</label>
+            <input id="dt" type="date" />
+          </div>
+          <div class="field">
+            <label for="pp">Coperti</label>
+            <select id="pp">
+              <option>2 persone</option><option>3 persone</option>
+              <option>4 persone</option><option>5+ persone</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="tm">Orario</label>
+            <input id="tm" type="time" value="19:30" />
+          </div>
+          <div class="field">
+            <label for="ph">Telefono</label>
+            <input id="ph" type="tel" placeholder="+39 ..." />
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem">Conferma prenotazione</button>
+        <p style="font-size:0.74rem;color:var(--ink-soft);text-align:center;margin-top:0.8rem">Riceverai conferma via SMS — nessuna registrazione richiesta.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FOOTER ====================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid glass">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:1rem">
+          <svg class="mark" viewBox="0 0 48 48" fill="none"><path d="M24 42C24 30 16 22 8 20c8-2 16 2 16 12" stroke="#6b7a45" stroke-width="2.2" stroke-linecap="round"/><path d="M24 42C24 26 32 18 40 16c-8-2-16 4-16 16" stroke="#6b7a45" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="11" cy="17" rx="4" ry="2.6" transform="rotate(-30 11 17)" fill="#97a86a"/><ellipse cx="37" cy="13" rx="4" ry="2.6" transform="rotate(30 37 13)" fill="#4a5a32"/><circle cx="24" cy="40" r="2.4" fill="#c06a45"/></svg>
+          <span style="line-height:1.05"><b>La Pergola Toscana</b><span>Cucina di Toscana</span></span>
+        </a>
+        <p>L'anima calda della campagna toscana, in un design di vetro liquido.</p>
+      </div>
+      <div>
+        <h4>Navigazione</h4>
+        <a href="#about">La nostra storia</a>
+        <a href="#dishes">Menu</a>
+        <a href="#gallery">Atmosfera</a>
+        <a href="#reserve">Prenotazioni</a>
+      </div>
+      <div>
+        <h4>Contatti</h4>
+        <a href="tel:+390551234567">+39 055 123 4567</a>
+        <a href="#">Via degli Ulivi 12</a>
+        <a href="#">Greve in Chianti (FI)</a>
+        <a href="mailto:ciao@pergolatoscana.it">ciao@pergolatoscana.it</a>
+      </div>
+      <div>
+        <h4>Seguici</h4>
+        <a href="#">Instagram</a>
+        <a href="#">Facebook</a>
+        <a href="#">Newsletter</a>
+      </div>
+    </div>
+    <div class="wrap foot-bottom">
+      <span>© 2026 La Pergola Toscana — Greve in Chianti. Tutti i diritti riservati.</span>
+      <span>Fatto con olio, vino &amp; vetro liquido.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ---- Minimal vanilla JS: only enhances, never required for layout ---- */
+
+  // 1) Sticky-nav shrink on scroll
+  const header = document.getElementById('header');
+  addEventListener('scroll', () => header.classList.toggle('scrolled', scrollY > 30), { passive: true });
+
+  // 2) Mobile menu toggle
+  const toggle = document.getElementById('menuToggle');
+  const links  = document.getElementById('navLinks');
+  toggle.addEventListener('click', () => links.classList.toggle('open'));
+  links.querySelectorAll('a').forEach(a => a.addEventListener('click', () => links.classList.remove('open')));
+
+  // 3) Reveal-on-scroll (IntersectionObserver) — adds the liquid "rise" in
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // 4) [LG] Pointer-reactive parallax on the liquid blobs — the colour
+  //    pools behind the glass drift toward the cursor, reinforcing the
+  //    sense of a fluid surface you can almost touch.
+  const blobs = document.querySelectorAll('.blob');
+  addEventListener('pointermove', (ev) => {
+    const cx = (ev.clientX / innerWidth  - 0.5);
+    const cy = (ev.clientY / innerHeight - 0.5);
+    blobs.forEach((b, i) => {
+      const depth = (i + 1) * 14;
+      b.style.translate = `${cx * depth}px ${cy * depth}px`;
+    });
+  }, { passive: true });
+</script>
+</body>
+</html>

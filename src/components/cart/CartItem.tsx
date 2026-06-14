@@ -176,12 +176,14 @@ function DishGlyph({ category, name }: { category: string; name: string }) {
   if (c.includes("pizza") || n.includes("pizza") || n.includes("margherita") || n.includes("diavola")) {
     return (
       <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-        <path d="M6 32 L21 6 L36 32 Z" fill="#C9A23E" fillOpacity="0.18" stroke="#B85C38" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M6 32 L36 32" stroke="#7A2B2B" strokeWidth="1.5" />
-        <circle cx="16" cy="24" r="2" fill="#7A2B2B" />
-        <circle cx="25" cy="20" r="2" fill="#7A2B2B" />
-        <circle cx="21" cy="27" r="2" fill="#7A2B2B" />
-        <circle cx="19" cy="16" r="1.5" fill="#4A7C59" />
+        {/* Round pizza — matches the menu's CategoryIllus + the mockup. */}
+        <circle cx="21" cy="21" r="15" fill="#C9A23E" fillOpacity="0.18" stroke="#B85C38" strokeWidth="1.5" />
+        <circle cx="21" cy="21" r="12" stroke="#7A2B2B" strokeWidth="1" fill="none" opacity="0.5" />
+        <circle cx="16" cy="18" r="2.4" fill="#CD212A" fillOpacity="0.7" />
+        <circle cx="26" cy="19" r="2.4" fill="#CD212A" fillOpacity="0.7" />
+        <circle cx="20" cy="26" r="2.4" fill="#CD212A" fillOpacity="0.7" />
+        <path d="M14 23 C 15.5 21.5, 17 23, 17 24.5" stroke="#4A7C59" strokeWidth="1.2" fill="#4A7C59" fillOpacity="0.4" />
+        <path d="M25 15 C 26.5 13.5, 28 15, 28 16.5" stroke="#4A7C59" strokeWidth="1.2" fill="#4A7C59" fillOpacity="0.4" />
       </svg>
     );
   }

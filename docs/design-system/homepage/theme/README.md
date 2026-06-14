@@ -12,9 +12,11 @@ token change must leave Core and Admin visually unchanged.
   for `@theme` blocks reachable from the entry CSS's `@import` chain.
   Edit the `bg-italia-*` / `text-italia-*` source-of-truth here.
 - **Custom CSS:** `src/app/themes/homepage/index.css` — `.pub-*` form
-  elements, `body { ... }` styling, the `delivery-*` keyframes.
-  JS-imported by `src/app/(public)/layout.tsx` and route-scoped (does
-  not ship on admin / kitchen / franchisee routes).
+  elements, the liquid-glass material (`--glass-*` vars, the `body::before`
+  aurora + `v8-aurora` keyframe, the `.v8-surface` / `.v8-sheen` primitives
+  + the `@supports` fallback), `html` / `body` canvas styling, the
+  `delivery-*` keyframes. JS-imported by `src/app/(public)/layout.tsx` and
+  route-scoped (does not ship on admin / kitchen / franchisee routes).
 - **JS-side token mirror:** `src/app/themes/homepage/theme.ts` exports
   the same values as typed constants. No JS consumers today; future
   Recharts / canvas / inline-SVG code on the storefront imports from
@@ -44,7 +46,8 @@ token change must leave Core and Admin visually unchanged.
 - [`philosophy.md`](./philosophy.md) — Homepage's operating principle: hospitality outranks density; beauty earns its keep.
 - [`color.md`](./color.md) — V8 Tuscany palette: parchment canvas, oxblood-as-brand vs flag-red, terracotta warm-action layer, ochre as editorial accent, basil for status. Italia-\* aliases remapped + new V8-named tokens (`parchment`, `terracotta`, `basil`, `oxblood`, `ochre`, `espresso`).
 - [`typography.md`](./typography.md) — Cormorant Garamond (display, brand voice) + Lora (workhorse) + JetBrains Mono (codes); 15–16px body default; sentence case headings; price callout rules.
-- [`material.md`](./material.md) — cream/white elevation alternation; the single brand-tinted shadow (FloatingCartButton); spring physics allowed on one-shot celebrations; 12/16/24px radius ladder; generous padding rhythm.
+- [`material.md`](./material.md) — the warm liquid-glass material: the `body::before` aurora canvas; the `.v8-surface` elevation (blur + refraction edge + warm shadow) with its `@supports` / reduced-motion fallback; rationed brand-tinted shadows; spring physics on one-shot celebrations; 12–18/24px radius ladder; generous padding rhythm.
+- [`extend.md`](./extend.md) — how to add a colour token, a glass surface, an animation, a page, or an icon without drifting — the canonical "edit one file, mirror it, document it" contract.
 - [`components.md`](./components.md) — `.pub-*` form primitives; shared `<Button>` / `<Sheet>` / `<Container>` / `<StarRating>` / `<NavDropdown>` (the collapsible primitive both nav switchers share) / `<LanguageSwitcher>` / `<CurrencySwitcher>`; the `<SurveyPrompt />` Pulse micro-survey (NPS) + its trigger engine (`.v8-pulse-*`); landing sections; item card; `<CartDrawer>` and `<FloatingCartButton>`; `<DeliveryProgress>`; the `/rewards` chrome (`.v8-rewards-*`); `<OrderTracker>`.
 
 ## Authority

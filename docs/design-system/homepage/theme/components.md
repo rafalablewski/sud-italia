@@ -6,6 +6,36 @@ The primitive vocabulary the storefront composes from. Same rule as
 the other themes: **don't add casually**. Every Homepage primitive
 lands on a brand surface where the guest is judging the operation.
 
+## Liquid-glass surface — `.v8-surface` / `.v8-sheen`
+
+The material primitive every panel opts into — a translucent parchment
+surface over the body aurora. CSS-only (no component), declared in
+`themes/homepage/index.css`.
+
+- **`.v8-surface`** — `--glass-fill` (parchment @50%) + `backdrop-filter:
+  blur(--glass-blur) saturate(--glass-saturate)` + `--glass-stroke` border +
+  a refraction top-edge highlight (`::before`) + the warm `--glass-shadow`
+  drop. This is the storefront's elevation; a panel reads as raised because
+  the aurora blooms through it, not because of a tone gap.
+- **`.v8-surface-strong`** — higher-opacity fill (`--glass-fill-strong`) for
+  drawers + sticky foot bars where dense copy needs more backing.
+- **`.v8-surface-dark`** — espresso-tinted glass (`--glass-fill-dark`) with
+  parchment text, for the loyalty / Soci surfaces that were solid blocks.
+- **`.v8-sheen`** — opt-in specular sweep on hover (a diagonal light band
+  glides across). Needs `position` + `overflow: hidden`, both of which
+  `.v8-surface` provides.
+
+Two fallbacks are mandatory and ship with the primitive (see
+[`material.md`](./material.md) rule #3): an `@supports not (backdrop-filter)`
+opaque-parchment path, and the global `prefers-reduced-motion` freeze of the
+aurora + sheen. To add a new glass surface, follow
+[`extend.md`](./extend.md) → "Add a glass surface" — reach for `.v8-surface`,
+point any custom card rule at the `--glass-*` vars, and never hand-roll a
+one-off translucent fill.
+
+Live code: the `.v8-surface` / `.v8-sheen` block + the `--glass-*` vars +
+`body::before` aurora in `src/app/themes/homepage/index.css`.
+
 ## Operator-controlled visibility — `<LayoutGate />`
 
 `src/components/layout/LayoutGate.tsx`. The client wrapper that lets
@@ -248,9 +278,11 @@ under the `.v8-*` selectors in `themes/homepage/index.css`.
 
 The V8 Trattoria top nav.
 
-- **Sticky parchment-gradient bar** (`linear-gradient(180deg, rgba(248,
-  239,222,0.98), rgba(248,239,222,0.88))` + 8px backdrop blur), line-soft
-  hairline border-bottom. Adds a subtle warm-brown drop shadow once the
+- **Sticky frosted-glass bar** (translucent parchment gradient
+  `rgba(248,239,222,0.72→0.55)` + the chrome backdrop blur, so content
+  frosts as it scrolls under), `--glass-stroke` hairline border-bottom;
+  falls back to the opaque parchment bar without backdrop-filter. Adds a
+  subtle warm-brown drop shadow once the
   page is scrolled (`.v8-nav-scrolled`). Measured at **98px tall** at
   ≥md (basil-mark 38px + wordmark 24px + italic sublabel 11.5px +
   vertical padding). `--v8-nav-height` (in `themes/homepage/index.css`)
@@ -348,9 +380,10 @@ rounded-2xl chrome to the V8 paper-and-ink treatment so it reads as
 part of the page, not a third-party drop-in. Mounted in
 `(public)/layout.tsx` via `<LayoutGate flag="showChatWidget">`.
 
-- **FAB closed state** (`.v8-chat-fab`) — 56px paper circle,
-  parchment-cream gradient ground, line-soft border, paper shadow,
-  hand-drawn speech-bubble icon (three dots inside the bubble) in
+- **FAB closed state** (`.v8-chat-fab`) — 56px frosted-glass circle
+  (`--glass-fill-strong` + chrome blur + `--glass-stroke`; falls back to the
+  parchment-cream gradient), hand-drawn speech-bubble icon (three dots
+  inside the bubble) in
   oxblood stroke. A pulsing basil "available" dot
   (`.v8-chat-fab-dot`) at the top-right corner — same kicker dot
   pattern the homepage hero + the chat-header sub use. Hover flips
@@ -359,8 +392,9 @@ part of the page, not a third-party drop-in. Mounted in
   (chat = hospitality / personal voice) instead of terracotta
   (order action). Sits at `bottom: 92px` (above the
   FloatingCartButton's `bottom: 22px` corner).
-- **Chat sheet open state** (`.v8-chat-sheet`) — 360px paper
-  card, parchment-deep gradient, 18px radius, 22/48px warm-brown
+- **Chat sheet open state** (`.v8-chat-sheet`) — 360px frosted-glass
+  card (`--glass-fill-strong` + backdrop blur + `--glass-stroke`; falls back
+  to the parchment-deep gradient), 18px radius, 22/48px warm-brown
   drop shadow, scale-in entrance animation. Capped at `min(560px,
   78vh)` so it never overruns the viewport. Hides under
   `body.v8-cart-open` so the cart drawer owns the bottom-right
@@ -394,9 +428,10 @@ part of the page, not a third-party drop-in. Mounted in
 
 ### `<Footer />` — `src/components/layout/Footer.tsx`
 
-V8 Trattoria footer — espresso canvas that picks up the Soci rail's
-palette so the Soci → Footer transition reads as one continuous
-dark block instead of a dark → light jolt. Mounted on every
+V8 Trattoria footer — dark frosted glass (`--glass-fill-dark`, espresso
+@86% + chrome blur; falls back to solid espresso) that shares the dark-glass
+fill with the Soci rail + rewards tier, so the Soci → Footer transition reads
+as one continuous dark-glass block instead of a dark → light jolt. Mounted on every
 storefront route via `(public)/layout.tsx`. **Async server
 component** — reads `AppSettings` via `getSettings()` on each
 render so operator edits surface without a redeploy.
@@ -480,7 +515,7 @@ The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#her
 ### `<LocationsGrid />`
 
 V8 Trattoria — `.v8-ps.v8-ps-alt` section with a 1 → 2-column grid
-of paper cards. Full layout spec in
+of liquid-glass cards. Full layout spec in
 [`../pages/home.md`](../pages/home.md#locations-grid--locationsgrid).
 
 - **Layout:** `.v8-ps.v8-ps-alt` (warm-paper section primitive) wrapping
@@ -557,7 +592,7 @@ typographic gesture, not a content block.
 
 ### `<BundlesShowcase />`
 
-V8 Trattoria — four paper cards in the wider `.v8-bundles-section`
+V8 Trattoria — four liquid-glass cards in the wider `.v8-bundles-section`
 (breaks out to 1500px max, leaves a parchment gutter at the iframe
 edges). Layout spec in
 [`../pages/home.md`](../pages/home.md#bundles-showcase--bundlesshowcase).
@@ -677,8 +712,8 @@ V8 Trattoria treatment — full spec in
 - **Composes against `.v8-loc-hero`** (a bespoke wrapper, not
   `.v8-ps` — the location hero predates the menu chrome by one
   block of vertical rhythm and uses its own padding ramp).
-  Parchment canvas with a soft fade to parchment-deep + line-soft
-  hairline border-bottom.
+  Translucent veil over the aurora (fade to ~30% parchment-deep, no
+  opaque base) + `--glass-stroke` hairline border-bottom.
 - **Per-slug pen-sketch illustration** at 360×180 — wider + more
   detailed than the LocationsGrid 220×140 card sketches. Add a
   function-per-slug + a switch in `LocationHeroIllus` to introduce
@@ -711,9 +746,10 @@ speed-guarantee banner, inline combo deals row, surprise-me pill,
 and the items grid. Full layout spec in
 [`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
 
-- **Single paper-band wrapper** — `.v8-menu-card` (parchment-deep
-  with the shared `shadow-paper`, full-bleed: no `max-width`, no
-  border, no border-radius). The whole menu surface is one
+- **Single translucent-veil wrapper** — `.v8-menu-card` (a soft
+  translucent parchment with the shared `shadow-paper`, **no
+  backdrop-filter** so the item cards' blur isn't doubled; full-bleed: no
+  `max-width`, no border, no border-radius). The whole menu surface is one
   continuous V8 band across the viewport instead of the pre-V8
   per-category sections, or the framed-rectangle "card" the earlier
   V8 build shipped (rounded radius + 1180px max-width + line-soft
@@ -761,12 +797,17 @@ state, justAdded post-add feedback, detail-drawer trigger,
 popularThisWeek flag, badges from `lib/upsell` (role + admin), LTO
 countdown, compliance pills — only the markup changed.
 
-- **Paper card** (`.v8-mi`) — parchment gradient, line border, 14px
-  radius, paper-card shadow. Hover lifts 3px with a deeper
-  warm-brown drop. `.is-unavailable` → 0.55 opacity + slight
-  greyscale, no hover lift. `.is-incart` → basil border + soft basil
-  ring so the visitor can see at a glance which items are already in
-  the cart.
+- **Glass card** (`.v8-mi`) — translucent parchment (`--glass-fill`) over
+  the aurora, `--glass-stroke` border, 14px radius, `--glass-shadow` drop.
+  Uses the **capped 14px blur** (`--glass-blur-chrome`) since the grid can
+  run 20–40 cards; the wrapping `.v8-menu-card` carries no blur so the
+  layer is frosted once. **Perf guard:** on `≤768px` (touch / mid-tier
+  mobile GPUs) the per-card `backdrop-filter` is dropped entirely for a
+  near-opaque parchment fill — desktop keeps the frosted card. Hover lifts
+  4px with a deeper drop.
+  `.is-unavailable` → 0.55 opacity + slight greyscale, no hover lift.
+  `.is-incart` → basil border + soft basil ring. Falls back to the opaque
+  parchment card under `@supports not (backdrop-filter)`.
 
 - **Floating flag ribbon** (`.v8-mi-flags` at top:-10px left:16px) —
   bilingual italic-Cormorant uppercase pills that sit slightly above
@@ -914,9 +955,11 @@ rail.
 The V8 "Il tuo carrello" floating pill — bottom-right on every
 storefront route.
 
-- `.v8-float-cart` parchment-cream pill with the bag SVG +
-  "Cart · il tuo carrello" italic bilingual label + a
-  `.v8-float-cart-count` terracotta count badge inside. On hover the
+- `.v8-float-cart` frosted-glass pill (`--glass-fill-strong` + chrome
+  backdrop blur + `--glass-stroke` border, keeping its branded oxblood
+  shadow) with the bag SVG + "Cart · il tuo carrello" italic bilingual
+  label + a `.v8-float-cart-count` terracotta count badge inside; falls
+  back to the parchment-cream pill without backdrop-filter. On hover the
   whole pill flips to terracotta fill + parchment text + parchment
   count badge.
 - `data-bump="true"` toggles for ~360ms whenever the cart count
@@ -964,10 +1007,11 @@ V8 per-dish info drawer that opens from the "Details · dettagli"
 button on each menu card.
 
 - Builds its own portalled sheet under `.v8-detail-*` (mirrors the
-  cart drawer vocabulary so the menu → detail → cart flow reads as
-  one editorial spread). The selectors stay namespaced under
-  `.v8-detail-*` so the detail styling can't leak into the cart's
-  `.v8-cart-*` family.
+  cart drawer vocabulary — including the **frosted-glass** panel
+  treatment — so the menu → detail → cart flow reads as one editorial
+  spread; falls back to opaque parchment without backdrop-filter). The
+  selectors stay namespaced under `.v8-detail-*` so the detail styling
+  can't leak into the cart's `.v8-cart-*` family.
 - Sheet sizes to 92vh on mobile (slightly slimmer than the cart
   drawer's 96vh — the detail surface is less info-dense, so the
   underlying menu stays visible past the top) and the same
@@ -1059,12 +1103,14 @@ that drops 35 portalled drawers + 35 useEffect chains from the DOM.
 
 V8 free-delivery shimmer-sweep-unlock micro-flow.
 
-- Below threshold: `.v8-cart-delivery` italic Cormorant
-  "Consegna a casa — N% verso la gratuità" headline +
-  `.v8-cart-delivery-rail` terracotta rail + `.v8-cart-delivery-fill`
-  terracotta gradient + `.v8-cart-delivery-shimmer` running
-  `--animate-delivery-shimmer` + `.v8-cart-cyclist` SVG that rides
-  the fill (`left: {pct}%`).
+- Below threshold: `.v8-cart-delivery` clean "Free delivery at
+  {threshold} / {remaining} to go" row over a **thin** (8px track)
+  `.v8-cart-delivery-rail` neutral rail + `.v8-cart-delivery-fill`
+  basil→ochre (green→gold) gradient on a basil-tinted box (matches the
+  mockup — green reads as "go") + `.v8-cart-delivery-shimmer` running
+  `--animate-delivery-shimmer`. (The earlier tall-track cyclist `.v8-cart-cyclist`
+  + the "rider Marco" foot line were dropped to match the mockup's clean
+  bar; the `.v8-cart-cyclist` style is now unused.)
 - At threshold: `.v8-cart-delivery.is-unlocked` gold→basil-tinted
   card + `.v8-cart-delivery-medallion` with the gold-to-basil radial
   + the one-shot `.v8-cart-delivery-sweep` overlay. Uses the same
@@ -1488,7 +1534,9 @@ goes idle with items in their cart. Lives at the layout level (Step
 11+ single-mount) and reads from `useCartStore.items` to decide
 whether to schedule the timer.
 
-- `.v8-abandoned` — fixed top-center paper card, sized
+- `.v8-abandoned` — fixed top-center frosted-glass card
+  (`--glass-fill-strong` + chrome blur + `--glass-stroke`; falls back to
+  opaque parchment), sized
   `min(440px, 100% - 32px)`. Slides in via the dedicated
   `v8-abandoned-slide` keyframe (opacity + 16px translate-y over
   400ms cubic-bezier). Anchored under the sticky nav at

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sud Italia — Parchment → Liquid Glass · Before / After</title>
+<!--
+  ============================================================================
+  SUD ITALIA STOREFRONT · "PARCHMENT → LIQUID GLASS" REMAKE · STANDALONE
+  ============================================================================
+  This is NOT a fictional restaurant — it's a faithful remake of OUR actual
+  V8 Tuscany homepage (src/components/landing/*). Same copy, same ornaments,
+  same hand-drawn pen-sketches (Kraków wood-fired oven, Warszawa Vespa), same
+  tricolore, same "Risen for 36 hours" Famiglia quote, same Tuscany tokens.
+
+  Three stacked 1:1 comparisons — drag each handle to wipe between:
+      LEFT  = the live parchment design (faithful reproduction)
+      RIGHT = the same thing, re-rendered in liquid glass
+  Sections: HERO · LOCATIONS (Kraków + Warszawa) · FAMIGLIA quote.
+
+  Tokens are the real ones from themes/homepage/tokens.css. Fonts match the
+  live stacks: Cormorant Garamond (heading) + Lora (body).
+
+  LIQUID-GLASS TECHNIQUES (grep the CSS):
+    [LG-1] Parchment base + flowing Tuscan aurora behind the glass
+    [LG-2] Glassmorphism: backdrop-filter blur + saturate, translucent fills
+    [LG-3] Dual-edge refraction borders (bright top edge + warm inner glow)
+    [LG-4] Specular sheen sweep on hover
+    [LG-5] Liquid blob morphing (animated border-radius / float)
+    [LG-6] Caustic light shimmer over the pen-sketch canvases
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ===== REAL Sud Italia V8 Tuscany tokens (themes/homepage/tokens.css) ===== */
+  :root{
+    --parchment:#F8EFDE; --parchment-deep:#F2E2C2; --paper-shadow:#E8D6B5;
+    --terracotta:#B85C38; --terracotta-dark:#9A4A2B; --terracotta-soft:#D88E6E;
+    --basil:#4A7C59; --basil-deep:#355C40;
+    --oxblood:#7A2B2B; --oxblood-soft:#A85252;
+    --ochre:#C9A23E; --ochre-light:#E6C97A;
+    --espresso:#3D2817; --espresso-soft:#6B4A30;
+    --ink:#2C1810; --muted:#8C6F4F; --line:#C9B48E; --line-soft:#E0CFA8;
+    --italy-green:#008C45; --italy-white:#F4F5F0; --italy-red:#CD212A;
+    --font-heading:'Cormorant Garamond',Georgia,serif;
+    --font-body:'Lora',Georgia,serif;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:var(--font-body);color:var(--ink);background:var(--parchment);}
+  h1,h2,h3,.heading{font-family:var(--font-heading);}
+
+  /* paper grain reused from the real .v8-loc-illus / body noise */
+  .grain::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+
+  /* tricolore hairline — verbatim from .v8-tricolore */
+  .tricolore{height:3px;opacity:.85;background:linear-gradient(90deg,
+    var(--italy-green) 0%,var(--italy-green) 33.3%,
+    var(--italy-white) 33.3%,var(--italy-white) 66.6%,
+    var(--italy-red) 66.6%,var(--italy-red) 100%);}
+
+  /* ===================== INTRO ===================== */
+  .intro{text-align:center;padding:3.4rem 6% 1rem;position:relative;}
+  .intro .eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:12px;color:var(--oxblood);}
+  .intro h1{font-size:clamp(2.3rem,5.5vw,3.6rem);font-weight:600;color:var(--espresso);margin:.4rem 0;letter-spacing:-.5px;}
+  .intro h1 em{font-style:italic;background:linear-gradient(100deg,var(--terracotta),var(--ochre),var(--basil));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .intro p{color:var(--muted);max-width:60ch;margin:0 auto;font-size:1.02rem;}
+  .clabel{font-family:var(--font-heading);font-size:1.5rem;font-weight:600;text-align:center;color:var(--espresso);margin:2.6rem 0 1rem;}
+  .clabel small{display:block;font-family:var(--font-heading);font-style:italic;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);font-weight:600;margin-bottom:.2rem;}
+
+  /* ===================== COMPARISON STAGE ===================== */
+  .stage{position:relative;width:92%;max-width:1120px;margin:0 auto;height:660px;border-radius:18px;overflow:hidden;
+    box-shadow:0 30px 70px -30px rgba(61,40,23,.5);border:1px solid var(--line);user-select:none;}
+  .pane{position:absolute;inset:0;overflow:hidden;}
+  .pane .scroll{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .badge{position:absolute;top:1.1rem;z-index:7;font-family:var(--font-heading);font-style:italic;font-size:.74rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;padding:.45rem .9rem;border-radius:999px;}
+
+  /* ---------- BEFORE: live parchment ---------- */
+  .before{background:var(--parchment);}
+  .before .badge{left:1.1rem;background:rgba(122,43,43,.05);color:var(--oxblood);border:1px solid rgba(122,43,43,.25);}
+
+  /* ---------- AFTER: liquid glass ---------- */
+  .after{clip-path:inset(0 0 0 50%);}
+  .after .bg{position:absolute;inset:0;background:                         /* [LG-1] */
+      radial-gradient(ellipse 55% 50% at 78% 14%,rgba(201,162,62,.5),transparent 60%),
+      radial-gradient(ellipse 55% 45% at 22% 86%,rgba(184,92,56,.45),transparent 60%),
+      radial-gradient(ellipse 60% 55% at 55% 55%,rgba(74,124,89,.38),transparent 62%),
+      radial-gradient(ellipse 50% 45% at 12% 20%,rgba(122,43,43,.28),transparent 60%),
+      linear-gradient(160deg,var(--parchment),var(--parchment-deep) 50%,var(--paper-shadow));
+    background-size:200% 200%,200% 200%,200% 200%,200% 200%,100% 100%;animation:aurora 24s ease-in-out infinite alternate;}
+  @keyframes aurora{0%{background-position:0 0,100% 100%,50% 50%,0 100%,0 0}100%{background-position:55% 45%,35% 55%,45% 35%,60% 30%,0 0}}
+  .after .blob{position:absolute;border-radius:45% 55% 60% 40%/45% 50% 50% 55%;filter:blur(55px);opacity:.45;width:340px;height:340px;animation:float 17s ease-in-out infinite alternate;} /* [LG-5] */
+  @keyframes float{to{transform:translate(-40px,40px) scale(1.1)}}
+  .after .badge{right:1.1rem;background:linear-gradient(135deg,var(--terracotta),var(--oxblood));color:var(--parchment);box-shadow:0 8px 20px -8px rgba(122,43,43,.7);}
+
+  /* reusable glass surface [LG-2][LG-3] */
+  .glass{position:relative;background:rgba(248,239,222,.46);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+    border:1px solid rgba(255,250,238,.6);border-radius:18px;
+    box-shadow:0 18px 50px -18px rgba(61,40,23,.3),inset 0 1px 0 rgba(255,255,255,.65);}
+  .glass::before{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);}
+  .sheen{overflow:hidden;}                                                  /* [LG-4] */
+  .sheen::after{content:"";position:absolute;top:-120%;left:-60%;width:50%;height:340%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.5) 50%,transparent);transform:rotate(8deg);transition:transform .9s var(--ease);pointer-events:none;}
+  .sheen:hover::after{transform:rotate(8deg) translateX(420%);}
+
+  /* ===================== SLIDER ===================== */
+  .handle{position:absolute;top:0;bottom:0;left:50%;width:3px;z-index:8;transform:translateX(-50%);
+    background:linear-gradient(var(--ochre-light),var(--terracotta));box-shadow:0 0 18px rgba(201,162,62,.8);}
+  .handle .grip{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;
+    background:rgba(248,239,222,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,250,238,.7);
+    box-shadow:0 8px 24px -6px rgba(61,40,23,.4);display:flex;align-items:center;justify-content:center;cursor:ew-resize;}
+  .handle .grip svg{width:22px;height:22px;stroke:var(--espresso);}
+  .slider{position:absolute;inset:0;width:100%;height:100%;z-index:9;opacity:0;cursor:ew-resize;}
+
+  /* ===================== SHARED CONTENT BLOCKS ===================== */
+  /* — HERO — */
+  .hero{width:90%;max-width:560px;text-align:center;padding:1.4rem 4%;position:relative;}
+  .orn{position:absolute;pointer-events:none;opacity:.5;z-index:1;}
+  .orn.basil-tl{top:-6px;left:-4%;transform:rotate(-12deg);}
+  .orn.basil-br{bottom:-10px;right:-4%;transform:rotate(150deg);opacity:.4;}
+  .orn.stain-1{top:18%;right:-6%;}
+  .orn.stain-2{bottom:6%;left:-4%;opacity:.45;}
+  .orn.tomato{top:4%;left:18%;}
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:11.5px;color:var(--oxblood);padding:6px 14px;border-radius:999px;margin-bottom:16px;}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--italy-green);box-shadow:0 0 0 3px rgba(0,140,69,.18);animation:pulse 2.4s ease-in-out infinite;}
+  .kicker .it{font-style:italic;font-weight:500;letter-spacing:.5px;opacity:.75;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+  .hero h2{font-weight:600;font-size:clamp(2rem,4.6vw,3.1rem);line-height:1.02;color:var(--espresso);letter-spacing:-.5px;margin-bottom:6px;}
+  .hero .sub{font-family:var(--font-heading);font-style:italic;font-size:1.25rem;color:var(--muted);margin-bottom:10px;}
+  .squiggle{color:var(--terracotta);margin:2px auto 14px;display:block;}
+  .lede{font-size:.96rem;line-height:1.65;color:var(--espresso-soft);max-width:46ch;margin:0 auto 20px;}
+  .lede em{font-family:var(--font-heading);font-style:italic;font-size:1.05em;color:var(--oxblood);}
+  .ctas{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+  .cta{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.3px;text-decoration:none;padding:12px 18px;border-radius:12px;cursor:pointer;}
+  .cta .it{font-style:italic;font-weight:500;font-size:.86em;}
+  .hero .tricolore{width:200px;height:3px;opacity:.7;margin:24px auto 0;}
+
+  /* BEFORE hero look (verbatim feel) */
+  .before .kicker{background:rgba(122,43,43,.05);border:1px solid rgba(122,43,43,.18);}
+  .before .cta-fill{background:var(--terracotta);color:var(--parchment);border:1px solid var(--terracotta-dark);box-shadow:0 10px 22px -12px rgba(184,92,56,.7);}
+  .before .cta-fill .it{color:rgba(255,247,232,.78);}
+  .before .cta-ghost{background:transparent;color:var(--oxblood);border:1px solid var(--oxblood);}
+  /* AFTER hero look (liquid glass) */
+  .after .hero-blob{background:radial-gradient(circle,var(--ochre-light),var(--terracotta));top:-70px;right:-50px;}
+  .after .hero-glass{padding:2rem 1.6rem;}
+  .after .kicker{background:rgba(248,239,222,.5);border:1px solid rgba(255,250,238,.6);backdrop-filter:blur(8px);}
+  .after .cta-fill{color:var(--parchment);background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));border:1px solid rgba(255,250,238,.4);box-shadow:0 12px 26px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .3s var(--ease);}
+  .after .cta-fill:hover{transform:translateY(-3px) scale(1.02);}
+  .after .cta-fill .it{color:rgba(255,247,232,.8);}
+  .after .cta-ghost{color:var(--oxblood);background:rgba(248,239,222,.55);backdrop-filter:blur(10px);border:1px solid rgba(122,43,43,.4);transition:transform .3s var(--ease);}
+  .after .cta-ghost:hover{transform:translateY(-3px);}
+
+  /* — LOCATIONS — */
+  .locs{width:92%;max-width:600px;padding:1.2rem 3%;}
+  .ps-head{text-align:center;margin-bottom:1.1rem;}
+  .ps-eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:11px;color:var(--oxblood);}
+  .ps-eyebrow .it{font-style:italic;font-weight:500;opacity:.75;}
+  .ps-title{font-weight:600;font-size:1.9rem;line-height:1.05;color:var(--espresso);margin:5px 0;}
+  .ps-title .it{font-style:italic;color:var(--oxblood);}
+  .ps-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:1rem;}
+  .loc-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.4rem;}
+  .loc-card{border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:transform .35s var(--ease),box-shadow .35s var(--ease);}
+  .loc-illus{position:relative;height:128px;display:grid;place-items:center;overflow:hidden;}
+  .loc-illus svg{position:relative;z-index:1;width:170px;height:auto;}
+  .loc-body{padding:14px 15px 16px;flex:1;display:flex;flex-direction:column;}
+  .loc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .loc-name{font-family:var(--font-heading);font-weight:600;font-size:1.6rem;line-height:1;color:var(--espresso);letter-spacing:-.3px;}
+  .loc-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-size:11px;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .loc-status .sdot{width:7px;height:7px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.15);animation:pulse 2s ease-in-out infinite;}
+  .loc-info{margin-top:5px;color:var(--espresso-soft);font-size:12px;line-height:1.5;}
+  .loc-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line-soft);}
+  .loc-row:last-child{border-bottom:none;}
+  .loc-row svg{flex:0 0 16px;margin-top:2px;}
+  .loc-desc{font-family:var(--font-heading);font-style:italic;font-size:14px;color:var(--espresso);margin:8px 0 6px;}
+  .loc-note{font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--muted);border-left:2px solid var(--ochre);padding-left:8px;margin-bottom:10px;}
+  .loc-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:13.5px;color:var(--terracotta);text-decoration:none;}
+  .loc-cta .it{font-style:italic;font-weight:500;font-size:.86em;color:var(--muted);}
+
+  /* BEFORE locations */
+  .before .locs{background:var(--parchment-deep);}
+  .before .loc-card{background:linear-gradient(180deg,#FBF4E1,var(--parchment));border:1px solid var(--line);box-shadow:0 18px 30px -22px rgba(61,40,23,.4);}
+  .before .loc-illus{background:linear-gradient(180deg,rgba(184,92,56,.08),rgba(201,162,62,.10)),var(--parchment-deep);border-bottom:1px solid var(--line-soft);}
+  .before .loc-status.is-live{color:var(--basil-deep);background:rgba(74,124,89,.10);border:1px solid rgba(74,124,89,.3);}
+  /* AFTER locations */
+  .after .locs-blob{background:radial-gradient(circle,var(--basil),var(--basil-deep));bottom:-80px;left:-40px;}
+  .after .loc-card{border:1px solid rgba(255,250,238,.6);box-shadow:0 18px 50px -18px rgba(61,40,23,.3),inset 0 1px 0 rgba(255,255,255,.6);}
+  .after .loc-card:hover{transform:translateY(-6px);box-shadow:0 30px 60px -24px rgba(61,40,23,.4),inset 0 1px 0 rgba(255,255,255,.7);}
+  .after .loc-illus{background:linear-gradient(160deg,rgba(184,92,56,.18),rgba(201,162,62,.16));}
+  .after .loc-illus::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 7s ease-in-out infinite alternate;} /* [LG-6] */
+  @keyframes shimmer{from{opacity:.3;transform:scale(1)}to{opacity:.8;transform:scale(1.12)}}
+  .after .loc-status.is-live{color:var(--basil-deep);background:rgba(74,124,89,.16);border:1px solid rgba(74,124,89,.4);backdrop-filter:blur(6px);}
+
+  /* — FAMIGLIA — */
+  .famiglia{width:90%;max-width:620px;text-align:center;padding:2rem 5%;position:relative;}
+  .famiglia blockquote{font-family:var(--font-heading);font-style:italic;font-weight:500;font-size:clamp(1.4rem,3.2vw,2.1rem);line-height:1.3;color:var(--espresso);}
+  .famiglia cite{display:block;font-family:var(--font-heading);font-style:normal;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;color:var(--oxblood);margin-top:1.1rem;}
+  .before .famiglia{background:var(--parchment);}
+  .after .fam-glass{padding:2.4rem 2rem;border-radius:20px;}
+  .after .fam-blob{background:radial-gradient(circle,var(--oxblood-soft),var(--oxblood));top:-60px;right:-40px;}
+
+  footer{text-align:center;padding:3rem 6% 2.4rem;color:var(--muted);font-size:.85rem;}
+  footer b{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--espresso);}
+
+  @media (max-width:760px){
+    .stage{height:600px;}
+    .loc-grid{grid-template-columns:1fr;}
+    .after .loc-card:nth-child(2),.before .loc-card:nth-child(2){display:none;} /* show one card on small screens */
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body>
+
+<!-- ===================== INTRO ===================== -->
+<div class="intro">
+  <span class="eyebrow">— Sud Italia · Napoli a Kraków &amp; Warszawa —</span>
+  <h1>Our storefront, remade in <em>Liquid Glass</em></h1>
+  <p>The same V8 Tuscany homepage you have today — basil sprigs, the wood-fired oven, the Vespa, nonna Concetta's 36-hour dough — re-rendered through liquid glass. Drag each handle to compare.</p>
+</div>
+
+<!-- ===================== 1 · HERO ===================== -->
+<div class="clabel"><small>Confronto 01</small>Hero</div>
+<div class="stage" data-compare>
+  <!-- BEFORE -->
+  <div class="pane before grain">
+    <span class="badge">● Live · Parchment</span>
+    <div class="scroll">
+      <div class="hero">
+        <span class="orn basil-tl" aria-hidden><svg width="96" height="96" viewBox="0 0 120 120" fill="none"><path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fill-opacity="0.18" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fill-opacity="0.18" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fill-opacity="0.18" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/></svg></span>
+        <span class="orn stain-1" aria-hidden><svg width="120" height="120" viewBox="0 0 160 160" fill="none"><ellipse cx="80" cy="80" rx="60" ry="55" stroke="#7A2B2B" stroke-width="2" fill="none"/><ellipse cx="80" cy="80" rx="48" ry="44" stroke="#7A2B2B" stroke-width="1.2" fill="none" opacity="0.6"/><ellipse cx="80" cy="80" rx="36" ry="33" stroke="#7A2B2B" stroke-width="0.8" fill="none" opacity="0.5"/></svg></span>
+        <span class="orn tomato" aria-hidden><svg width="56" height="56" viewBox="0 0 70 70" fill="none"><path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fill-opacity="0.22" stroke="#B85C38" stroke-width="2"/><path d="M35 24 L35 16" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.22" stroke-linejoin="round"/><path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.22" stroke-linejoin="round"/></svg></span>
+        <span class="orn basil-br" aria-hidden><svg width="72" height="72" viewBox="0 0 100 100" fill="none"><path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round"/><path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fill-opacity="0.18" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fill-opacity="0.18" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+
+        <span class="kicker"><span class="dot"></span>Open now · <span class="it">aperto ora</span> · Kraków · Warszawa</span>
+        <h2>Pizza, the way it's made in Naples</h2>
+        <div class="sub">La pizza, fatta come a Napoli</div>
+        <svg class="squiggle" width="200" height="16" viewBox="0 0 220 18" fill="none" aria-hidden><path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="216" cy="12" r="1.8" fill="currentColor"/></svg>
+        <p class="lede">San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60 seconds, eaten in silence — a Neapolitan rule we like to break with a glass of <em>vino della casa</em>.</p>
+        <div class="ctas">
+          <a class="cta cta-fill">Order in Kraków <span class="it">· Ordina</span></a>
+          <a class="cta cta-fill">Order in Warszawa <span class="it">· Ordina</span></a>
+          <a class="cta cta-ghost">Our Story <span class="it">· La storia</span></a>
+        </div>
+        <div class="tricolore"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AFTER -->
+  <div class="pane after">
+    <div class="bg"></div><div class="blob hero-blob"></div>
+    <span class="badge">✦ Liquid Glass</span>
+    <div class="scroll">
+      <div class="hero">
+        <span class="orn basil-tl" aria-hidden><svg width="96" height="96" viewBox="0 0 120 120" fill="none"><path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fill-opacity="0.22" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fill-opacity="0.22" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fill-opacity="0.22" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/></svg></span>
+        <span class="orn tomato" aria-hidden><svg width="56" height="56" viewBox="0 0 70 70" fill="none"><path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fill-opacity="0.3" stroke="#B85C38" stroke-width="2"/><path d="M35 24 L35 16" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.3" stroke-linejoin="round"/><path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.3" stroke-linejoin="round"/></svg></span>
+        <span class="orn basil-br" aria-hidden><svg width="72" height="72" viewBox="0 0 100 100" fill="none"><path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round"/><path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fill-opacity="0.22" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fill-opacity="0.22" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+
+        <div class="glass sheen hero-glass">
+          <span class="kicker"><span class="dot"></span>Open now · <span class="it">aperto ora</span> · Kraków · Warszawa</span>
+          <h2>Pizza, the way it's made in Naples</h2>
+          <div class="sub">La pizza, fatta come a Napoli</div>
+          <svg class="squiggle" width="200" height="16" viewBox="0 0 220 18" fill="none" aria-hidden><path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="216" cy="12" r="1.8" fill="currentColor"/></svg>
+          <p class="lede">San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60 seconds, eaten in silence — a Neapolitan rule we like to break with a glass of <em>vino della casa</em>.</p>
+          <div class="ctas">
+            <a class="cta cta-fill">Order in Kraków <span class="it">· Ordina</span></a>
+            <a class="cta cta-fill">Order in Warszawa <span class="it">· Ordina</span></a>
+            <a class="cta cta-ghost">Our Story <span class="it">· La storia</span></a>
+          </div>
+          <div class="tricolore"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="handle"><div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg></div></div>
+  <input type="range" class="slider" min="0" max="100" value="50" aria-label="Confronta hero" />
+</div>
+
+<!-- ===================== 2 · LOCATIONS ===================== -->
+<div class="clabel"><small>Confronto 02</small>Le botteghe · Kraków &amp; Warszawa</div>
+<div class="stage" data-compare>
+  <!-- BEFORE -->
+  <div class="pane before grain">
+    <span class="badge">● Live · Parchment</span>
+    <div class="scroll"><div class="locs">
+      <div class="ps-head">
+        <div class="ps-eyebrow">The restaurants <span class="it">· le botteghe</span></div>
+        <h2 class="ps-title">Two addresses, <span class="it">one family</span></h2>
+        <p class="ps-sub">Two restaurants, one kitchen, one nonna who taught us the dough.</p>
+      </div>
+      <div class="loc-grid" id="locsBefore"></div>
+    </div></div>
+  </div>
+  <!-- AFTER -->
+  <div class="pane after">
+    <div class="bg"></div><div class="blob locs-blob"></div>
+    <span class="badge">✦ Liquid Glass</span>
+    <div class="scroll"><div class="locs">
+      <div class="ps-head">
+        <div class="ps-eyebrow">The restaurants <span class="it">· le botteghe</span></div>
+        <h2 class="ps-title">Two addresses, <span class="it">one family</span></h2>
+        <p class="ps-sub">Two restaurants, one kitchen, one nonna who taught us the dough.</p>
+      </div>
+      <div class="loc-grid" id="locsAfter"></div>
+    </div></div>
+  </div>
+  <div class="handle"><div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg></div></div>
+  <input type="range" class="slider" min="0" max="100" value="50" aria-label="Confronta botteghe" />
+</div>
+
+<!-- ===================== 3 · FAMIGLIA ===================== -->
+<div class="clabel"><small>Confronto 03</small>Famiglia</div>
+<div class="stage" data-compare>
+  <!-- BEFORE -->
+  <div class="pane before grain">
+    <span class="badge">● Live · Parchment</span>
+    <div class="scroll"><div class="famiglia">
+      <blockquote>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</blockquote>
+      <cite>Giuseppe Esposito · Pizzaiolo</cite>
+    </div></div>
+  </div>
+  <!-- AFTER -->
+  <div class="pane after">
+    <div class="bg"></div><div class="blob fam-blob"></div>
+    <span class="badge">✦ Liquid Glass</span>
+    <div class="scroll"><div class="famiglia">
+      <div class="glass sheen fam-glass">
+        <blockquote>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</blockquote>
+        <cite>Giuseppe Esposito · Pizzaiolo</cite>
+      </div>
+    </div></div>
+  </div>
+  <div class="handle"><div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg></div></div>
+  <input type="range" class="slider" min="0" max="100" value="50" aria-label="Confronta famiglia" />
+</div>
+
+<footer>
+  <b>Sud Italia</b><br/>
+  Napoli a Kraków &amp; Warszawa · pasta tirata a mano, lievito madre, forno a legna a 485&deg;C
+</footer>
+
+<script>
+  /* ---- The real Kraków oven + Warszawa Vespa pen-sketches (verbatim from
+          LocationsGrid.tsx) so the mockup uses OUR illustrations, not stand-ins. */
+  const OVEN = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="48" y="92" width="124" height="22" rx="3" stroke="#7A2B2B" stroke-width="1.8" fill="#E8D6B5"/><path d="M48 92 C 48 60, 80 38, 110 38 C 140 38, 172 60, 172 92 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#F2E2C2"/><path d="M82 92 C 82 76, 96 66, 110 66 C 124 66, 138 76, 138 92 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M96 88 C 100 80, 104 84, 108 78 C 112 84, 116 80, 120 88" stroke="#CD212A" stroke-width="1.8" fill="#CD212A" fill-opacity="0.3" stroke-linejoin="round"/><path d="M102 86 C 105 81, 108 84, 111 79 C 114 84, 117 81, 120 86" stroke="#C9A23E" stroke-width="1.2" fill="none" stroke-linejoin="round"/><rect x="100" y="22" width="14" height="20" stroke="#7A2B2B" stroke-width="1.6" fill="#B85C38" fill-opacity="0.2"/><path d="M107 18 C 110 12, 105 6, 110 0" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.6"/><path d="M178 110 L208 88" stroke="#3D2817" stroke-width="1.6" stroke-linecap="round"/><rect x="174" y="98" width="20" height="14" rx="2" transform="rotate(-30 184 105)" stroke="#3D2817" stroke-width="1.6" fill="#E8D6B5"/></svg>`;
+  const VESPA = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="32" y="48" width="46" height="26" rx="2" stroke="#7A2B2B" stroke-width="1.6" fill="#E8D6B5"/><text x="55" y="68" text-anchor="middle" font-family="Georgia" font-size="9" font-style="italic" fill="#7A2B2B">Ottaviano</text><path d="M68 100 C 60 100, 56 92, 60 82 C 64 72, 78 70, 92 72 L120 78 C 134 80, 148 82, 156 92 L162 102 C 158 110, 76 110, 68 100 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#B85C38" fill-opacity="0.4" stroke-linejoin="round"/><path d="M82 78 L120 78 L122 70 L88 70 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M152 86 L168 64" stroke="#3D2817" stroke-width="1.8" stroke-linecap="round"/><circle cx="158" cy="84" r="5" stroke="#C9A23E" stroke-width="1.4" fill="#C9A23E" fill-opacity="0.6"/><circle cx="72" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="72" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/><circle cx="158" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="158" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/></svg>`;
+  const PIN = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z" stroke="#B85C38" stroke-width="1.5" fill="rgba(184,92,56,0.12)"/><circle cx="10" cy="6.5" r="2.4" stroke="#B85C38" stroke-width="1.4" fill="none"/></svg>`;
+  const CLOCK = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#B85C38" stroke-width="1.5" fill="none"/><path d="M10 5 L10 10 L13.5 12.5" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+  /* Real location data (src/data/locations.ts) */
+  const LOCS = [
+    { city:"Kraków", illus:OVEN, addr:"Rynek Główny, 31-042 Kraków",
+      hours:"Mon-Thu 11–21 · Fri-Sat 11–23 · Sun 12–20",
+      desc:"Authentic Neapolitan pizza & pasta at Kraków's Main Square",
+      note:"Cooked by Giuseppe and family" },
+    { city:"Warszawa", illus:VESPA, addr:"ul. Nowy Świat 15, 00-029 Warszawa",
+      hours:"Mon-Thu 11–21 · Fri-Sat 11–22 · Sun 12–20",
+      desc:"A taste of Naples on Warsaw's iconic Nowy Świat street",
+      note:"Cooked by Anna and crew" },
+  ];
+  const cardHTML = (l, glass) => `
+    <article class="loc-card ${glass ? 'glass sheen' : ''}">
+      <div class="loc-illus">${l.illus}</div>
+      <div class="tricolore" style="height:2.5px"></div>
+      <div class="loc-body">
+        <div class="loc-head">
+          <div class="loc-name">${l.city}</div>
+          <span class="loc-status is-live"><span class="sdot"></span>Open now <span class="it">· aperto</span></span>
+        </div>
+        <div class="loc-info">
+          <div class="loc-row">${PIN}<div>${l.addr}</div></div>
+          <div class="loc-row">${CLOCK}<div>${l.hours}</div></div>
+        </div>
+        <p class="loc-desc">${l.desc}</p>
+        <p class="loc-note">${l.note}</p>
+        <a class="loc-cta">View Menu &amp; Order <span class="it">· vedi il menù</span> →</a>
+      </div>
+    </article>`;
+  document.getElementById('locsBefore').innerHTML = LOCS.map(l => cardHTML(l, false)).join('');
+  document.getElementById('locsAfter').innerHTML  = LOCS.map(l => cardHTML(l, true)).join('');
+
+  /* One handler wires every before/after block (clip-path wipe). */
+  document.querySelectorAll('[data-compare]').forEach(stage=>{
+    const after=stage.querySelector('.after'),handle=stage.querySelector('.handle'),slider=stage.querySelector('.slider');
+    const setPos=v=>{after.style.clipPath=`inset(0 0 0 ${v}%)`;handle.style.left=v+'%';};
+    slider.addEventListener('input',e=>setPos(e.target.value));setPos(50);
+  });
+</script>
+</body>
+</html>

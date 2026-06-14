@@ -24,9 +24,10 @@ interface DeliveryProgressProps {
 /**
  * Free-delivery progress — audit §2.1 post-attach, V8 reskin.
  *
- *   Below threshold: italic Cormorant headline + terracotta rail + a
- *   pencil-sketched cyclist riding the fill. The shimmer keyframe lives
- *   over the gradient fill so motion still catches the eye.
+ *   Below threshold: a clean "Free delivery at {threshold} / {remaining}
+ *   to go" row over a thin basil→ochre (green→gold) progress bar — matches
+ *   the mockup. The shimmer keyframe still rides the fill so motion catches
+ *   the eye.
  *
  *   On unlock: the gold→basil medallion + one-shot shimmer sweep + the
  *   delivery-unlock pop-in (the same --animate-delivery-* keyframes
@@ -71,30 +72,7 @@ export function DeliveryProgress({
     <div className="v8-cart-delivery">
       <div className="v8-cart-delivery-head">
         <div className="v8-cart-delivery-title">
-          Consegna a casa — {Math.round(pct)}% verso la gratuità
-        </div>
-        <div className="v8-cart-delivery-amt">+{formatPrice(remaining)}</div>
-      </div>
-      <div className="v8-cart-delivery-track">
-        <div className="v8-cart-delivery-rail">
-          <div className="v8-cart-delivery-fill" style={{ width: `${pct}%` }}>
-            <span className="v8-cart-delivery-shimmer" aria-hidden="true" />
-          </div>
-        </div>
-        <span className="v8-cart-cyclist" style={{ left: `${pct}%` }} aria-hidden="true">
-          <svg width="34" height="22" viewBox="0 0 34 22" fill="none">
-            <circle cx="7" cy="16" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="#F8EFDE" />
-            <circle cx="27" cy="16" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="#F8EFDE" />
-            <path d="M7 16 L14 8 L20 16 L27 16 L23 8 L14 8" stroke="#B85C38" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-            <circle cx="14" cy="8" r="1.4" fill="#7A2B2B" />
-            <path d="M23 8 L25 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        </span>
-      </div>
-      <div className="v8-cart-delivery-foot">
-        Add a little more — and our rider Marco pedals it on the house.{" "}
-        <span className="v8-cart-delivery-target">
-          {formatPrice(threshold)}
+          Free delivery at {formatPrice(threshold)}
           {isPersonalised && (
             <span
               style={{ marginLeft: 4, fontStyle: "italic", fontWeight: 400, color: "var(--color-muted)" }}
@@ -103,7 +81,15 @@ export function DeliveryProgress({
               · tuned for you
             </span>
           )}
-        </span>
+        </div>
+        <div className="v8-cart-delivery-amt">{formatPrice(remaining)} to go</div>
+      </div>
+      <div className="v8-cart-delivery-track">
+        <div className="v8-cart-delivery-rail">
+          <div className="v8-cart-delivery-fill" style={{ width: `${pct}%` }}>
+            <span className="v8-cart-delivery-shimmer" aria-hidden="true" />
+          </div>
+        </div>
       </div>
     </div>
   );
