@@ -663,22 +663,24 @@ export function CorePos({
       toast(`Voided ${name}`, "default");
       pendingSaves.current += 1;
       try {
-        const res = await fetch(
-          `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`,
-          { method: "DELETE" },
-        );
+        const url = `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`;
+        const res = await fetch(url, { method: "DELETE" });
+        // TEMP DIAGNOSTIC: surface the exact DELETE outcome so we can see why the
+        // void isn't reaching/persisting on the device. Remove once confirmed.
+        toast(`DEBUG void → HTTP ${res.status} (loc=${pageLoc || "∅"})`, res.ok ? "success" : "danger");
         // 404 = already gone (a double-fire / cross-till void); not an error — the
         // filter self-clears once a poll no longer sees the id. On a real failure
         // the void didn't happen, so release the id and let reality reconcile it
         // back rather than hide a check that still exists server-side.
         if (!res.ok && res.status !== 404) {
           voidedIds.current.delete(id);
-          toast(`Couldn't void ${name} — it may reappear`, "danger");
         }
-      } catch {
+      } catch (e) {
         // Offline / network error — the DELETE may not have landed. Release the id
         // so the next poll reconciles (the check returns if the void didn't take).
         voidedIds.current.delete(id);
+        // TEMP DIAGNOSTIC: surface the network-level failure (name + message).
+        toast(`DEBUG void FAILED: ${e instanceof Error ? `${e.name}: ${e.message}` : "unknown"}`, "danger");
       } finally {
         pendingSaves.current = Math.max(0, pendingSaves.current - 1);
       }
