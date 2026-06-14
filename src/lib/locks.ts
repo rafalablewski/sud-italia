@@ -49,6 +49,34 @@ const DEFAULT_TTL_MS = 10_000;
 const DEFAULT_ACQUIRE_TIMEOUT_MS = 5_000;
 const DEFAULT_RETRY_DELAY_MS = 50;
 
+// Fail-fast against a sick Upstash. A single Redis op must not hang the whole
+// request: cap each call, and once one fails, open a short circuit so every
+// subsequent lock skips Redis entirely (straight to in-process) instead of each
+// eating a fresh timeout. Without this, an unreachable Upstash adds seconds to
+// EVERY locked write app-wide (a dead REST URL DNS-times-out per call). The
+// circuit half-opens after the cooldown so a recovered Redis is picked back up.
+const REDIS_OP_TIMEOUT_MS = 1_000;
+const REDIS_CIRCUIT_COOLDOWN_MS = 30_000;
+let redisCircuitOpenUntil = 0;
+
+/** Reject if `p` doesn't settle within `ms` — so one slow Redis call can't hang
+ *  a request. Used to bound every Upstash round-trip. */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 const metrics = {
   acquisitions: 0,
   contentions: 0,
@@ -89,7 +117,11 @@ async function tryAcquireRedis(
   const redis = getUpstashRedis();
   if (!redis) return "broken";
   try {
-    const result = await redis.set(key, token, { nx: true, px: ttlMs });
+    const result = await withTimeout(
+      redis.set(key, token, { nx: true, px: ttlMs }),
+      REDIS_OP_TIMEOUT_MS,
+      "redis.set",
+    );
     return result === "OK";
   } catch (err) {
     logger.error(
@@ -113,7 +145,7 @@ async function releaseRedis(key: string, token: string): Promise<void> {
   const redis = getUpstashRedis();
   if (!redis) return;
   try {
-    await redis.eval(RELEASE_SCRIPT, [key], [token]);
+    await withTimeout(redis.eval(RELEASE_SCRIPT, [key], [token]), REDIS_OP_TIMEOUT_MS, "redis.eval");
   } catch (err) {
     logger.warn("withDistributedLock release failed", { key }, err);
   }
@@ -152,6 +184,14 @@ export async function withDistributedLock<T>(
   const token = newToken();
   const redis = getUpstashRedis();
 
+  // Circuit open (a recent Redis call failed) → skip Upstash entirely so we don't
+  // re-pay the timeout on every lock while it's down. Half-opens after the
+  // cooldown, so a recovered Redis is automatically picked back up.
+  if (redis && Date.now() < redisCircuitOpenUntil) {
+    metrics.inProcessFallbacks += 1;
+    return withInProcessLock(key, fn);
+  }
+
   if (!redis) {
     metrics.inProcessFallbacks += 1;
     // In dev / CI without Upstash this is correct. In production without
@@ -181,6 +221,10 @@ export async function withDistributedLock<T>(
       // alternative is throwing a 500 on every lock callsite — far
       // worse than dropping to in-process and accepting the cross-
       // instance race we were already living with pre-m0_1.
+      // Open the circuit so the NEXT 30s of locks skip Redis up-front instead of
+      // each re-discovering it's down (which is what made an unreachable Upstash
+      // add seconds to every write).
+      redisCircuitOpenUntil = Date.now() + REDIS_CIRCUIT_COOLDOWN_MS;
       metrics.inProcessFallbacks += 1;
       incrCounter("lock.fallbacks");
       // Surface to Sentry (logger.error mirrors there) so the lock-fallback
