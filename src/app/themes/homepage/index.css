@@ -8245,10 +8245,14 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-challenge {
   padding: 14px 16px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .v8-rewards-challenge-head {
   display: flex;
@@ -8417,10 +8421,27 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-tier-tile {
   padding: 14px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  /* Light-on-dark translucent tile — sits INSIDE the dark glass tier card,
+     so no blur of its own (avoids double blur on the already-frosted tier). */
+  background: rgba(255, 250, 238, 0.08);
+  border: 1px solid rgba(255, 250, 238, 0.16);
   border-radius: var(--r-md);
   transition: all 0.2s;
+}
+
+/* Fallback for the rewards sub-card glass (challenge / combo / perks / wallet
+   / reward) — opaque parchment without backdrop-filter. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .v8-rewards-challenge,
+  .v8-rewards-combo,
+  .v8-rewards-perks-card,
+  .v8-rewards-wallet,
+  .v8-rewards-reward {
+    background: var(--color-parchment);
+    border-color: var(--color-line);
+    box-shadow: var(--shadow-paper);
+  }
+  .v8-rewards-reward { border-color: var(--color-ochre); }
 }
 .v8-rewards-tier-tile.is-active {
   background: linear-gradient(135deg, rgba(201, 162, 62, 0.10), rgba(184, 92, 56, 0.04));
@@ -8547,10 +8568,14 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-reward {
   padding: 18px;
-  background: var(--color-parchment);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border: 1px solid var(--color-ochre);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   transition: all 0.2s;
 }
 .v8-rewards-reward.is-locked {
@@ -8698,10 +8723,14 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-combo {
   padding: 16px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .v8-rewards-combo-head {
   display: flex;
@@ -8745,10 +8774,14 @@ body.v8-detail-open { overflow: hidden; }
 
 .v8-rewards-perks-card {
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .v8-rewards-perk-line {
   display: flex;
@@ -8823,10 +8856,14 @@ body.v8-detail-open { overflow: hidden; }
    ------------------------------------------------------------------ */
 .v8-rewards-wallet {
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   margin-bottom: 18px;
 }
 .v8-rewards-wallet-sub {

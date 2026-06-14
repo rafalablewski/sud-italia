@@ -119,7 +119,7 @@ The "what's going on with my account" view.
   settimane" + italic Lora "Order again this week to keep it going.
   **3 weeks = +30 bonus pts.**"
 - **Weekly challenges** (`.v8-rewards-challenges`) — 3-up grid of
-  parchment cards (1-up on mobile). Each `.v8-rewards-challenge` has
+  glass cards (1-up on mobile). Each `.v8-rewards-challenge` has
   the italic Cormorant title + oxblood clock chip ("Nd"), italic
   Lora description, terracotta progress rail
   (`.v8-rewards-challenge-rail` + `-fill`), and a foot row with
@@ -135,7 +135,8 @@ The "what's going on with my account" view.
   card hides itself when the operator sets `referral.active = false`
   in `/admin/growth → Referrals` — there's no static fallback copy.
 - **Tier roadmap** (`.v8-rewards-roadmap`) — 4-up grid of
-  `.v8-rewards-tier-tile` paper cards. Active tier gets the
+  `.v8-rewards-tier-tile` light-on-dark translucent tiles (they sit inside
+  the dark glass tier card). Active tier gets the
   ochre-fill name pill + "Current · attuale" green sublabel + the
   ochre→terracotta-soft tile background. Locked tiers dim to 55%.
   Each tile lists the multiplier, the unlock threshold, and the
@@ -168,11 +169,11 @@ The "what's going on with my account" view.
 
 #### Offers tab
 
-- **Combo deals** (`.v8-rewards-combos`) — 3-up grid of paper cards.
+- **Combo deals** (`.v8-rewards-combos`) — 3-up grid of glass cards.
   Each `.v8-rewards-combo` has the italic Cormorant deal name + the
   ochre `−12%` chip + italic Lora description + italic
   category-list "Add X + Y + Z — applies automatically."
-- **Tier perks** (`.v8-rewards-perks-card`) — paper card with the
+- **Tier perks** (`.v8-rewards-perks-card`) — glass card with the
   current tier badge + per-perk basil check rows + a dashed
   hairline "Reach {next}" block listing the next-tier perks as
   muted locked rows.
