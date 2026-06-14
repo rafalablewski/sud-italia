@@ -225,8 +225,10 @@ export async function getActiveDataMode(): Promise<"live" | "simulation"> {
  *  touched — only `prefix`-prefixed keys are removed. */
 async function wipeNamespace(prefix: string): Promise<void> {
   // A wipe removes blobs out from under the heavy-read cache; drop it wholesale
-  // so a stale parse can't outlive the reset (cheap — the map is tiny).
+  // so a stale parse can't outlive the reset (cheap — the map is tiny). Bump the
+  // analytics version too so the daily-stats / insights memos rebuild.
   heavyReadCache.clear();
+  bumpAnalyticsVersion();
   if (useDB) {
     await ensureDB();
     const db = sql();
@@ -383,9 +385,28 @@ const HEAVY_READ_TTL_MS = 5_000;
 // cached promise is always safe to re-await.
 const heavyReadCache = new Map<string, { at: number; promise: Promise<unknown> }>();
 
+// --- Analytics data-version (drives the daily-stats / insights memos) -------
+// getSummary/getAnalytics/getInsights re-aggregate the WHOLE order history on
+// every call, and the dashboard fires ~7 of them per 30s refresh. Once the raw
+// blob parse is cached (above), that O(orders) re-aggregation is the dominant
+// remaining cost on a deep dataset. The memos below cache the aggregated output
+// keyed by this counter, which bumps on ANY write to an analytics input
+// (orders or slots). So while an operator browses static history, every call
+// after the first is an O(days) lookup instead of an O(orders) re-scan; a
+// new/changed order or slot bumps the version and the next refresh rebuilds.
+// Over-bumping only forces a harmless rebuild — under-bumping would serve stale
+// numbers, so the DB-mode mutation paths (which bypass writeJSON for their
+// primary write) bump explicitly too.
+const ANALYTICS_INPUT_KEYS = new Set<string>(["orders.json", "slots.json"]);
+let analyticsDataVersion = 0;
+function bumpAnalyticsVersion(): void {
+  analyticsDataVersion++;
+}
+
 function invalidateKvCache(key: string): void {
   if (key === ADMIN_USERS_KEY) adminUsersCache = null;
   if (HEAVY_READ_KEYS.has(key)) heavyReadCache.delete(resolveKey(key));
+  if (ANALYTICS_INPUT_KEYS.has(key)) bumpAnalyticsVersion();
 }
 
 // --- Time Slots (m1_1: normalized table with dual-write) ----------------
@@ -1728,6 +1749,10 @@ export async function createOrder(
   // on the shared kv blob (filesystem/sim), so the seeder runs them once,
   // awaited, after all orders land.
   if (!opts?.suppressCascades) void recomputeCustomerRollup(order.customerPhone);
+  // Invalidate the analytics memos synchronously — the DB-mode primary write
+  // (dualWriteOrder) bypasses writeJSON, so we can't rely on the fire-and-forget
+  // kv mirror to bump in time for the next dashboard poll.
+  bumpAnalyticsVersion();
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
   incrCounter("orders.placed");
   // Fire KDS tickets (m2_2). Idempotent on (order_id, station_id) so
@@ -1778,6 +1803,7 @@ export async function bulkAppendOrders(orders: Order[]): Promise<void> {
   const db = await getDomainDb();
   if (db) {
     for (const o of orders) await dualWriteOrder(o);
+    bumpAnalyticsVersion();
     return;
   }
   // Group by location to honour the per-location lock scope, then one
@@ -1839,6 +1865,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     });
   }
   if (updated) {
+    bumpAnalyticsVersion();
     emitOrderEvent({
       kind: "status_changed",
       orderId: updated.id,
@@ -1953,6 +1980,7 @@ export async function updateOrder(
     void recomputeCustomerRollup(updated.customerPhone);
   }
   if (updated) {
+    bumpAnalyticsVersion();
     emitOrderEvent({ kind: "updated", orderId: updated.id, locationSlug: updated.locationSlug });
     // Outbox: paidAt transition (checkout.session.completed webhook lands)
     // and refund are the customer-facing events that need durable side
@@ -2046,6 +2074,7 @@ export async function deleteOrder(id: string): Promise<boolean> {
       void recomputeCustomerRollup(customerPhone);
     }
     if (locationSlug) {
+      bumpAnalyticsVersion();
       emitOrderEvent({ kind: "deleted", orderId: id, locationSlug });
     }
   }
@@ -2183,11 +2212,29 @@ export interface DailyStats {
   topItems: { name: string; quantity: number; revenue: number }[];
 }
 
-export async function getAnalytics(
-  locationSlug?: string,
-  dateFrom?: string,
-  dateTo?: string
-): Promise<DailyStats[]> {
+// Per-version memo of the FULL (unfiltered) daily-stats series, keyed by
+// namespace prefix + location. Cleared whenever the analytics version moves.
+// A short TTL backstops the version signal across serverless instances: a
+// read-only instance never sees a SIBLING instance's write bump its own
+// version, so without an age cap its memo could serve stale numbers until the
+// instance recycles. With the cap, cross-instance writes converge within
+// ANALYTICS_MEMO_TTL_MS (same-instance writes are still instant — they bump the
+// version and clear the memo). The within-burst dedup — the dashboard's ~8
+// parallel analytics calls collapsing to ONE build — holds regardless of TTL.
+//
+// 45s sits just above the 30s dashboard poll cadence so steady-state polling
+// (and multiple operators / SSE reconnects) reliably reuse one build per window
+// instead of re-scanning the whole order set each poll. Analytics is a recent-
+// trends view, so a sub-minute cross-instance lag is invisible; a real order on
+// this instance bumps the version and rebuilds immediately regardless.
+const ANALYTICS_MEMO_TTL_MS = 45_000;
+const dailyStatsMemo = new Map<string, { at: number; promise: Promise<DailyStats[]> }>();
+let dailyStatsMemoVersion = -1;
+
+/** Heavy work behind getAnalytics: aggregate EVERY day for a location scope,
+ *  with no date filter, so the result can be cached once per data-version and
+ *  re-sliced cheaply for any range. Pure function of the order set. */
+async function computeDailyStats(locationSlug?: string): Promise<DailyStats[]> {
   const orders = (await getOrders(locationSlug)).filter(
     (o) => o.status !== "pending"
   );
@@ -2195,8 +2242,6 @@ export async function getAnalytics(
   const byDate = new Map<string, Order[]>();
   for (const order of orders) {
     const date = order.slotDate || order.createdAt.split("T")[0];
-    if (dateFrom && date < dateFrom) continue;
-    if (dateTo && date > dateTo) continue;
     const list = byDate.get(date) || [];
     list.push(order);
     byDate.set(date, list);
@@ -2267,6 +2312,39 @@ export async function getAnalytics(
 
   stats.sort((a, b) => a.date.localeCompare(b.date));
   return stats;
+}
+
+export async function getAnalytics(
+  locationSlug?: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<DailyStats[]> {
+  // Prime the namespace prefix so the cache key can't bucket a cold-instance
+  // read under the wrong (live vs simulation) namespace.
+  await refreshDataMode();
+  if (dailyStatsMemoVersion !== analyticsDataVersion) {
+    dailyStatsMemo.clear();
+    dailyStatsMemoVersion = analyticsDataVersion;
+  }
+  const memoKey = `${activePrefixSync()}|${locationSlug ?? "*"}`;
+  const hit = dailyStatsMemo.get(memoKey);
+  // Cache the in-flight promise so a burst of concurrent callers for the same
+  // scope share ONE aggregation instead of each re-scanning the whole order set.
+  let promise: Promise<DailyStats[]>;
+  if (hit && Date.now() - hit.at < ANALYTICS_MEMO_TTL_MS) {
+    promise = hit.promise;
+  } else {
+    promise = computeDailyStats(locationSlug);
+    // Don't let a transient failure stick in the cache for the whole TTL.
+    promise.catch(() => dailyStatsMemo.delete(memoKey));
+    dailyStatsMemo.set(memoKey, { at: Date.now(), promise });
+  }
+  const full = await promise;
+  // Slice to the requested range. Always returns a NEW array so callers can
+  // never mutate the memoized series.
+  return full.filter(
+    (s) => (!dateFrom || s.date >= dateFrom) && (!dateTo || s.date <= dateTo),
+  );
 }
 
 export interface SummaryStats {
@@ -2399,7 +2477,31 @@ export interface InsightsData {
   peakHours: { hour: number; orderCount: number; revenue: number }[];
 }
 
+// Per-version memo of insights output, keyed by namespace prefix + date range.
+// Its inputs are orders (getOrders) and the slots blob — both covered by the
+// analytics version (ANALYTICS_INPUT_KEYS includes slots.json), so a slot edit
+// invalidates it just like an order does. Active-locations changes are rare
+// config; a subsequent order write rebuilds within the same shift.
+const insightsMemo = new Map<string, { at: number; promise: Promise<InsightsData> }>();
+let insightsMemoVersion = -1;
+
 export async function getInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
+  await refreshDataMode();
+  if (insightsMemoVersion !== analyticsDataVersion) {
+    insightsMemo.clear();
+    insightsMemoVersion = analyticsDataVersion;
+  }
+  const memoKey = `${activePrefixSync()}|${dateFrom ?? ""}|${dateTo ?? ""}`;
+  const hit = insightsMemo.get(memoKey);
+  if (hit && Date.now() - hit.at < ANALYTICS_MEMO_TTL_MS) return hit.promise;
+  const promise = computeInsights(dateFrom, dateTo);
+  // Don't let a transient failure stick in the cache for the whole TTL.
+  promise.catch(() => insightsMemo.delete(memoKey));
+  insightsMemo.set(memoKey, { at: Date.now(), promise });
+  return promise;
+}
+
+async function computeInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
   const allSlots = await readJSON<TimeSlot[]>("slots.json", []);
   // Read orders through getOrders() — the SAME canonical, table-first source
   // getAnalytics/getSummary use — not the raw orders.json kv mirror. In
@@ -2576,7 +2678,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .map(([hour, d]) => ({ hour, orderCount: d.count, revenue: d.revenue }))
     .sort((a, b) => a.hour - b.hour);
 
-  return {
+  const result: InsightsData = {
     slotUtilization,
     locationComparison,
     repeatCustomers,
@@ -2587,6 +2689,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     cancellationRate,
     peakHours,
   };
+  return result;
 }
 
 // --- Notifications ---
