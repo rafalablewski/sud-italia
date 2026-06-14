@@ -2682,7 +2682,11 @@ body.v8-cart-open { overflow: hidden; }
   max-width: 460px;
   height: 96vh;
   max-height: 96vh;
-  background: var(--glass-fill-strong);
+  /* Bright warm-cream frost — these sheets cover the page on mobile, so a
+     high-alpha cream reads clean and warm (matching the header) instead of
+     letting a darker page backdrop dull the scroll body. The blur + the
+     refraction border keep the glass edge. */
+  background: rgba(250, 244, 232, 0.90);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border-radius: 18px 18px 0 0;
@@ -5850,7 +5854,11 @@ body.v8-detail-open { overflow: hidden; }
   max-width: 460px;
   height: 92vh;
   max-height: 92vh;
-  background: var(--glass-fill-strong);
+  /* Bright warm-cream frost — these sheets cover the page on mobile, so a
+     high-alpha cream reads clean and warm (matching the header) instead of
+     letting a darker page backdrop dull the scroll body. The blur + the
+     refraction border keep the glass edge. */
+  background: rgba(250, 244, 232, 0.90);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border-radius: 18px 18px 0 0;

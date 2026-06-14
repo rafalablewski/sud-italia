@@ -179,10 +179,12 @@ friction, maximum trust, one slide-over from the menu.
 ## V8 Trattoria visual — Step 11
 
 The drawer's chrome is the Tuscany-trattoria vocabulary introduced in
-Steps 1-10, now rendered in **liquid glass**: the panel is a strong
-frosted-glass sheet (`--glass-fill-strong` + backdrop blur + `--glass-stroke`
-border, keeping its dramatic upward shadow) over the warm scrim, so the
-aurora reads softly through the drawer. The selector family lives under
+Steps 1-10, now rendered in **liquid glass**: the panel is a bright
+warm-cream frosted sheet (~0.90 cream + backdrop blur + `--glass-stroke`
+border, keeping its dramatic upward shadow). The high cream alpha is
+deliberate — the sheet covers the page on mobile, so a lighter fill keeps
+the scroll body warm and readable instead of letting a darker page backdrop
+dull it; the blur + refraction border still give the glass edge. The selector family lives under
 `.v8-cart-*` in `src/app/themes/homepage/index.css` and is owned by
 `CartDrawer.tsx` (the drawer no longer composes through the generic
 `<Sheet />` primitive — it builds its own portalled sheet so the glass feel
