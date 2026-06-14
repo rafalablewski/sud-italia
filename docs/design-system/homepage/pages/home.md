@@ -104,10 +104,11 @@ for it.
 
 ### Locations grid — `<LocationsGrid />`
 
-V8 Trattoria treatment — alternating warm-paper section
-(`.v8-ps.v8-ps-alt`) with a centred header and a 1 → 2-column grid of
-paper cards. Lives at the `#locations` anchor for the hero kicker's
-"Locations" link.
+V8 Trattoria treatment — alternating-veil section (`.v8-ps.v8-ps-alt`,
+now a faint translucent-parchment veil over the aurora rather than an
+opaque band) with a centred header and a 1 → 2-column grid of
+**liquid-glass** cards. Lives at the `#locations` anchor for the hero
+kicker's "Locations" link.
 
 - **Section header** uses the new shared `<eyebrow / title / sub>`
   primitives. Eyebrow: `THE TRUCKS · le botteghe` in uppercase
@@ -118,11 +119,15 @@ paper cards. Lives at the `#locations` anchor for the hero kicker's
   one kitchen, one nonna who taught us the dough."
 - **One card per location** (Kraków + Warszawa today, Wrocław auto-
   shows as Coming Soon because `isActive: false` in the seed data).
-  Cards are paper rectangles with a parchment-deep gradient ground.
+  Cards are `.v8-loc-card` **glass surfaces** — translucent parchment
+  (`--glass-fill`) over the aurora with a `--glass-stroke` border, the
+  warm `--glass-shadow` drop, and a hover sheen sweep (`::after`).
 - **Per-slug pen-sketch illustration** in the card's top 180px panel:
   wood-fired oven (Kraków), Vespa with pizza box (Warszawa), a market-
   stall fallback (any future location, until its slug is hand-drawn).
-  Same paper-grain noise overlay as the body canvas at 70% opacity.
+  The illustration tile is now a translucent warm wash (no opaque
+  parchment-deep base) so the aurora reads through; the same paper-grain
+  noise overlay still sits on top at 70% opacity for tooth.
 - **Tricolore hairline** (2.5px, the shared `.v8-tricolore`) sits
   between the illustration and the body — reads as a separator, not
   a closer.
@@ -150,14 +155,15 @@ paper cards. Lives at the `#locations` anchor for the hero kicker's
     locations the CTA is replaced with the existing `<NotifyMeForm />`
     so visitors can leave their email; bilingual "avvisami
     all'apertura" subtitle above the form.
-- **Card hover** lifts 4px with a deeper warm-brown drop shadow
-  (350ms ease). No aggressive scale.
+- **Card hover** lifts 6px with a deeper `--glass-shadow` drop + the
+  sheen sweep (350ms ease). No aggressive scale. Falls back to the
+  opaque pre-glass card under `@supports not (backdrop-filter)`.
 
 The new `.v8-ps`, `.v8-ps-alt`, `.v8-ps-head`, `.v8-ps-eyebrow`,
 `.v8-ps-title`, `.v8-ps-sub`, `.v8-page-inner` primitives are
 **reusable** — Bundles, Loyalty, the future CTA section compose
 against the same classes so spacing, type ladder, and the
-alt-paper rhythm stay identical across the landing. The Famiglia
+alt-veil rhythm stay identical across the landing. The Famiglia
 strip is the **deliberate exception** — V8 strips the eyebrow /
 title / subtitle chrome so the quote lands as a single
 typographic gesture between Bundles and Loyalty (see the Famiglia
@@ -166,8 +172,8 @@ strip section below). See
 
 ### Bundles showcase — `<BundlesShowcase />`
 
-V8 Trattoria treatment — four paper cards inside a wider `.v8-ps`
-section (`.v8-bundles-section`) that breaks out of the standard
+V8 Trattoria treatment — four **liquid-glass** cards inside a wider
+`.v8-ps` section (`.v8-bundles-section`) that breaks out of the standard
 `.v8-page-inner` 1180px column to a 1500px hard cap, with a parchment
 gutter at the iframe edges. The Famiglia / Pranzo / Spicchio Notturno
 / Il Classico cards correspond to the four meal-window slots V8
@@ -182,6 +188,12 @@ designed (family / lunch / late-night / auto-combo).
     English copy.
 - **Grid** is 1 → 2 → 4 columns across mobile / tablet (≥640px) /
   desktop (≥1000px), gap widens to 28px ≥1400px.
+- **Glass surface** — each card is `.v8-bundle` translucent parchment
+  (`--glass-fill`) over the aurora with a `--glass-stroke` border, the
+  warm `--glass-shadow` drop, and a hover sheen (`::after`). The 5px
+  accent stripe doubles as the surface's top-edge light catch, so the
+  bundle card skips the generic refraction line. Falls back to the
+  opaque pre-glass card under `@supports not (backdrop-filter)`.
 - **Per-card variant accents** drive the top stripe (5px gradient
   from accent → accent-soft), the icon colour, and the uppercase
   english subtitle colour:
@@ -218,7 +230,8 @@ designed (family / lunch / late-night / auto-combo).
   pill. CTA links to the **primary active location** (`getActiveLocations()[0].slug`)
   — the cart drawer surfaces the actual bundle ladder once the
   customer's on a menu.
-- **Card hover** — translateY(-4px) + warm-brown drop shadow.
+- **Card hover** — translateY(-6px) + deeper `--glass-shadow` drop +
+  the sheen sweep.
 
 Per-location admin overrides (`LocationUpsellConfig.bundles`) do
 **not** reflect here — the homepage is location-agnostic. Operators
@@ -248,8 +261,9 @@ Famiglia strip.
   the citation — V8 polish zeroed it.
 - **Background** is a single soft terracotta radial wash centred on
   the section box (`radial-gradient(at 50% 50%, rgba(184,92,56,
-  0.06), transparent 70%)`). No alt-paper band, no tricolore, no
-  ornaments — restraint is the point.
+  0.06), transparent 70%)`). No alt-veil band, no tricolore, no
+  ornaments — restraint is the point; the famiglia quote sits directly
+  on the aurora as a single typographic gesture.
 - **The quote** — italic Cormorant 28px → 36px ≥md, espresso
   colour, max-width 720px, centred. Wrapped in translucent oxblood
   curly quotes (`\201C` open + `\201D` close) as pseudo-elements at
@@ -282,12 +296,18 @@ finishes the landing. NOT the small inline `<LoyaltyCard />` panel
 the previous storefront shipped on the landing (that interactive
 sign-in card lives on `/rewards` instead).
 
-- **Section is `.v8-ps.v8-ps-dark`** — the dark variant of the
-  shared section primitive. Espresso background with a warm
-  terracotta radial wash top-left + an ochre wash bottom-right.
-  Light-on-dark variant flips the shared `.v8-ps-eyebrow / -title
-  / -sub` colours via descendant selectors so this section reads
-  with the same type ladder as the lighter sections, just inverted.
+- **Section is `.v8-ps.v8-ps-dark`** — the **dark frosted-glass**
+  variant of the shared section primitive. Predominantly espresso
+  (rgba(61,40,23,0.86) — heavy enough that the parchment text holds
+  WCAG AA over the aurora) with a warm terracotta radial wash top-left
+  + an ochre wash bottom-right, then a backdrop blur frosting the aurora
+  edges behind. (A full-bleed closer needs the heavy fill; the lighter
+  `--glass-fill-dark` token is reserved for card-sized dark surfaces
+  like the rewards tier card — P4.) Falls back to the solid espresso
+  block under `@supports not (backdrop-filter)`. The light-on-dark
+  variant flips the shared `.v8-ps-eyebrow / -title / -sub` colours via
+  descendant selectors so this section reads with the same type ladder
+  as the lighter sections, just inverted.
 - **Eyebrow** in ochre-light: `Members & friends · soci e amici`,
   em-dashes in `--color-espresso-soft` (a darker brown than the
   light-section line tokens).

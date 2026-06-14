@@ -126,8 +126,12 @@ Each phase = code + design-system doc edit + verify, in one reviewable unit.
   `.v8-sheen` primitives, body aurora + reduced-motion/@supports fallback.
   Docs: rewrite `material.md`, extend `color.md`, **add `theme/extend.md`**
   (the "how to add a glass surface" contract — admin has one, homepage doesn't).
-- **P1 — Landing.** `v8-hero`, `v8-ps`, `v8-loc-card`, `v8-bundles`,
-  `v8-famiglia`, `v8-soci`. Docs: `pages/home.md`.
+- **P1 — Landing.** ✅ DONE — `v8-loc-card` + `v8-bundle` → glass (fill /
+  border / shadow at `--glass-*`, hover sheen `::after`), `v8-loc-illus` →
+  translucent wash, `v8-ps-dark` (Soci closer) → dark frosted glass
+  (0.86 espresso for AA), `v8-ps-alt` → translucent veil, P1 `@supports`
+  fallback. Hero left as-is — it already sits on the aurora. Docs:
+  `pages/home.md` (locations / bundles / Soci / alt-band notes).
 - **P2 — Location / menu.** `v8-mi` (perf pass), `v8-menu`, `v8-cat`,
   location hero, `v8-guarantee`, `v8-float`. Docs: `pages/menu.md`.
 - **P3 — Cart / checkout.** `v8-cart*`, `v8-detail`, `v8-combo`,
