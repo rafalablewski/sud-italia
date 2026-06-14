@@ -224,6 +224,11 @@ export async function getActiveDataMode(): Promise<"live" | "simulation"> {
 /** Wipe every key under one namespace prefix. Real/shared keys are never
  *  touched — only `prefix`-prefixed keys are removed. */
 async function wipeNamespace(prefix: string): Promise<void> {
+  // A wipe removes blobs out from under the heavy-read cache; drop it wholesale
+  // so a stale parse can't outlive the reset (cheap — the map is tiny). Bump the
+  // analytics version too so the daily-stats / insights memos rebuild.
+  heavyReadCache.clear();
+  bumpAnalyticsVersion();
   if (useDB) {
     await ensureDB();
     const db = sql();
@@ -274,7 +279,15 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
   // while a test mode is on. Shared keys are never namespaced, so they skip the
   // round-trip (and avoid recursing on settings.json, which refreshDataMode reads raw).
   if (!SHARED_KEYS.has(key)) await refreshDataMode();
-  return rawReadJSON(resolveKey(key), fallback);
+  const resolved = resolveKey(key);
+  if (HEAVY_READ_KEYS.has(key)) {
+    const hit = heavyReadCache.get(resolved);
+    if (hit && Date.now() - hit.at < HEAVY_READ_TTL_MS) return (await hit.promise) as T;
+    const promise = rawReadJSON(resolved, fallback);
+    heavyReadCache.set(resolved, { at: Date.now(), promise });
+    return (await promise) as T;
+  }
+  return rawReadJSON(resolved, fallback);
 }
 
 async function rawReadJSON<T>(key: string, fallback: T): Promise<T> {
@@ -347,8 +360,53 @@ const ADMIN_USERS_KEY = "admin-users.json";
 const ADMIN_USERS_TTL_MS = 5_000;
 let adminUsersCache: { data: AdminUser[]; at: number } | null = null;
 
+// --- Short-TTL read cache for hot, HEAVY, read-mostly blobs -----------------
+// The orders blob grows into the multi-MB range once a couple of locations
+// build months of history. A single admin dashboard refresh fans out into ~10
+// routes (analytics ×4, insights ×3, orders, KDS fleet, labor…) that each call
+// getOrders()/getSummary()/getInsights() — and every one of those would
+// otherwise re-fetch and re-JSON.parse the WHOLE blob, serialized on one Node
+// process: ~10 × the parse cost per refresh, which is exactly the "takes
+// forever to load anything" the deep-history test surfaced. A few-second
+// per-instance cache collapses that burst to ONE read+parse; writeJSON
+// invalidates the key on any mutation so a new/changed order is visible within
+// the TTL at worst. Scoped to an allowlist of genuinely heavy keys so small,
+// write-hot config blobs (settings toggles — Rule #7) keep read-your-write
+// immediacy. Keyed by the RESOLVED key so live and simulation namespaces never
+// alias. The cached value is shared by reference, which is safe because every
+// read path treats it as immutable (getOrders/getAnalytics build new arrays)
+// and every mutate path writes (→ invalidates) right after it mutates.
+const HEAVY_READ_KEYS = new Set<string>(["orders.json", "kds-tickets.json"]);
+const HEAVY_READ_TTL_MS = 5_000;
+// Stores the in-flight PROMISE (not just the resolved value) so a burst of
+// concurrent callers — the dashboard fans out ~10 at once — share a single
+// read+parse instead of each racing its own before any of them populates the
+// cache. rawReadJSON never rejects (it catches and returns the fallback), so a
+// cached promise is always safe to re-await.
+const heavyReadCache = new Map<string, { at: number; promise: Promise<unknown> }>();
+
+// --- Analytics data-version (drives the daily-stats / insights memos) -------
+// getSummary/getAnalytics/getInsights re-aggregate the WHOLE order history on
+// every call, and the dashboard fires ~7 of them per 30s refresh. Once the raw
+// blob parse is cached (above), that O(orders) re-aggregation is the dominant
+// remaining cost on a deep dataset. The memos below cache the aggregated output
+// keyed by this counter, which bumps on ANY write to an analytics input
+// (orders or slots). So while an operator browses static history, every call
+// after the first is an O(days) lookup instead of an O(orders) re-scan; a
+// new/changed order or slot bumps the version and the next refresh rebuilds.
+// Over-bumping only forces a harmless rebuild — under-bumping would serve stale
+// numbers, so the DB-mode mutation paths (which bypass writeJSON for their
+// primary write) bump explicitly too.
+const ANALYTICS_INPUT_KEYS = new Set<string>(["orders.json", "slots.json"]);
+let analyticsDataVersion = 0;
+function bumpAnalyticsVersion(): void {
+  analyticsDataVersion++;
+}
+
 function invalidateKvCache(key: string): void {
   if (key === ADMIN_USERS_KEY) adminUsersCache = null;
+  if (HEAVY_READ_KEYS.has(key)) heavyReadCache.delete(resolveKey(key));
+  if (ANALYTICS_INPUT_KEYS.has(key)) bumpAnalyticsVersion();
 }
 
 // --- Time Slots (m1_1: normalized table with dual-write) ----------------
@@ -1438,6 +1496,12 @@ async function mirrorOrderDeleteToKvStore(id: string): Promise<void> {
   }
 }
 
+/** Default cap for the operational Orders board + live stream snapshot. The
+ *  board shows recent activity newest-first; nobody scrolls thousands of old
+ *  completed orders, and shipping them all is what made a deep-history dataset
+ *  unusable. Reports/analytics read the full period via the uncapped path. */
+export const ORDERS_BOARD_LIMIT = 500;
+
 export async function getOrders(
   locationSlug?: string,
   /** Optional cutoff — only return orders with createdAt >= this ISO string.
@@ -1448,11 +1512,20 @@ export async function getOrders(
   /** Simulated-record escape hatch. Simulated orders are filtered out of
    *  every read by default so they never reach the dashboard, Orders list,
    *  reports, CRM or analytics. Reserved opt-in for future simulation tooling
-   *  (no current consumer — the KDS order simulator was removed). */
-  opts?: { includeSimulated?: boolean },
+   *  (no current consumer — the KDS order simulator was removed).
+   *
+   *  `limit` caps the result to the N most-recent orders (newest first). The
+   *  Orders board and live stream snapshot use it so a deep-history dataset
+   *  never ships 16k rows / many MB to the browser — operationally you only
+   *  ever act on recent orders, and old completed ones never change. Pushed
+   *  into SQL as `LIMIT` (with the createdAt index doing the ordering) on the
+   *  DB path; applied as a sort+slice on the kv path. Analytics/reports leave
+   *  it unset because they genuinely need the full period. */
+  opts?: { includeSimulated?: boolean; limit?: number },
 ): Promise<Order[]> {
   const keepSim = opts?.includeSimulated === true;
   const stripSim = (list: Order[]): Order[] => (keepSim ? list : list.filter((o) => !o.simulated));
+  const limit = opts?.limit;
   const db = await getDomainDb();
   if (db) {
     try {
@@ -1474,9 +1547,10 @@ export async function getOrders(
         : conditions.length === 1
           ? conditions[0]
           : and(...conditions);
-      const rows = whereClause
-        ? await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
-        : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+      const base = whereClause
+        ? db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
+        : db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+      const rows = limit && limit > 0 ? await base.limit(limit) : await base;
       if (rows.length > 0) return stripSim(rows.map(rowToOrder));
     } catch (err) {
       logger.warn(
@@ -1503,7 +1577,15 @@ export async function getOrders(
     bumpLazyBackfillHit("orders");
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
   }
-  return stripSim(filtered);
+  const result = stripSim(filtered);
+  if (limit && limit > 0 && result.length > limit) {
+    // Newest-first, then take the head — matches the DB path's ORDER BY
+    // createdAt DESC LIMIT n (the kv blob isn't guaranteed sorted on disk).
+    return [...result]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+  return result;
 }
 
 /**
@@ -1667,6 +1749,10 @@ export async function createOrder(
   // on the shared kv blob (filesystem/sim), so the seeder runs them once,
   // awaited, after all orders land.
   if (!opts?.suppressCascades) void recomputeCustomerRollup(order.customerPhone);
+  // Invalidate the analytics memos synchronously — the DB-mode primary write
+  // (dualWriteOrder) bypasses writeJSON, so we can't rely on the fire-and-forget
+  // kv mirror to bump in time for the next dashboard poll.
+  bumpAnalyticsVersion();
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
   incrCounter("orders.placed");
   // Fire KDS tickets (m2_2). Idempotent on (order_id, station_id) so
@@ -1717,6 +1803,7 @@ export async function bulkAppendOrders(orders: Order[]): Promise<void> {
   const db = await getDomainDb();
   if (db) {
     for (const o of orders) await dualWriteOrder(o);
+    bumpAnalyticsVersion();
     return;
   }
   // Group by location to honour the per-location lock scope, then one
@@ -1778,6 +1865,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     });
   }
   if (updated) {
+    bumpAnalyticsVersion();
     emitOrderEvent({
       kind: "status_changed",
       orderId: updated.id,
@@ -1892,6 +1980,7 @@ export async function updateOrder(
     void recomputeCustomerRollup(updated.customerPhone);
   }
   if (updated) {
+    bumpAnalyticsVersion();
     emitOrderEvent({ kind: "updated", orderId: updated.id, locationSlug: updated.locationSlug });
     // Outbox: paidAt transition (checkout.session.completed webhook lands)
     // and refund are the customer-facing events that need durable side
@@ -1985,6 +2074,7 @@ export async function deleteOrder(id: string): Promise<boolean> {
       void recomputeCustomerRollup(customerPhone);
     }
     if (locationSlug) {
+      bumpAnalyticsVersion();
       emitOrderEvent({ kind: "deleted", orderId: id, locationSlug });
     }
   }
@@ -2122,11 +2212,29 @@ export interface DailyStats {
   topItems: { name: string; quantity: number; revenue: number }[];
 }
 
-export async function getAnalytics(
-  locationSlug?: string,
-  dateFrom?: string,
-  dateTo?: string
-): Promise<DailyStats[]> {
+// Per-version memo of the FULL (unfiltered) daily-stats series, keyed by
+// namespace prefix + location. Cleared whenever the analytics version moves.
+// A short TTL backstops the version signal across serverless instances: a
+// read-only instance never sees a SIBLING instance's write bump its own
+// version, so without an age cap its memo could serve stale numbers until the
+// instance recycles. With the cap, cross-instance writes converge within
+// ANALYTICS_MEMO_TTL_MS (same-instance writes are still instant — they bump the
+// version and clear the memo). The within-burst dedup — the dashboard's ~8
+// parallel analytics calls collapsing to ONE build — holds regardless of TTL.
+//
+// 45s sits just above the 30s dashboard poll cadence so steady-state polling
+// (and multiple operators / SSE reconnects) reliably reuse one build per window
+// instead of re-scanning the whole order set each poll. Analytics is a recent-
+// trends view, so a sub-minute cross-instance lag is invisible; a real order on
+// this instance bumps the version and rebuilds immediately regardless.
+const ANALYTICS_MEMO_TTL_MS = 45_000;
+const dailyStatsMemo = new Map<string, { at: number; promise: Promise<DailyStats[]> }>();
+let dailyStatsMemoVersion = -1;
+
+/** Heavy work behind getAnalytics: aggregate EVERY day for a location scope,
+ *  with no date filter, so the result can be cached once per data-version and
+ *  re-sliced cheaply for any range. Pure function of the order set. */
+async function computeDailyStats(locationSlug?: string): Promise<DailyStats[]> {
   const orders = (await getOrders(locationSlug)).filter(
     (o) => o.status !== "pending"
   );
@@ -2134,8 +2242,6 @@ export async function getAnalytics(
   const byDate = new Map<string, Order[]>();
   for (const order of orders) {
     const date = order.slotDate || order.createdAt.split("T")[0];
-    if (dateFrom && date < dateFrom) continue;
-    if (dateTo && date > dateTo) continue;
     const list = byDate.get(date) || [];
     list.push(order);
     byDate.set(date, list);
@@ -2206,6 +2312,39 @@ export async function getAnalytics(
 
   stats.sort((a, b) => a.date.localeCompare(b.date));
   return stats;
+}
+
+export async function getAnalytics(
+  locationSlug?: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<DailyStats[]> {
+  // Prime the namespace prefix so the cache key can't bucket a cold-instance
+  // read under the wrong (live vs simulation) namespace.
+  await refreshDataMode();
+  if (dailyStatsMemoVersion !== analyticsDataVersion) {
+    dailyStatsMemo.clear();
+    dailyStatsMemoVersion = analyticsDataVersion;
+  }
+  const memoKey = `${activePrefixSync()}|${locationSlug ?? "*"}`;
+  const hit = dailyStatsMemo.get(memoKey);
+  // Cache the in-flight promise so a burst of concurrent callers for the same
+  // scope share ONE aggregation instead of each re-scanning the whole order set.
+  let promise: Promise<DailyStats[]>;
+  if (hit && Date.now() - hit.at < ANALYTICS_MEMO_TTL_MS) {
+    promise = hit.promise;
+  } else {
+    promise = computeDailyStats(locationSlug);
+    // Don't let a transient failure stick in the cache for the whole TTL.
+    promise.catch(() => dailyStatsMemo.delete(memoKey));
+    dailyStatsMemo.set(memoKey, { at: Date.now(), promise });
+  }
+  const full = await promise;
+  // Slice to the requested range. Always returns a NEW array so callers can
+  // never mutate the memoized series.
+  return full.filter(
+    (s) => (!dateFrom || s.date >= dateFrom) && (!dateTo || s.date <= dateTo),
+  );
 }
 
 export interface SummaryStats {
@@ -2338,7 +2477,31 @@ export interface InsightsData {
   peakHours: { hour: number; orderCount: number; revenue: number }[];
 }
 
+// Per-version memo of insights output, keyed by namespace prefix + date range.
+// Its inputs are orders (getOrders) and the slots blob — both covered by the
+// analytics version (ANALYTICS_INPUT_KEYS includes slots.json), so a slot edit
+// invalidates it just like an order does. Active-locations changes are rare
+// config; a subsequent order write rebuilds within the same shift.
+const insightsMemo = new Map<string, { at: number; promise: Promise<InsightsData> }>();
+let insightsMemoVersion = -1;
+
 export async function getInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
+  await refreshDataMode();
+  if (insightsMemoVersion !== analyticsDataVersion) {
+    insightsMemo.clear();
+    insightsMemoVersion = analyticsDataVersion;
+  }
+  const memoKey = `${activePrefixSync()}|${dateFrom ?? ""}|${dateTo ?? ""}`;
+  const hit = insightsMemo.get(memoKey);
+  if (hit && Date.now() - hit.at < ANALYTICS_MEMO_TTL_MS) return hit.promise;
+  const promise = computeInsights(dateFrom, dateTo);
+  // Don't let a transient failure stick in the cache for the whole TTL.
+  promise.catch(() => insightsMemo.delete(memoKey));
+  insightsMemo.set(memoKey, { at: Date.now(), promise });
+  return promise;
+}
+
+async function computeInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
   const allSlots = await readJSON<TimeSlot[]>("slots.json", []);
   // Read orders through getOrders() — the SAME canonical, table-first source
   // getAnalytics/getSummary use — not the raw orders.json kv mirror. In
@@ -2515,7 +2678,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .map(([hour, d]) => ({ hour, orderCount: d.count, revenue: d.revenue }))
     .sort((a, b) => a.hour - b.hour);
 
-  return {
+  const result: InsightsData = {
     slotUtilization,
     locationComparison,
     repeatCustomers,
@@ -2526,6 +2689,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     cancellationRate,
     peakHours,
   };
+  return result;
 }
 
 // --- Notifications ---
