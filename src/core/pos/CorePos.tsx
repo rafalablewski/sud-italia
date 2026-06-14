@@ -115,15 +115,23 @@ export function CorePos({
   // (ring 3, the till must keep 3) — the old code computed off a stale `tabs`
   // snapshot, so back-to-back taps overwrote each other's count.
   const pendingPersistRef = useRef<Set<string>>(new Set());
-  // The cross-till poll's GET can be in flight BEFORE a void and resolve AFTER
-  // it; the `pendingSaves` guard only blocks NEW polls, so that already-running
-  // read would re-add the just-voided check (mergeTabs takes membership from
-  // `incoming`). Rather than mask it with a timed tombstone, we abort the
-  // in-flight read the instant we void — a cancelled fetch never reaches
-  // mergeTabs, so a stale snapshot can't resurrect the check. Deletes are now
-  // authoritative server-side (an edit/link can't re-create a voided check), so
-  // once the next poll runs the id is simply gone.
-  const readAbort = useRef<AbortController | null>(null);
+  // Voided checks the server hasn't confirmed gone yet. The cross-till poll's GET
+  // can snapshot a check BEFORE a void and resolve AFTER it (the `pendingSaves`
+  // guard only blocks NEW polls, and aborting only helps while the fetch is still
+  // on the wire — not in the window where the response already arrived and is
+  // about to merge). So we filter every incoming list (poll + hydrate) against
+  // this set: a voided id stays hidden until the server stops returning it
+  // (delete confirmed → drop it), and is released immediately if the DELETE
+  // actually fails (so a genuinely-failed void reconciles back to reality). No
+  // timer — the lifecycle is the server's answer, not a guessed TTL.
+  const voidedIds = useRef<Set<string>>(new Set());
+  const withoutVoided = useCallback((incoming: PosTab[]): PosTab[] => {
+    const set = voidedIds.current;
+    if (set.size === 0) return incoming;
+    const incomingIds = new Set(incoming.map((t) => t.id));
+    for (const id of set) if (!incomingIds.has(id)) set.delete(id); // server confirmed gone
+    return set.size === 0 ? incoming : incoming.filter((t) => !set.has(t.id));
+  }, []);
   // Temp ids voided WHILE their create-POST is still on the wire. Voiding a `tmp-`
   // check can't hit the server (it has no real id yet), so without this the POST
   // lands a beat later, creates the check server-side, and the next cross-till
@@ -138,7 +146,8 @@ export function CorePos({
   // wrote can't clobber the fresher edit. Optimistic `tmp-` checks (a create
   // whose POST hasn't returned) are never on the server yet, so carry them over
   // rather than let a poll drop a check that's still being opened.
-  const mergeTabs = useCallback((incoming: PosTab[]) => {
+  const mergeTabs = useCallback((incomingRaw: PosTab[]) => {
+    const incoming = withoutVoided(incomingRaw);
     setTabs((local) => {
       const byId = new Map(local.map((t) => [t.id, t] as const));
       const serverIds = new Set(incoming.map((t) => t.id));
@@ -150,15 +159,17 @@ export function CorePos({
       for (const t of local) if (t.id.startsWith("tmp-") && !serverIds.has(t.id)) merged.push(t);
       return merged;
     });
-  }, []);
+  }, [withoutVoided]);
 
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
     try {
-      const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+      // no-store: a cached poll read would re-serve a pre-void snapshot and the
+      // merge below would restore every just-voided check.
+      const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { cache: "no-store" });
       if (!res.ok) return;
       const data: { tabs?: PosTab[] } = await res.json();
-      const list = Array.isArray(data.tabs) ? data.tabs : [];
+      const list = withoutVoided(Array.isArray(data.tabs) ? data.tabs : []);
       // Initial hydrate, but never drop a check the user opened WHILE this fetch
       // was in flight: at hydrate time any local tab the server response omits is
       // an optimistic check still being created (its POST hasn't landed in this
@@ -175,7 +186,7 @@ export function CorePos({
     } finally {
       setHydrated(true);
     }
-  }, [pageLoc]);
+  }, [pageLoc, withoutVoided]);
 
   useEffect(() => {
     setTabs([]);
@@ -188,22 +199,17 @@ export function CorePos({
   usePolling(
     async () => {
       if (!pageLoc || persistTimers.current.size > 0 || pendingSaves.current > 0) return;
-      // Expose this read so a void mid-flight can abort it — an aborted fetch
-      // never reaches mergeTabs, so a snapshot taken before the void can't re-add
-      // the just-deleted check.
-      const ac = new AbortController();
-      readAbort.current = ac;
       try {
-        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { signal: ac.signal });
+        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data: { tabs?: PosTab[] } = await res.json();
-        const list = Array.isArray(data.tabs) ? data.tabs : [];
+        // Filter voided-but-unconfirmed ids out of the active-id pick too, so a
+        // stale snapshot can't re-select a check the operator just dropped.
+        const list = withoutVoided(Array.isArray(data.tabs) ? data.tabs : []);
         mergeTabs(list);
         setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
       } catch {
-        /* aborted (a concurrent void) or network blip — both non-fatal */
-      } finally {
-        if (readAbort.current === ac) readAbort.current = null;
+        /* non-fatal */
       }
     },
     5000,
@@ -419,12 +425,20 @@ export function CorePos({
       // into state. This is what stops a just-voided new check from reappearing.
       if (pendingCreateVoids.current.has(tempId)) {
         pendingCreateVoids.current.delete(tempId);
-        readAbort.current?.abort(); // drop any in-flight poll that may have seen the new check
+        // Hide the real id from incoming lists until the server confirms the
+        // delete, so a poll can't surface the check between this DELETE and its
+        // commit. Released on failure so a check that survives reconciles back.
+        voidedIds.current.add(real.id);
         pendingSaves.current += 1;
         void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(real.id)}`, {
           method: "DELETE",
         })
-          .catch(() => {})
+          .then((res) => {
+            if (!res.ok && res.status !== 404) voidedIds.current.delete(real.id);
+          })
+          .catch(() => {
+            voidedIds.current.delete(real.id);
+          })
           .finally(() => {
             pendingSaves.current = Math.max(0, pendingSaves.current - 1);
           });
@@ -637,11 +651,10 @@ export function CorePos({
         pendingCreateVoids.current.add(id);
         return;
       }
-      // Abort any cross-till poll read already on the wire: it may have snapshotted
-      // this check before we voided it, and applying that stale list would re-add
-      // it. New polls are blocked by `pendingSaves` for the DELETE round-trip, so
-      // by the time one runs again the id is gone server-side.
-      readAbort.current?.abort();
+      // Hide this id from every incoming server list until the server confirms
+      // the delete — this is what stops a poll that snapshotted the check before
+      // the void (and resolves after it) from re-adding the just-voided row.
+      voidedIds.current.add(id);
       // Confirm to the operator **immediately** — the row is already gone, so
       // the toast must not wait on the DELETE round-trip. Server deletes
       // serialize on the per-location tab lock, so voiding several in a row
@@ -654,10 +667,18 @@ export function CorePos({
           `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`,
           { method: "DELETE" },
         );
-        // 404 = already gone (a double-fire / cross-till void); not an error.
-        if (!res.ok && res.status !== 404) toast(`Couldn't void ${name} — it may reappear`, "danger");
+        // 404 = already gone (a double-fire / cross-till void); not an error — the
+        // filter self-clears once a poll no longer sees the id. On a real failure
+        // the void didn't happen, so release the id and let reality reconcile it
+        // back rather than hide a check that still exists server-side.
+        if (!res.ok && res.status !== 404) {
+          voidedIds.current.delete(id);
+          toast(`Couldn't void ${name} — it may reappear`, "danger");
+        }
       } catch {
-        /* offline — best effort; the poll reconciles when the link returns */
+        // Offline / network error — the DELETE may not have landed. Release the id
+        // so the next poll reconciles (the check returns if the void didn't take).
+        voidedIds.current.delete(id);
       } finally {
         pendingSaves.current = Math.max(0, pendingSaves.current - 1);
       }

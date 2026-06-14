@@ -17,10 +17,21 @@ import { getPosTabs, getPosTab, savePosTab, deletePosTab } from "@/lib/store";
  *   DELETE → drop a check (?id=)
  */
 
+// This is a live till read polled every few seconds — it must NEVER be cached.
+// A cached GET (Vercel CDN edge or the browser's HTTP cache, which can serve a
+// response with no Cache-Control heuristically) returns a pre-void snapshot, and
+// the client's merge then restores every check the operator just voided — the
+// "voided checks reappear, whole set comes back to the original total" bug. Force
+// the route dynamic and stamp an explicit no-store on the body.
+export const dynamic = "force-dynamic";
+
 export const GET = withAdmin(
   { roles: ["staff"], locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    return NextResponse.json({ tabs: await getPosTabs(locationSlug ?? undefined) });
+    return NextResponse.json(
+      { tabs: await getPosTabs(locationSlug ?? undefined) },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } },
+    );
   },
 );
 
