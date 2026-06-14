@@ -367,6 +367,50 @@ export function CorePos({
     [mutateActive],
   );
 
+  // Delete a check server-side **durably**. The void is the one mutation that
+  // must survive a transient failure intact, so it goes through the same
+  // idempotent outbox as Send/Charge (durableMutate) instead of a bare fetch.
+  // The old fire-and-forget DELETE released the `voidedIds` guard on ANY failure
+  // (a 5xx, a dropped connection, a cold-instance timeout), and the 5s cross-till
+  // poll then re-added the check the operator had voided — THE "voided checks
+  // reappear a few seconds later" bug, which survived a dozen server-side delete
+  // fixes because the resurrection was the client undoing its own void. Now a
+  // transient failure RETRIES (and survives a reload via the persisted outbox);
+  // only a genuine 4xx other than 404 releases the guard and lets the poll
+  // reconcile the check back. 404 = already gone (double-fire / cross-till void).
+  const voidCheckOnServer = useCallback(
+    (id: string) => {
+      voidedIds.current.add(id);
+      // Only a genuine client-side rejection (a 4xx other than 404) means the
+      // void truly won't happen — release the guard so the next poll reconciles
+      // the check back. A 404 is "already gone" and a 5xx is a transient server
+      // hiccup (idempotentFetch already retried it); both stay hidden so a blip
+      // can never resurrect a voided check.
+      const release = (status: number) => {
+        if (status >= 400 && status < 500 && status !== 404) voidedIds.current.delete(id);
+      };
+      pendingSaves.current += 1;
+      void durableMutate({
+        url: `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`,
+        method: "DELETE",
+        entity: `tab:${id}`,
+        desc: `Void · #${id}`,
+        // Fires only for a PARKED write that finally lands on a terminal 4xx.
+        onReject: release,
+      })
+        .then(({ res }) => {
+          // res === null ⟺ parked offline: stay hidden, the outbox replays the
+          // DELETE until it lands. A real non-ok response is a 4xx (5xx retries
+          // inside durableMutate) — let `release` decide on the status.
+          if (res && !res.ok) release(res.status);
+        })
+        .finally(() => {
+          pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+        });
+    },
+    [pageLoc],
+  );
+
   const newTab = useCallback(async () => {
     if (!pageLoc) return;
     // Derive the next default name from the highest existing "Tab N" so it never
@@ -425,23 +469,11 @@ export function CorePos({
       // into state. This is what stops a just-voided new check from reappearing.
       if (pendingCreateVoids.current.has(tempId)) {
         pendingCreateVoids.current.delete(tempId);
-        // Hide the real id from incoming lists until the server confirms the
-        // delete, so a poll can't surface the check between this DELETE and its
-        // commit. Released on failure so a check that survives reconciles back.
-        voidedIds.current.add(real.id);
-        pendingSaves.current += 1;
-        void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(real.id)}`, {
-          method: "DELETE",
-        })
-          .then((res) => {
-            if (!res.ok && res.status !== 404) voidedIds.current.delete(real.id);
-          })
-          .catch(() => {
-            voidedIds.current.delete(real.id);
-          })
-          .finally(() => {
-            pendingSaves.current = Math.max(0, pendingSaves.current - 1);
-          });
+        // The operator voided this check while its create-POST was in flight; it
+        // now exists server-side under `real.id`. Delete it durably (same outbox
+        // as a normal void) so a transient failure retries instead of letting the
+        // poll resurrect the just-voided check.
+        voidCheckOnServer(real.id);
         return;
       }
       // Swap temp → real id, keeping anything rung onto the optimistic check.
@@ -463,7 +495,7 @@ export function CorePos({
     } finally {
       pendingSaves.current = Math.max(0, pendingSaves.current - 1);
     }
-  }, [pageLoc, tabs]);
+  }, [pageLoc, tabs, voidCheckOnServer]);
 
   // Flush any just-reconciled optimistic checks: once the temp→real id swap has
   // committed to `tabs`, persist them under the real id if anything was rung up
@@ -651,41 +683,16 @@ export function CorePos({
         pendingCreateVoids.current.add(id);
         return;
       }
-      // Hide this id from every incoming server list until the server confirms
-      // the delete — this is what stops a poll that snapshotted the check before
-      // the void (and resolves after it) from re-adding the just-voided row.
-      voidedIds.current.add(id);
-      // Confirm to the operator **immediately** — the row is already gone, so
-      // the toast must not wait on the DELETE round-trip. Server deletes
-      // serialize on the per-location tab lock, so voiding several in a row
-      // stacked the later toasts seconds behind the taps; only an actual
-      // failure surfaces a toast now.
+      // Delete it durably — a transient failure retries (and survives a reload)
+      // instead of releasing the guard and letting the 5s poll resurrect the
+      // check. voidCheckOnServer hides the id until the server confirms it gone.
+      voidCheckOnServer(id);
+      // Confirm to the operator immediately — the row is already gone, so the
+      // toast must not wait on the round-trip. Voiding several in a row no longer
+      // stacks toasts behind the taps.
       toast(`Voided ${name}`, "default");
-      pendingSaves.current += 1;
-      try {
-        const url = `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`;
-        const res = await fetch(url, { method: "DELETE" });
-        // TEMP DIAGNOSTIC: surface the exact DELETE outcome so we can see why the
-        // void isn't reaching/persisting on the device. Remove once confirmed.
-        toast(`DEBUG void → HTTP ${res.status} (loc=${pageLoc || "∅"})`, res.ok ? "success" : "danger");
-        // 404 = already gone (a double-fire / cross-till void); not an error — the
-        // filter self-clears once a poll no longer sees the id. On a real failure
-        // the void didn't happen, so release the id and let reality reconcile it
-        // back rather than hide a check that still exists server-side.
-        if (!res.ok && res.status !== 404) {
-          voidedIds.current.delete(id);
-        }
-      } catch (e) {
-        // Offline / network error — the DELETE may not have landed. Release the id
-        // so the next poll reconciles (the check returns if the void didn't take).
-        voidedIds.current.delete(id);
-        // TEMP DIAGNOSTIC: surface the network-level failure (name + message).
-        toast(`DEBUG void FAILED: ${e instanceof Error ? `${e.name}: ${e.message}` : "unknown"}`, "danger");
-      } finally {
-        pendingSaves.current = Math.max(0, pendingSaves.current - 1);
-      }
     },
-    [pageLoc, toast],
+    [voidCheckOnServer, toast],
   );
   // Empty checks vanish on tap; a check with rung items asks first.
   const requestVoid = useCallback(() => {

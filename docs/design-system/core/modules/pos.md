@@ -116,7 +116,16 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   once. An **empty** check is dropped on tap; a check with rung items
   confirms via a `CoreDialog` first (its danger button is
   `.core-btn.danger`). An unsaved optimistic (`tmp-`) check is removed locally
-  only.
+  only. The DELETE is **durable** — it goes through the same idempotent outbox
+  as Send/Charge (`durableMutate`, `voidCheckOnServer` in `CorePos.tsx`), so a
+  transient failure (5xx / dropped connection / cold-instance timeout) retries
+  invisibly and survives a reload instead of resurfacing the voided check. The
+  voided id is hidden from every incoming poll list (`voidedIds`) until the
+  server confirms it gone; only a genuine 4xx (other than 404 = already gone)
+  releases the guard and lets the next poll reconcile the check back. This is
+  the fix for "voided checks reappear a few seconds later" — the bare
+  fire-and-forget DELETE used to release the guard on any failure, so the 5s
+  cross-till poll re-added the check the operator had just voided.
 
 ## Engine + API contract
 
@@ -129,7 +138,8 @@ total and the `orderId` — the till only ever sends item ids + quantities.
 - **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. `POST`
   opens a check (fired in the background behind the optimistic chip); local
   edits debounce 350ms to `PUT` (temp `tmp-` ids are never PUT — their edits
-  flush once under the real id at reconcile); `DELETE` voids a check. A
+  flush once under the real id at reconcile); `DELETE` voids a check **durably**
+  via `durableMutate` (see **Void** above). A
   visibility-aware 5s poll (`usePolling`) syncs other tills — skipped while an
   edit is mid-debounce **or** any save/open/void is still on the wire
   (`pendingSaves`, so an in-flight open or void can't be resurrected), and
