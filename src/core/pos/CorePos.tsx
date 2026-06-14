@@ -164,7 +164,9 @@ export function CorePos({
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
     try {
-      const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+      // no-store: a cached poll read would re-serve a pre-void snapshot and the
+      // merge below would restore every just-voided check.
+      const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { cache: "no-store" });
       if (!res.ok) return;
       const data: { tabs?: PosTab[] } = await res.json();
       const list = withoutVoided(Array.isArray(data.tabs) ? data.tabs : []);
@@ -198,7 +200,7 @@ export function CorePos({
     async () => {
       if (!pageLoc || persistTimers.current.size > 0 || pendingSaves.current > 0) return;
       try {
-        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data: { tabs?: PosTab[] } = await res.json();
         // Filter voided-but-unconfirmed ids out of the active-id pick too, so a
