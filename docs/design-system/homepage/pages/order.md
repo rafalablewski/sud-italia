@@ -95,7 +95,8 @@ The live, polling status display.
   tinted paper card with a clock SVG, the editorial "ESTIMATED ·
   STIMATO" uppercase Cormorant label, and the time value in oxblood
   italic Cormorant 22px ("10-15 min", "Ready now!").
-- **Order summary** (`.v8-order-summary`) — paper card with the
+- **Order summary** (`.v8-order-summary`) — glass card (`--glass-fill` +
+  backdrop blur over the aurora; falls back to opaque parchment) with the
   bilingual "Your order · il tuo ordine" title, the fulfilment chip
   (`.v8-order-summary-mode`) with the icon + label + party-size suffix,
   one row per line item, and the dashed-hairline total line with
@@ -112,7 +113,7 @@ The live, polling status display.
 
 The "by the way you earned points" surface.
 
-- `.v8-order-loyalty` — ochre paper card with a 38px italic Cormorant
+- `.v8-order-loyalty` — frosted ochre-glass card with a 38px italic Cormorant
   `+N` count, bilingual italic "points earned · punti guadagnati"
   suffix, balance + tier line below ("Balance: 47 pts · Bronze" with
   the tier in oxblood italic), small italic Lora footer reminding

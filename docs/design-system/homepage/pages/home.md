@@ -297,14 +297,14 @@ the previous storefront shipped on the landing (that interactive
 sign-in card lives on `/rewards` instead).
 
 - **Section is `.v8-ps.v8-ps-dark`** — the **dark frosted-glass**
-  variant of the shared section primitive. Predominantly espresso
-  (rgba(61,40,23,0.86) — heavy enough that the parchment text holds
-  WCAG AA over the aurora) with a warm terracotta radial wash top-left
-  + an ochre wash bottom-right, then a backdrop blur frosting the aurora
-  edges behind. (A full-bleed closer needs the heavy fill; the lighter
-  `--glass-fill-dark` token is reserved for card-sized dark surfaces
-  like the rewards tier card — P4.) Falls back to the solid espresso
-  block under `@supports not (backdrop-filter)`. The light-on-dark
+  variant of the shared section primitive. Predominantly espresso via
+  `--glass-fill-dark` (espresso @86% — heavy enough that the parchment
+  text holds WCAG AA over the light aurora) with a warm terracotta radial
+  wash top-left + an ochre wash bottom-right, then a backdrop blur frosting
+  the aurora edges behind. (`--glass-fill-dark` is the shared dark-glass
+  fill — the Soci closer here and the rewards tier card (P4) both use it.)
+  Falls back to the solid espresso block under
+  `@supports not (backdrop-filter)`. The light-on-dark
   variant flips the shared `.v8-ps-eyebrow / -title / -sub` colours via
   descendant selectors so this section reads with the same type ladder
   as the lighter sections, just inverted.

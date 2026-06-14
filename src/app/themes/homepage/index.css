@@ -61,7 +61,7 @@
    * a new glass surface is theme/extend.md. */
   --glass-fill: rgba(248, 239, 222, 0.50);        /* parchment @50% — default surface */
   --glass-fill-strong: rgba(248, 239, 222, 0.62); /* drawers, sticky foot bars */
-  --glass-fill-dark: rgba(61, 40, 23, 0.34);      /* espresso tint — loyalty / dark surfaces */
+  --glass-fill-dark: rgba(61, 40, 23, 0.86);      /* espresso @86% — dark frosted surfaces (Soci closer, rewards tier); high alpha so parchment text holds AA over the LIGHT aurora */
   --glass-stroke: rgba(255, 250, 238, 0.60);      /* refraction border */
   --glass-stroke-soft: rgba(201, 162, 62, 0.30);  /* ochre-tinted hairline */
   --glass-shadow: rgba(61, 40, 23, 0.30);         /* warm-brown drop */
@@ -793,7 +793,7 @@ body::before {
   background:
     radial-gradient(at 30% 20%, rgba(184, 92, 56, 0.20), transparent 60%),
     radial-gradient(at 80% 80%, rgba(201, 162, 62, 0.14), transparent 60%),
-    rgba(61, 40, 23, 0.86);
+    var(--glass-fill-dark);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   color: var(--color-parchment);
@@ -6436,10 +6436,15 @@ body.v8-detail-open { overflow: hidden; }
    limited-time, share blocks.
    ------------------------------------------------------------------ */
 .v8-order-card {
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  position: relative;
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   padding: 18px;
   margin-bottom: 18px;
   font-family: var(--font-body);
@@ -6708,9 +6713,14 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-summary {
   margin-top: 16px;
   padding: 16px 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   font-family: var(--font-body);
 }
 .v8-order-summary-head {
@@ -6829,11 +6839,32 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-loyalty {
   text-align: center;
   padding: 18px;
-  background: linear-gradient(135deg, rgba(201, 162, 62, 0.14), rgba(184, 92, 56, 0.08));
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.16), rgba(184, 92, 56, 0.10));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border: 1px solid rgba(201, 162, 62, 0.40);
   border-radius: var(--r-md);
   margin-bottom: 18px;
   font-family: var(--font-body);
+}
+
+/* Fallback for the P4 glass surfaces — opaque pre-glass look where
+   backdrop-filter is unsupported. The rewards-tier keeps its ::before/::after
+   radial washes; only the fill reverts to solid espresso. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .v8-order-card,
+  .v8-order-summary,
+  .v8-rewards-card,
+  .v8-rewards-signin-card {
+    background: var(--color-parchment);
+    border-color: var(--color-line);
+    box-shadow: var(--shadow-paper);
+  }
+  .v8-rewards-tier {
+    background: var(--color-espresso);
+    border-color: var(--color-espresso-soft);
+    box-shadow: 0 12px 36px -16px rgba(45, 24, 16, 0.6);
+  }
 }
 .v8-order-loyalty-row {
   display: inline-flex;
@@ -7411,10 +7442,15 @@ body.v8-detail-open { overflow: hidden; }
 
 /* Generic paper card */
 .v8-rewards-card {
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  position: relative;
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   padding: 18px;
   margin-bottom: 18px;
   font-family: var(--font-body);
@@ -7552,11 +7588,15 @@ body.v8-detail-open { overflow: hidden; }
 .v8-rewards-signin-card {
   margin-top: 18px;
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--r-md);
   text-align: center;
-  box-shadow: var(--shadow-paper);
+  box-shadow:
+    0 18px 50px -18px var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .v8-rewards-signin-card p {
   font-family: var(--font-heading);
@@ -7600,12 +7640,20 @@ body.v8-detail-open { overflow: hidden; }
   position: relative;
   overflow: hidden;
   padding: 22px 22px 26px;
-  background: var(--color-espresso);
+  /* Dark frosted glass — the shared --glass-fill-dark (espresso @86%) so the
+     parchment text holds AA over the light aurora, with a backdrop blur
+     frosting the aurora at the card edges. The ::before/::after radial
+     washes still ride on top. */
+  background: var(--glass-fill-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   color: var(--color-parchment);
-  border: 1px solid var(--color-espresso-soft);
+  border: 1px solid rgba(255, 250, 238, 0.16);
   border-radius: 18px;
   margin-bottom: 22px;
-  box-shadow: 0 12px 36px -16px rgba(45, 24, 16, 0.6);
+  box-shadow:
+    0 24px 50px -20px rgba(45, 24, 16, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .v8-rewards-tier::before {
   content: "";

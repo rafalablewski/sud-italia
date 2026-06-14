@@ -150,8 +150,17 @@ Each phase = code + design-system doc edit + verify, in one reviewable unit.
   P3 `@supports` fallback. The overlay scrim was already warm + blurred.
   Docs: `pages/checkout.md` (drawer material + item-illus) +
   `theme/components.md` (ItemDetailDrawer frosted note).
-- **P4 — Order + rewards.** `v8-order`, `v8-rewards`. Docs: `pages/order.md`,
-  `pages/loyalty.md`.
+- **P4 — Order + rewards.** ✅ DONE — light glass on `.v8-order-card`,
+  `.v8-order-summary`, `.v8-rewards-card`, `.v8-rewards-signin-card`; frosted
+  ochre on `.v8-order-loyalty`; **dark frosted glass** on `.v8-rewards-tier`.
+  **Resolved open Q#2:** unified the dark-glass token — `--glass-fill-dark`
+  raised 0.34 → **0.86** (a card on the *light* aurora needs high alpha for
+  AA), now shared by the Soci closer (refactored P1 literal → token) and the
+  rewards tier. **Intentionally left opaque:** the loyalty QR (scannability),
+  icon discs / marks, and the nested rewards sub-cards (challenges / perks /
+  combos / tier-tiles) which read as solid tiles inside the glass containers.
+  P4 `@supports` fallback. Docs: `pages/order.md`, `pages/loyalty.md`,
+  `theme/material.md` (token %), `pages/home.md` (Soci note).
 - **P5 — Chrome + polish.** `v8-nav`, `v8-switcher`, `v8-back`, `v8-pfoot`,
   `v8-abandoned`, `v8-surprise`, `v8-chat`. Cross-page QA.
 

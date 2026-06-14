@@ -53,7 +53,7 @@ recipe every surface family opts into:
 | 0 | Aurora canvas | `<html>` parchment + `body::before` aurora + grain | Page ground, base sections |
 | 1 | `.v8-surface` | `--glass-fill` (parchment @50%) + `backdrop-filter: blur(--glass-blur) saturate(--glass-saturate)` + `--glass-stroke` border + refraction top-edge + `0 18px 50px -18px --glass-shadow` | Cards on the canvas — item cards, location cards, the rewards tier card, the order-confirmation summary |
 | 2 | `.v8-surface-strong` | as Step 1 with `--glass-fill-strong` (parchment @62%) | Portalled overlays + sticky foot bars — cart drawer, item detail drawer, the checkout foot. Plus the portal backdrop scrim. |
-| — | `.v8-surface-dark` | `--glass-fill-dark` (espresso @34%) + parchment text | The loyalty / Soci surfaces that were solid espresso blocks |
+| — | `.v8-surface-dark` | `--glass-fill-dark` (espresso @86%) + parchment text | The dark loyalty surfaces that were solid espresso blocks — the Soci closer + the rewards tier card. High alpha so parchment text holds AA over the *light* aurora. |
 
 The **refraction top-edge** (`.v8-surface::before` — a bright 1px highlight
 across the top) is what reads as "light catching glass"; keep it on every
