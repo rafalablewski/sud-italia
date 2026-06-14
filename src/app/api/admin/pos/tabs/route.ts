@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server";
+import { neon } from "@neondatabase/serverless";
 import { withAdmin } from "@/lib/api-middleware";
-import { getPosTabs, getPosTab, savePosTab, deletePosTab } from "@/lib/store";
+import { getPosTabs, getPosTab, savePosTab, deletePosTab, getActiveDataMode } from "@/lib/store";
+
+/** TEMPORARY: record what the DELETE route resolved/did, so /api/admin/pos/diag
+ *  can read it back (mobile-friendly). Reveals whether the void route resolves a
+ *  different data mode/namespace than the reads. Best-effort; remove with the
+ *  diagnostic. Written to an UN-namespaced key so the diag can read it in any
+ *  mode. */
+async function recordVoidDebug(entry: Record<string, unknown>): Promise<void> {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    await sql`
+      INSERT INTO kv_store (key, value)
+      VALUES ('pos-void-debug', ${JSON.stringify({ at: new Date().toISOString(), ...entry })}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `;
+  } catch {
+    /* best-effort */
+  }
+}
 
 /**
  * POS open checks (tabs) — the server-backed working state for the Tabs POS.
@@ -103,11 +123,14 @@ export const DELETE = withAdmin(
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     // Scope the delete to the caller's truck — a till can't drop another
     // location's open check by guessing its id.
+    const mode = await getActiveDataMode().catch(() => "?");
     const tab = await getPosTab(id, locationSlug ?? undefined);
     if (!tab || (locationSlug && tab.locationSlug !== locationSlug)) {
+      await recordVoidDebug({ id, locationSlug, mode, found: !!tab, tabLoc: tab?.locationSlug ?? null, result: "404-not-found" });
       return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     }
     const ok = await deletePosTab(id, tab.locationSlug);
+    await recordVoidDebug({ id, locationSlug, mode, found: true, tabLoc: tab.locationSlug, deleted: ok, result: ok ? "ok" : "404-delete-false" });
     if (!ok) return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   },

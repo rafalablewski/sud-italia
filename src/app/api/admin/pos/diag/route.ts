@@ -53,15 +53,19 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
     );
   }
 
-  const [krakow, warszawa, blobs] = await Promise.all([
+  const sql = neon(process.env.DATABASE_URL!);
+  const [krakow, warszawa, blobs, dbg] = await Promise.all([
     getPosTabs("krakow"),
     getPosTabs("warszawa"),
     dumpBlobs(),
+    sql`SELECT value FROM kv_store WHERE key = 'pos-void-debug'`.then((r) => r[0]?.value ?? null).catch(() => null),
   ]);
   return NextResponse.json(
     {
       useDB: true,
       mode,
+      // What the actual DELETE route last recorded (the void button's decision).
+      lastVoidRoute: dbg,
       // What the POS actually shows (id + which check), so we can see which blob
       // these came from by cross-referencing the raw dump below.
       posShows: {
