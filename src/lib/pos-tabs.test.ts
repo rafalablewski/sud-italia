@@ -136,3 +136,37 @@ test("per-location CRUD round-trips and stays scoped to its location", async () 
   // A second delete is a no-op (already gone).
   assert.equal(await deletePosTab(created.id, loc), false);
 });
+
+test("an edit (mustExist) NEVER resurrects a voided check", async () => {
+  // The bug: a debounced/in-flight PUT that lands a beat AFTER the DELETE used
+  // to re-insert the voided check via savePosTab's upsert, so it reappeared on
+  // the next cross-till poll (after the client tombstone expired ~12s later).
+  // An edit must be update-only: a save aimed at an already-voided id is dropped.
+  const loc = `test-loc-${randomUUID().slice(0, 8)}`;
+
+  const tab = await savePosTab({ locationSlug: loc, name: "Window 1", status: "open", items: [] });
+  assert.equal(await deletePosTab(tab.id, loc), true);
+
+  // Late edit lands after the void — must be a no-op (null), check stays gone.
+  const stale = await savePosTab(
+    {
+      id: tab.id,
+      locationSlug: loc,
+      name: "Window 1",
+      status: "open",
+      items: [{ menuItemId: "krk-pizza-margherita", quantity: 1 }],
+    },
+    { mustExist: true },
+  );
+  assert.equal(stale, null);
+  assert.deepEqual(await getPosTabs(loc), []);
+
+  // A normal edit of a LIVE check still applies (the fix can't break editing).
+  const live = await savePosTab({ locationSlug: loc, name: "Window 2", status: "open", items: [] });
+  const edited = await savePosTab(
+    { id: live.id, locationSlug: loc, items: [{ menuItemId: "krk-pizza-margherita", quantity: 3 }] },
+    { mustExist: true },
+  );
+  assert.equal(edited?.items[0]?.quantity, 3);
+  await deletePosTab(live.id, loc);
+});

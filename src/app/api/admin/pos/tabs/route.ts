@@ -56,23 +56,31 @@ export const PUT = withAdmin(
     }
     // savePosTab sanitises lines/channel/status and preserves the server-owned
     // orderId — so a stray "pay" status or order link can't be forged here.
-    const tab = await savePosTab({
-      id: body.id,
-      locationSlug,
-      name: body.name,
-      channel: body.channel ?? null,
-      status: body.status,
-      items: body.items,
-      tableId: body.tableId,
-      covers: body.covers,
-      address: body.address,
-      customerPhone: body.customerPhone,
-      customerName: body.customerName,
-      // null = explicit clear (a full-tab PUT can't send `undefined`).
-      discount: body.discount,
-      sentKds: body.sentKds,
-      coursed: body.coursed === null ? undefined : body.coursed,
-    });
+    // `mustExist` makes a PUT an EDIT, never a create: an edit aimed at a check
+    // that was just voided is dropped (404) instead of resurrecting it. Only
+    // POST opens a check. This is the fix for voided checks reappearing — a
+    // debounced PUT that lands a beat after the DELETE used to re-insert the row.
+    const tab = await savePosTab(
+      {
+        id: body.id,
+        locationSlug,
+        name: body.name,
+        channel: body.channel ?? null,
+        status: body.status,
+        items: body.items,
+        tableId: body.tableId,
+        covers: body.covers,
+        address: body.address,
+        customerPhone: body.customerPhone,
+        customerName: body.customerName,
+        // null = explicit clear (a full-tab PUT can't send `undefined`).
+        discount: body.discount,
+        sentKds: body.sentKds,
+        coursed: body.coursed === null ? undefined : body.coursed,
+      },
+      { mustExist: true },
+    );
+    if (!tab) return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     return NextResponse.json({ tab });
   },
 );
