@@ -278,9 +278,11 @@ under the `.v8-*` selectors in `themes/homepage/index.css`.
 
 The V8 Trattoria top nav.
 
-- **Sticky parchment-gradient bar** (`linear-gradient(180deg, rgba(248,
-  239,222,0.98), rgba(248,239,222,0.88))` + 8px backdrop blur), line-soft
-  hairline border-bottom. Adds a subtle warm-brown drop shadow once the
+- **Sticky frosted-glass bar** (translucent parchment gradient
+  `rgba(248,239,222,0.72→0.55)` + the chrome backdrop blur, so content
+  frosts as it scrolls under), `--glass-stroke` hairline border-bottom;
+  falls back to the opaque parchment bar without backdrop-filter. Adds a
+  subtle warm-brown drop shadow once the
   page is scrolled (`.v8-nav-scrolled`). Measured at **98px tall** at
   ≥md (basil-mark 38px + wordmark 24px + italic sublabel 11.5px +
   vertical padding). `--v8-nav-height` (in `themes/homepage/index.css`)
@@ -378,9 +380,10 @@ rounded-2xl chrome to the V8 paper-and-ink treatment so it reads as
 part of the page, not a third-party drop-in. Mounted in
 `(public)/layout.tsx` via `<LayoutGate flag="showChatWidget">`.
 
-- **FAB closed state** (`.v8-chat-fab`) — 56px paper circle,
-  parchment-cream gradient ground, line-soft border, paper shadow,
-  hand-drawn speech-bubble icon (three dots inside the bubble) in
+- **FAB closed state** (`.v8-chat-fab`) — 56px frosted-glass circle
+  (`--glass-fill-strong` + chrome blur + `--glass-stroke`; falls back to the
+  parchment-cream gradient), hand-drawn speech-bubble icon (three dots
+  inside the bubble) in
   oxblood stroke. A pulsing basil "available" dot
   (`.v8-chat-fab-dot`) at the top-right corner — same kicker dot
   pattern the homepage hero + the chat-header sub use. Hover flips
@@ -389,8 +392,9 @@ part of the page, not a third-party drop-in. Mounted in
   (chat = hospitality / personal voice) instead of terracotta
   (order action). Sits at `bottom: 92px` (above the
   FloatingCartButton's `bottom: 22px` corner).
-- **Chat sheet open state** (`.v8-chat-sheet`) — 360px paper
-  card, parchment-deep gradient, 18px radius, 22/48px warm-brown
+- **Chat sheet open state** (`.v8-chat-sheet`) — 360px frosted-glass
+  card (`--glass-fill-strong` + backdrop blur + `--glass-stroke`; falls back
+  to the parchment-deep gradient), 18px radius, 22/48px warm-brown
   drop shadow, scale-in entrance animation. Capped at `min(560px,
   78vh)` so it never overruns the viewport. Hides under
   `body.v8-cart-open` so the cart drawer owns the bottom-right
@@ -424,9 +428,10 @@ part of the page, not a third-party drop-in. Mounted in
 
 ### `<Footer />` — `src/components/layout/Footer.tsx`
 
-V8 Trattoria footer — espresso canvas that picks up the Soci rail's
-palette so the Soci → Footer transition reads as one continuous
-dark block instead of a dark → light jolt. Mounted on every
+V8 Trattoria footer — dark frosted glass (`--glass-fill-dark`, espresso
+@86% + chrome blur; falls back to solid espresso) that shares the dark-glass
+fill with the Soci rail + rewards tier, so the Soci → Footer transition reads
+as one continuous dark-glass block instead of a dark → light jolt. Mounted on every
 storefront route via `(public)/layout.tsx`. **Async server
 component** — reads `AppSettings` via `getSettings()` on each
 render so operator edits surface without a redeploy.
@@ -1524,7 +1529,9 @@ goes idle with items in their cart. Lives at the layout level (Step
 11+ single-mount) and reads from `useCartStore.items` to decide
 whether to schedule the timer.
 
-- `.v8-abandoned` — fixed top-center paper card, sized
+- `.v8-abandoned` — fixed top-center frosted-glass card
+  (`--glass-fill-strong` + chrome blur + `--glass-stroke`; falls back to
+  opaque parchment), sized
   `min(440px, 100% - 32px)`. Slides in via the dedicated
   `v8-abandoned-slide` keyframe (opacity + 16px translate-y over
   400ms cubic-bezier). Anchored under the sticky nav at

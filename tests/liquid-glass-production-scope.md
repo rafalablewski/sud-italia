@@ -1,6 +1,8 @@
 # Liquid Glass — Production Migration Scope
 
-**Status:** P0 (foundation) shipped · P1–P5 not started
+**Status:** ✅ ALL PHASES SHIPPED (P0–P5). Storefront migrated to liquid glass.
+Remaining: a real-browser visual + mobile-perf validation pass (never rendered
+during the migration — all changes are CSS + doc, brace-checked only).
 **Decisions (2026-06-14):** clean replacement · full storefront in phase 1 · this doc committed
 
 ### P0 — Foundation — ✅ DONE
@@ -161,8 +163,14 @@ Each phase = code + design-system doc edit + verify, in one reviewable unit.
   combos / tier-tiles) which read as solid tiles inside the glass containers.
   P4 `@supports` fallback. Docs: `pages/order.md`, `pages/loyalty.md`,
   `theme/material.md` (token %), `pages/home.md` (Soci note).
-- **P5 — Chrome + polish.** `v8-nav`, `v8-switcher`, `v8-back`, `v8-pfoot`,
-  `v8-abandoned`, `v8-surprise`, `v8-chat`. Cross-page QA.
+- **P5 — Chrome + polish.** ✅ DONE — `.v8-nav` + `.v8-nav-mobile-menu` +
+  `.v8-switcher-panel` → frosted chrome (chrome blur); `.v8-pfoot` footer →
+  dark frosted glass (shares `--glass-fill-dark` with Soci + tier, so the
+  page closes on one dark-glass note); `.v8-chat-fab` + `.v8-chat-sheet` →
+  glass; `.v8-abandoned` → frosted banner; P5 `@supports` fallback.
+  `.v8-back-chip` + `.v8-surprise` already translucent — left as-is.
+  Cross-page sweep: no stale flat-material claims remain in the docs.
+  Docs: `theme/components.md` (nav, chat fab/sheet, footer, abandoned).
 
 ---
 
