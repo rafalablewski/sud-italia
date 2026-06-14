@@ -5,7 +5,7 @@ import {
   orderStatusChangeSchema,
   parseBody,
 } from "@/lib/api-schemas";
-import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib/store";
+import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder, ORDERS_BOARD_LIMIT } from "@/lib/store";
 
 export const GET = withAdmin(
   { locationParam: "location" },
@@ -14,8 +14,22 @@ export const GET = withAdmin(
     // reserved opt-in for future simulation tooling (no current consumer —
     // the KDS order simulator was removed).
     const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
-    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated });
-    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Cap to the most-recent orders by default so a deep-history dataset never
+    // serializes 16k rows / many MB to the browser (the board only shows recent
+    // activity, newest first). `?all=1` bypasses for export-style needs;
+    // `?limit=N` overrides. The store returns newest-first when a limit is set,
+    // so the explicit sort is only needed on the uncapped path.
+    const all = req.nextUrl.searchParams.get("all") === "1";
+    const limitParam = Number(req.nextUrl.searchParams.get("limit"));
+    const limit = all
+      ? undefined
+      : Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 2000)
+        : ORDERS_BOARD_LIMIT;
+    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated, limit });
+    if (limit === undefined) {
+      orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
     return NextResponse.json(orders);
   },
 );

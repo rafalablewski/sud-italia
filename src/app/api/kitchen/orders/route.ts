@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKitchenSession } from "@/lib/kitchen-auth";
-import { getOrders, getOrderById, updateOrderStatus } from "@/lib/store";
+import { getOrders, getOrderById, updateOrderStatus, ORDERS_BOARD_LIMIT } from "@/lib/store";
 import { ORDER_STATUSES } from "@/data/types";
 
 async function requireKitchenSession(): Promise<
@@ -21,7 +21,10 @@ export async function GET() {
   if (error) return error;
 
   // Real orders only — getOrders() strips any simulated records by default.
-  const orders = await getOrders(session!.slug);
+  // Cap to recent orders: a kitchen board only ever works open tickets, which
+  // are inherently among the most recent, so this never hides an active order
+  // while keeping a deep-history dataset from streaming 16k rows to the KDS.
+  const orders = await getOrders(session!.slug, undefined, { limit: ORDERS_BOARD_LIMIT });
   orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return NextResponse.json(orders);

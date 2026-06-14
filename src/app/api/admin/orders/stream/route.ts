@@ -1,5 +1,5 @@
 import { withAdmin } from "@/lib/api-middleware";
-import { getOrders } from "@/lib/store";
+import { getOrders, ORDERS_BOARD_LIMIT } from "@/lib/store";
 import { subscribeOrderEvents } from "@/lib/order-events";
 import { diffOrders } from "@/lib/order-delta";
 
@@ -70,7 +70,14 @@ export const GET = withAdmin(
         const sendIfChanged = async () => {
           if (closed) return;
           try {
-            const orders = await getOrders(locationSlug, undefined, { includeSimulated });
+            // Cap the snapshot to recent orders — same as the REST board — so a
+            // deep-history dataset never streams 16k rows / many MB per frame.
+            // Old completed orders never change, so they'd only ever appear in
+            // the first snap and never in a delta anyway.
+            const orders = await getOrders(locationSlug, undefined, {
+              includeSimulated,
+              limit: ORDERS_BOARD_LIMIT,
+            });
             // Sort newest first to match the REST endpoint's contract.
             orders.sort(
               (a, b) =>

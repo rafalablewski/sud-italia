@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getKitchenSession } from "@/lib/kitchen-auth";
-import { getOrders } from "@/lib/store";
+import { getOrders, ORDERS_BOARD_LIMIT } from "@/lib/store";
 import { subscribeOrderEvents } from "@/lib/order-events";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
       const sendIfChanged = async () => {
         if (closed) return;
         try {
-          const orders = await getOrders(slug);
+          // Cap to recent orders — active kitchen tickets are always among the
+          // most recent, so a deep-history dataset never streams 16k rows.
+          const orders = await getOrders(slug, undefined, { limit: ORDERS_BOARD_LIMIT });
           orders.sort(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

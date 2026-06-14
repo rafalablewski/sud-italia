@@ -224,6 +224,9 @@ export async function getActiveDataMode(): Promise<"live" | "simulation"> {
 /** Wipe every key under one namespace prefix. Real/shared keys are never
  *  touched — only `prefix`-prefixed keys are removed. */
 async function wipeNamespace(prefix: string): Promise<void> {
+  // A wipe removes blobs out from under the heavy-read cache; drop it wholesale
+  // so a stale parse can't outlive the reset (cheap — the map is tiny).
+  heavyReadCache.clear();
   if (useDB) {
     await ensureDB();
     const db = sql();
@@ -274,7 +277,15 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
   // while a test mode is on. Shared keys are never namespaced, so they skip the
   // round-trip (and avoid recursing on settings.json, which refreshDataMode reads raw).
   if (!SHARED_KEYS.has(key)) await refreshDataMode();
-  return rawReadJSON(resolveKey(key), fallback);
+  const resolved = resolveKey(key);
+  if (HEAVY_READ_KEYS.has(key)) {
+    const hit = heavyReadCache.get(resolved);
+    if (hit && Date.now() - hit.at < HEAVY_READ_TTL_MS) return (await hit.promise) as T;
+    const promise = rawReadJSON(resolved, fallback);
+    heavyReadCache.set(resolved, { at: Date.now(), promise });
+    return (await promise) as T;
+  }
+  return rawReadJSON(resolved, fallback);
 }
 
 async function rawReadJSON<T>(key: string, fallback: T): Promise<T> {
@@ -347,8 +358,34 @@ const ADMIN_USERS_KEY = "admin-users.json";
 const ADMIN_USERS_TTL_MS = 5_000;
 let adminUsersCache: { data: AdminUser[]; at: number } | null = null;
 
+// --- Short-TTL read cache for hot, HEAVY, read-mostly blobs -----------------
+// The orders blob grows into the multi-MB range once a couple of locations
+// build months of history. A single admin dashboard refresh fans out into ~10
+// routes (analytics ×4, insights ×3, orders, KDS fleet, labor…) that each call
+// getOrders()/getSummary()/getInsights() — and every one of those would
+// otherwise re-fetch and re-JSON.parse the WHOLE blob, serialized on one Node
+// process: ~10 × the parse cost per refresh, which is exactly the "takes
+// forever to load anything" the deep-history test surfaced. A few-second
+// per-instance cache collapses that burst to ONE read+parse; writeJSON
+// invalidates the key on any mutation so a new/changed order is visible within
+// the TTL at worst. Scoped to an allowlist of genuinely heavy keys so small,
+// write-hot config blobs (settings toggles — Rule #7) keep read-your-write
+// immediacy. Keyed by the RESOLVED key so live and simulation namespaces never
+// alias. The cached value is shared by reference, which is safe because every
+// read path treats it as immutable (getOrders/getAnalytics build new arrays)
+// and every mutate path writes (→ invalidates) right after it mutates.
+const HEAVY_READ_KEYS = new Set<string>(["orders.json", "kds-tickets.json"]);
+const HEAVY_READ_TTL_MS = 5_000;
+// Stores the in-flight PROMISE (not just the resolved value) so a burst of
+// concurrent callers — the dashboard fans out ~10 at once — share a single
+// read+parse instead of each racing its own before any of them populates the
+// cache. rawReadJSON never rejects (it catches and returns the fallback), so a
+// cached promise is always safe to re-await.
+const heavyReadCache = new Map<string, { at: number; promise: Promise<unknown> }>();
+
 function invalidateKvCache(key: string): void {
   if (key === ADMIN_USERS_KEY) adminUsersCache = null;
+  if (HEAVY_READ_KEYS.has(key)) heavyReadCache.delete(resolveKey(key));
 }
 
 // --- Time Slots (m1_1: normalized table with dual-write) ----------------
@@ -1438,6 +1475,12 @@ async function mirrorOrderDeleteToKvStore(id: string): Promise<void> {
   }
 }
 
+/** Default cap for the operational Orders board + live stream snapshot. The
+ *  board shows recent activity newest-first; nobody scrolls thousands of old
+ *  completed orders, and shipping them all is what made a deep-history dataset
+ *  unusable. Reports/analytics read the full period via the uncapped path. */
+export const ORDERS_BOARD_LIMIT = 500;
+
 export async function getOrders(
   locationSlug?: string,
   /** Optional cutoff — only return orders with createdAt >= this ISO string.
@@ -1448,11 +1491,20 @@ export async function getOrders(
   /** Simulated-record escape hatch. Simulated orders are filtered out of
    *  every read by default so they never reach the dashboard, Orders list,
    *  reports, CRM or analytics. Reserved opt-in for future simulation tooling
-   *  (no current consumer — the KDS order simulator was removed). */
-  opts?: { includeSimulated?: boolean },
+   *  (no current consumer — the KDS order simulator was removed).
+   *
+   *  `limit` caps the result to the N most-recent orders (newest first). The
+   *  Orders board and live stream snapshot use it so a deep-history dataset
+   *  never ships 16k rows / many MB to the browser — operationally you only
+   *  ever act on recent orders, and old completed ones never change. Pushed
+   *  into SQL as `LIMIT` (with the createdAt index doing the ordering) on the
+   *  DB path; applied as a sort+slice on the kv path. Analytics/reports leave
+   *  it unset because they genuinely need the full period. */
+  opts?: { includeSimulated?: boolean; limit?: number },
 ): Promise<Order[]> {
   const keepSim = opts?.includeSimulated === true;
   const stripSim = (list: Order[]): Order[] => (keepSim ? list : list.filter((o) => !o.simulated));
+  const limit = opts?.limit;
   const db = await getDomainDb();
   if (db) {
     try {
@@ -1474,9 +1526,10 @@ export async function getOrders(
         : conditions.length === 1
           ? conditions[0]
           : and(...conditions);
-      const rows = whereClause
-        ? await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
-        : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+      const base = whereClause
+        ? db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
+        : db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+      const rows = limit && limit > 0 ? await base.limit(limit) : await base;
       if (rows.length > 0) return stripSim(rows.map(rowToOrder));
     } catch (err) {
       logger.warn(
@@ -1503,7 +1556,15 @@ export async function getOrders(
     bumpLazyBackfillHit("orders");
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
   }
-  return stripSim(filtered);
+  const result = stripSim(filtered);
+  if (limit && limit > 0 && result.length > limit) {
+    // Newest-first, then take the head — matches the DB path's ORDER BY
+    // createdAt DESC LIMIT n (the kv blob isn't guaranteed sorted on disk).
+    return [...result]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+  return result;
 }
 
 /**
