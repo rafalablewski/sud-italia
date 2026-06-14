@@ -73,8 +73,9 @@ The default state when the drawer opens.
 
 ### Fulfilment — `<SlotPicker />`
 
-- **Mode toggle:** segmented control `Pickup` / `Delivery` (the latter
-  shown only for locations that deliver).
+- **Mode toggle:** three bordered pills `Pickup` / `Delivery` / `Dine-in`
+  (the active pill = terracotta fill with parchment text, matching the
+  mockup; Delivery shown only for locations that deliver).
 - **Date strip:** today + next 6 days as a horizontal scroll of pills;
   current day default.
 - **Slot grid:** time slots for the selected date pulled from
@@ -397,7 +398,7 @@ sommelier rail:
 
 | Element                  | Selector                                                |
 | ------------------------ | ------------------------------------------------------- |
-| 3-up segmented toggle    | `.v8-cart-fulfill` + `.v8-cart-fulfill-btn` (`.is-on`)  |
+| 3-up pill toggle (active = terracotta fill) | `.v8-cart-fulfill` + `.v8-cart-fulfill-btn` (`.is-on`)  |
 | Address / email field    | `.v8-cart-field` + `.v8-cart-field-label` + `.v8-cart-input` |
 | Delivery address autocomplete | `<AddressAutocomplete />` (`src/components/cart/AddressAutocomplete.tsx`) — `.v8-address-ac` wrapper + `.v8-address-ac-list` / `.v8-address-ac-option` (`.is-active`) dropdown. Wraps the same `.v8-cart-input`; suggestions come from `/api/address/autocomplete` (Google Places or OSM Nominatim, key server-side). Field stays free-text. |
 | Phone with +48 prefix    | `.v8-cart-phone` + `.v8-cart-phone-prefix`              |

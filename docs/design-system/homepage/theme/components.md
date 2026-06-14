@@ -1105,8 +1105,9 @@ V8 free-delivery shimmer-sweep-unlock micro-flow.
 
 - Below threshold: `.v8-cart-delivery` italic Cormorant
   "Consegna a casa — N% verso la gratuità" headline +
-  `.v8-cart-delivery-rail` terracotta rail + `.v8-cart-delivery-fill`
-  terracotta gradient + `.v8-cart-delivery-shimmer` running
+  `.v8-cart-delivery-rail` neutral rail + `.v8-cart-delivery-fill`
+  basil→ochre (green→gold) gradient on a basil-tinted box (matches the
+  mockup — green reads as "go") + `.v8-cart-delivery-shimmer` running
   `--animate-delivery-shimmer` + `.v8-cart-cyclist` SVG that rides
   the fill (`left: {pct}%`).
 - At threshold: `.v8-cart-delivery.is-unlocked` gold→basil-tinted
