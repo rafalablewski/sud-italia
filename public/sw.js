@@ -23,9 +23,18 @@
  *
  * Bump the version below when shipping breaking shell changes — old
  * caches are pruned on activate.
+ *
+ * IMPORTANT: the browser only re-installs this worker when sw.js's *bytes*
+ * change. This file went unbumped across a long run of client fixes, so
+ * installed workers kept serving the cached v4 bundle and none of those
+ * deploys ever reached the operator's browser (the "fix changes nothing on
+ * the device" trap). Bump VERSION on any deploy that must reach already-
+ * installed clients — it triggers reinstall → activate → old-cache purge,
+ * and the page-side controllerchange handler (offline-outbox.ts) reloads the
+ * open tab once so it picks up the fresh chunks without a manual hard-refresh.
  */
 
-const VERSION = "v4";
+const VERSION = "v5";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 

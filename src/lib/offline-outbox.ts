@@ -146,6 +146,22 @@ export function registerOfflineOutbox(): void {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
+  // If this page is already controlled by an OLD worker, a later
+  // controllerchange means a NEW worker just took over (it called
+  // skipWaiting + clients.claim on activate). The page is still running the
+  // previously-loaded chunks, so reload ONCE to pick up the fresh bundle —
+  // this is what lets a deployed fix actually reach an already-open till
+  // instead of waiting on a manual hard-refresh. Guarded so it never loops,
+  // and skipped for a first-time visitor (no prior controller) whose initial
+  // claim is not an update.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading || !hadController) return;
+    reloading = true;
+    window.location.reload();
+  });
+
   navigator.serviceWorker
     .register("/sw.js")
     .then(() => {
