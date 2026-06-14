@@ -2661,7 +2661,7 @@ body.v8-cart-open { overflow: hidden; }
   position: fixed;
   inset: 0;
   z-index: 90;
-  background: rgba(45, 24, 16, 0.45);
+  background: rgba(61, 40, 23, 0.34);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   opacity: 0;
@@ -2682,13 +2682,13 @@ body.v8-cart-open { overflow: hidden; }
   max-width: 460px;
   height: 96vh;
   max-height: 96vh;
-  /* Bright warm-cream frost — these sheets cover the page on mobile, so a
-     high-alpha cream reads clean and warm (matching the header) instead of
-     letting a darker page backdrop dull the scroll body. The blur + the
-     refraction border keep the glass edge. */
-  background: rgba(250, 244, 232, 0.90);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  /* Translucent warm-cream frost — kept see-through so the blur + refraction
+     read as liquid glass (not an opaque panel). It stays bright rather than
+     muddy because (a) the scrim behind it is a lighter warm dim and (b) the
+     backdrop filter adds a brightness() lift. */
+  background: rgba(250, 244, 232, 0.58);
+  backdrop-filter: blur(var(--glass-blur)) saturate(175%) brightness(1.1);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(175%) brightness(1.1);
   border-radius: 18px 18px 0 0;
   border: 1px solid var(--glass-stroke);
   box-shadow:
@@ -5833,7 +5833,7 @@ body.v8-detail-open { overflow: hidden; }
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(45, 24, 16, 0.45);
+  background: rgba(61, 40, 23, 0.34);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   opacity: 0;
@@ -5854,13 +5854,13 @@ body.v8-detail-open { overflow: hidden; }
   max-width: 460px;
   height: 92vh;
   max-height: 92vh;
-  /* Bright warm-cream frost — these sheets cover the page on mobile, so a
-     high-alpha cream reads clean and warm (matching the header) instead of
-     letting a darker page backdrop dull the scroll body. The blur + the
-     refraction border keep the glass edge. */
-  background: rgba(250, 244, 232, 0.90);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  /* Translucent warm-cream frost — kept see-through so the blur + refraction
+     read as liquid glass (not an opaque panel). It stays bright rather than
+     muddy because (a) the scrim behind it is a lighter warm dim and (b) the
+     backdrop filter adds a brightness() lift. */
+  background: rgba(250, 244, 232, 0.58);
+  backdrop-filter: blur(var(--glass-blur)) saturate(175%) brightness(1.1);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(175%) brightness(1.1);
   border-radius: 18px 18px 0 0;
   border: 1px solid var(--glass-stroke);
   box-shadow:
