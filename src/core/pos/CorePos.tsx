@@ -683,6 +683,14 @@ export function CorePos({
         pendingCreateVoids.current.add(id);
         return;
       }
+      // TEMP DIAGNOSTIC (#197): a GET beacon — which we know reaches the server —
+      // fired right before the durable DELETE. If the diag shows this beacon
+      // (lastClientBeacon) but lastVoidRoute stays null, the browser ran the void
+      // yet the non-GET DELETE never reached the server (a dropped DELETE), which
+      // durable retry alone can't cure. Kept until the void is confirmed in prod.
+      void fetch(`/api/admin/pos/diag?beacon=${encodeURIComponent(id)}&loc=${encodeURIComponent(pageLoc)}`, {
+        cache: "no-store",
+      }).catch(() => {});
       // Delete it durably — a transient failure retries (and survives a reload)
       // instead of releasing the guard and letting the 5s poll resurrect the
       // check. voidCheckOnServer hides the id until the server confirms it gone.
@@ -692,7 +700,7 @@ export function CorePos({
       // stacks toasts behind the taps.
       toast(`Voided ${name}`, "default");
     },
-    [voidCheckOnServer, toast],
+    [pageLoc, voidCheckOnServer, toast],
   );
   // Empty checks vanish on tap; a check with rung items asks first.
   const requestVoid = useCallback(() => {
