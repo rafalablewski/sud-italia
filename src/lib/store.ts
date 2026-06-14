@@ -14297,29 +14297,60 @@ export async function getPosTab(id: string, locationSlug?: string): Promise<PosT
 // row-level serialization of the UPDATE makes concurrent saves/deletes of
 // different tabs safe with no application lock at all.
 
-/** Atomically upsert one tab into a location's blob (replace if present, append
- *  if not) in a single statement, so it can't clobber concurrent changes to
- *  OTHER tabs in the same blob. */
-async function dbUpsertPosTab(loc: string, tab: PosTab): Promise<void> {
+/** Atomically write one tab into a location's blob in a single statement, so it
+ *  can't clobber concurrent changes to OTHER tabs in the same blob.
+ *
+ *  `insertIfMissing` (default true) is the create path: replace if present, else
+ *  append. When false it's the EDIT path: replace if present, else DO NOTHING —
+ *  so an edit (PUT) that lands after a void can't resurrect the voided check by
+ *  re-inserting it. Returns whether a tab with this id was actually written
+ *  (always true when inserting; false on an edit that found nothing to update —
+ *  i.e. the check was voided out from under it). */
+async function dbUpsertPosTab(
+  loc: string,
+  tab: PosTab,
+  opts?: { insertIfMissing?: boolean },
+): Promise<boolean> {
+  const insertIfMissing = opts?.insertIfMissing !== false;
   await refreshDataMode();
   await ensureDB();
   const key = resolveKey(posTabsKey(loc));
   const db = sql();
   const idMatch = JSON.stringify([{ id: tab.id }]);
   const tabJson = JSON.stringify(tab);
-  const tabArr = JSON.stringify([tab]);
-  // Ensure the row exists so the UPDATE below always has an array to operate on.
-  await db`INSERT INTO kv_store (key, value) VALUES (${key}, '[]'::jsonb) ON CONFLICT (key) DO NOTHING`;
-  await db`
-    UPDATE kv_store SET value = CASE
-      WHEN value @> ${idMatch}::jsonb
-      THEN (SELECT jsonb_agg(CASE WHEN e->>'id' = ${tab.id} THEN ${tabJson}::jsonb ELSE e END)
-            FROM jsonb_array_elements(value) e)
-      ELSE value || ${tabArr}::jsonb
-    END
-    WHERE key = ${key}
+  if (insertIfMissing) {
+    const tabArr = JSON.stringify([tab]);
+    // Ensure the row exists so the UPDATE below always has an array to operate on.
+    await db`INSERT INTO kv_store (key, value) VALUES (${key}, '[]'::jsonb) ON CONFLICT (key) DO NOTHING`;
+    await db`
+      UPDATE kv_store SET value = CASE
+        WHEN value @> ${idMatch}::jsonb
+        THEN (SELECT jsonb_agg(CASE WHEN e->>'id' = ${tab.id} THEN ${tabJson}::jsonb ELSE e END)
+              FROM jsonb_array_elements(value) e)
+        ELSE value || ${tabArr}::jsonb
+      END
+      WHERE key = ${key}
+    `;
+    invalidateKvCache(posTabsKey(loc));
+    return true;
+  }
+  // Edit path: update the element ONLY if it's still present. The `value @>`
+  // guard makes this a no-op when the tab was voided between the caller's read
+  // and this write, so a stale PUT can never bring a deleted check back. Postgres
+  // serializes the row UPDATE, so this is safe with no application lock.
+  const rows = await db`
+    UPDATE kv_store SET value = (
+      SELECT jsonb_agg(CASE WHEN e->>'id' = ${tab.id} THEN ${tabJson}::jsonb ELSE e END)
+      FROM jsonb_array_elements(value) e
+    )
+    WHERE key = ${key} AND value @> ${idMatch}::jsonb
+    RETURNING key
   `;
-  invalidateKvCache(posTabsKey(loc));
+  if (rows.length > 0) {
+    invalidateKvCache(posTabsKey(loc));
+    return true;
+  }
+  return false;
 }
 
 /** Atomically remove one tab from a location's blob in a single statement.
@@ -14352,11 +14383,29 @@ async function dbRemovePosTab(loc: string, id: string): Promise<boolean> {
  * a till can't reassign which Order a tab points at. In DB mode the write is an
  * atomic single-tab upsert (no whole-blob clobber); on the filesystem (single
  * process) the per-location lock + read-modify-write is correct.
+ *
+ * `mustExist` is the EDIT contract (the client PUT route): the save must NEVER
+ * create a check — only the create path (POST → no id, no `mustExist`) does. An
+ * edit aimed at an id that is no longer there (the check was just voided) is a
+ * no-op and returns null, so a debounced/in-flight PUT that lands a beat after a
+ * DELETE can't resurrect the voided check. This was the real "voided checks come
+ * back a few seconds later" bug: the upsert re-inserted the row a stale PUT
+ * carried, and the client tombstone only masked it until it expired (~12s).
  */
 export async function savePosTab(
   input: Partial<PosTab> & { locationSlug: string },
-): Promise<PosTab> {
+  opts: { mustExist: true },
+): Promise<PosTab | null>;
+export async function savePosTab(
+  input: Partial<PosTab> & { locationSlug: string },
+  opts?: { mustExist?: false },
+): Promise<PosTab>;
+export async function savePosTab(
+  input: Partial<PosTab> & { locationSlug: string },
+  opts?: { mustExist?: boolean },
+): Promise<PosTab | null> {
   const loc = input.locationSlug;
+  const mustExist = opts?.mustExist === true;
   if (useDB) {
     // Read the current record only to MERGE this one tab's fields (preserve
     // orderId/createdAt, derive sentKds); the WRITE is an atomic single-tab
@@ -14372,8 +14421,14 @@ export async function savePosTab(
         fromLegacy = true;
       }
     }
+    // Edit of an already-voided check → do nothing (never resurrect it).
+    if (mustExist && !existing) return null;
     const tab = mergePosTab(input, existing);
-    await dbUpsertPosTab(loc, tab);
+    // Edits write update-only (no insert) so a void that lands between the read
+    // above and this write wins; a legacy check still needs the insert to be
+    // promoted into its per-location key.
+    const wrote = await dbUpsertPosTab(loc, tab, { insertIfMissing: !mustExist || fromLegacy });
+    if (mustExist && !wrote) return null; // raced a concurrent delete — stay deleted
     if (fromLegacy) await dropFromLegacyPosTabs(new Set([tab.id])); // promote out of legacy
     return tab;
   }
@@ -14388,10 +14443,13 @@ export async function savePosTab(
         fromLegacy = true;
       }
     }
+    // Edit of an already-voided check → do nothing. The lock serializes against
+    // deletePosTab, so a missing record here means the void already committed.
+    if (mustExist && !existing) return null;
     const tab = mergePosTab(input, existing);
     const i = own.findIndex((t) => t.id === tab.id);
     if (i >= 0) own[i] = tab;
-    else own.push(tab);
+    else own.push(tab); // create, or promote a legacy check into its own key
     await writeJSON(posTabsKey(loc), own);
     if (fromLegacy) await dropFromLegacyPosTabs(new Set([tab.id])); // promote out of legacy
     return tab;
@@ -14436,7 +14494,10 @@ export async function linkPosTabOrder(
       fromLegacy = true;
     }
     const tab = applyPatch({ ...base });
-    await dbUpsertPosTab(loc, tab); // atomic single-tab write
+    // Update-only (except to promote a legacy check) so linking an order can't
+    // re-insert a tab the operator voided while the send was in flight.
+    const wrote = await dbUpsertPosTab(loc, tab, { insertIfMissing: fromLegacy });
+    if (!wrote) return null; // voided mid-send — leave it voided
     if (fromLegacy) await dropFromLegacyPosTabs(new Set([id])); // promote out of legacy
     return tab;
   }
