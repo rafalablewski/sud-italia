@@ -7,6 +7,10 @@ import { withAdmin } from "@/lib/api-middleware";
  * every pos-tabs blob in the kv_store (across namespaces + per-location + legacy)
  * with just the tab ids, so we can see exactly where a just-voided id still
  * lives. Owner-only, no-store. Remove once the root cause is confirmed.
+ *
+ * NB: the folder must NOT start with "_" — Next.js App Router treats `_folder`
+ * as a private folder excluded from routing (a 404), so this lives at
+ * /api/admin/pos/diag.
  */
 export const dynamic = "force-dynamic";
 
