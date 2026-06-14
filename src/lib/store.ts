@@ -14285,15 +14285,98 @@ export async function getPosTab(id: string, locationSlug?: string): Promise<PosT
   return (await readPosTabsForLocation(loc)).find((t) => t.id === id);
 }
 
+// --- Atomic single-tab kv mutations (DB mode) ------------------------------
+// The POS tabs blob is one JSONB array per location. A JS read-modify-write of
+// the whole blob (read list → splice one tab → write list) loses concurrent
+// updates whenever two requests run without a shared lock — which is exactly the
+// case on serverless when Upstash isn't configured (the lock falls back to a
+// PER-INSTANCE mutex, so two Vercel instances each read the pre-change list and
+// the last writer wins). The classic symptom: void several checks at once and
+// some come back, because each DELETE's whole-blob write clobbered the others'.
+// These helpers mutate a SINGLE element in ONE SQL statement, so Postgres'
+// row-level serialization of the UPDATE makes concurrent saves/deletes of
+// different tabs safe with no application lock at all.
+
+/** Atomically upsert one tab into a location's blob (replace if present, append
+ *  if not) in a single statement, so it can't clobber concurrent changes to
+ *  OTHER tabs in the same blob. */
+async function dbUpsertPosTab(loc: string, tab: PosTab): Promise<void> {
+  await refreshDataMode();
+  await ensureDB();
+  const key = resolveKey(posTabsKey(loc));
+  const db = sql();
+  const idMatch = JSON.stringify([{ id: tab.id }]);
+  const tabJson = JSON.stringify(tab);
+  const tabArr = JSON.stringify([tab]);
+  // Ensure the row exists so the UPDATE below always has an array to operate on.
+  await db`INSERT INTO kv_store (key, value) VALUES (${key}, '[]'::jsonb) ON CONFLICT (key) DO NOTHING`;
+  await db`
+    UPDATE kv_store SET value = CASE
+      WHEN value @> ${idMatch}::jsonb
+      THEN (SELECT jsonb_agg(CASE WHEN e->>'id' = ${tab.id} THEN ${tabJson}::jsonb ELSE e END)
+            FROM jsonb_array_elements(value) e)
+      ELSE value || ${tabArr}::jsonb
+    END
+    WHERE key = ${key}
+  `;
+  invalidateKvCache(posTabsKey(loc));
+}
+
+/** Atomically remove one tab from a location's blob in a single statement.
+ *  Returns true if a tab with that id was present and removed. */
+async function dbRemovePosTab(loc: string, id: string): Promise<boolean> {
+  await refreshDataMode();
+  await ensureDB();
+  const key = resolveKey(posTabsKey(loc));
+  const db = sql();
+  const idMatch = JSON.stringify([{ id }]);
+  const rows = await db`
+    UPDATE kv_store
+    SET value = COALESCE(
+      (SELECT jsonb_agg(e) FROM jsonb_array_elements(value) e WHERE e->>'id' <> ${id}),
+      '[]'::jsonb
+    )
+    WHERE key = ${key} AND value @> ${idMatch}::jsonb
+    RETURNING key
+  `;
+  if (rows.length > 0) {
+    invalidateKvCache(posTabsKey(loc));
+    return true;
+  }
+  return false;
+}
+
 /**
  * Upsert an open check. `orderId` is never taken from the caller — it is
  * minted server-side on send/charge and preserved from the stored record — so
- * a till can't reassign which Order a tab points at. Locked per location.
+ * a till can't reassign which Order a tab points at. In DB mode the write is an
+ * atomic single-tab upsert (no whole-blob clobber); on the filesystem (single
+ * process) the per-location lock + read-modify-write is correct.
  */
 export async function savePosTab(
   input: Partial<PosTab> & { locationSlug: string },
 ): Promise<PosTab> {
   const loc = input.locationSlug;
+  if (useDB) {
+    // Read the current record only to MERGE this one tab's fields (preserve
+    // orderId/createdAt, derive sentKds); the WRITE is an atomic single-tab
+    // upsert that never rewrites the whole blob, so a concurrent void/save of
+    // other tabs can't be lost — no per-location lock needed.
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    let existing = input.id ? own.find((t) => t.id === input.id) : undefined;
+    let fromLegacy = false;
+    if (!existing && input.id) {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === input.id && t.locationSlug === loc);
+      if (legacy) {
+        existing = legacy;
+        fromLegacy = true;
+      }
+    }
+    const tab = mergePosTab(input, existing);
+    await dbUpsertPosTab(loc, tab);
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([tab.id])); // promote out of legacy
+    return tab;
+  }
   return withLockScoped("pos-tabs", loc, async () => {
     const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
     let existing = input.id ? own.find((t) => t.id === input.id) : undefined;
@@ -14330,6 +14413,33 @@ export async function linkPosTabOrder(
 ): Promise<PosTab | null> {
   const loc = locationSlug ?? (await locationForPosTab(id));
   if (!loc) return null;
+  const applyPatch = (tab: PosTab): PosTab => {
+    if (patch.orderId !== undefined) tab.orderId = patch.orderId;
+    if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
+    if (patch.firedCourses !== undefined) {
+      tab.firedCourses = sanitizeFiredCourses(patch.firedCourses);
+    }
+    if (patch.status !== undefined && POS_TAB_STATUSES.includes(patch.status)) {
+      tab.status = patch.status;
+    }
+    tab.updatedAt = new Date().toISOString();
+    return tab;
+  };
+  if (useDB) {
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    let base = own.find((t) => t.id === id);
+    let fromLegacy = false;
+    if (!base) {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === id && t.locationSlug === loc);
+      if (!legacy) return null;
+      base = legacy;
+      fromLegacy = true;
+    }
+    const tab = applyPatch({ ...base });
+    await dbUpsertPosTab(loc, tab); // atomic single-tab write
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([id])); // promote out of legacy
+    return tab;
+  }
   return withLockScoped("pos-tabs", loc, async () => {
     const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
     const i = own.findIndex((t) => t.id === id);
@@ -14343,15 +14453,7 @@ export async function linkPosTabOrder(
       tab = legacy;
       fromLegacy = true;
     }
-    if (patch.orderId !== undefined) tab.orderId = patch.orderId;
-    if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
-    if (patch.firedCourses !== undefined) {
-      tab.firedCourses = sanitizeFiredCourses(patch.firedCourses);
-    }
-    if (patch.status !== undefined && POS_TAB_STATUSES.includes(patch.status)) {
-      tab.status = patch.status;
-    }
-    tab.updatedAt = new Date().toISOString();
+    applyPatch(tab);
     if (i >= 0) own[i] = tab;
     else own.push(tab);
     await writeJSON(posTabsKey(loc), own);
@@ -14363,13 +14465,17 @@ export async function linkPosTabOrder(
 export async function deletePosTab(id: string, locationSlug?: string): Promise<boolean> {
   const loc = locationSlug ?? (await locationForPosTab(id));
   if (loc) {
-    const removedOwn = await withLockScoped("pos-tabs", loc, async () => {
-      const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
-      const next = own.filter((t) => t.id !== id);
-      if (next.length === own.length) return false;
-      await writeJSON(posTabsKey(loc), next);
-      return true;
-    });
+    // DB mode: atomic single-statement remove so concurrent voids can't clobber
+    // each other (the cross-instance lost-update that made voided checks return).
+    const removedOwn = useDB
+      ? await dbRemovePosTab(loc, id)
+      : await withLockScoped("pos-tabs", loc, async () => {
+          const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+          const next = own.filter((t) => t.id !== id);
+          if (next.length === own.length) return false;
+          await writeJSON(posTabsKey(loc), next);
+          return true;
+        });
     if (removedOwn) return true;
   }
   // Not in any per-location key — maybe a pre-split check still in legacy.
