@@ -142,8 +142,14 @@ Each phase = code + design-system doc edit + verify, in one reviewable unit.
   capped blur isn't enough. Docs: `pages/menu.md` + `theme/components.md`
   (item card, menu chrome, loc hero, floating cart, + the P1
   locations/bundles lines that had drifted).
-- **P3 — Cart / checkout.** `v8-cart*`, `v8-detail`, `v8-combo`,
-  `v8-address`, `v8-composer`. Docs: `pages/checkout.md`.
+- **P3 — Cart / checkout.** ✅ DONE — `.v8-cart-sheet` + `.v8-detail-sheet`
+  → strong frosted glass (`--glass-fill-strong` + blur, keeps the dramatic
+  shadow); in-sheet surfaces (item-illus, detail-illus, form fields) →
+  **translucent fills with no blur** so the drawer is frosted once;
+  `.v8-combo-card` → glass (capped blur, lives in the blur-free menu chrome);
+  P3 `@supports` fallback. The overlay scrim was already warm + blurred.
+  Docs: `pages/checkout.md` (drawer material + item-illus) +
+  `theme/components.md` (ItemDetailDrawer frosted note).
 - **P4 — Order + rewards.** `v8-order`, `v8-rewards`. Docs: `pages/order.md`,
   `pages/loyalty.md`.
 - **P5 — Chrome + polish.** `v8-nav`, `v8-switcher`, `v8-back`, `v8-pfoot`,

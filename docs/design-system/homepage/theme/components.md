@@ -999,10 +999,11 @@ V8 per-dish info drawer that opens from the "Details · dettagli"
 button on each menu card.
 
 - Builds its own portalled sheet under `.v8-detail-*` (mirrors the
-  cart drawer vocabulary so the menu → detail → cart flow reads as
-  one editorial spread). The selectors stay namespaced under
-  `.v8-detail-*` so the detail styling can't leak into the cart's
-  `.v8-cart-*` family.
+  cart drawer vocabulary — including the **frosted-glass** panel
+  treatment — so the menu → detail → cart flow reads as one editorial
+  spread; falls back to opaque parchment without backdrop-filter). The
+  selectors stay namespaced under `.v8-detail-*` so the detail styling
+  can't leak into the cart's `.v8-cart-*` family.
 - Sheet sizes to 92vh on mobile (slightly slimmer than the cart
   drawer's 96vh — the detail surface is less info-dense, so the
   underlying menu stays visible past the top) and the same

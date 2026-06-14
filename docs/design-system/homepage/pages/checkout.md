@@ -177,12 +177,18 @@ friction, maximum trust, one slide-over from the menu.
 
 ## V8 Trattoria visual — Step 11
 
-The drawer's chrome is the Tuscany-trattoria paper-card vocabulary
-introduced in Steps 1-10. The selector family lives under
+The drawer's chrome is the Tuscany-trattoria vocabulary introduced in
+Steps 1-10, now rendered in **liquid glass**: the panel is a strong
+frosted-glass sheet (`--glass-fill-strong` + backdrop blur + `--glass-stroke`
+border, keeping its dramatic upward shadow) over the warm scrim, so the
+aurora reads softly through the drawer. The selector family lives under
 `.v8-cart-*` in `src/app/themes/homepage/index.css` and is owned by
 `CartDrawer.tsx` (the drawer no longer composes through the generic
-`<Sheet />` primitive — it builds its own portalled sheet so the
-parchment-paper feel can extend edge-to-edge inside the panel).
+`<Sheet />` primitive — it builds its own portalled sheet so the glass feel
+can extend edge-to-edge inside the panel). Surfaces *inside* the sheet (item
+rows, loyalty rail, form fields) use translucent fills with **no** blur of
+their own, so the drawer is frosted once. Falls back to the opaque parchment
+sheet under `@supports not (backdrop-filter)`.
 
 ### The shell
 
@@ -240,7 +246,8 @@ state.
 
 Each row is `.v8-cart-item` and carries:
 
-- **`.v8-cart-item-illus`** — 64×64 parchment-deep tile with an
+- **`.v8-cart-item-illus`** — 64×64 translucent warm-wash tile (so the
+  frosted sheet reads through) with an
   inline hand-sketched glyph per category (pizza, pasta, dessert,
   drinks, coffee, antipasti, panini). Glyphs come from the
   `DishGlyph` helper inside `CartItem.tsx` — pencil-style SVG that
