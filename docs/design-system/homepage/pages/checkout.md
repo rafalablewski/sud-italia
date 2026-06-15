@@ -17,6 +17,16 @@ confirmation.
 | Payment         | Stripe Elements via `/api/checkout`                       |
 | Confirmation    | Redirects to `/order-confirmation?orderId=...`            |
 
+**Liquid Glass.** The drawer (`.v8-cart-sheet`) and the item-detail sheet
+(`.v8-detail-sheet`) are `--glass-fill-strong` frosted glass; their sticky
+header (`.v8-cart-top`) and pay bars (`.v8-cart-paybar` /
+`.v8-detail-paybar`) are strong glass so they frost the scrolling content
+beneath; line-item + detail illustration tiles carry the caustic shimmer;
+and every field (`.pub-input` / `.pub-select` / `.v8-cart-input` /
+`-textarea`) is a frosted translucent input. The terracotta CTAs stay
+solid (brand action). See
+[`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
+
 ## The flow contract
 
 The cart drawer is the **only checkout surface**. Specifically:
