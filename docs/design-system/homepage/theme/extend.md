@@ -63,6 +63,26 @@ All glass reads from the `--glass-*` vars in the `:root` block of
 | `--glass-blur` / `-blur-strong` | blur + saturation depth |
 | `--glass-shadow` / `-shadow-strong` | warm drop shadow |
 | `--glass-edge` / `-edge-dark` | inset top highlight |
+| `--glass-lens` | Apple-style lensing — bright top **and** faint bottom inner rim, for interactive controls (steppers, segmented control, toggles) that should read as physical glass pebbles |
+
+### Interactive glass (2026 refinement)
+
+Controls the guest touches get a slightly richer treatment than static
+cards, borrowed from Apple's Liquid Glass:
+
+- **Lensed rim** — apply `--glass-lens` (not just `--glass-edge`) so light
+  catches both lips of the pebble. Used by the cart/menu steppers
+  (`.v8-cart-qty-btn`, `.v8-mi-stepper-btn`) and the fulfillment segment
+  (`.v8-cart-fulfill-btn.is-on`).
+- **Press feedback** — interactive glass scales down on `:active`
+  (`transform: scale(0.9)` for round pebbles, `0.97–0.99` for pills/CTAs).
+  Never spring; a quick `0.12s var(--ease)` snap.
+- **Specular CTA** — the primary terracotta button layers an inset gloss
+  (`inset 0 1px 0` highlight + a soft inner sheen) so it reads as glass
+  laid over the brand colour, not a flat fill.
+- **Fading hairlines** — dividers between glass rows fade to transparent at
+  both ends (`linear-gradient(90deg, transparent, var(--color-line),
+  transparent)`) rather than a hard edge-to-edge rule.
 
 ## Adding an aurora pool
 
