@@ -19,8 +19,11 @@ V8 since Step 15 — all selectors live under `.v8-rewards-*` in
 **Liquid Glass.** The generic rewards cards (`.v8-rewards-card`) are
 `--glass-fill` glass over the aurora, and the centrepiece tier card
 (`.v8-rewards-tier`) is espresso **dark glass** (`--glass-dark`) with its
-ochre/terracotta `::before`/`::after` washes riding on top. See
-[`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
+ochre/terracotta `::before`/`::after` washes riding on top. The inner
+tiles layer on as frosted glass too — reward / challenge / tier-ladder /
+combo / wallet-stat tiles (`--glass-fill`), the achievement tiles as
+frosted ochre, the tab pills + sign-in / profile inputs as frosted fields.
+See [`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
 
 ## The page contract
 

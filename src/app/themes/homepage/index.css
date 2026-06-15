@@ -7550,8 +7550,10 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-signin-input {
   flex: 1;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: 0 var(--r-md) var(--r-md) 0;
   padding: 12px 14px;
   font-family: var(--font-body);
@@ -7883,8 +7885,10 @@ body.v8-detail-open { overflow: hidden; }
   align-items: center;
   gap: 6px;
   padding: 9px 16px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   font-family: var(--font-heading);
   font-style: italic;
@@ -7975,8 +7979,10 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-input {
   width: 100%;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   padding: 10px 12px;
   font-family: var(--font-body);
@@ -8188,10 +8194,12 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-challenge {
   padding: 14px 16px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
 }
 .v8-rewards-challenge-head {
   display: flex;
@@ -8360,9 +8368,12 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-tier-tile {
   padding: 14px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   transition: all 0.2s;
 }
 .v8-rewards-tier-tile.is-active {
@@ -8490,10 +8501,12 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-reward {
   padding: 18px;
-  background: var(--color-parchment);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-ochre);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   transition: all 0.2s;
 }
 .v8-rewards-reward.is-locked {
@@ -8589,9 +8602,12 @@ body.v8-detail-open { overflow: hidden; }
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: rgba(201, 162, 62, 0.07);
+  background: rgba(201, 162, 62, 0.12);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.30);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
 }
 .v8-rewards-achievement.is-locked {
   background: var(--color-parchment-deep);
@@ -8641,8 +8657,11 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-rewards-combo {
   padding: 16px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-edge);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-paper);
 }
@@ -8843,9 +8862,12 @@ body.v8-detail-open { overflow: hidden; }
 .v8-rewards-wallet-stat {
   text-align: center;
   padding: 12px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
 }
 .v8-rewards-wallet-stat-label {
   font-family: var(--font-body);
