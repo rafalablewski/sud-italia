@@ -274,6 +274,15 @@ The storefront's two persistent layout slabs sit at the top of every
 `(public)` route. Markup in `src/components/layout/`. Custom styling
 under the `.v8-*` selectors in `themes/homepage/index.css`.
 
+> **Liquid Glass chrome.** The sticky nav (`.v8-nav`) + mobile menu sheet
+> are frosted `--glass-blur` glass; the footer (`.v8-pfoot`) is espresso
+> **dark glass** (`--glass-dark`); and the floating surfaces — the
+> floating cart pill (`.v8-float-cart`), chat FAB + sheet
+> (`.v8-chat-fab` / `.v8-chat-sheet`), add-to-cart toast (`.v8-cart-toast`,
+> dark glass), abandoned-cart banner (`.v8-abandoned`), and the Pulse
+> survey (`.v8-pulse`) — are all glass over the aurora. See
+> [`material.md`](./material.md#the-aurora-canvas--liquid-glass).
+
 ### `<Header />` — `src/components/layout/Header.tsx`
 
 The V8 Trattoria top nav.
