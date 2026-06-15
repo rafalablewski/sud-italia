@@ -621,6 +621,29 @@ body::after {
   .v8-hero { padding: 80px 0 0; }
 }
 
+/* Hero content boxed in a glass card (reference file 2) — the headline,
+   kicker, lede + CTAs float on a translucent parchment panel over the
+   aurora, with the pen-sketch ornaments peeking around its edges (they
+   live on .v8-hero, behind this card, so they read softly through the
+   glass). 24px radius — the hero gets the one generous radius. The
+   layout utilities (max-width / centring / horizontal padding) stay on
+   the element via Tailwind; this rule only adds the glass material +
+   vertical breathing room. */
+.v8-hero-inner {
+  position: relative;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: var(--glass-shadow), var(--glass-edge);
+  padding-top: 36px;
+  padding-bottom: 40px;
+}
+@media (min-width: 768px) {
+  .v8-hero-inner { padding-top: 48px; padding-bottom: 52px; }
+}
+
 /* Kicker — oxblood "Open now" pill above the headline */
 .v8-hero-kicker {
   display: inline-flex;

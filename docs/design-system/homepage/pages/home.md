@@ -16,10 +16,13 @@ sections under the public layout's `<Header />` (the V8 Trattoria nav)
 
 **Liquid Glass.** As of the glass material pass the landing sits over the
 living aurora canvas: the alt sections are transparent so the aurora reads
-continuously, the location + bundle cards are translucent glass
-(`--glass-fill`), the location illustration tiles carry the caustic
-shimmer, the hero kicker is a frosted pill, and the Soci rail + footer are
-espresso **dark glass** (`--glass-dark`). See
+continuously, the hero copy is boxed in a `--glass-fill` card
+(`.v8-hero-inner`, 24px radius) with the pen-sketch ornaments peeking
+around its edges and reading softly through the glass, the location +
+bundle cards are translucent glass (`--glass-fill`), the location
+illustration tiles carry the caustic shimmer, the hero kicker is a frosted
+pill, and the Soci rail + footer are espresso **dark glass**
+(`--glass-dark`). See
 [`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
 
 ## The page contract
