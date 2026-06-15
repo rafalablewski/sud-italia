@@ -14,6 +14,14 @@ sections under the public layout's `<Header />` (the V8 Trattoria nav)
 | Famiglia strip   | `src/components/landing/AboutSection.tsx` (file name kept) |
 | Soci / loyalty   | `src/components/location/LoyaltySection.tsx` (shared, V8 dark rail) |
 
+**Liquid Glass.** As of the glass material pass the landing sits over the
+living aurora canvas: the alt sections are transparent so the aurora reads
+continuously, the location + bundle cards are translucent glass
+(`--glass-fill`), the location illustration tiles carry the caustic
+shimmer, the hero kicker is a frosted pill, and the Soci rail + footer are
+espresso **dark glass** (`--glass-dark`). See
+[`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
+
 ## The page contract
 
 The landing answers exactly four questions, in order:

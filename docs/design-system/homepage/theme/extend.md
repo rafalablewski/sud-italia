@@ -32,9 +32,23 @@ primitive onto it and let the card own only its radius, padding, layout:
   illustration tile for the drifting shimmer.
 
 The primitive supplies fill + blur + refraction edge + shadow from the
-`--glass-*` tokens. **Never** re-declare `backdrop-filter` or a
-`rgba(248,239,222,…)` fill on a card — a token retune must ripple from
-one place.
+`--glass-*` tokens.
+
+**Two ways to wear glass, one source of truth:**
+
+1. **New cards** compose `.v8-surface*` (above) — cleanest, gets the
+   `::before` refraction edge for free.
+2. **Legacy V8 card classes** that already own a `::before`/`::after`
+   (flag ribbons, accent stripes — e.g. `.v8-mi`, `.v8-bundle`) can't
+   add a second pseudo, so they apply the glass **inline from the same
+   tokens** instead: `background: var(--glass-fill); backdrop-filter:
+   var(--glass-blur); border: 1px solid var(--glass-border); box-shadow:
+   var(--glass-shadow), var(--glass-edge);`. The `--glass-edge` inset
+   highlight is the refraction read in lieu of the `::before`.
+
+The rule that matters: **never hard-code an `rgba(248,239,222,…)` fill or
+a literal `blur(22px)` value** — always reach through the `--glass-*`
+tokens so a retune ripples from one place.
 
 ## Retuning the glass
 
