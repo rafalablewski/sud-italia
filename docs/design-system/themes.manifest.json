@@ -71,7 +71,7 @@
     },
     {
      "path": "src/app/themes/homepage/index.css",
-     "description": ".pub-* form classes, body styling, delivery-* keyframes. JS-imported by (public)/layout.tsx, route-scoped."
+     "description": "Liquid Glass material (aurora canvas body::before/::after, .v8-surface*/.v8-sheen/.v8-caustic primitives + --glass-* tokens), .pub-* form classes, body styling, delivery-*/v8-aurora/v8-caustic-shimmer keyframes. JS-imported by (public)/layout.tsx, route-scoped."
     },
     {
      "path": "src/app/themes/homepage/theme.ts",

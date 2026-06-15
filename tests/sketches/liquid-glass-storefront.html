@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sud Italia — Storefront in Liquid Glass · Parchment ⇄ Glass</title>
+<!--
+  ============================================================================
+  SUD ITALIA STOREFRONT · "PARCHMENT ⇄ LIQUID GLASS" · ONE STANDALONE FILE
+  ============================================================================
+  This is NOT a fictional restaurant — it's a faithful remake of OUR actual
+  V8 Tuscany storefront (src/components/landing/*, the location/menu page, the
+  cart drawer, the order-confirmation tracker and the Soci rewards screen).
+  Same copy, same hand-drawn pen-sketches (Kraków wood-fired oven, Warszawa
+  Vespa, per-category pizza/pasta glyphs, basil sprigs, tomato), same
+  tricolore hairline, same "Risen for 36 hours" Famiglia quote, same Tuscany
+  tokens, same Cormorant Garamond + Lora type stack.
+
+  ONE sticky toggle up top flips the WHOLE page between:
+      • Parchment (current)  — the live design you ship today
+      • Liquid Glass (new)   — the same surfaces re-rendered in liquid glass
+  Liquid Glass is the default/active state. Every surface shares the
+  `.surface` class; `body.theme-parchment` overrides flatten each one back to
+  the live parchment look, so a single switch shows both states everywhere.
+
+  LIQUID-GLASS TECHNIQUES (grep the CSS for these markers):
+    [LG-1] Parchment base + 4-pool drifting Tuscan aurora behind the glass
+    [LG-2] Glassmorphism: backdrop-filter blur(22px) saturate(160%) + fills
+    [LG-3] Dual-edge refraction border (bright top edge + inset highlight)
+    [LG-4] Specular sheen sweep on hover
+    [LG-5] Morphing / floating liquid blobs
+    [LG-6] Caustic shimmer over the illustration / pen-sketch tiles
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ===== REAL Sud Italia V8 Tuscany tokens (themes/homepage/tokens.css) ===== */
+  :root{
+    --parchment:#F8EFDE; --parchment-deep:#F2E2C2; --paper-shadow:#E8D6B5; --paper-hi:#FBF4E1;
+    --terracotta:#B85C38; --terracotta-dark:#9A4A2B; --terracotta-soft:#D88E6E;
+    --basil:#4A7C59; --basil-deep:#355C40;
+    --oxblood:#7A2B2B; --oxblood-soft:#A85252;
+    --ochre:#C9A23E; --ochre-light:#E6C97A;
+    --espresso:#3D2817; --espresso-soft:#6B4A30;
+    --ink:#2C1810; --muted:#8C6F4F; --line:#C9B48E; --line-soft:#E0CFA8;
+    --italy-green:#008C45; --italy-white:#F4F5F0; --italy-red:#CD212A;
+    --font-heading:'Cormorant Garamond',Georgia,serif;
+    --font-body:'Lora',Georgia,serif;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:var(--font-body);color:var(--ink);position:relative;min-height:100vh;
+    background:linear-gradient(160deg,var(--parchment),var(--parchment-deep) 50%,var(--paper-shadow));}
+  h1,h2,h3,h4{font-family:var(--font-heading);}
+  .num{font-variant-numeric:tabular-nums;}
+  .it{font-style:italic;}
+
+  /* ========== [LG-1] flowing Tuscan aurora — glass mode only ========== */
+  .aurora{position:fixed;inset:0;z-index:-3;opacity:0;transition:opacity .6s var(--ease);
+    background:
+      radial-gradient(ellipse 50% 45% at 80% 8%,rgba(201,162,62,.5),transparent 60%),
+      radial-gradient(ellipse 55% 45% at 18% 90%,rgba(184,92,56,.45),transparent 60%),
+      radial-gradient(ellipse 55% 55% at 60% 50%,rgba(74,124,89,.36),transparent 62%),
+      radial-gradient(ellipse 45% 45% at 10% 30%,rgba(122,43,43,.28),transparent 60%);
+    background-size:200% 200%,200% 200%,200% 200%,200% 200%;animation:aurora 24s ease-in-out infinite alternate;}
+  @keyframes aurora{0%{background-position:0 0,100% 100%,50% 50%,0 100%}100%{background-position:55% 45%,35% 55%,45% 35%,60% 30%}}
+  /* [LG-5] morphing/floating blobs */
+  .blob{position:fixed;z-index:-2;border-radius:45% 55% 60% 40%/45% 50% 50% 55%;filter:blur(60px);opacity:0;width:380px;height:380px;
+    transition:opacity .6s var(--ease);animation:float 18s ease-in-out infinite alternate;}
+  .blob.b1{background:radial-gradient(circle,var(--ochre-light),var(--terracotta));top:-100px;right:-80px;}
+  .blob.b2{background:radial-gradient(circle,var(--basil),var(--basil-deep));bottom:8%;left:-120px;animation-delay:-7s;}
+  .blob.b3{background:radial-gradient(circle,var(--oxblood-soft),var(--oxblood));top:42%;right:-130px;animation-delay:-12s;}
+  @keyframes float{to{transform:translate(-40px,40px) scale(1.1)}}
+  body.theme-glass .aurora{opacity:1;} body.theme-glass .blob{opacity:.42;}
+
+  /* paper grain (live look) — parchment mode only */
+  body.theme-parchment::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+  body.theme-parchment{background:var(--parchment);}
+
+  /* tricolore hairline — verbatim from .v8-tricolore */
+  .tricolore{height:3px;opacity:.85;background:linear-gradient(90deg,
+    var(--italy-green) 0 33.3%,var(--italy-white) 33.3% 66.6%,var(--italy-red) 66.6% 100%);}
+
+  /* =====================================================================
+     [LG-2/3] SHARED SURFACE — glass by default, parchment when toggled
+     ===================================================================== */
+  .surface{position:relative;border-radius:18px;
+    background:rgba(248,239,222,.5);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+    border:1px solid rgba(255,250,238,.6);
+    box-shadow:0 18px 50px -18px rgba(61,40,23,.3),inset 0 1px 0 rgba(255,255,255,.65);}
+  .surface::before{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);} /* [LG-3] */
+  body.theme-parchment .surface{background:linear-gradient(180deg,var(--paper-hi),var(--parchment));backdrop-filter:none;-webkit-backdrop-filter:none;
+    border:1px solid var(--line);box-shadow:0 18px 30px -22px rgba(61,40,23,.4);}
+  body.theme-parchment .surface::before{display:none;}
+
+  /* dark glass surface variant (rewards espresso tier) */
+  .surface-dark{position:relative;border-radius:18px;color:var(--parchment);
+    background:linear-gradient(160deg,rgba(61,40,23,.78),rgba(122,43,43,.66));backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+    border:1px solid rgba(230,201,122,.4);
+    box-shadow:0 24px 60px -22px rgba(40,24,12,.7),inset 0 1px 0 rgba(255,236,196,.35);}
+  .surface-dark::before{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,236,196,.9),transparent);} /* [LG-3] */
+  body.theme-parchment .surface-dark{background:linear-gradient(160deg,var(--espresso),var(--oxblood));backdrop-filter:none;-webkit-backdrop-filter:none;
+    border:1px solid var(--espresso);box-shadow:0 22px 40px -24px rgba(40,24,12,.7);}
+  body.theme-parchment .surface-dark::before{display:none;}
+
+  /* [LG-4] sheen — only meaningful in glass mode (harmless in parchment) */
+  .sheen{overflow:hidden;}
+  .sheen::after{content:"";position:absolute;top:-120%;left:-60%;width:50%;height:340%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.5) 50%,transparent);transform:rotate(8deg);transition:transform .9s var(--ease);pointer-events:none;opacity:1;}
+  body.theme-parchment .sheen::after{opacity:0;}
+  .sheen:hover::after{transform:rotate(8deg) translateX(420%);}
+
+  /* =====================================================================
+     TOP TOGGLE BAR
+     ===================================================================== */
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+    padding:.7rem 5%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(248,239,222,.78);border-bottom:1px solid var(--line-soft);}
+  .topbar .brand{font-family:var(--font-heading);font-weight:600;font-size:1.35rem;color:var(--espresso);line-height:1;}
+  .topbar .brand small{display:block;font-style:italic;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);margin-top:1px;}
+  .toggle{display:inline-flex;background:rgba(122,43,43,.06);border:1px solid var(--line);border-radius:999px;padding:3px;}
+  .toggle button{font-family:var(--font-heading);font-weight:600;font-size:13px;letter-spacing:.4px;border:none;cursor:pointer;background:transparent;color:var(--muted);padding:8px 18px;border-radius:999px;transition:all .3s var(--ease);}
+  .toggle button .it{font-weight:500;font-size:.78em;opacity:.7;}
+  .toggle button.active{background:var(--terracotta);color:var(--parchment);box-shadow:0 6px 16px -8px rgba(184,92,56,.7);}
+  .toggle button.active .it{color:rgba(255,247,232,.85);}
+  body.theme-glass .toggle button.active{background:linear-gradient(135deg,var(--terracotta),var(--oxblood));}
+
+  /* =====================================================================
+     PAGE INTRO
+     ===================================================================== */
+  .intro{text-align:center;padding:3rem 6% 1rem;}
+  .intro .eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:12px;color:var(--oxblood);}
+  .intro h1{font-size:clamp(2.3rem,5.5vw,3.6rem);font-weight:600;color:var(--espresso);margin:.4rem 0;letter-spacing:-.5px;}
+  .intro h1 em{font-style:italic;background:linear-gradient(100deg,var(--terracotta),var(--ochre),var(--basil));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .intro p{color:var(--muted);max-width:64ch;margin:.4rem auto 0;font-size:1.02rem;line-height:1.6;}
+
+  /* screen section headers */
+  .section-head{text-align:center;margin:3rem 0 1.2rem;padding:0 6%;}
+  .section-head .clabel{display:block;font-family:var(--font-heading);font-style:italic;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);font-weight:600;margin-bottom:.2rem;}
+  .section-head h2{font-family:var(--font-heading);font-size:1.7rem;font-weight:600;color:var(--espresso);}
+  .section-head .cap{color:var(--muted);font-size:.92rem;max-width:62ch;margin:.45rem auto 0;line-height:1.55;}
+
+  /* device frames row */
+  .screens{display:flex;flex-wrap:wrap;gap:2rem;justify-content:center;align-items:flex-start;padding:0 4% 1rem;}
+  .screen{flex:1 1 380px;max-width:440px;}
+  .screen-label{font-family:var(--font-heading);font-weight:600;text-align:center;color:var(--espresso);font-size:1.2rem;margin-bottom:.7rem;}
+  .screen-label small{display:block;font-style:italic;font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);}
+  .device{border-radius:26px;overflow:hidden;height:760px;display:flex;flex-direction:column;
+    border:1px solid var(--line);box-shadow:0 40px 80px -40px rgba(61,40,23,.6);background:transparent;}
+  .device.tall{height:860px;}
+  .device .vp{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;}
+  .device .vp::-webkit-scrollbar{width:6px;} .device .vp::-webkit-scrollbar-thumb{background:rgba(140,111,79,.4);border-radius:3px;}
+
+  .eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:2.5px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);}
+
+  /* =====================================================================
+     SCREEN 1 · LANDING (hero · locations · famiglia)
+     ===================================================================== */
+  .land{position:relative;}
+  body.theme-glass .land{background:transparent;}
+  body.theme-parchment .land{background:var(--parchment);}
+
+  /* — HERO — */
+  .hero{position:relative;padding:1.6rem 1.3rem 1.4rem;text-align:center;}
+  .orn{position:absolute;pointer-events:none;opacity:.5;z-index:1;}
+  .orn.basil-tl{top:2px;left:-2%;transform:rotate(-12deg);}
+  .orn.basil-br{bottom:6px;right:-2%;transform:rotate(150deg);opacity:.4;}
+  .orn.tomato{top:7%;right:8%;}
+  .hero-glass{position:relative;z-index:2;padding:1.8rem 1.3rem;border-radius:20px;}
+  .kicker{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-heading);font-weight:600;letter-spacing:2.5px;text-transform:uppercase;font-size:11px;color:var(--oxblood);padding:6px 13px;border-radius:999px;margin-bottom:14px;
+    background:rgba(122,43,43,.05);border:1px solid rgba(122,43,43,.18);}
+  body.theme-glass .kicker{background:rgba(248,239,222,.5);border:1px solid rgba(255,250,238,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--italy-green);box-shadow:0 0 0 3px rgba(0,140,69,.18);animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+  .hero h1{font-weight:600;font-size:clamp(1.9rem,4.4vw,2.6rem);line-height:1.02;color:var(--espresso);letter-spacing:-.5px;margin-bottom:5px;}
+  .hero .sub{font-family:var(--font-heading);font-style:italic;font-size:1.2rem;color:var(--muted);margin-bottom:8px;}
+  .squiggle{color:var(--terracotta);margin:2px auto 13px;display:block;}
+  .lede{font-size:.92rem;line-height:1.6;color:var(--espresso-soft);max-width:42ch;margin:0 auto 18px;}
+  .lede em{font-family:var(--font-heading);font-style:italic;font-size:1.05em;color:var(--oxblood);}
+  .ctas{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;}
+  .cta{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-heading);font-weight:600;font-size:14px;letter-spacing:.3px;text-decoration:none;padding:11px 16px;border-radius:12px;cursor:pointer;transition:transform .3s var(--ease);}
+  .cta .it{font-style:italic;font-weight:500;font-size:.84em;}
+  .cta-fill{background:var(--terracotta);color:var(--parchment);border:1px solid var(--terracotta-dark);box-shadow:0 10px 22px -12px rgba(184,92,56,.7);}
+  .cta-fill .it{color:rgba(255,247,232,.78);}
+  body.theme-glass .cta-fill{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));border:1px solid rgba(255,250,238,.4);box-shadow:0 12px 26px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
+  .cta-fill:hover{transform:translateY(-3px) scale(1.02);}
+  .cta-ghost{background:transparent;color:var(--oxblood);border:1px solid var(--oxblood);}
+  body.theme-glass .cta-ghost{background:rgba(248,239,222,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(122,43,43,.4);}
+  .cta-ghost:hover{transform:translateY(-3px);}
+  .hero .tricolore{width:200px;height:3px;opacity:.7;margin:22px auto 0;}
+
+  /* — LOCATIONS — */
+  .locs{padding:1.4rem 1.1rem 1.2rem;}
+  body.theme-parchment .locs{background:var(--parchment-deep);}
+  .ps-head{text-align:center;margin-bottom:1rem;}
+  .ps-eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:11px;color:var(--oxblood);}
+  .ps-eyebrow .it{font-weight:500;opacity:.75;}
+  .ps-title{font-weight:600;font-size:1.8rem;line-height:1.05;color:var(--espresso);margin:5px 0;}
+  .ps-title .it{color:var(--oxblood);}
+  .ps-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.98rem;}
+  .loc-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:.5rem;}
+  .loc-card{border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:transform .35s var(--ease),box-shadow .35s var(--ease);}
+  body.theme-glass .loc-card:hover{transform:translateY(-6px);box-shadow:0 30px 60px -24px rgba(61,40,23,.4),inset 0 1px 0 rgba(255,255,255,.7);}
+  .loc-illus{position:relative;height:128px;display:grid;place-items:center;overflow:hidden;}
+  body.theme-glass .loc-illus{background:linear-gradient(160deg,rgba(184,92,56,.18),rgba(201,162,62,.16));}
+  body.theme-parchment .loc-illus{background:linear-gradient(180deg,rgba(184,92,56,.08),rgba(201,162,62,.10)),var(--parchment-deep);border-bottom:1px solid var(--line-soft);}
+  body.theme-glass .loc-illus::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 7s ease-in-out infinite alternate;} /* [LG-6] */
+  @keyframes shimmer{from{opacity:.3;transform:scale(1)}to{opacity:.8;transform:scale(1.12)}}
+  .loc-illus svg{position:relative;z-index:1;width:170px;height:auto;}
+  .loc-body{padding:14px 15px 16px;flex:1;display:flex;flex-direction:column;}
+  .loc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .loc-name{font-family:var(--font-heading);font-weight:600;font-size:1.6rem;line-height:1;color:var(--espresso);letter-spacing:-.3px;}
+  .loc-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-size:11px;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;
+    color:var(--basil-deep);background:rgba(74,124,89,.10);border:1px solid rgba(74,124,89,.3);}
+  body.theme-glass .loc-status{background:rgba(74,124,89,.16);border:1px solid rgba(74,124,89,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .loc-status .sdot{width:7px;height:7px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.15);animation:pulse 2s ease-in-out infinite;}
+  .loc-info{margin-top:5px;color:var(--espresso-soft);font-size:12px;line-height:1.5;}
+  .loc-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line-soft);}
+  .loc-row:last-child{border-bottom:none;}
+  .loc-row svg{flex:0 0 16px;margin-top:2px;}
+  .loc-desc{font-family:var(--font-heading);font-style:italic;font-size:14px;color:var(--espresso);margin:8px 0 6px;}
+  .loc-note{font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--muted);border-left:2px solid var(--ochre);padding-left:8px;margin-bottom:10px;}
+  .loc-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:13.5px;color:var(--terracotta);text-decoration:none;}
+  .loc-cta .it{font-weight:500;font-size:.86em;color:var(--muted);}
+
+  /* — FAMIGLIA — */
+  .famiglia{padding:2rem 1.3rem 2.2rem;text-align:center;position:relative;}
+  .fam-glass{position:relative;padding:2rem 1.6rem;border-radius:20px;}
+  .famiglia blockquote{font-family:var(--font-heading);font-style:italic;font-weight:500;font-size:clamp(1.3rem,3vw,1.7rem);line-height:1.3;color:var(--espresso);}
+  .famiglia cite{display:block;font-family:var(--font-heading);font-style:normal;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;color:var(--oxblood);margin-top:1.1rem;}
+
+  /* =====================================================================
+     SCREEN 2 · LOCATION / MENU
+     ===================================================================== */
+  .loc-hero{padding:1.6rem 1.4rem;text-align:center;position:relative;overflow:hidden;}
+  body.theme-glass .loc-hero{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.14));}
+  body.theme-parchment .loc-hero{background:linear-gradient(180deg,rgba(184,92,56,.08),rgba(201,162,62,.10)),var(--parchment-deep);}
+  .loc-hero .status{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--basil-deep);background:rgba(74,124,89,.14);border:1px solid rgba(74,124,89,.34);padding:4px 11px;border-radius:999px;}
+  .loc-hero .status .sdot{width:7px;height:7px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.18);animation:pulse 2s ease-in-out infinite;}
+  .loc-hero h1{font-weight:600;font-size:2.4rem;color:var(--espresso);line-height:1;margin:.5rem 0 .2rem;letter-spacing:-.5px;}
+  .loc-hero .addr{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.95rem;}
+  .loc-hero .tricolore{width:160px;height:2.5px;margin:.9rem auto 0;}
+
+  .menu-wrap{padding:1.2rem 1rem 1.6rem;}
+  .menu-cat{font-family:var(--font-heading);font-weight:600;font-size:1.5rem;color:var(--espresso);margin:.6rem 4px .7rem;display:flex;align-items:baseline;gap:10px;}
+  .menu-cat small{font-style:italic;font-size:.8rem;color:var(--muted);font-weight:500;}
+  .mi{position:relative;margin-bottom:.9rem;padding:14px;border-radius:14px;}
+  .mi.is-incart{outline:1.5px solid rgba(74,124,89,.5);outline-offset:-1.5px;}
+  .mi-flags{position:absolute;top:-9px;left:12px;display:flex;gap:6px;z-index:3;}
+  .mi-flag{font-family:var(--font-heading);font-weight:600;font-style:italic;font-size:10px;letter-spacing:.4px;color:var(--parchment);background:var(--terracotta);padding:3px 9px;border-radius:999px;box-shadow:0 4px 10px -4px rgba(184,92,56,.7);}
+  .mi-flag.is-gold{background:var(--ochre);} .mi-flag.is-basil{background:var(--basil);}
+  .mi-top{display:flex;gap:12px;}
+  .mi-illus{flex:0 0 64px;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;transition:transform .35s var(--ease);}
+  body.theme-glass .mi-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));}
+  body.theme-parchment .mi-illus{background:var(--parchment-deep);border:1px solid var(--line-soft);}
+  body.theme-glass .mi-illus::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.45),transparent 55%);animation:shimmer 7s ease-in-out infinite alternate;} /* [LG-6] */
+  .mi:hover .mi-illus{transform:rotate(-3deg);}
+  .mi-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.3rem;color:var(--espresso);line-height:1.1;}
+  .mi-name .en{display:block;font-style:normal;font-weight:600;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--terracotta);margin-top:1px;}
+  .mi-origin{font-size:12.5px;color:var(--espresso-soft);line-height:1.45;margin-top:3px;}
+  .mi-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+  .mi-chip{font-size:10px;letter-spacing:.2px;padding:2px 8px;border-radius:999px;color:var(--basil-deep);background:rgba(74,124,89,.12);border:1px solid rgba(74,124,89,.28);}
+  .mi-chip.is-gold{color:var(--ochre);background:rgba(201,162,62,.12);border-color:rgba(201,162,62,.34);}
+  .mi-chip.is-warn{color:var(--oxblood);background:rgba(122,43,43,.08);border-color:rgba(122,43,43,.28);}
+  .mi-chip.is-italic{font-family:var(--font-heading);font-style:italic;}
+  .mi-foot{display:flex;align-items:center;justify-content:space-between;margin-top:11px;padding-top:11px;border-top:1px dashed var(--line-soft);}
+  .mi-price{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--espresso);}
+  .mi-add{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:14px;color:var(--parchment);background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:11px;padding:8px 14px;cursor:pointer;transition:all .25s var(--ease);}
+  body.theme-glass .mi-add{box-shadow:0 10px 22px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.3);}
+  .mi-add:hover{background:var(--terracotta-dark);transform:translateY(-2px);}
+  .mi-add .it{font-style:italic;font-weight:500;font-size:.84em;opacity:.8;}
+  .mi-stepper{display:inline-flex;align-items:center;gap:12px;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.32);border-radius:11px;padding:5px 10px;}
+  .mi-stepper button{width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:var(--basil);color:#fff;display:grid;place-items:center;font-size:14px;line-height:1;}
+  .mi-stepper .c{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--basil-deep);min-width:14px;text-align:center;}
+
+  /* =====================================================================
+     SCREEN 3 · CART DRAWER
+     ===================================================================== */
+  .cart{display:flex;flex-direction:column;height:100%;}
+  body.theme-glass .cart{background:rgba(248,239,222,.36);}
+  body.theme-parchment .cart{background:var(--parchment);}
+  .cart-grip{width:42px;height:4px;border-radius:99px;background:var(--line);margin:10px auto 4px;}
+  .cart-top{padding:.4rem 1.2rem .7rem;}
+  .cart-top h2{font-weight:600;font-size:1.5rem;color:var(--espresso);}
+  .cart-top .sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.85rem;}
+  .cart-tricolore{height:2.5px;}
+  .cart-scroll{flex:1;overflow-y:auto;padding:1rem 1.2rem;}
+  .cart-section-title{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);margin:.4rem 0 .7rem;}
+  .ci{display:flex;gap:11px;padding:11px;border-radius:13px;margin-bottom:.7rem;}
+  .ci-illus{flex:0 0 46px;width:46px;height:46px;border-radius:10px;display:grid;place-items:center;position:relative;overflow:hidden;}
+  body.theme-glass .ci-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));}
+  body.theme-parchment .ci-illus{background:var(--parchment-deep);border:1px solid var(--line-soft);}
+  .ci-body{flex:1;}
+  .ci-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.05rem;color:var(--espresso);}
+  .ci-meta{font-size:11.5px;color:var(--muted);}
+  .ci-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+  .ci-price{font-family:var(--font-heading);font-weight:600;color:var(--espresso);}
+  .ci-step{display:inline-flex;align-items:center;gap:9px;}
+  .ci-step button{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--terracotta);cursor:pointer;display:grid;place-items:center;line-height:1;}
+  .ci-step .c{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--basil-deep);}
+
+  .cart-loyalty{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:.9rem;
+    background:rgba(201,162,62,.12);border:1px solid rgba(201,162,62,.32);}
+  .cart-loyalty .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ochre);color:#fff;flex:none;}
+  .cart-loyalty .nm{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--espresso);}
+  .cart-loyalty .pts{font-size:11.5px;color:var(--muted);}
+
+  .cart-fulfill{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:.9rem;}
+  .ff{font-family:var(--font-heading);font-weight:600;font-size:13px;text-align:center;padding:9px 4px;border-radius:11px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--espresso-soft);transition:all .25s var(--ease);}
+  .ff .it{display:block;font-style:italic;font-weight:500;font-size:10px;color:var(--muted);}
+  .ff.active{background:var(--terracotta);color:var(--parchment);border-color:var(--terracotta-dark);}
+  .ff.active .it{color:rgba(255,247,232,.8);}
+
+  .delivery{padding:10px 12px;border-radius:12px;margin-bottom:.9rem;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.28);}
+  .delivery .row{display:flex;justify-content:space-between;font-size:12px;color:var(--espresso-soft);margin-bottom:6px;}
+  .delivery .row b{font-family:var(--font-heading);font-style:italic;color:var(--basil-deep);}
+  .delivery .bar{height:7px;border-radius:99px;background:rgba(140,111,79,.18);overflow:hidden;}
+  .delivery .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--basil),var(--ochre));}
+
+  .cart-field{margin-bottom:.7rem;}
+  .cart-field label{display:block;font-family:var(--font-heading);font-weight:600;font-size:11px;letter-spacing:.4px;color:var(--espresso-soft);margin-bottom:4px;}
+  .cart-field label aside{font-style:italic;color:var(--muted);font-weight:500;}
+  .cart-input{width:100%;font-family:var(--font-body);font-size:14px;padding:10px 12px;border-radius:11px;color:var(--ink);outline:none;
+    border:1px solid var(--line);background:rgba(255,255,255,.5);transition:border .25s,box-shadow .25s;}
+  body.theme-glass .cart-input{border:1px solid rgba(255,250,238,.6);background:rgba(255,255,255,.45);}
+  .cart-input:focus{border-color:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.16);}
+
+  .cart-foot{border-top:1px solid var(--line-soft);padding:1rem 1.2rem 1.2rem;}
+  body.theme-glass .cart-foot{background:rgba(248,239,222,.4);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  .tot-row{display:flex;justify-content:space-between;font-size:13px;color:var(--espresso-soft);margin-bottom:5px;}
+  .tot-row.grand{font-family:var(--font-heading);font-size:1.3rem;font-weight:600;color:var(--espresso);margin:8px 0 12px;padding-top:8px;border-top:1px dashed var(--line-soft);}
+  .checkout-btn{width:100%;font-family:var(--font-heading);font-weight:600;font-size:16px;color:var(--parchment);
+    background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:13px;padding:14px;cursor:pointer;transition:all .25s var(--ease);}
+  body.theme-glass .checkout-btn{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));box-shadow:0 14px 30px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
+  .checkout-btn:hover{transform:translateY(-2px);}
+  .checkout-btn .it{font-style:italic;font-weight:500;font-size:.82em;opacity:.82;}
+
+  /* =====================================================================
+     SCREEN 4 · CONFIRMATION / TRACKER
+     ===================================================================== */
+  .conf{padding:1.6rem 1.4rem;text-align:center;}
+  .conf-check{width:84px;height:84px;border-radius:50%;margin:.6rem auto 1rem;display:grid;place-items:center;position:relative;
+    background:radial-gradient(circle at 40% 35%,var(--basil),var(--basil-deep));color:#fff;box-shadow:0 16px 36px -14px rgba(53,92,64,.7);}
+  body.theme-glass .conf-check::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 6s ease-in-out infinite alternate;}
+  .conf h1{font-weight:600;font-size:2rem;color:var(--espresso);line-height:1.05;}
+  .conf .it-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);margin-bottom:.4rem;}
+  .conf .order-no{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;color:var(--oxblood);font-size:13px;}
+  .conf-card{padding:1.1rem 1.2rem;border-radius:15px;margin:1.2rem 0;text-align:left;}
+  .conf-eta{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+  .conf-eta .big{font-family:var(--font-heading);font-weight:600;font-size:1.7rem;color:var(--espresso);}
+  .conf-eta .lab{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+  .track{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:18px;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--line-soft);}
+  .step.done:not(:last-child)::before{background:var(--basil);}
+  .step .dot{flex:0 0 24px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;z-index:1;
+    background:var(--parchment-deep);border:1.5px solid var(--line);color:var(--muted);}
+  .step.done .dot{background:var(--basil);border-color:var(--basil);color:#fff;}
+  .step.active .dot{background:var(--terracotta);border-color:var(--terracotta);color:#fff;animation:pulse 1.8s ease-in-out infinite;}
+  .step .t{font-family:var(--font-heading);font-weight:600;font-size:1.05rem;color:var(--espresso);}
+  .step .t .it{font-size:.8em;color:var(--muted);}
+  .step .s{font-size:11.5px;color:var(--muted);}
+  .conf-items{font-size:13px;color:var(--espresso-soft);}
+  .conf-items .ir{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line-soft);}
+  .conf-items .ir:last-child{border-bottom:none;}
+  .conf-items .ir.tot{font-family:var(--font-heading);font-weight:600;color:var(--espresso);}
+  .conf .tricolore{width:140px;height:2.5px;margin:1rem auto 0;}
+
+  /* =====================================================================
+     SCREEN 5 · REWARDS (Soci) — espresso tier dark glass
+     ===================================================================== */
+  .rw{padding:1.5rem 1.3rem 1.8rem;}
+  .rw-head{text-align:center;margin-bottom:1.1rem;}
+  .rw-head h1{font-weight:600;font-size:2.1rem;color:var(--espresso);line-height:1;}
+  .rw-head .it-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.92rem;margin-top:2px;}
+
+  .tier-card{padding:1.4rem 1.4rem 1.5rem;border-radius:20px;position:relative;overflow:hidden;}
+  body.theme-glass .tier-card::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 12%,rgba(230,201,122,.28),transparent 55%);animation:shimmer 8s ease-in-out infinite alternate;pointer-events:none;} /* [LG-6] */
+  .tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;position:relative;z-index:1;}
+  .tier-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:12px;letter-spacing:.4px;
+    padding:4px 12px;border-radius:999px;color:var(--espresso);background:linear-gradient(135deg,var(--ochre-light),var(--ochre));box-shadow:0 6px 16px -6px rgba(201,162,62,.7);}
+  .tier-pill .bean{width:9px;height:9px;border-radius:50%;background:var(--espresso);}
+  .tier-mult{font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--ochre-light);text-align:right;}
+  .tier-mult b{display:block;font-size:1.5rem;font-style:normal;color:var(--parchment);line-height:1;}
+  .tier-pts{position:relative;z-index:1;margin:1rem 0 .3rem;}
+  .tier-pts .big{font-family:var(--font-heading);font-weight:600;font-size:3rem;line-height:1;color:var(--parchment);}
+  .tier-pts .lab{font-family:var(--font-heading);font-style:italic;font-size:13px;color:rgba(244,234,214,.7);}
+  .tier-rail{position:relative;z-index:1;margin:1rem 0 .5rem;}
+  .tier-rail .meta{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(244,234,214,.78);margin-bottom:6px;}
+  .tier-rail .meta b{font-family:var(--font-heading);font-style:italic;color:var(--ochre-light);}
+  .tier-rail .bar{height:8px;border-radius:99px;background:rgba(244,234,214,.16);overflow:hidden;}
+  .tier-rail .bar i{display:block;height:100%;width:68%;border-radius:99px;background:linear-gradient(90deg,var(--ochre),var(--ochre-light));box-shadow:0 0 12px rgba(230,201,122,.6);}
+  .tier-stats{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:1.1rem;padding-top:1.1rem;border-top:1px solid rgba(230,201,122,.25);}
+  .tier-stat{text-align:center;}
+  .tier-stat .v{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--parchment);line-height:1;}
+  .tier-stat .k{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:rgba(244,234,214,.6);margin-top:3px;}
+
+  .rw-section-title{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);margin:1.4rem 0 .8rem;}
+  .reward-tile{display:flex;align-items:center;gap:12px;padding:13px;border-radius:14px;margin-bottom:.8rem;}
+  .reward-tile .rt-ic{flex:0 0 44px;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;}
+  body.theme-glass .reward-tile .rt-ic{background:linear-gradient(160deg,rgba(184,92,56,.18),rgba(201,162,62,.18));}
+  body.theme-parchment .reward-tile .rt-ic{background:var(--parchment-deep);border:1px solid var(--line-soft);}
+  .reward-tile .rt-body{flex:1;}
+  .reward-tile .rt-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.1rem;color:var(--espresso);line-height:1.1;}
+  .reward-tile .rt-desc{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .reward-tile .rt-cost{font-family:var(--font-heading);font-weight:600;font-size:13px;color:var(--ochre);white-space:nowrap;}
+  .reward-tile .rt-redeem{font-family:var(--font-heading);font-weight:600;font-size:13px;color:var(--parchment);background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:10px;padding:7px 12px;cursor:pointer;white-space:nowrap;transition:all .25s var(--ease);}
+  body.theme-glass .reward-tile .rt-redeem{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));box-shadow:0 8px 18px -8px rgba(184,92,56,.7);}
+  .reward-tile .rt-redeem:hover{transform:translateY(-2px);}
+  .reward-tile .rt-redeem.is-locked{background:transparent;color:var(--muted);border-color:var(--line);box-shadow:none;cursor:default;}
+
+  footer{text-align:center;padding:2.6rem 6% 3.2rem;color:var(--muted);font-size:.85rem;line-height:1.6;}
+  footer b{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--espresso);}
+
+  @media (max-width:520px){.device,.device.tall{height:680px;}}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body class="theme-glass">
+
+<div class="aurora"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<!-- ============ STICKY TOP TOGGLE ============ -->
+<div class="topbar">
+  <div class="brand">Sud Italia<small>Napoli a Kraków &amp; Warszawa</small></div>
+  <div class="toggle" id="toggle">
+    <button data-theme="theme-parchment">Parchment <span class="it">· current</span></button>
+    <button data-theme="theme-glass" class="active">Liquid Glass <span class="it">· new</span></button>
+  </div>
+</div>
+
+<!-- ============ INTRO ============ -->
+<div class="intro">
+  <span class="eyebrow">— Storefront redesign · before vs after —</span>
+  <h1>Our storefront, remade in <em>Liquid Glass</em></h1>
+  <p>The same V8 Tuscany storefront you ship today — basil sprigs, the wood-fired oven, the Vespa, nonna Concetta's 36-hour dough — re-rendered through liquid glass. Flip the toggle above to switch <strong>every</strong> screen below between the current parchment design and the new liquid-glass language at once. Liquid Glass is shown by default.</p>
+</div>
+
+<!-- ============================================================
+     SCREEN 1 · LANDING (hero · locations · famiglia)
+     ============================================================ -->
+<div class="section-head">
+  <span class="clabel">Screen 01 · la vetrina</span>
+  <h2>Landing</h2>
+  <p class="cap">Hero, the Kraków + Warszawa locations grid, and the Famiglia quote. In glass mode the hero copy floats on a frosted card over a drifting Tuscan aurora; the oven and Vespa sketches pick up a caustic shimmer.</p>
+</div>
+<div class="screens">
+  <div class="screen" style="flex-basis:460px;max-width:480px;">
+    <div class="screen-label"><small>Schermo 01</small>Landing · home</div>
+    <div class="device tall">
+      <div class="vp">
+        <div class="land">
+          <!-- HERO -->
+          <div class="hero">
+            <span class="orn basil-tl" aria-hidden><svg width="84" height="84" viewBox="0 0 120 120" fill="none"><path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/></svg></span>
+            <span class="orn tomato" aria-hidden><svg width="50" height="50" viewBox="0 0 70 70" fill="none"><path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fill-opacity="0.26" stroke="#B85C38" stroke-width="2"/><path d="M35 24 L35 16" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/><path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/></svg></span>
+            <span class="orn basil-br" aria-hidden><svg width="64" height="64" viewBox="0 0 100 100" fill="none"><path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round"/><path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+
+            <div class="hero-glass surface sheen">
+              <span class="kicker"><span class="dot"></span>Open now · <span class="it">aperto ora</span></span>
+              <h1>Pizza, the way it's made in Naples</h1>
+              <div class="sub">La pizza, fatta come a Napoli</div>
+              <svg class="squiggle" width="190" height="15" viewBox="0 0 220 18" fill="none" aria-hidden><path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="216" cy="12" r="1.8" fill="currentColor"/></svg>
+              <p class="lede">San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60 seconds, eaten in silence — a Neapolitan rule we like to break with a glass of <em>vino della casa</em>.</p>
+              <div class="ctas">
+                <a class="cta cta-fill">Order in Kraków <span class="it">· Ordina</span></a>
+                <a class="cta cta-fill">Order in Warszawa <span class="it">· Ordina</span></a>
+                <a class="cta cta-ghost">Our Story <span class="it">· La storia</span></a>
+              </div>
+              <div class="tricolore"></div>
+            </div>
+          </div>
+
+          <!-- LOCATIONS -->
+          <div class="locs">
+            <div class="ps-head">
+              <div class="ps-eyebrow">The restaurants <span class="it">· le botteghe</span></div>
+              <h2 class="ps-title">Two addresses, <span class="it">one family</span></h2>
+              <p class="ps-sub">Two restaurants, one kitchen, one nonna who taught us the dough.</p>
+            </div>
+            <div class="loc-grid" id="locGrid"></div>
+          </div>
+
+          <!-- FAMIGLIA -->
+          <div class="famiglia">
+            <div class="fam-glass surface sheen">
+              <blockquote>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</blockquote>
+              <cite>Giuseppe Esposito · Pizzaiolo</cite>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 2 · LOCATION / MENU
+     ============================================================ -->
+<div class="section-head">
+  <span class="clabel">Screen 02 · il menù</span>
+  <h2>Location &amp; menu — Kraków</h2>
+  <p class="cap">The LocationHero plus real menu item cards: per-category pen-sketch tiles, flag ribbons (Our Hero / Most Popular / Just landed), diet chips, prices in złoty, and the Add button that becomes a basil stepper once an item is in the cart.</p>
+</div>
+<div class="screens">
+  <div class="screen">
+    <div class="screen-label"><small>Schermo 02</small>Location · Kraków</div>
+    <div class="device tall">
+      <div class="vp">
+        <div class="loc-hero">
+          <span class="status"><span class="sdot"></span>Open now <span class="it">· aperto ora</span></span>
+          <h1>Kraków</h1>
+          <div class="addr">Rynek Główny, 31-042 · forno a legna 485°C</div>
+          <div class="tricolore"></div>
+        </div>
+        <div class="menu-wrap">
+          <h3 class="menu-cat">Pizze <small>· dal forno a legna</small></h3>
+
+          <article class="mi surface sheen is-incart">
+            <div class="mi-flags"><span class="mi-flag">Our Hero</span><span class="mi-flag is-gold">Most Popular</span></div>
+            <div class="mi-top">
+              <div class="mi-illus" data-illus="pizza"></div>
+              <div>
+                <div class="mi-name">Margherita<span class="en">The gateway — start here</span></div>
+                <div class="mi-origin">San Marzano tomato sauce, fior di latte mozzarella, fresh basil, extra virgin olive oil</div>
+                <div class="mi-chips"><span class="mi-chip">Vegetarian · <span class="it">vegetariano</span></span><span class="mi-chip is-italic">36h proofing</span></div>
+              </div>
+            </div>
+            <div class="mi-foot">
+              <div class="mi-price num">27,90 zł</div>
+              <div class="mi-stepper"><button aria-label="Remove one">−</button><span class="c">2</span><button aria-label="Add one">＋</button></div>
+            </div>
+          </article>
+
+          <article class="mi surface sheen">
+            <div class="mi-flags"><span class="mi-flag is-basil">Just landed</span></div>
+            <div class="mi-top">
+              <div class="mi-illus" data-illus="pizza"></div>
+              <div>
+                <div class="mi-name">Diavola<span class="en">Pizzaiolo's pick</span></div>
+                <div class="mi-origin">San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil</div>
+                <div class="mi-chips"><span class="mi-chip is-warn">Spicy · <span class="it">piccante</span></span><span class="mi-chip is-italic">36h proofing</span></div>
+              </div>
+            </div>
+            <div class="mi-foot">
+              <div class="mi-price num">32,90 zł</div>
+              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+            </div>
+          </article>
+
+          <article class="mi surface sheen">
+            <div class="mi-top">
+              <div class="mi-illus" data-illus="pizza"></div>
+              <div>
+                <div class="mi-name">Prosciutto e Rucola</div>
+                <div class="mi-origin">Fior di latte, prosciutto crudo di Parma, wild arugula, shaved Parmigiano, olive oil</div>
+                <div class="mi-chips"><span class="mi-chip is-italic">36h proofing</span></div>
+              </div>
+            </div>
+            <div class="mi-foot">
+              <div class="mi-price num">35,90 zł</div>
+              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+            </div>
+          </article>
+
+          <h3 class="menu-cat" style="margin-top:1.2rem">Paste <small>· fatte a mano</small></h3>
+          <article class="mi surface sheen">
+            <div class="mi-top">
+              <div class="mi-illus" data-illus="pasta"></div>
+              <div>
+                <div class="mi-name">Spaghetti Carbonara<span class="en">Chef's signature</span></div>
+                <div class="mi-origin">Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic Roman way</div>
+              </div>
+            </div>
+            <div class="mi-foot">
+              <div class="mi-price num">28,95 zł</div>
+              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 3 + 4 · CART + CONFIRMATION
+     ============================================================ -->
+<div class="section-head">
+  <span class="clabel">Screen 03 &amp; 04 · l'ordine</span>
+  <h2>Cart drawer &amp; order confirmation</h2>
+  <p class="cap">The slide-over cart — line items with steppers, the Soci loyalty rail, the fulfillment toggle, the free-delivery progress bar, name/phone and totals — then the order-placed screen with the live wood-oven tracker.</p>
+</div>
+<div class="screens">
+  <!-- CART -->
+  <div class="screen">
+    <div class="screen-label"><small>Schermo 03</small>Il tuo ordine · Cart</div>
+    <div class="device tall">
+      <div class="vp" style="display:flex;flex-direction:column;overflow:hidden;">
+        <div class="cart">
+          <div class="cart-grip"></div>
+          <div class="cart-top">
+            <h2>Your order</h2>
+            <div class="sub">— il tuo ordine</div>
+          </div>
+          <div class="cart-tricolore tricolore"></div>
+
+          <div class="cart-scroll">
+            <div class="cart-section-title">Your items · i tuoi piatti</div>
+
+            <div class="ci surface">
+              <div class="ci-illus" data-illus="pizza"></div>
+              <div class="ci-body"><div class="ci-name">Margherita</div><div class="ci-meta">36h proofing · vegetariano</div></div>
+              <div class="ci-right"><div class="ci-price num">55,80 zł</div><div class="ci-step"><button>−</button><span class="c">2</span><button>＋</button></div></div>
+            </div>
+            <div class="ci surface">
+              <div class="ci-illus" data-illus="pasta"></div>
+              <div class="ci-body"><div class="ci-name">Spaghetti Carbonara</div><div class="ci-meta">Roman classic</div></div>
+              <div class="ci-right"><div class="ci-price num">28,95 zł</div><div class="ci-step"><button>−</button><span class="c">1</span><button>＋</button></div></div>
+            </div>
+
+            <div class="cart-loyalty">
+              <span class="ic">★</span>
+              <div><div class="nm">Soci e amici.</div><div class="pts">You'll earn <b>84 pts</b> · join free</div></div>
+            </div>
+
+            <div class="cart-section-title">How would you like it? · come lo vuoi</div>
+            <div class="cart-fulfill">
+              <button class="ff active">Pickup<span class="it">· asporto</span></button>
+              <button class="ff">Delivery<span class="it">· consegna</span></button>
+              <button class="ff">Dine-in<span class="it">· a tavola</span></button>
+            </div>
+
+            <div class="delivery">
+              <div class="row"><span>Free delivery at 80 zł</span><b>8,25 zł to go</b></div>
+              <div class="bar"><i></i></div>
+            </div>
+
+            <div class="cart-field">
+              <label>Name <aside>· nome</aside></label>
+              <input class="cart-input" value="Giulia Rossi" />
+            </div>
+            <div class="cart-field">
+              <label>Phone <aside>· telefono</aside></label>
+              <input class="cart-input" value="+48 600 123 456" />
+            </div>
+          </div>
+
+          <div class="cart-foot">
+            <div class="tot-row"><span>Subtotal · subtotale</span><span class="num">84,75 zł</span></div>
+            <div class="tot-row"><span>Pickup · asporto</span><span class="num">Free</span></div>
+            <div class="tot-row grand"><span>Total · totale</span><span class="num">84,75 zł</span></div>
+            <button class="checkout-btn">Place order <span class="it">· conferma l'ordine</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRMATION -->
+  <div class="screen">
+    <div class="screen-label"><small>Schermo 04</small>Ordine confermato · Tracker</div>
+    <div class="device tall">
+      <div class="vp">
+        <div class="conf">
+          <div class="conf-check"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></div>
+          <h1>Grazie, Giulia!</h1>
+          <div class="it-sub">Your pizza is on its way to the oven</div>
+          <div class="order-no">ORDER #SI-4827 · KRAKÓW</div>
+
+          <div class="conf-card surface sheen">
+            <div class="conf-eta">
+              <div><div class="lab">Ready by · pronto per le</div><div class="big num">19:42</div></div>
+              <div style="text-align:right"><div class="lab">Pickup · asporto</div><div class="big">Rynek</div></div>
+            </div>
+            <div class="track">
+              <div class="step done"><span class="dot">✓</span><div><div class="t">Order received <span class="it">· ricevuto</span></div><div class="s">19:18 · confirmed</div></div></div>
+              <div class="step done"><span class="dot">✓</span><div><div class="t">Dough stretched <span class="it">· stesa</span></div><div class="s">Giuseppe's at the bench</div></div></div>
+              <div class="step active"><span class="dot">●</span><div><div class="t">In the wood oven <span class="it">· nel forno</span></div><div class="s">485°C · 60 seconds</div></div></div>
+              <div class="step"><span class="dot">4</span><div><div class="t">Ready for pickup <span class="it">· pronto</span></div><div class="s">We'll text you</div></div></div>
+            </div>
+          </div>
+
+          <div class="conf-card surface" style="padding-top:.9rem">
+            <div class="cart-section-title" style="margin-top:0">Your order · il tuo ordine</div>
+            <div class="conf-items">
+              <div class="ir"><span>2 × Margherita</span><span class="num">55,80 zł</span></div>
+              <div class="ir"><span>1 × Spaghetti Carbonara</span><span class="num">28,95 zł</span></div>
+              <div class="ir tot"><span>Total</span><span class="num">84,75 zł</span></div>
+            </div>
+          </div>
+
+          <div class="tricolore"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 5 · REWARDS (Soci)
+     ============================================================ -->
+<div class="section-head">
+  <span class="clabel">Screen 05 · i soci</span>
+  <h2>Rewards — Soci e amici</h2>
+  <p class="cap">The loyalty home: the Espresso-tier card rendered as dark glass (points balance, tier pill, multiplier, progress rail to the next tier, and a stats row), followed by redeemable reward tiles.</p>
+</div>
+<div class="screens">
+  <div class="screen">
+    <div class="screen-label"><small>Schermo 05</small>Rewards · Soci</div>
+    <div class="device">
+      <div class="vp">
+        <div class="rw">
+          <div class="rw-head">
+            <h1>Ciao, Giulia</h1>
+            <div class="it-sub">Soci e amici — friends of the house</div>
+          </div>
+
+          <!-- ESPRESSO TIER — dark glass -->
+          <div class="tier-card surface-dark sheen">
+            <div class="tier-top">
+              <span class="tier-pill"><span class="bean"></span>Espresso tier</span>
+              <div class="tier-mult"><b>1.5×</b>points earned</div>
+            </div>
+            <div class="tier-pts">
+              <div class="big num">1 240</div>
+              <div class="lab">points · punti</div>
+            </div>
+            <div class="tier-rail">
+              <div class="meta"><span>Espresso</span><span><b>560 pts</b> to Limoncello</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+            <div class="tier-stats">
+              <div class="tier-stat"><div class="v num">38</div><div class="k">Orders</div></div>
+              <div class="tier-stat"><div class="v num">14</div><div class="k">Free pizze</div></div>
+              <div class="tier-stat"><div class="v">2y</div><div class="k">A socio dal</div></div>
+            </div>
+          </div>
+
+          <div class="rw-section-title">Spend your points · usa i punti</div>
+
+          <div class="reward-tile surface sheen">
+            <div class="rt-ic" data-illus="pizza"></div>
+            <div class="rt-body"><div class="rt-name">Free Margherita</div><div class="rt-desc">Any classic pizza, on the house</div></div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">800 pts</span><button class="rt-redeem">Redeem</button></div>
+          </div>
+
+          <div class="reward-tile surface sheen">
+            <div class="rt-ic" data-illus="espresso"></div>
+            <div class="rt-body"><div class="rt-name">Espresso &amp; cantucci</div><div class="rt-desc">A little Neapolitan ritual</div></div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">250 pts</span><button class="rt-redeem">Redeem</button></div>
+          </div>
+
+          <div class="reward-tile surface sheen">
+            <div class="rt-ic" data-illus="pasta"></div>
+            <div class="rt-body"><div class="rt-name">Carbonara for two</div><div class="rt-desc">Unlocks at Limoncello tier</div></div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">1 800 pts</span><button class="rt-redeem is-locked">Locked</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>Sud Italia</b><br/>
+  Napoli a Kraków &amp; Warszawa · pasta tirata a mano, lievito madre, forno a legna a 485&deg;C<br/>
+  The same screens you ship today — landing, menu, cart, order tracking, rewards — toggled between parchment &amp; liquid glass.
+</footer>
+
+<script>
+  /* ============ Real pen-sketches (verbatim from the live components) ============ */
+  /* Kraków wood-fired oven + Warszawa Vespa (LocationsGrid.tsx) */
+  const OVEN = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="48" y="92" width="124" height="22" rx="3" stroke="#7A2B2B" stroke-width="1.8" fill="#E8D6B5"/><path d="M48 92 C 48 60, 80 38, 110 38 C 140 38, 172 60, 172 92 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#F2E2C2"/><path d="M82 92 C 82 76, 96 66, 110 66 C 124 66, 138 76, 138 92 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M96 88 C 100 80, 104 84, 108 78 C 112 84, 116 80, 120 88" stroke="#CD212A" stroke-width="1.8" fill="#CD212A" fill-opacity="0.3" stroke-linejoin="round"/><path d="M102 86 C 105 81, 108 84, 111 79 C 114 84, 117 81, 120 86" stroke="#C9A23E" stroke-width="1.2" fill="none" stroke-linejoin="round"/><rect x="100" y="22" width="14" height="20" stroke="#7A2B2B" stroke-width="1.6" fill="#B85C38" fill-opacity="0.2"/><path d="M107 18 C 110 12, 105 6, 110 0" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.6"/><path d="M178 110 L208 88" stroke="#3D2817" stroke-width="1.6" stroke-linecap="round"/><rect x="174" y="98" width="20" height="14" rx="2" transform="rotate(-30 184 105)" stroke="#3D2817" stroke-width="1.6" fill="#E8D6B5"/></svg>`;
+  const VESPA = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="32" y="48" width="46" height="26" rx="2" stroke="#7A2B2B" stroke-width="1.6" fill="#E8D6B5"/><text x="55" y="68" text-anchor="middle" font-family="Georgia" font-size="9" font-style="italic" fill="#7A2B2B">Ottaviano</text><path d="M68 100 C 60 100, 56 92, 60 82 C 64 72, 78 70, 92 72 L120 78 C 134 80, 148 82, 156 92 L162 102 C 158 110, 76 110, 68 100 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#B85C38" fill-opacity="0.4" stroke-linejoin="round"/><path d="M82 78 L120 78 L122 70 L88 70 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M152 86 L168 64" stroke="#3D2817" stroke-width="1.8" stroke-linecap="round"/><circle cx="158" cy="84" r="5" stroke="#C9A23E" stroke-width="1.4" fill="#C9A23E" fill-opacity="0.6"/><circle cx="72" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="72" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/><circle cx="158" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="158" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/></svg>`;
+  const PIN = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z" stroke="#B85C38" stroke-width="1.5" fill="rgba(184,92,56,0.12)"/><circle cx="10" cy="6.5" r="2.4" stroke="#B85C38" stroke-width="1.4" fill="none"/></svg>`;
+  const CLOCK = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#B85C38" stroke-width="1.5" fill="none"/><path d="M10 5 L10 10 L13.5 12.5" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+  /* Per-category glyphs (MenuItem.tsx CategoryIllus) — sized via [data-illus] host */
+  const PIZZA = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><circle cx="31" cy="32" r="22" fill="#C9A23E" fill-opacity="0.18" stroke="#B85C38" stroke-width="1.6"/><circle cx="31" cy="32" r="18" stroke="#7A2B2B" stroke-width="1" fill="none" opacity="0.5"/><circle cx="24" cy="28" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="38" cy="30" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="30" cy="38" r="3" fill="#CD212A" fill-opacity="0.7"/><path d="M22 35 C 24 33, 26 35, 26 37" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M36 24 C 38 22, 40 24, 40 26" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M38 38 C 40 36, 42 38, 42 40" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/></svg>`;
+  const PASTA = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><ellipse cx="31" cy="38" rx="22" ry="8" fill="#F2E2C2" stroke="#7A2B2B" stroke-width="1.4"/><path d="M12 36 C 18 30, 28 30, 31 36 C 34 42, 44 42, 50 36" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 38 C 18 32, 28 32, 31 38 C 34 44, 44 44, 50 38" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 40 C 18 34, 28 34, 31 40 C 34 46, 44 46, 50 40" stroke="#B85C38" stroke-width="1.2" fill="none"/><circle cx="22" cy="36" r="1.6" fill="#7A2B2B"/><circle cx="40" cy="38" r="1.6" fill="#7A2B2B"/><path d="M28 22 C 30 18, 34 18, 34 22" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.3"/></svg>`;
+  const ESPRESSO = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><path d="M16 26 L44 26 L42 44 C 41 49, 37 52, 31 52 C 25 52, 21 49, 20 44 Z" fill="#3D2817" fill-opacity="0.2" stroke="#7A2B2B" stroke-width="1.6" stroke-linejoin="round"/><path d="M44 30 C 50 30, 52 34, 50 38 C 49 40, 46 40, 44 39" stroke="#7A2B2B" stroke-width="1.4" fill="none"/><ellipse cx="30" cy="28" rx="13" ry="3" fill="#3D2817" fill-opacity="0.5"/><path d="M26 18 C 24 14, 28 12, 26 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/><path d="M34 18 C 32 14, 36 12, 34 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/></svg>`;
+
+  const GLYPH = { pizza:PIZZA, pasta:PASTA, espresso:ESPRESSO };
+  document.querySelectorAll('[data-illus]').forEach(el => { el.innerHTML = GLYPH[el.dataset.illus] || PIZZA; });
+
+  /* Locations grid (src/data/locations.ts) */
+  const LOCS = [
+    { city:"Kraków", illus:OVEN, addr:"Rynek Główny, 31-042 Kraków",
+      hours:"Mon-Thu 11–21 · Fri-Sat 11–23 · Sun 12–20",
+      desc:"Authentic Neapolitan pizza & pasta at Kraków's Main Square",
+      note:"Cooked by Giuseppe and family" },
+    { city:"Warszawa", illus:VESPA, addr:"ul. Nowy Świat 15, 00-029 Warszawa",
+      hours:"Mon-Thu 11–21 · Fri-Sat 11–22 · Sun 12–20",
+      desc:"A taste of Naples on Warsaw's iconic Nowy Świat street",
+      note:"Cooked by Anna and crew" },
+  ];
+  document.getElementById('locGrid').innerHTML = LOCS.map(l => `
+    <article class="loc-card surface sheen">
+      <div class="loc-illus">${l.illus}</div>
+      <div class="tricolore" style="height:2.5px"></div>
+      <div class="loc-body">
+        <div class="loc-head">
+          <div class="loc-name">${l.city}</div>
+          <span class="loc-status"><span class="sdot"></span>Open now <span class="it">· aperto</span></span>
+        </div>
+        <div class="loc-info">
+          <div class="loc-row">${PIN}<div>${l.addr}</div></div>
+          <div class="loc-row">${CLOCK}<div>${l.hours}</div></div>
+        </div>
+        <p class="loc-desc">${l.desc}</p>
+        <p class="loc-note">${l.note}</p>
+        <a class="loc-cta">View Menu &amp; Order <span class="it">· vedi il menù</span> →</a>
+      </div>
+    </article>`).join('');
+
+  /* ============ Global theme toggle — flips the WHOLE page ============ */
+  const toggle = document.getElementById('toggle');
+  toggle.addEventListener('click', e => {
+    const btn = e.target.closest('button'); if(!btn) return;
+    document.body.className = btn.dataset.theme;
+    toggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+</script>
+</body>
+</html>

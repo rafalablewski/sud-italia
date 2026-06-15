@@ -179,19 +179,24 @@ separately in `themes/base/index.css` — Homepage doesn't read them):
 1. **No bright-red as a UI colour.** Oxblood is brand; bright red is
    reserved for the Italian flag in the Famiglia strip. Errors use
    oxblood, not flag-red.
-2. **Two warm gradients on the body, nowhere else.** The radial washes
-   on `body` are part of the V8 paper canvas. Section backgrounds stay
-   flat parchment / parchment-deep / white. The delivery-shimmer
-   keyframe is the lone exception inside a section, and it's a shimmer
-   *across* a flat surface, not a static gradient.
+2. **The aurora lives on the body, nowhere else.** The four drifting
+   radial pools (`body::before`) are the V8 canvas — see
+   [`material.md`](./material.md#the-aurora-canvas--liquid-glass).
+   Sections stay transparent so the one aurora reads continuously;
+   surfaces opt into the `.v8-surface*` glass fills. Don't paint a
+   second static gradient on a section — let the glass refract the one
+   aurora instead. Aurora pools are low-alpha washes of existing hues —
+   never a new colour.
 3. **No glow shadows.** Neutral warm-brown shadows for elevation
    (see `--shadow-paper` / `--shadow-card`); never a brand-tinted blur
    ring. A `text-italia-red` headline doesn't get an `oxblood` halo —
    `--shadow-cta` is the only branded shadow (warm terracotta drop on
    the hero CTA only).
-4. **Parchment + parchment-deep + white alternate** to create rhythm on
-   a long landing page. Never three consecutive sections at the same
-   tone.
+4. **Rhythm comes from glass depth, not tone.** On a long landing page
+   the aurora drift + alternating surface elevation (`.v8-surface` vs
+   `.v8-surface-dark` on the Soci rail / footer) create the rhythm.
+   Don't reach for `parchment-deep` section fills — the glass-on-aurora
+   contrast does the work the cream/white alternation used to.
 5. **Ochre appears at most once per viewport.** Don't crowd it — the
    editorial accent loses meaning if it's everywhere.
 6. **All token edits happen in `@theme inline`** (in

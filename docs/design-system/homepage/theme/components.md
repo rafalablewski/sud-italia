@@ -121,6 +121,36 @@ rewards tier card.
 - Hover: `box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform:
   translateY(-1px);`
 
+## Liquid Glass surface primitives (`.v8-surface*`)
+
+The storefront's default surface material — translucent glass over the
+aurora canvas. Declared in `themes/homepage/index.css` next to the
+page-canvas block; the recipe + tokens are documented in
+[`material.md`](./material.md#the-elevation-ramp--blur-depth--refraction).
+**Compose these onto an existing card** — the card keeps its own radius,
+padding, and layout; the primitive supplies fill + blur + refraction +
+shadow. Never hand-roll a `background: rgba(...)` + `backdrop-filter`
+on a new card; reach for the primitive so a token retune ripples.
+
+| Class | Material | Use |
+| ----- | -------- | --- |
+| `.v8-surface` | parchment @46% + `blur(22px) saturate(160%)`, refraction top-edge (`::before`), warm drop + inset highlight | Standard cards — `.v8-mi`, `.v8-loc-card`, `.v8-bundle`, `.v8-order-card`, `.v8-rewards-card`, the cart banners |
+| `.v8-surface-strong` | parchment @64% + `blur(28px)`, deeper shadow | Portalled overlays + sticky bars — `.v8-cart-sheet`, `.v8-detail-sheet`, paybars |
+| `.v8-surface-dark` | espresso @62% glass, parchment text, dim refraction edge | Dark surfaces — `.v8-ps-dark` (Soci), `.v8-pfoot` (footer), `.v8-rewards-tier`, `.v8-cart-toast` |
+| `.v8-sheen` | diagonal specular band that glides across on hover (compose with a surface; it sets `overflow:hidden`) | Hero cards, menu cards, bundle cards |
+| `.v8-caustic` | drifting radial caustic shimmer (`v8-caustic-shimmer` keyframe) | Illustration tiles — `.v8-mi-illus`, `.v8-loc-illus`, `.v8-cart-item-illus`, the loyalty mark |
+
+- **Refraction edge** — every surface paints a `::before` 1px bright
+  top-edge highlight. The dark variant dims it to 40% so it reads on
+  espresso without glaring.
+- **Fallbacks** — `@supports not (backdrop-filter)` swaps each surface
+  to opaque parchment / espresso; `@media (max-width: 540px)` drops the
+  blur and raises fill opacity to 92–93% (phone-GPU perf); reduced-motion
+  stills the aurora, caustic shimmer, and sheen.
+- **Tokens** — `--glass-fill` / `-fill-strong` / `--glass-dark` /
+  `--glass-border` / `--glass-blur` / `--glass-shadow` / `--glass-edge`
+  (in the `:root` block of `index.css`). Retune the look there once.
+
 ## Shared UI components (in `src/components/ui/`)
 
 These are JSX components shared across the storefront and (sparingly)
