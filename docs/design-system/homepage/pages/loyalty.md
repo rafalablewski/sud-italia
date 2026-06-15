@@ -16,6 +16,12 @@ hardcoded thresholds remain in the helper module.
 V8 since Step 15 — all selectors live under `.v8-rewards-*` in
 `themes/homepage/index.css`.
 
+**Liquid Glass.** The generic rewards cards (`.v8-rewards-card`) are
+`--glass-fill` glass over the aurora, and the centrepiece tier card
+(`.v8-rewards-tier`) is espresso **dark glass** (`--glass-dark`) with its
+ochre/terracotta `::before`/`::after` washes riding on top. See
+[`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
+
 ## The page contract
 
 The rewards page is the **value-of-the-relationship surface**. It

@@ -6405,10 +6405,12 @@ body.v8-detail-open { overflow: hidden; }
    limited-time, share blocks.
    ------------------------------------------------------------------ */
 .v8-order-card {
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   padding: 18px;
   margin-bottom: 18px;
   font-family: var(--font-body);
@@ -6677,9 +6679,12 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-summary {
   margin-top: 16px;
   padding: 16px 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   font-family: var(--font-body);
 }
 .v8-order-summary-head {
@@ -7378,12 +7383,14 @@ body.v8-detail-open { overflow: hidden; }
   font-size: 14px;
 }
 
-/* Generic paper card */
+/* Generic glass card */
 .v8-rewards-card {
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   padding: 18px;
   margin-bottom: 18px;
   font-family: var(--font-body);
@@ -7569,12 +7576,14 @@ body.v8-detail-open { overflow: hidden; }
   position: relative;
   overflow: hidden;
   padding: 22px 22px 26px;
-  background: var(--color-espresso);
+  background: var(--glass-dark);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
   color: var(--color-parchment);
-  border: 1px solid var(--color-espresso-soft);
+  border: 1px solid var(--glass-border-dark);
   border-radius: 18px;
   margin-bottom: 22px;
-  box-shadow: 0 12px 36px -16px rgba(45, 24, 16, 0.6);
+  box-shadow: var(--glass-shadow-strong), var(--glass-edge-dark);
 }
 .v8-rewards-tier::before {
   content: "";
