@@ -16,6 +16,19 @@
   tricolore hairline, same "Risen for 36 hours" Famiglia quote, same Tuscany
   tokens, same Cormorant Garamond + Lora type stack.
 
+  ── TYPE PARITY (the whole point of this revision) ──────────────────────────
+  Every text element's font-family / font-size (INCLUDING the
+  @media (min-width:768px) overrides) / font-weight / font-style /
+  letter-spacing / line-height is COPIED VERBATIM from the production
+  `.v8-*` rules in src/app/themes/homepage/index.css. No clamp(), no rem-
+  scaling, no eyeballing — literal px values from the source. The class
+  names below are renamed (.lg-*) for this standalone file but each one is
+  annotated with the production class + the index.css line it was copied
+  from. The old cramped fixed-height "device frames" that shrank the type
+  are GONE: each screen now renders as a real, full-width responsive column
+  (centered max-width:1180px content with the real 18px / 36px@md gutters,
+  exactly like the live storefront) so 76px hero text renders at true size.
+
   ONE sticky toggle up top flips the WHOLE page between:
       • Parchment (current)  — the live design you ship today
       • Liquid Glass (new)   — the same surfaces re-rendered in liquid glass
@@ -39,7 +52,7 @@
      with the live storefront — no browser-synthesised weights. -->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
 <style>
-  /* ===== REAL Sud Italia V8 Tuscany tokens (themes/homepage/tokens.css) ===== */
+  /* ===== REAL Sud Italia V8 Tuscany tokens (themes/homepage tokens) ===== */
   :root{
     --parchment:#F8EFDE; --parchment-deep:#F2E2C2; --paper-shadow:#E8D6B5; --paper-hi:#FBF4E1;
     --terracotta:#B85C38; --terracotta-dark:#9A4A2B; --terracotta-soft:#D88E6E;
@@ -49,16 +62,18 @@
     --espresso:#3D2817; --espresso-soft:#6B4A30;
     --ink:#2C1810; --muted:#8C6F4F; --line:#C9B48E; --line-soft:#E0CFA8;
     --italy-green:#008C45; --italy-white:#F4F5F0; --italy-red:#CD212A;
-    /* identical to production tokens.css --font-heading / --font-body */
+    /* index.css :root — identical to production --font-heading / --font-body */
     --font-heading:'Cormorant Garamond','Playfair Display',Georgia,'Times New Roman',serif;
     --font-body:'Lora',Georgia,'Times New Roman',serif;
     --ease:cubic-bezier(.22,1,.36,1);
+    --r-sm:6px; --r-md:8px;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  body{font-family:var(--font-body);color:var(--ink);position:relative;min-height:100vh;
+  /* index.css L102-110 — body: var(--font-body); font-size:15px; line-height:1.55 */
+  body{font-family:var(--font-body);font-size:15px;line-height:1.55;color:var(--ink);position:relative;min-height:100vh;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
     background:linear-gradient(160deg,var(--parchment),var(--parchment-deep) 50%,var(--paper-shadow));}
-  h1,h2,h3,h4{font-family:var(--font-heading);}
   .num{font-variant-numeric:tabular-nums;}
   .it{font-style:italic;}
 
@@ -91,6 +106,7 @@
 
   /* =====================================================================
      [LG-2/3] SHARED SURFACE — glass by default, parchment when toggled
+     glass-fill rgba(248,239,222,.46-.5) + blur(22px) saturate(160%)
      ===================================================================== */
   .surface{position:relative;border-radius:18px;
     background:rgba(248,239,222,.5);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
@@ -101,7 +117,7 @@
     border:1px solid var(--line);box-shadow:0 18px 30px -22px rgba(61,40,23,.4);}
   body.theme-parchment .surface::before{display:none;}
 
-  /* dark glass surface variant (rewards espresso tier) */
+  /* dark glass surface variant (espresso — Soci tier / footer) */
   .surface-dark{position:relative;border-radius:18px;color:var(--parchment);
     background:linear-gradient(160deg,rgba(61,40,23,.78),rgba(122,43,43,.66));backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
     border:1px solid rgba(230,201,122,.4);
@@ -116,6 +132,10 @@
   .sheen::after{content:"";position:absolute;top:-120%;left:-60%;width:50%;height:340%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.5) 50%,transparent);transform:rotate(8deg);transition:transform .9s var(--ease);pointer-events:none;opacity:1;}
   body.theme-parchment .sheen::after{opacity:0;}
   .sheen:hover::after{transform:rotate(8deg) translateX(420%);}
+
+  /* [LG-6] caustic shimmer host */
+  @keyframes shimmer{from{opacity:.3;transform:scale(1)}to{opacity:.8;transform:scale(1.12)}}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
 
   /* =====================================================================
      TOP TOGGLE BAR
@@ -132,293 +152,388 @@
   body.theme-glass .toggle button.active{background:linear-gradient(135deg,var(--terracotta),var(--oxblood));}
 
   /* =====================================================================
-     PAGE INTRO
+     PAGE INTRO + per-screen labels (mockup chrome — not production type)
      ===================================================================== */
   .intro{text-align:center;padding:3rem 6% 1rem;}
   .intro .eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:12px;color:var(--oxblood);}
-  .intro h1{font-size:clamp(2.3rem,5.5vw,3.6rem);font-weight:600;color:var(--espresso);margin:.4rem 0;letter-spacing:-.5px;}
+  .intro h1{font-family:var(--font-heading);font-size:clamp(2.3rem,5.5vw,3.6rem);font-weight:600;color:var(--espresso);margin:.4rem 0;letter-spacing:-.5px;}
   .intro h1 em{font-style:italic;background:linear-gradient(100deg,var(--terracotta),var(--ochre),var(--basil));-webkit-background-clip:text;background-clip:text;color:transparent;}
   .intro p{color:var(--muted);max-width:64ch;margin:.4rem auto 0;font-size:1.02rem;line-height:1.6;}
 
-  /* screen section headers */
-  .section-head{text-align:center;margin:3rem 0 1.2rem;padding:0 6%;}
-  .section-head .clabel{display:block;font-family:var(--font-heading);font-style:italic;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);font-weight:600;margin-bottom:.2rem;}
-  .section-head h2{font-family:var(--font-heading);font-size:1.7rem;font-weight:600;color:var(--espresso);}
-  .section-head .cap{color:var(--muted);font-size:.92rem;max-width:62ch;margin:.45rem auto 0;line-height:1.55;}
-
-  /* device frames row */
-  .screens{display:flex;flex-wrap:wrap;gap:2rem;justify-content:center;align-items:flex-start;padding:0 4% 1rem;}
-  .screen{flex:1 1 380px;max-width:440px;}
-  .screen-label{font-family:var(--font-heading);font-weight:600;text-align:center;color:var(--espresso);font-size:1.2rem;margin-bottom:.7rem;}
-  .screen-label small{display:block;font-style:italic;font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:var(--oxblood);}
-  .device{border-radius:26px;overflow:hidden;height:760px;display:flex;flex-direction:column;
-    border:1px solid var(--line);box-shadow:0 40px 80px -40px rgba(61,40,23,.6);background:transparent;}
-  .device.tall{height:860px;}
-  .device .vp{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;}
-  .device .vp::-webkit-scrollbar{width:6px;} .device .vp::-webkit-scrollbar-thumb{background:rgba(140,111,79,.4);border-radius:3px;}
-
-  .eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:2.5px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);}
+  /* screen section headers (mockup chrome) */
+  .screen-head{margin:4rem auto 1.4rem;padding:0 18px;max-width:1180px;}
+  @media (min-width:768px){.screen-head{padding:0 36px;}}
+  .screen-head .clabel{display:block;font-family:var(--font-heading);font-style:italic;font-size:.82rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--oxblood);font-weight:600;margin-bottom:.25rem;}
+  .screen-head h2{font-family:var(--font-heading);font-size:1.85rem;font-weight:600;color:var(--espresso);}
+  .screen-head .cap{color:var(--muted);font-size:.95rem;max-width:70ch;margin:.5rem 0 0;line-height:1.55;}
+  .screen-rule{max-width:1180px;margin:0 auto;height:1px;background:linear-gradient(90deg,var(--line),transparent 80%);opacity:.6;}
 
   /* =====================================================================
-     SCREEN 1 · LANDING (hero · locations · famiglia)
+     PAGE COLUMN — the REAL storefront content column.
+     index.css L841-848  .v8-page-inner: max-width:1180px; padding:0 18px;
+                          @media(min-width:768px){ padding:0 36px; }
      ===================================================================== */
-  .land{position:relative;}
-  body.theme-glass .land{background:transparent;}
-  body.theme-parchment .land{background:var(--parchment);}
+  .page-inner{max-width:1180px;margin:0 auto;padding:0 18px;}
+  @media (min-width:768px){.page-inner{padding:0 36px;}}
 
-  /* — HERO — */
-  .hero{position:relative;padding:1.6rem 1.3rem 1.4rem;text-align:center;}
+  /* the cart + tracker share a row at wide widths so they read like a pair */
+  .pair{max-width:1180px;margin:0 auto;padding:0 18px;display:grid;gap:28px;grid-template-columns:1fr;}
+  @media (min-width:768px){.pair{padding:0 36px;}}
+  @media (min-width:960px){.pair{grid-template-columns:minmax(0,440px) 1fr;align-items:start;}}
+
+  /* =====================================================================
+     SCREEN 1 · LANDING — HERO
+     ===================================================================== */
+  .lg-hero{position:relative;text-align:center;}
+  /* index.css L638-644 .v8-hero-inner padding */
+  .lg-hero-inner{position:relative;z-index:2;padding-top:36px;padding-bottom:40px;}
+  @media (min-width:768px){.lg-hero-inner{padding-top:48px;padding-bottom:52px;}}
   .orn{position:absolute;pointer-events:none;opacity:.5;z-index:1;}
-  .orn.basil-tl{top:2px;left:-2%;transform:rotate(-12deg);}
-  .orn.basil-br{bottom:6px;right:-2%;transform:rotate(150deg);opacity:.4;}
-  .orn.tomato{top:7%;right:8%;}
-  .hero-glass{position:relative;z-index:2;padding:1.8rem 1.3rem;border-radius:20px;}
-  .kicker{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-heading);font-weight:600;letter-spacing:2.5px;text-transform:uppercase;font-size:11px;color:var(--oxblood);padding:6px 13px;border-radius:999px;margin-bottom:14px;
-    background:rgba(122,43,43,.05);border:1px solid rgba(122,43,43,.18);}
-  body.theme-glass .kicker{background:rgba(248,239,222,.5);border:1px solid rgba(255,250,238,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
-  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--italy-green);box-shadow:0 0 0 3px rgba(0,140,69,.18);animation:pulse 2.4s ease-in-out infinite;}
-  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
-  .hero h1{font-weight:600;font-size:clamp(1.9rem,4.4vw,2.6rem);line-height:1.02;color:var(--espresso);letter-spacing:-.5px;margin-bottom:5px;}
-  .hero .sub{font-family:var(--font-heading);font-style:italic;font-size:1.2rem;color:var(--muted);margin-bottom:8px;}
-  .squiggle{color:var(--terracotta);margin:2px auto 13px;display:block;}
-  .lede{font-size:.92rem;line-height:1.6;color:var(--espresso-soft);max-width:42ch;margin:0 auto 18px;}
-  .lede em{font-family:var(--font-heading);font-style:italic;font-size:1.05em;color:var(--oxblood);}
-  .ctas{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;}
-  .cta{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-heading);font-weight:600;font-size:14px;letter-spacing:.3px;text-decoration:none;padding:11px 16px;border-radius:12px;cursor:pointer;transition:transform .3s var(--ease);}
-  .cta .it{font-style:italic;font-weight:500;font-size:.84em;}
-  .cta-fill{background:var(--terracotta);color:var(--parchment);border:1px solid var(--terracotta-dark);box-shadow:0 10px 22px -12px rgba(184,92,56,.7);}
-  .cta-fill .it{color:rgba(255,247,232,.78);}
-  body.theme-glass .cta-fill{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));border:1px solid rgba(255,250,238,.4);box-shadow:0 12px 26px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
-  .cta-fill:hover{transform:translateY(-3px) scale(1.02);}
-  .cta-ghost{background:transparent;color:var(--oxblood);border:1px solid var(--oxblood);}
-  body.theme-glass .cta-ghost{background:rgba(248,239,222,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(122,43,43,.4);}
-  .cta-ghost:hover{transform:translateY(-3px);}
-  .hero .tricolore{width:200px;height:3px;opacity:.7;margin:22px auto 0;}
+  .orn.basil-tl{top:30px;left:4%;transform:rotate(-12deg);}
+  .orn.basil-br{bottom:40px;right:4%;transform:rotate(150deg);opacity:.4;}
+  .orn.tomato{top:12%;left:10%;opacity:.35;}
+  .lg-hero-card{position:relative;z-index:2;padding:30px 26px;border-radius:20px;max-width:840px;margin:0 auto;}
 
-  /* — LOCATIONS — */
-  .locs{padding:1.4rem 1.1rem 1.2rem;}
-  body.theme-parchment .locs{background:var(--parchment-deep);}
-  .ps-head{text-align:center;margin-bottom:1rem;}
-  .ps-eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;font-size:11px;color:var(--oxblood);}
-  .ps-eyebrow .it{font-weight:500;opacity:.75;}
-  .ps-title{font-weight:600;font-size:1.8rem;line-height:1.05;color:var(--espresso);margin:5px 0;}
-  .ps-title .it{color:var(--oxblood);}
-  .ps-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.98rem;}
-  .loc-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:.5rem;}
+  /* index.css L648-666 .v8-hero-kicker: Cormorant 600, 11.5px, ls 3px, uppercase */
+  .lg-kicker{display:inline-flex;align-items:center;gap:10px;
+    font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--oxblood);
+    font-size:11.5px;margin-bottom:18px;padding:6px 14px;border-radius:999px;
+    background:rgba(122,43,43,.05);border:1px solid rgba(122,43,43,.18);}
+  body.theme-glass .lg-kicker{background:rgba(248,239,222,.5);border:1px solid rgba(255,250,238,.6);backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.6);}
+  /* L667-672 .v8-hero-kicker .bi-sec */
+  .lg-kicker .it{font-style:italic;font-weight:500;letter-spacing:.5px;opacity:.75;}
+  .lg-kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--italy-green);box-shadow:0 0 0 3px rgba(0,140,69,.18);animation:pulse 2.4s ease-in-out infinite;}
+
+  /* index.css L693-704 .v8-hero-h1: Cormorant 600, 44px, ls -.5px, lh 1.02; @md 76px */
+  .lg-hero-h1{font-family:var(--font-heading);font-weight:600;font-size:44px;line-height:1.02;letter-spacing:-.5px;color:var(--espresso);margin:0 0 8px;}
+  @media (min-width:768px){.lg-hero-h1{font-size:76px;}}
+  .lg-hero-h1 em{font-style:italic;}
+  /* index.css L707-717 .v8-hero-en: Cormorant italic, 19px, ls .2px; @md 24px */
+  .lg-hero-en{font-family:var(--font-heading);font-style:italic;font-size:19px;color:var(--muted);margin:4px 0 22px;letter-spacing:.2px;}
+  @media (min-width:768px){.lg-hero-en{font-size:24px;margin:6px 0 28px;}}
+  .lg-hero-underline{display:block;margin:0 auto 26px;color:var(--terracotta);}
+  /* index.css L728-743 .v8-hero-lede: Lora 16px lh 1.6; @md 18px; <em> Cormorant italic espresso */
+  .lg-hero-lede{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--espresso-soft);max-width:580px;margin:0 auto 30px;}
+  @media (min-width:768px){.lg-hero-lede{font-size:18px;margin-bottom:38px;}}
+  .lg-hero-lede em{font-family:var(--font-heading);font-style:italic;color:var(--espresso);}
+  .lg-ctas{display:flex;flex-direction:column;gap:12px;align-items:stretch;max-width:480px;margin:0 auto;}
+  @media (min-width:640px){.lg-ctas{flex-direction:row;justify-content:center;max-width:none;flex-wrap:wrap;}}
+  /* index.css L764-783 .v8-hero-cta: Cormorant 600, 16px, ls .3px */
+  .lg-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+    background:var(--terracotta);color:var(--parchment);border:1px solid var(--terracotta-dark);border-radius:var(--r-md);padding:14px 22px;
+    font-family:var(--font-heading);font-weight:600;font-size:16px;letter-spacing:.3px;cursor:pointer;text-decoration:none;
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 10px 22px -10px rgba(184,92,56,.55);transition:all .25s ease;}
+  body.theme-glass .lg-cta{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));border:1px solid rgba(255,250,238,.4);box-shadow:0 12px 26px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
+  .lg-cta:hover{transform:translateY(-2px);}
+  /* L789-794 .v8-hero-cta .bi-sec — italic 500 */
+  .lg-cta .it{font-style:italic;font-weight:500;color:rgba(255,247,232,.78);}
+  .lg-cta-ghost{background:transparent;color:var(--oxblood);border-color:var(--oxblood);box-shadow:none;}
+  body.theme-glass .lg-cta-ghost{background:rgba(248,239,222,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(122,43,43,.4);}
+  .lg-cta-ghost .it{color:rgba(122,43,43,.65);}
+  .lg-hero-tricolore{margin:28px auto 0;width:200px;opacity:.7;}
+
+  /* =====================================================================
+     SCREEN 1 · LANDING — SECTION PRIMITIVES (eyebrow / title / sub)
+     ===================================================================== */
+  .lg-ps{padding:56px 0;position:relative;}
+  @media (min-width:768px){.lg-ps{padding:80px 0;}}
+  .lg-ps-head{text-align:center;margin-bottom:36px;}
+  @media (min-width:768px){.lg-ps-head{margin-bottom:48px;}}
+  /* index.css L904-926 .v8-ps-eyebrow: Cormorant 600, 11px, ls 3px, uppercase */
+  .lg-ps-eyebrow{font-family:var(--font-heading);font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--oxblood);font-size:11px;margin-bottom:12px;display:inline-block;}
+  .lg-ps-eyebrow::before,.lg-ps-eyebrow::after{content:"—";color:var(--line);margin:0 8px;font-weight:400;}
+  .lg-ps-eyebrow .it{font-style:italic;font-weight:500;letter-spacing:.5px;opacity:.75;}
+  /* index.css L930-945 .v8-ps-title: Cormorant 600, 36px lh 1.05; @md 52px; .it italic 500 oxblood */
+  .lg-ps-title{font-family:var(--font-heading);font-weight:600;font-size:36px;line-height:1.05;color:var(--espresso);margin:0 0 6px;}
+  @media (min-width:768px){.lg-ps-title{font-size:52px;}}
+  .lg-ps-title .it{font-style:italic;color:var(--oxblood);font-weight:500;}
+  /* index.css L948-959 .v8-ps-sub: Cormorant italic, 17px lh 1.45; @md 20px */
+  .lg-ps-sub{font-family:var(--font-heading);font-style:italic;font-size:17px;color:var(--muted);margin:4px auto 0;max-width:640px;line-height:1.45;}
+  @media (min-width:768px){.lg-ps-sub{font-size:20px;}}
+
+  /* =====================================================================
+     SCREEN 1 · LOCATIONS GRID
+     ===================================================================== */
+  .loc-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-top:.5rem;}
+  @media (min-width:768px){.loc-grid{grid-template-columns:1fr 1fr;}}
   .loc-card{border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:transform .35s var(--ease),box-shadow .35s var(--ease);}
   body.theme-glass .loc-card:hover{transform:translateY(-6px);box-shadow:0 30px 60px -24px rgba(61,40,23,.4),inset 0 1px 0 rgba(255,255,255,.7);}
-  .loc-illus{position:relative;height:128px;display:grid;place-items:center;overflow:hidden;}
+  .loc-illus{position:relative;height:170px;display:grid;place-items:center;overflow:hidden;}
   body.theme-glass .loc-illus{background:linear-gradient(160deg,rgba(184,92,56,.18),rgba(201,162,62,.16));}
   body.theme-parchment .loc-illus{background:linear-gradient(180deg,rgba(184,92,56,.08),rgba(201,162,62,.10)),var(--parchment-deep);border-bottom:1px solid var(--line-soft);}
   body.theme-glass .loc-illus::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 7s ease-in-out infinite alternate;} /* [LG-6] */
-  @keyframes shimmer{from{opacity:.3;transform:scale(1)}to{opacity:.8;transform:scale(1.12)}}
-  .loc-illus svg{position:relative;z-index:1;width:170px;height:auto;}
-  .loc-body{padding:14px 15px 16px;flex:1;display:flex;flex-direction:column;}
-  .loc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
-  .loc-name{font-family:var(--font-heading);font-weight:600;font-size:1.6rem;line-height:1;color:var(--espresso);letter-spacing:-.3px;}
-  .loc-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-size:11px;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;
+  .loc-illus svg{position:relative;z-index:1;width:230px;height:auto;}
+  .loc-body{padding:22px 24px 26px;flex:1;display:flex;flex-direction:column;}
+  .loc-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+  /* index.css L1050-1057 .v8-loc-name: Cormorant 600, 32px lh 1, ls -.3px */
+  .loc-name{font-family:var(--font-heading);font-weight:600;font-size:32px;line-height:1;color:var(--espresso);letter-spacing:-.3px;}
+  /* index.css L1062-1077 .v8-loc-status: Cormorant italic, 12.5px, ls .6px */
+  .loc-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-size:12.5px;letter-spacing:.6px;padding:4px 10px;border-radius:999px;white-space:nowrap;
     color:var(--basil-deep);background:rgba(74,124,89,.10);border:1px solid rgba(74,124,89,.3);}
   body.theme-glass .loc-status{background:rgba(74,124,89,.16);border:1px solid rgba(74,124,89,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
-  .loc-status .sdot{width:7px;height:7px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.15);animation:pulse 2s ease-in-out infinite;}
-  .loc-info{margin-top:5px;color:var(--espresso-soft);font-size:12px;line-height:1.5;}
-  .loc-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line-soft);}
+  .loc-status .sdot{width:8px;height:8px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.15);animation:pulse 2s ease-in-out infinite;}
+  /* index.css L1108-1113 .v8-loc-info: 14px lh 1.5 (Lora body inherit) */
+  .loc-info{margin-top:6px;color:var(--espresso-soft);font-size:14px;line-height:1.5;}
+  .loc-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line-soft);}
   .loc-row:last-child{border-bottom:none;}
-  .loc-row svg{flex:0 0 16px;margin-top:2px;}
-  .loc-desc{font-family:var(--font-heading);font-style:italic;font-size:14px;color:var(--espresso);margin:8px 0 6px;}
-  .loc-note{font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--muted);border-left:2px solid var(--ochre);padding-left:8px;margin-bottom:10px;}
-  .loc-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:13.5px;color:var(--terracotta);text-decoration:none;}
-  .loc-cta .it{font-weight:500;font-size:.86em;color:var(--muted);}
+  .loc-row svg{flex:0 0 18px;margin-top:2px;}
+  /* index.css L1126-1133 .v8-loc-desc: Cormorant italic, 16px lh 1.45 */
+  .loc-desc{font-family:var(--font-heading);font-style:italic;font-size:16px;color:var(--espresso);margin:14px 0 6px;line-height:1.45;}
+  /* index.css L1136-1144 .v8-loc-note: Cormorant italic, 13px */
+  .loc-note{font-family:var(--font-heading);font-style:italic;font-size:13px;color:var(--muted);border-left:2px solid var(--ochre);padding-left:12px;margin:0 0 18px;}
+  /* index.css L1147-1167 .v8-loc-cta: Cormorant 600, 15px */
+  .loc-cta{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;
+    background:var(--terracotta);color:var(--parchment);border:1px solid var(--terracotta-dark);border-radius:var(--r-md);padding:13px 18px;
+    font-family:var(--font-heading);font-weight:600;font-size:15px;text-decoration:none;cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 10px 22px -10px rgba(184,92,56,.55);transition:all .25s ease;}
+  body.theme-glass .loc-cta{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));box-shadow:0 12px 26px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
+  /* L1172-1176 .v8-loc-cta .bi-sec — italic 500 */
+  .loc-cta .it{font-style:italic;font-weight:500;opacity:.85;}
 
-  /* — FAMIGLIA — */
-  .famiglia{padding:2rem 1.3rem 2.2rem;text-align:center;position:relative;}
-  .fam-glass{position:relative;padding:2rem 1.6rem;border-radius:20px;}
-  .famiglia blockquote{font-family:var(--font-heading);font-style:italic;font-weight:500;font-size:clamp(1.3rem,3vw,1.7rem);line-height:1.3;color:var(--espresso);}
-  .famiglia cite{display:block;font-family:var(--font-heading);font-style:normal;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;color:var(--oxblood);margin-top:1.1rem;}
+  /* =====================================================================
+     SCREEN 1 · FAMIGLIA quote
+     ===================================================================== */
+  .famiglia{text-align:center;}
+  .fam-glass{position:relative;padding:48px 40px;border-radius:20px;max-width:900px;margin:0 auto;}
+  /* italic Cormorant pull-quote (matches the Soci/quote treatment) */
+  .famiglia blockquote{font-family:var(--font-heading);font-style:italic;font-weight:500;font-size:clamp(1.5rem,3.4vw,2.1rem);line-height:1.3;color:var(--espresso);}
+  .famiglia cite{display:block;font-family:var(--font-heading);font-style:normal;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;color:var(--oxblood);margin-top:1.3rem;}
 
   /* =====================================================================
      SCREEN 2 · LOCATION / MENU
      ===================================================================== */
-  .loc-hero{padding:1.6rem 1.4rem;text-align:center;position:relative;overflow:hidden;}
+  .loc-hero{padding:24px 18px 40px;text-align:center;position:relative;overflow:hidden;border-radius:18px;}
+  @media (min-width:768px){.loc-hero{padding:24px 36px 48px;}}
   body.theme-glass .loc-hero{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.14));}
   body.theme-parchment .loc-hero{background:linear-gradient(180deg,rgba(184,92,56,.08),rgba(201,162,62,.10)),var(--parchment-deep);}
-  .loc-hero .status{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--basil-deep);background:rgba(74,124,89,.14);border:1px solid rgba(74,124,89,.34);padding:4px 11px;border-radius:999px;}
-  .loc-hero .status .sdot{width:7px;height:7px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.18);animation:pulse 2s ease-in-out infinite;}
-  .loc-hero h1{font-weight:600;font-size:2.4rem;color:var(--espresso);line-height:1;margin:.5rem 0 .2rem;letter-spacing:-.5px;}
-  .loc-hero .addr{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.95rem;}
-  .loc-hero .tricolore{width:160px;height:2.5px;margin:.9rem auto 0;}
+  /* index.css L1765-1772 .v8-loc-hero-status: Lora 13px (body) */
+  .loc-hero .status{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:13px;color:var(--basil-deep);background:rgba(74,124,89,.14);border:1px solid rgba(74,124,89,.34);padding:6px 14px;border-radius:999px;}
+  .loc-hero .status .it{font-style:italic;}
+  .loc-hero .status .sdot{width:8px;height:8px;border-radius:50%;background:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.18);animation:pulse 2s ease-in-out infinite;}
+  /* index.css L1718-1729 .v8-loc-hero-name: Cormorant 600, 44px lh 1.02 ls -.01em; @md 60px */
+  .loc-hero h1{font-family:var(--font-heading);font-weight:600;font-size:44px;line-height:1.02;letter-spacing:-.01em;color:var(--espresso);margin:8px 0 6px;}
+  @media (min-width:768px){.loc-hero h1{font-size:60px;}}
+  /* index.css L1744-1751 .v8-loc-hero-sub: Cormorant italic, 17px lh 1.45 */
+  .loc-hero .addr{font-family:var(--font-heading);font-style:italic;font-size:17px;color:var(--espresso-soft);margin:0 0 14px;line-height:1.45;}
+  .loc-hero .tricolore{width:80px;height:3px;margin:4px auto 10px;border-radius:2px;}
 
-  .menu-wrap{padding:1.2rem 1rem 1.6rem;}
-  .menu-cat{font-family:var(--font-heading);font-weight:600;font-size:1.5rem;color:var(--espresso);margin:.6rem 4px .7rem;display:flex;align-items:baseline;gap:10px;}
-  .menu-cat small{font-style:italic;font-size:.8rem;color:var(--muted);font-weight:500;}
-  .mi{position:relative;margin-bottom:.9rem;padding:14px;border-radius:14px;}
-  .mi.is-incart{outline:1.5px solid rgba(74,124,89,.5);outline-offset:-1.5px;}
-  .mi-flags{position:absolute;top:-9px;left:12px;display:flex;gap:6px;z-index:3;}
-  .mi-flag{font-family:var(--font-heading);font-weight:600;font-style:italic;font-size:10px;letter-spacing:.4px;color:var(--parchment);background:var(--terracotta);padding:3px 9px;border-radius:999px;box-shadow:0 4px 10px -4px rgba(184,92,56,.7);}
+  .menu-wrap{margin-top:32px;}
+  /* mockup category band — uses the .v8-cat-tab type ladder (Cormorant 600, ls)
+     since the live menu groups by the cat-tab row, not a section <h>. */
+  .menu-cat{font-family:var(--font-heading);font-weight:600;font-size:1.6rem;color:var(--espresso);margin:1.4rem 0 1rem;display:flex;align-items:baseline;gap:12px;}
+  .menu-cat small{font-style:italic;font-size:.85rem;color:var(--muted);font-weight:500;}
+  .menu-items{display:grid;grid-template-columns:1fr;gap:22px;}
+  @media (min-width:768px){.menu-items{grid-template-columns:1fr 1fr;}}
+
+  .mi{position:relative;padding:22px 20px 20px;border-radius:14px;display:flex;flex-direction:column;}
+  .mi.is-incart{border-color:rgba(74,124,89,.55);box-shadow:0 0 0 1px rgba(74,124,89,.16) inset,0 18px 50px -18px rgba(61,40,23,.3),inset 0 1px 0 rgba(255,255,255,.65);}
+  .mi-flags{position:absolute;top:-11px;left:18px;display:flex;gap:6px;z-index:3;}
+  .mi-flag{font-family:var(--font-heading);font-weight:600;font-style:italic;font-size:10.5px;letter-spacing:.4px;color:var(--parchment);background:var(--terracotta);padding:3px 10px;border-radius:999px;box-shadow:0 4px 10px -4px rgba(184,92,56,.7);}
   .mi-flag.is-gold{background:var(--ochre);} .mi-flag.is-basil{background:var(--basil);}
-  .mi-top{display:flex;gap:12px;}
-  .mi-illus{flex:0 0 64px;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;transition:transform .35s var(--ease);}
-  body.theme-glass .mi-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));}
+  .mi-top{display:flex;gap:16px;align-items:flex-start;}
+  .mi-illus{flex:0 0 84px;width:84px;height:84px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;transition:transform .4s ease;}
+  body.theme-glass .mi-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));border:1px solid rgba(255,250,238,.6);}
   body.theme-parchment .mi-illus{background:var(--parchment-deep);border:1px solid var(--line-soft);}
   body.theme-glass .mi-illus::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.45),transparent 55%);animation:shimmer 7s ease-in-out infinite alternate;} /* [LG-6] */
+  .mi-illus svg{position:relative;z-index:1;}
   .mi:hover .mi-illus{transform:rotate(-3deg);}
-  .mi-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.3rem;color:var(--espresso);line-height:1.1;}
-  .mi-name .en{display:block;font-style:normal;font-weight:600;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--terracotta);margin-top:1px;}
-  .mi-origin{font-size:12.5px;color:var(--espresso-soft);line-height:1.45;margin-top:3px;}
-  .mi-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
-  .mi-chip{font-size:10px;letter-spacing:.2px;padding:2px 8px;border-radius:999px;color:var(--basil-deep);background:rgba(74,124,89,.12);border:1px solid rgba(74,124,89,.28);}
-  .mi-chip.is-gold{color:var(--ochre);background:rgba(201,162,62,.12);border-color:rgba(201,162,62,.34);}
-  .mi-chip.is-warn{color:var(--oxblood);background:rgba(122,43,43,.08);border-color:rgba(122,43,43,.28);}
-  .mi-chip.is-italic{font-family:var(--font-heading);font-style:italic;}
-  .mi-foot{display:flex;align-items:center;justify-content:space-between;margin-top:11px;padding-top:11px;border-top:1px dashed var(--line-soft);}
-  .mi-price{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--espresso);}
-  .mi-add{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:14px;color:var(--parchment);background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:11px;padding:8px 14px;cursor:pointer;transition:all .25s var(--ease);}
+  .mi-info{flex:1;min-width:0;}
+  /* index.css L2352-2360 .v8-mi-name: Cormorant ITALIC 600, 22px lh 1.05 */
+  .mi-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:22px;color:var(--espresso);line-height:1.05;margin:0;}
+  /* index.css L2361-2370 .v8-mi-name .en: normal, 11px, ls 1.4px, 600, uppercase, italy-red */
+  .mi-name .en{display:block;font-style:normal;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--italy-red);font-weight:600;margin-top:4px;}
+  /* index.css L2374-2381 .v8-mi-origin: Cormorant ITALIC, 13.5px lh 1.4 (THE bug fix) */
+  .mi-origin{font-family:var(--font-heading);font-style:italic;font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.4;}
+  /* index.css L2385-2415 .v8-mi-chip: Cormorant, 11px, ls .6px, 600; .is-italic italic 500 */
+  .mi-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .mi-chip{font-family:var(--font-heading);font-size:11px;letter-spacing:.6px;padding:3px 9px;border-radius:999px;background:rgba(74,124,89,.10);color:var(--basil-deep);border:1px solid rgba(74,124,89,.3);font-weight:600;}
+  .mi-chip.is-italic{font-style:italic;font-weight:500;}
+  .mi-chip.is-warn{background:rgba(122,43,43,.07);color:var(--oxblood);border-color:rgba(122,43,43,.3);}
+  .mi-chip.is-gold{background:rgba(201,162,62,.15);color:var(--ochre);border-color:rgba(201,162,62,.4);}
+  .mi-foot{margin-top:auto;padding-top:14px;border-top:1px dashed var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;}
+  /* index.css L2455-2461 .v8-mi-price: Cormorant 600, 22px */
+  .mi-price{font-family:var(--font-heading);font-weight:600;font-size:22px;color:var(--ink);font-feature-settings:"tnum" 1,"lnum" 1;}
+  /* index.css L2463-2472 .v8-mi-add: Cormorant 600, 14.5px */
+  .mi-add{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-weight:600;font-size:14.5px;color:var(--parchment);background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:var(--r-md);padding:10px 18px;cursor:pointer;transition:all .25s var(--ease);}
   body.theme-glass .mi-add{box-shadow:0 10px 22px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.3);}
   .mi-add:hover{background:var(--terracotta-dark);transform:translateY(-2px);}
-  .mi-add .it{font-style:italic;font-weight:500;font-size:.84em;opacity:.8;}
-  .mi-stepper{display:inline-flex;align-items:center;gap:12px;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.32);border-radius:11px;padding:5px 10px;}
-  .mi-stepper button{width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:var(--basil);color:#fff;display:grid;place-items:center;font-size:14px;line-height:1;}
-  .mi-stepper .c{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--basil-deep);min-width:14px;text-align:center;}
+  .mi-add .it{font-style:italic;font-weight:500;opacity:.8;}
+  .mi-stepper{display:inline-flex;align-items:center;gap:12px;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.32);border-radius:var(--r-md);padding:6px 12px;}
+  .mi-stepper button{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;background:var(--basil);color:#fff;display:grid;place-items:center;font-size:15px;line-height:1;}
+  .mi-stepper .c{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--basil-deep);min-width:16px;text-align:center;}
 
   /* =====================================================================
      SCREEN 3 · CART DRAWER
      ===================================================================== */
-  .cart{display:flex;flex-direction:column;height:100%;}
+  .cart{display:flex;flex-direction:column;border-radius:18px;overflow:hidden;}
   body.theme-glass .cart{background:rgba(248,239,222,.36);}
   body.theme-parchment .cart{background:var(--parchment);}
-  .cart-grip{width:42px;height:4px;border-radius:99px;background:var(--line);margin:10px auto 4px;}
-  .cart-top{padding:.4rem 1.2rem .7rem;}
-  .cart-top h2{font-weight:600;font-size:1.5rem;color:var(--espresso);}
-  .cart-top .sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.85rem;}
-  .cart-tricolore{height:2.5px;}
-  .cart-scroll{flex:1;overflow-y:auto;padding:1rem 1.2rem;}
-  .cart-section-title{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);margin:.4rem 0 .7rem;}
-  .ci{display:flex;gap:11px;padding:11px;border-radius:13px;margin-bottom:.7rem;}
-  .ci-illus{flex:0 0 46px;width:46px;height:46px;border-radius:10px;display:grid;place-items:center;position:relative;overflow:hidden;}
-  body.theme-glass .ci-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));}
+  .cart-grip{width:42px;height:4px;border-radius:99px;background:var(--line);margin:12px auto 4px;}
+  .cart-top{padding:18px 20px 14px;}
+  /* index.css L2727-2735 .v8-cart-top-title h2: Cormorant 600, 26px lh 1, ls .2px */
+  .cart-top h2{font-family:var(--font-heading);font-weight:600;font-size:26px;line-height:1;letter-spacing:.2px;color:var(--espresso);}
+  /* index.css L2736-2743 .v8-cart-top-sub: Cormorant italic, 15px, ls .3px */
+  .cart-top .sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:15px;margin-top:2px;letter-spacing:.3px;}
+  .cart-tricolore{height:3px;}
+  .cart-scroll{padding:20px;}
+  /* mockup section label — Cormorant 600 uppercase (matches order-section-title ladder) */
+  .cart-section-title{font-family:var(--font-heading);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;font-size:13px;color:var(--espresso-soft);margin:.4rem 0 .9rem;}
+  .ci{display:flex;gap:14px;padding:14px;border-radius:14px;margin-bottom:.9rem;align-items:flex-start;}
+  .ci-illus{flex:0 0 56px;width:56px;height:56px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;}
+  body.theme-glass .ci-illus{background:linear-gradient(160deg,rgba(184,92,56,.16),rgba(201,162,62,.16));border:1px solid rgba(255,250,238,.6);}
   body.theme-parchment .ci-illus{background:var(--parchment-deep);border:1px solid var(--line-soft);}
-  .ci-body{flex:1;}
-  .ci-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.05rem;color:var(--espresso);}
-  .ci-meta{font-size:11.5px;color:var(--muted);}
-  .ci-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-  .ci-price{font-family:var(--font-heading);font-weight:600;color:var(--espresso);}
-  .ci-step{display:inline-flex;align-items:center;gap:9px;}
-  .ci-step button{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--terracotta);cursor:pointer;display:grid;place-items:center;line-height:1;}
+  .ci-body{flex:1;min-width:0;}
+  /* index.css L2855-2862 .v8-cart-item-name: Cormorant ITALIC 600, 20px lh 1.1 */
+  .ci-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:20px;color:var(--espresso);line-height:1.1;}
+  /* index.css L2871-2877 .v8-cart-item-origin: italic 12.5px (Lora body) */
+  .ci-meta{font-style:italic;font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.35;}
+  .ci-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  /* index.css L2863-2870 .v8-cart-item-price: Cormorant 600, 17px */
+  .ci-price{font-family:var(--font-heading);font-weight:600;font-size:17px;color:var(--ink);white-space:nowrap;font-feature-settings:"tnum" 1,"lnum" 1;}
+  .ci-step{display:inline-flex;align-items:center;gap:10px;}
+  .ci-step button{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--terracotta);cursor:pointer;display:grid;place-items:center;line-height:1;}
   .ci-step .c{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--basil-deep);}
 
-  .cart-loyalty{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:.9rem;
+  .cart-loyalty{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;margin-bottom:1rem;
     background:rgba(201,162,62,.12);border:1px solid rgba(201,162,62,.32);}
-  .cart-loyalty .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ochre);color:#fff;flex:none;}
-  .cart-loyalty .nm{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--espresso);}
-  .cart-loyalty .pts{font-size:11.5px;color:var(--muted);}
+  .cart-loyalty .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--ochre);color:#fff;flex:none;}
+  .cart-loyalty .nm{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:17px;color:var(--espresso);}
+  .cart-loyalty .pts{font-style:italic;font-size:12.5px;color:var(--muted);margin-top:2px;}
 
-  .cart-fulfill{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:.9rem;}
-  .ff{font-family:var(--font-heading);font-weight:600;font-size:13px;text-align:center;padding:9px 4px;border-radius:11px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--espresso-soft);transition:all .25s var(--ease);}
-  .ff .it{display:block;font-style:italic;font-weight:500;font-size:10px;color:var(--muted);}
+  .cart-fulfill{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem;}
+  .ff{font-family:var(--font-heading);font-weight:600;font-size:14px;text-align:center;padding:10px 6px;border-radius:var(--r-md);cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--espresso-soft);transition:all .25s var(--ease);}
+  .ff .it{display:block;font-style:italic;font-weight:500;font-size:11px;color:var(--muted);}
   .ff.active{background:var(--terracotta);color:var(--parchment);border-color:var(--terracotta-dark);}
   .ff.active .it{color:rgba(255,247,232,.8);}
 
-  .delivery{padding:10px 12px;border-radius:12px;margin-bottom:.9rem;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.28);}
-  .delivery .row{display:flex;justify-content:space-between;font-size:12px;color:var(--espresso-soft);margin-bottom:6px;}
+  .delivery{padding:12px 14px;border-radius:12px;margin-bottom:1rem;background:rgba(74,124,89,.1);border:1px solid rgba(74,124,89,.28);}
+  .delivery .row{display:flex;justify-content:space-between;font-size:13px;color:var(--espresso-soft);margin-bottom:8px;}
   .delivery .row b{font-family:var(--font-heading);font-style:italic;color:var(--basil-deep);}
   .delivery .bar{height:7px;border-radius:99px;background:rgba(140,111,79,.18);overflow:hidden;}
   .delivery .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--basil),var(--ochre));}
 
-  .cart-field{margin-bottom:.7rem;}
-  .cart-field label{display:block;font-family:var(--font-heading);font-weight:600;font-size:11px;letter-spacing:.4px;color:var(--espresso-soft);margin-bottom:4px;}
+  .cart-field{margin-bottom:.8rem;}
+  .cart-field label{display:block;font-family:var(--font-heading);font-weight:600;font-size:12px;letter-spacing:.4px;color:var(--espresso-soft);margin-bottom:5px;}
   .cart-field label aside{font-style:italic;color:var(--muted);font-weight:500;}
-  .cart-input{width:100%;font-family:var(--font-body);font-size:14px;padding:10px 12px;border-radius:11px;color:var(--ink);outline:none;
+  .cart-input{width:100%;font-family:var(--font-body);font-size:14px;padding:11px 13px;border-radius:var(--r-md);color:var(--ink);outline:none;
     border:1px solid var(--line);background:rgba(255,255,255,.5);transition:border .25s,box-shadow .25s;}
   body.theme-glass .cart-input{border:1px solid rgba(255,250,238,.6);background:rgba(255,255,255,.45);}
   .cart-input:focus{border-color:var(--terracotta);box-shadow:0 0 0 3px rgba(184,92,56,.16);}
 
-  .cart-foot{border-top:1px solid var(--line-soft);padding:1rem 1.2rem 1.2rem;}
+  .cart-foot{border-top:1px solid var(--line-soft);padding:18px 20px 22px;}
   body.theme-glass .cart-foot{background:rgba(248,239,222,.4);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
-  .tot-row{display:flex;justify-content:space-between;font-size:13px;color:var(--espresso-soft);margin-bottom:5px;}
-  .tot-row.grand{font-family:var(--font-heading);font-size:1.3rem;font-weight:600;color:var(--espresso);margin:8px 0 12px;padding-top:8px;border-top:1px dashed var(--line-soft);}
-  .checkout-btn{width:100%;font-family:var(--font-heading);font-weight:600;font-size:16px;color:var(--parchment);
-    background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:13px;padding:14px;cursor:pointer;transition:all .25s var(--ease);}
+  /* index.css L3669-3705 .v8-cart-totals-row: 13.5px; .is-total 16px; .val Cormorant 600; total val 21px */
+  .tot-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;color:var(--espresso-soft);padding:2px 0;}
+  .tot-row .v{font-family:var(--font-heading);font-weight:600;font-variant-numeric:tabular-nums;}
+  .tot-row.grand{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line);font-size:16px;color:var(--espresso);}
+  .tot-row.grand .v{font-size:21px;color:var(--oxblood);}
+  .checkout-btn{width:100%;font-family:var(--font-heading);font-weight:600;font-size:16px;letter-spacing:.3px;color:var(--parchment);margin-top:14px;
+    background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:var(--r-md);padding:14px;cursor:pointer;transition:all .25s var(--ease);}
   body.theme-glass .checkout-btn{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));box-shadow:0 14px 30px -10px rgba(184,92,56,.7),inset 0 1px 0 rgba(255,255,255,.35);}
   .checkout-btn:hover{transform:translateY(-2px);}
-  .checkout-btn .it{font-style:italic;font-weight:500;font-size:.82em;opacity:.82;}
+  .checkout-btn .it{font-style:italic;font-weight:500;color:rgba(255,247,232,.82);}
 
   /* =====================================================================
      SCREEN 4 · CONFIRMATION / TRACKER
      ===================================================================== */
-  .conf{padding:1.6rem 1.4rem;text-align:center;}
-  .conf-check{width:84px;height:84px;border-radius:50%;margin:.6rem auto 1rem;display:grid;place-items:center;position:relative;
-    background:radial-gradient(circle at 40% 35%,var(--basil),var(--basil-deep));color:#fff;box-shadow:0 16px 36px -14px rgba(53,92,64,.7);}
-  body.theme-glass .conf-check::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 6s ease-in-out infinite alternate;}
-  .conf h1{font-weight:600;font-size:2rem;color:var(--espresso);line-height:1.05;}
-  .conf .it-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);margin-bottom:.4rem;}
-  .conf .order-no{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;color:var(--oxblood);font-size:13px;}
-  .conf-card{padding:1.1rem 1.2rem;border-radius:15px;margin:1.2rem 0;text-align:left;}
-  .conf-eta{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-  .conf-eta .big{font-family:var(--font-heading);font-weight:600;font-size:1.7rem;color:var(--espresso);}
+  .conf{text-align:center;}
+  .conf-mark{display:inline-grid;place-items:center;width:76px;height:76px;border-radius:50%;margin:0 auto 18px;position:relative;
+    background:rgba(74,124,89,.10);border:1px solid rgba(74,124,89,.30);color:var(--basil);}
+  body.theme-glass .conf-mark::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 25%,rgba(255,255,255,.4),transparent 55%);animation:shimmer 6s ease-in-out infinite alternate;}
+  /* index.css L6438-6446 .v8-order-success-h1: Cormorant ITALIC 600, 36px lh 1.1 */
+  .conf h1{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:36px;color:var(--espresso);line-height:1.1;margin:0 0 6px;}
+  /* index.css L6447-6453 .v8-order-success-sub: Cormorant italic, 17px */
+  .conf .it-sub{font-family:var(--font-heading);font-style:italic;font-size:17px;color:var(--muted);margin:0 0 12px;}
+  /* index.css L6459-6471 .v8-order-success-id: Cormorant 600, 13.5px */
+  .conf .order-no{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--parchment-deep);border:1px solid var(--line);border-radius:999px;font-family:var(--font-heading);font-weight:600;font-size:13.5px;color:var(--espresso);font-feature-settings:"tnum" 1,"lnum" 1;}
+  .conf-card{padding:22px;border-radius:15px;margin:24px 0;text-align:left;}
+  /* index.css L6386-6396 .v8-order-section-title: Cormorant 600, 13px, ls 2.4px, uppercase */
+  .conf-sec{font-family:var(--font-heading);font-weight:600;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:var(--espresso-soft);margin:0 0 14px;}
+  .conf-eta{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .conf-eta .big{font-family:var(--font-heading);font-weight:600;font-size:28px;color:var(--espresso);font-feature-settings:"tnum" 1,"lnum" 1;}
   .conf-eta .lab{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
   .track{display:flex;flex-direction:column;gap:0;}
-  .step{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:18px;}
-  .step:not(:last-child)::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--line-soft);}
+  .step{display:flex;gap:14px;align-items:flex-start;position:relative;padding-bottom:20px;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:12px;top:26px;bottom:0;width:2px;background:var(--line-soft);}
   .step.done:not(:last-child)::before{background:var(--basil);}
-  .step .dot{flex:0 0 24px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;z-index:1;
+  .step .dot{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;z-index:1;
     background:var(--parchment-deep);border:1.5px solid var(--line);color:var(--muted);}
   .step.done .dot{background:var(--basil);border-color:var(--basil);color:#fff;}
   .step.active .dot{background:var(--terracotta);border-color:var(--terracotta);color:#fff;animation:pulse 1.8s ease-in-out infinite;}
-  .step .t{font-family:var(--font-heading);font-weight:600;font-size:1.05rem;color:var(--espresso);}
-  .step .t .it{font-size:.8em;color:var(--muted);}
-  .step .s{font-size:11.5px;color:var(--muted);}
-  .conf-items{font-size:13px;color:var(--espresso-soft);}
-  .conf-items .ir{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line-soft);}
+  /* index.css L6628-6647 .v8-order-step-label: Cormorant ITALIC 600, 17px lh 1.15; .it Lora 13px */
+  .step .t{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:17px;color:var(--espresso);line-height:1.15;}
+  .step .t .it{font-family:var(--font-body);font-style:italic;font-weight:400;font-size:13px;color:var(--muted);margin-left:4px;}
+  /* index.css L6666-6672 .v8-order-step-desc: italic 12.5px (Lora body) lh 1.45 */
+  .step .s{font-style:italic;font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;}
+  .conf-items{font-size:13.5px;color:var(--espresso-soft);}
+  .conf-items .ir{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px dashed var(--line-soft);}
   .conf-items .ir:last-child{border-bottom:none;}
-  .conf-items .ir.tot{font-family:var(--font-heading);font-weight:600;color:var(--espresso);}
-  .conf .tricolore{width:140px;height:2.5px;margin:1rem auto 0;}
+  .conf-items .ir .num{font-family:var(--font-heading);font-weight:600;font-variant-numeric:tabular-nums;}
+  .conf-items .ir.tot{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line);font-size:16px;color:var(--espresso);}
+  .conf-items .ir.tot .num{font-size:21px;color:var(--oxblood);}
+  .conf .tricolore{width:80px;height:3px;margin:1.2rem auto 0;border-radius:2px;}
 
   /* =====================================================================
      SCREEN 5 · REWARDS (Soci) — espresso tier dark glass
      ===================================================================== */
-  .rw{padding:1.5rem 1.3rem 1.8rem;}
-  .rw-head{text-align:center;margin-bottom:1.1rem;}
-  .rw-head h1{font-weight:600;font-size:2.1rem;color:var(--espresso);line-height:1;}
-  .rw-head .it-sub{font-family:var(--font-heading);font-style:italic;color:var(--muted);font-size:.92rem;margin-top:2px;}
+  .rw{max-width:760px;margin:0 auto;}
+  .rw-head{text-align:center;margin-bottom:1.4rem;}
+  /* matches the order success header treatment — Cormorant italic 600 36px */
+  .rw-head h1{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:36px;color:var(--espresso);line-height:1.1;}
+  .rw-head .it-sub{font-family:var(--font-heading);font-style:italic;font-size:17px;color:var(--muted);margin-top:4px;}
 
-  .tier-card{padding:1.4rem 1.4rem 1.5rem;border-radius:20px;position:relative;overflow:hidden;}
+  .tier-card{padding:28px;border-radius:20px;position:relative;overflow:hidden;}
   body.theme-glass .tier-card::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 12%,rgba(230,201,122,.28),transparent 55%);animation:shimmer 8s ease-in-out infinite alternate;pointer-events:none;} /* [LG-6] */
-  .tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;position:relative;z-index:1;}
-  .tier-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:12px;letter-spacing:.4px;
-    padding:4px 12px;border-radius:999px;color:var(--espresso);background:linear-gradient(135deg,var(--ochre-light),var(--ochre));box-shadow:0 6px 16px -6px rgba(201,162,62,.7);}
+  .tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1;}
+  /* index.css L7801-7815 .v8-rewards-tier-pill: Cormorant 600 italic, 14px, ls .3px */
+  .tier-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:14px;letter-spacing:.3px;
+    padding:6px 14px;border-radius:999px;color:var(--espresso);background:var(--ochre);border:1px solid #B58F36;box-shadow:0 6px 16px -6px rgba(201,162,62,.7);}
   .tier-pill .bean{width:9px;height:9px;border-radius:50%;background:var(--espresso);}
-  .tier-mult{font-family:var(--font-heading);font-style:italic;font-size:12px;color:var(--ochre-light);text-align:right;}
-  .tier-mult b{display:block;font-size:1.5rem;font-style:normal;color:var(--parchment);line-height:1;}
-  .tier-pts{position:relative;z-index:1;margin:1rem 0 .3rem;}
-  .tier-pts .big{font-family:var(--font-heading);font-weight:600;font-size:3rem;line-height:1;color:var(--parchment);}
-  .tier-pts .lab{font-family:var(--font-heading);font-style:italic;font-size:13px;color:rgba(244,234,214,.7);}
-  .tier-rail{position:relative;z-index:1;margin:1rem 0 .5rem;}
-  .tier-rail .meta{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(244,234,214,.78);margin-bottom:6px;}
-  .tier-rail .meta b{font-family:var(--font-heading);font-style:italic;color:var(--ochre-light);}
-  .tier-rail .bar{height:8px;border-radius:99px;background:rgba(244,234,214,.16);overflow:hidden;}
-  .tier-rail .bar i{display:block;height:100%;width:68%;border-radius:99px;background:linear-gradient(90deg,var(--ochre),var(--ochre-light));box-shadow:0 0 12px rgba(230,201,122,.6);}
-  .tier-stats{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:1.1rem;padding-top:1.1rem;border-top:1px solid rgba(230,201,122,.25);}
-  .tier-stat{text-align:center;}
-  .tier-stat .v{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--parchment);line-height:1;}
-  .tier-stat .k{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:rgba(244,234,214,.6);margin-top:3px;}
+  /* index.css L7816-7824 .v8-rewards-tier-mult: Lora italic, 11.5px */
+  .tier-mult{font-family:var(--font-body);font-style:italic;font-size:11.5px;color:rgba(248,239,222,.55);text-align:right;font-feature-settings:"tnum" 1,"lnum" 1;}
+  .tier-mult b{display:block;font-family:var(--font-heading);font-style:normal;font-weight:600;font-size:19px;color:var(--parchment);line-height:1.15;}
+  .tier-pts{position:relative;z-index:1;margin:1.1rem 0 .3rem;}
+  /* index.css L7771-7778 .v8-rewards-tier-points-num: Cormorant ITALIC 600, 56px lh 1, ochre */
+  .tier-pts .big{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:56px;line-height:1;color:var(--ochre);font-feature-settings:"tnum" 1,"lnum" 1;}
+  /* index.css L7780-7786 .v8-rewards-tier-points-label: Lora italic, 13px */
+  .tier-pts .lab{font-family:var(--font-body);font-style:italic;font-size:13px;color:rgba(248,239,222,.55);margin-top:6px;}
+  .tier-rail{position:relative;z-index:1;margin:1.1rem 0 .5rem;}
+  /* index.css L7830-7844 .v8-rewards-tier-progress-row: Lora italic, 11.5px; strong Cormorant italic 600 ochre-light */
+  .tier-rail .meta{display:flex;justify-content:space-between;font-family:var(--font-body);font-style:italic;font-size:11.5px;color:rgba(248,239,222,.55);margin-bottom:6px;}
+  .tier-rail .meta b{font-family:var(--font-heading);font-style:italic;font-weight:600;color:var(--ochre-light);font-feature-settings:"tnum" 1,"lnum" 1;}
+  .tier-rail .bar{height:7px;border-radius:4px;background:rgba(244,245,240,.08);overflow:hidden;}
+  .tier-rail .bar i{display:block;height:100%;width:68%;border-radius:4px;background:linear-gradient(90deg,var(--ochre),var(--terracotta-soft));box-shadow:0 0 12px rgba(230,201,122,.6);}
+  .tier-stats{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:22px;padding-top:22px;border-top:1px solid rgba(230,201,122,.25);}
+  .tier-stat{text-align:center;background:rgba(244,245,240,.06);border:1px solid rgba(244,245,240,.10);border-radius:var(--r-sm);padding:10px;}
+  /* index.css L7874-7884 .v8-rewards-tier-stat-num: Cormorant ITALIC 600, 20px */
+  .tier-stat .v{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:20px;color:var(--parchment);line-height:1;font-feature-settings:"tnum" 1,"lnum" 1;}
+  /* index.css L7886-7892 .v8-rewards-tier-stat-label: Lora italic, 11px */
+  .tier-stat .k{font-family:var(--font-body);font-style:italic;font-size:11px;color:rgba(248,239,222,.55);margin-top:2px;}
 
-  .rw-section-title{font-family:var(--font-heading);font-weight:600;letter-spacing:2px;text-transform:uppercase;font-size:10.5px;color:var(--oxblood);margin:1.4rem 0 .8rem;}
-  .reward-tile{display:flex;align-items:center;gap:12px;padding:13px;border-radius:14px;margin-bottom:.8rem;}
-  .reward-tile .rt-ic{flex:0 0 44px;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;position:relative;overflow:hidden;}
-  body.theme-glass .reward-tile .rt-ic{background:linear-gradient(160deg,rgba(184,92,56,.18),rgba(201,162,62,.18));}
+  /* index.css L7454-7464 .v8-rewards-section-title: Cormorant italic 600, 20px lh 1.15 */
+  .rw-section-title{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:20px;color:var(--espresso);line-height:1.15;margin:1.6rem 0 1rem;}
+  .reward-grid{display:grid;grid-template-columns:1fr;gap:18px;}
+  @media (min-width:600px){.reward-grid{grid-template-columns:1fr 1fr;}}
+  .reward-tile{display:flex;align-items:flex-start;gap:14px;padding:18px;border-radius:14px;}
+  .reward-tile .rt-ic{flex:0 0 40px;width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;position:relative;overflow:hidden;}
+  body.theme-glass .reward-tile .rt-ic{background:rgba(201,162,62,.15);}
   body.theme-parchment .reward-tile .rt-ic{background:var(--parchment-deep);border:1px solid var(--line-soft);}
-  .reward-tile .rt-body{flex:1;}
-  .reward-tile .rt-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:1.1rem;color:var(--espresso);line-height:1.1;}
-  .reward-tile .rt-desc{font-size:11.5px;color:var(--muted);margin-top:1px;}
-  .reward-tile .rt-cost{font-family:var(--font-heading);font-weight:600;font-size:13px;color:var(--ochre);white-space:nowrap;}
-  .reward-tile .rt-redeem{font-family:var(--font-heading);font-weight:600;font-size:13px;color:var(--parchment);background:var(--terracotta);border:1px solid var(--terracotta-dark);border-radius:10px;padding:7px 12px;cursor:pointer;white-space:nowrap;transition:all .25s var(--ease);}
-  body.theme-glass .reward-tile .rt-redeem{background:linear-gradient(135deg,var(--terracotta),var(--terracotta-dark));box-shadow:0 8px 18px -8px rgba(184,92,56,.7);}
-  .reward-tile .rt-redeem:hover{transform:translateY(-2px);}
+  .reward-tile .rt-body{flex:1;min-width:0;}
+  /* index.css L8570-8577 .v8-rewards-reward-name: Cormorant ITALIC 600, 18px lh 1.15 */
+  .reward-tile .rt-name{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:18px;color:var(--espresso);line-height:1.15;margin-bottom:4px;}
+  /* index.css L8579-8585 .v8-rewards-reward-desc: Lora italic, 12.5px lh 1.4 */
+  .reward-tile .rt-desc{font-family:var(--font-body);font-style:italic;font-size:12.5px;color:var(--muted);line-height:1.4;}
+  /* index.css L8562-8568 .v8-rewards-reward-cost: Cormorant ITALIC 600, 18px ochre */
+  .reward-tile .rt-cost{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:18px;color:var(--ochre);white-space:nowrap;font-feature-settings:"tnum" 1,"lnum" 1;}
+  /* index.css L8587-8599 .v8-rewards-reward-cta: Cormorant italic 600, 14px */
+  .reward-tile .rt-redeem{font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:14px;color:var(--espresso);background:var(--ochre);border:1px solid #B58F36;border-radius:var(--r-md);padding:8px 14px;cursor:pointer;white-space:nowrap;transition:all .2s;}
+  .reward-tile .rt-redeem:hover{background:var(--ochre-light);transform:translateY(-1px);}
   .reward-tile .rt-redeem.is-locked{background:transparent;color:var(--muted);border-color:var(--line);box-shadow:none;cursor:default;}
 
-  footer{text-align:center;padding:2.6rem 6% 3.2rem;color:var(--muted);font-size:.85rem;line-height:1.6;}
-  footer b{font-family:var(--font-heading);font-weight:600;font-size:1.3rem;color:var(--espresso);}
+  footer{text-align:center;padding:3.4rem 6% 4rem;color:var(--muted);font-size:.9rem;line-height:1.6;}
+  /* footer wordmark — Cormorant 600 (matches brand heading) */
+  footer b{font-family:var(--font-heading);font-weight:600;font-size:1.4rem;color:var(--espresso);}
 
-  @media (max-width:520px){.device,.device.tall{height:680px;}}
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;}}
 </style>
 </head>
@@ -439,330 +554,309 @@
 <div class="intro">
   <span class="eyebrow">— Storefront redesign · before vs after —</span>
   <h1>Our storefront, remade in <em>Liquid Glass</em></h1>
-  <p>The same V8 Tuscany storefront you ship today — basil sprigs, the wood-fired oven, the Vespa, nonna Concetta's 36-hour dough — re-rendered through liquid glass. Flip the toggle above to switch <strong>every</strong> screen below between the current parchment design and the new liquid-glass language at once. Liquid Glass is shown by default.</p>
+  <p>The same V8 Tuscany storefront you ship today — basil sprigs, the wood-fired oven, the Vespa, nonna Concetta's 36-hour dough — re-rendered through liquid glass, at full size. Every screen below uses the real storefront type scale (76px hero, 56px points balance, the lot) and the real 1180px content column. Flip the toggle above to switch <strong>every</strong> screen between the current parchment design and the new liquid-glass language at once. Liquid Glass is shown by default.</p>
 </div>
 
 <!-- ============================================================
      SCREEN 1 · LANDING (hero · locations · famiglia)
      ============================================================ -->
-<div class="section-head">
-  <span class="clabel">Screen 01 · la vetrina</span>
+<div class="screen-head">
+  <span class="clabel">Schermo 01 · la vetrina</span>
   <h2>Landing</h2>
-  <p class="cap">Hero, the Kraków + Warszawa locations grid, and the Famiglia quote. In glass mode the hero copy floats on a frosted card over a drifting Tuscan aurora; the oven and Vespa sketches pick up a caustic shimmer.</p>
+  <p class="cap">Hero, the Kraków + Warszawa locations grid, and the Famiglia quote — rendered full-width at the real 44/76px headline scale. In glass mode the hero copy floats over a drifting Tuscan aurora; the oven and Vespa sketches pick up a caustic shimmer.</p>
 </div>
-<div class="screens">
-  <div class="screen" style="flex-basis:460px;max-width:480px;">
-    <div class="screen-label"><small>Schermo 01</small>Landing · home</div>
-    <div class="device tall">
-      <div class="vp">
-        <div class="land">
-          <!-- HERO -->
-          <div class="hero">
-            <span class="orn basil-tl" aria-hidden><svg width="84" height="84" viewBox="0 0 120 120" fill="none"><path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/></svg></span>
-            <span class="orn tomato" aria-hidden><svg width="50" height="50" viewBox="0 0 70 70" fill="none"><path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fill-opacity="0.26" stroke="#B85C38" stroke-width="2"/><path d="M35 24 L35 16" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/><path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/></svg></span>
-            <span class="orn basil-br" aria-hidden><svg width="64" height="64" viewBox="0 0 100 100" fill="none"><path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round"/><path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+<div class="screen-rule"></div>
 
-            <div class="hero-glass surface sheen">
-              <span class="kicker"><span class="dot"></span>Open now · <span class="it">aperto ora</span></span>
-              <h1>Pizza, the way it's made in Naples</h1>
-              <div class="sub">La pizza, fatta come a Napoli</div>
-              <svg class="squiggle" width="190" height="15" viewBox="0 0 220 18" fill="none" aria-hidden><path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="216" cy="12" r="1.8" fill="currentColor"/></svg>
-              <p class="lede">San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60 seconds, eaten in silence — a Neapolitan rule we like to break with a glass of <em>vino della casa</em>.</p>
-              <div class="ctas">
-                <a class="cta cta-fill">Order in Kraków <span class="it">· Ordina</span></a>
-                <a class="cta cta-fill">Order in Warszawa <span class="it">· Ordina</span></a>
-                <a class="cta cta-ghost">Our Story <span class="it">· La storia</span></a>
-              </div>
-              <div class="tricolore"></div>
-            </div>
-          </div>
+<div class="page-inner">
+  <!-- HERO -->
+  <section class="lg-hero">
+    <div class="lg-hero-inner">
+      <span class="orn basil-tl" aria-hidden><svg width="120" height="120" viewBox="0 0 120 120" fill="none"><path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/><path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      <span class="orn tomato" aria-hidden><svg width="70" height="70" viewBox="0 0 70 70" fill="none"><path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fill-opacity="0.26" stroke="#B85C38" stroke-width="2"/><path d="M35 24 L35 16" stroke="#4A7C59" stroke-width="2" stroke-linecap="round"/><path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/><path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" stroke-width="2" fill="#4A7C59" fill-opacity="0.26" stroke-linejoin="round"/></svg></span>
+      <span class="orn basil-br" aria-hidden><svg width="100" height="100" viewBox="0 0 100 100" fill="none"><path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round"/><path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fill-opacity="0.2" stroke="#4A7C59" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
 
-          <!-- LOCATIONS -->
-          <div class="locs">
-            <div class="ps-head">
-              <div class="ps-eyebrow">The restaurants <span class="it">· le botteghe</span></div>
-              <h2 class="ps-title">Two addresses, <span class="it">one family</span></h2>
-              <p class="ps-sub">Two restaurants, one kitchen, one nonna who taught us the dough.</p>
-            </div>
-            <div class="loc-grid" id="locGrid"></div>
-          </div>
-
-          <!-- FAMIGLIA -->
-          <div class="famiglia">
-            <div class="fam-glass surface sheen">
-              <blockquote>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</blockquote>
-              <cite>Giuseppe Esposito · Pizzaiolo</cite>
-            </div>
-          </div>
+      <div class="lg-hero-card surface sheen">
+        <span class="lg-kicker"><span class="dot"></span>Open now · <span class="it">aperto ora</span></span>
+        <h1 class="lg-hero-h1">Pizza, the way it's made in Naples</h1>
+        <div class="lg-hero-en">La pizza, fatta come a Napoli</div>
+        <svg class="lg-hero-underline" width="220" height="18" viewBox="0 0 220 18" fill="none" aria-hidden><path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="216" cy="12" r="1.8" fill="currentColor"/></svg>
+        <p class="lg-hero-lede">San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60 seconds, eaten in silence — a Neapolitan rule we like to break with a glass of <em>vino della casa</em>.</p>
+        <div class="lg-ctas">
+          <a class="lg-cta">Order in Kraków <span class="it">· Ordina</span></a>
+          <a class="lg-cta">Order in Warszawa <span class="it">· Ordina</span></a>
+          <a class="lg-cta lg-cta-ghost">Our Story <span class="it">· La storia</span></a>
         </div>
+        <div class="lg-hero-tricolore tricolore"></div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- LOCATIONS -->
+  <section class="lg-ps">
+    <div class="lg-ps-head">
+      <div class="lg-ps-eyebrow">The restaurants <span class="it">· le botteghe</span></div>
+      <h2 class="lg-ps-title">Two addresses, <span class="it">one family</span></h2>
+      <p class="lg-ps-sub">Two restaurants, one kitchen, one nonna who taught us the dough.</p>
+    </div>
+    <div class="loc-grid" id="locGrid"></div>
+  </section>
+
+  <!-- FAMIGLIA -->
+  <section class="lg-ps famiglia">
+    <div class="fam-glass surface sheen">
+      <blockquote>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</blockquote>
+      <cite>Giuseppe Esposito · Pizzaiolo</cite>
+    </div>
+  </section>
 </div>
 
 <!-- ============================================================
      SCREEN 2 · LOCATION / MENU
      ============================================================ -->
-<div class="section-head">
-  <span class="clabel">Screen 02 · il menù</span>
+<div class="screen-head">
+  <span class="clabel">Schermo 02 · il menù</span>
   <h2>Location &amp; menu — Kraków</h2>
-  <p class="cap">The LocationHero plus real menu item cards: per-category pen-sketch tiles, flag ribbons (Our Hero / Most Popular / Just landed), diet chips, prices in złoty, and the Add button that becomes a basil stepper once an item is in the cart.</p>
+  <p class="cap">The LocationHero plus real menu item cards in the live 2-column grid: per-category pen-sketch tiles, flag ribbons (Our Hero / Most Popular / Just landed), diet chips, prices in złoty, and the Add button that becomes a basil stepper once an item is in the cart. The origin line is italic Cormorant 13.5px — the bug the old mockup got wrong.</p>
 </div>
-<div class="screens">
-  <div class="screen">
-    <div class="screen-label"><small>Schermo 02</small>Location · Kraków</div>
-    <div class="device tall">
-      <div class="vp">
-        <div class="loc-hero">
-          <span class="status"><span class="sdot"></span>Open now <span class="it">· aperto ora</span></span>
-          <h1>Kraków</h1>
-          <div class="addr">Rynek Główny, 31-042 · forno a legna 485°C</div>
-          <div class="tricolore"></div>
+<div class="screen-rule"></div>
+
+<div class="page-inner">
+  <div class="loc-hero surface" style="border-radius:18px;margin-top:8px;">
+    <span class="status"><span class="sdot"></span>Open now <span class="it">· aperto ora</span></span>
+    <h1>Kraków</h1>
+    <div class="addr">Rynek Główny, 31-042 · forno a legna 485°C</div>
+    <div class="tricolore"></div>
+  </div>
+
+  <div class="menu-wrap">
+    <h3 class="menu-cat">Pizze <small>· dal forno a legna</small></h3>
+    <div class="menu-items">
+
+      <article class="mi surface sheen is-incart">
+        <div class="mi-flags"><span class="mi-flag">Our Hero</span><span class="mi-flag is-gold">Most Popular</span></div>
+        <div class="mi-top">
+          <div class="mi-illus" data-illus="pizza"></div>
+          <div class="mi-info">
+            <div class="mi-name">Margherita<span class="en">The gateway — start here</span></div>
+            <div class="mi-origin">San Marzano tomato sauce, fior di latte mozzarella, fresh basil, extra virgin olive oil</div>
+            <div class="mi-chips"><span class="mi-chip">Vegetarian · <span class="it">vegetariano</span></span><span class="mi-chip is-italic">36h proofing</span></div>
+          </div>
         </div>
-        <div class="menu-wrap">
-          <h3 class="menu-cat">Pizze <small>· dal forno a legna</small></h3>
-
-          <article class="mi surface sheen is-incart">
-            <div class="mi-flags"><span class="mi-flag">Our Hero</span><span class="mi-flag is-gold">Most Popular</span></div>
-            <div class="mi-top">
-              <div class="mi-illus" data-illus="pizza"></div>
-              <div>
-                <div class="mi-name">Margherita<span class="en">The gateway — start here</span></div>
-                <div class="mi-origin">San Marzano tomato sauce, fior di latte mozzarella, fresh basil, extra virgin olive oil</div>
-                <div class="mi-chips"><span class="mi-chip">Vegetarian · <span class="it">vegetariano</span></span><span class="mi-chip is-italic">36h proofing</span></div>
-              </div>
-            </div>
-            <div class="mi-foot">
-              <div class="mi-price num">27,90 zł</div>
-              <div class="mi-stepper"><button aria-label="Remove one">−</button><span class="c">2</span><button aria-label="Add one">＋</button></div>
-            </div>
-          </article>
-
-          <article class="mi surface sheen">
-            <div class="mi-flags"><span class="mi-flag is-basil">Just landed</span></div>
-            <div class="mi-top">
-              <div class="mi-illus" data-illus="pizza"></div>
-              <div>
-                <div class="mi-name">Diavola<span class="en">Pizzaiolo's pick</span></div>
-                <div class="mi-origin">San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil</div>
-                <div class="mi-chips"><span class="mi-chip is-warn">Spicy · <span class="it">piccante</span></span><span class="mi-chip is-italic">36h proofing</span></div>
-              </div>
-            </div>
-            <div class="mi-foot">
-              <div class="mi-price num">32,90 zł</div>
-              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
-            </div>
-          </article>
-
-          <article class="mi surface sheen">
-            <div class="mi-top">
-              <div class="mi-illus" data-illus="pizza"></div>
-              <div>
-                <div class="mi-name">Prosciutto e Rucola</div>
-                <div class="mi-origin">Fior di latte, prosciutto crudo di Parma, wild arugula, shaved Parmigiano, olive oil</div>
-                <div class="mi-chips"><span class="mi-chip is-italic">36h proofing</span></div>
-              </div>
-            </div>
-            <div class="mi-foot">
-              <div class="mi-price num">35,90 zł</div>
-              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
-            </div>
-          </article>
-
-          <h3 class="menu-cat" style="margin-top:1.2rem">Paste <small>· fatte a mano</small></h3>
-          <article class="mi surface sheen">
-            <div class="mi-top">
-              <div class="mi-illus" data-illus="pasta"></div>
-              <div>
-                <div class="mi-name">Spaghetti Carbonara<span class="en">Chef's signature</span></div>
-                <div class="mi-origin">Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic Roman way</div>
-              </div>
-            </div>
-            <div class="mi-foot">
-              <div class="mi-price num">28,95 zł</div>
-              <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
-            </div>
-          </article>
+        <div class="mi-foot">
+          <div class="mi-price num">27,90 zł</div>
+          <div class="mi-stepper"><button aria-label="Remove one">−</button><span class="c">2</span><button aria-label="Add one">＋</button></div>
         </div>
-      </div>
+      </article>
+
+      <article class="mi surface sheen">
+        <div class="mi-flags"><span class="mi-flag is-basil">Just landed</span></div>
+        <div class="mi-top">
+          <div class="mi-illus" data-illus="pizza"></div>
+          <div class="mi-info">
+            <div class="mi-name">Diavola<span class="en">Pizzaiolo's pick</span></div>
+            <div class="mi-origin">San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil</div>
+            <div class="mi-chips"><span class="mi-chip is-warn">Spicy · <span class="it">piccante</span></span><span class="mi-chip is-italic">36h proofing</span></div>
+          </div>
+        </div>
+        <div class="mi-foot">
+          <div class="mi-price num">32,90 zł</div>
+          <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+        </div>
+      </article>
+
+      <article class="mi surface sheen">
+        <div class="mi-top">
+          <div class="mi-illus" data-illus="pizza"></div>
+          <div class="mi-info">
+            <div class="mi-name">Prosciutto e Rucola</div>
+            <div class="mi-origin">Fior di latte, prosciutto crudo di Parma, wild arugula, shaved Parmigiano, olive oil</div>
+            <div class="mi-chips"><span class="mi-chip is-italic">36h proofing</span></div>
+          </div>
+        </div>
+        <div class="mi-foot">
+          <div class="mi-price num">35,90 zł</div>
+          <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+        </div>
+      </article>
+
+      <article class="mi surface sheen">
+        <div class="mi-top">
+          <div class="mi-illus" data-illus="pasta"></div>
+          <div class="mi-info">
+            <div class="mi-name">Spaghetti Carbonara<span class="en">Chef's signature</span></div>
+            <div class="mi-origin">Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic Roman way</div>
+          </div>
+        </div>
+        <div class="mi-foot">
+          <div class="mi-price num">28,95 zł</div>
+          <button class="mi-add">＋ Add <span class="it">· aggiungi</span></button>
+        </div>
+      </article>
+
     </div>
+    <div style="margin-top:4px;font-family:var(--font-heading);font-style:italic;font-size:.85rem;color:var(--muted);padding-left:4px;">Paste · fatte a mano — and the Carbonara above is one of them.</div>
   </div>
 </div>
 
 <!-- ============================================================
      SCREEN 3 + 4 · CART + CONFIRMATION
      ============================================================ -->
-<div class="section-head">
-  <span class="clabel">Screen 03 &amp; 04 · l'ordine</span>
+<div class="screen-head">
+  <span class="clabel">Schermo 03 &amp; 04 · l'ordine</span>
   <h2>Cart drawer &amp; order confirmation</h2>
-  <p class="cap">The slide-over cart — line items with steppers, the Soci loyalty rail, the fulfillment toggle, the free-delivery progress bar, name/phone and totals — then the order-placed screen with the live wood-oven tracker.</p>
+  <p class="cap">The slide-over cart — line items with steppers (cart names are italic Cormorant 20px), the Soci loyalty rail, the fulfillment toggle, the free-delivery progress bar, name/phone and totals (total value 21px oxblood) — then the order-placed screen with the live wood-oven tracker at the real 36px "Grazie!" / 17px step scale.</p>
 </div>
-<div class="screens">
+<div class="screen-rule"></div>
+
+<div class="pair">
   <!-- CART -->
-  <div class="screen">
-    <div class="screen-label"><small>Schermo 03</small>Il tuo ordine · Cart</div>
-    <div class="device tall">
-      <div class="vp" style="display:flex;flex-direction:column;overflow:hidden;">
-        <div class="cart">
-          <div class="cart-grip"></div>
-          <div class="cart-top">
-            <h2>Your order</h2>
-            <div class="sub">— il tuo ordine</div>
-          </div>
-          <div class="cart-tricolore tricolore"></div>
+  <div class="cart surface">
+    <div class="cart-grip"></div>
+    <div class="cart-top">
+      <h2>Your order</h2>
+      <div class="sub">— il tuo ordine</div>
+    </div>
+    <div class="cart-tricolore tricolore"></div>
 
-          <div class="cart-scroll">
-            <div class="cart-section-title">Your items · i tuoi piatti</div>
+    <div class="cart-scroll">
+      <div class="cart-section-title">Your items · i tuoi piatti</div>
 
-            <div class="ci surface">
-              <div class="ci-illus" data-illus="pizza"></div>
-              <div class="ci-body"><div class="ci-name">Margherita</div><div class="ci-meta">36h proofing · vegetariano</div></div>
-              <div class="ci-right"><div class="ci-price num">55,80 zł</div><div class="ci-step"><button>−</button><span class="c">2</span><button>＋</button></div></div>
-            </div>
-            <div class="ci surface">
-              <div class="ci-illus" data-illus="pasta"></div>
-              <div class="ci-body"><div class="ci-name">Spaghetti Carbonara</div><div class="ci-meta">Roman classic</div></div>
-              <div class="ci-right"><div class="ci-price num">28,95 zł</div><div class="ci-step"><button>−</button><span class="c">1</span><button>＋</button></div></div>
-            </div>
-
-            <div class="cart-loyalty">
-              <span class="ic">★</span>
-              <div><div class="nm">Soci e amici.</div><div class="pts">You'll earn <b>84 pts</b> · join free</div></div>
-            </div>
-
-            <div class="cart-section-title">How would you like it? · come lo vuoi</div>
-            <div class="cart-fulfill">
-              <button class="ff active">Pickup<span class="it">· asporto</span></button>
-              <button class="ff">Delivery<span class="it">· consegna</span></button>
-              <button class="ff">Dine-in<span class="it">· a tavola</span></button>
-            </div>
-
-            <div class="delivery">
-              <div class="row"><span>Free delivery at 80 zł</span><b>8,25 zł to go</b></div>
-              <div class="bar"><i></i></div>
-            </div>
-
-            <div class="cart-field">
-              <label>Name <aside>· nome</aside></label>
-              <input class="cart-input" value="Giulia Rossi" />
-            </div>
-            <div class="cart-field">
-              <label>Phone <aside>· telefono</aside></label>
-              <input class="cart-input" value="+48 600 123 456" />
-            </div>
-          </div>
-
-          <div class="cart-foot">
-            <div class="tot-row"><span>Subtotal · subtotale</span><span class="num">84,75 zł</span></div>
-            <div class="tot-row"><span>Pickup · asporto</span><span class="num">Free</span></div>
-            <div class="tot-row grand"><span>Total · totale</span><span class="num">84,75 zł</span></div>
-            <button class="checkout-btn">Place order <span class="it">· conferma l'ordine</span></button>
-          </div>
-        </div>
+      <div class="ci surface">
+        <div class="ci-illus" data-illus="pizza"></div>
+        <div class="ci-body"><div class="ci-name">Margherita</div><div class="ci-meta">36h proofing · vegetariano</div></div>
+        <div class="ci-right"><div class="ci-price num">55,80 zł</div><div class="ci-step"><button>−</button><span class="c">2</span><button>＋</button></div></div>
       </div>
+      <div class="ci surface">
+        <div class="ci-illus" data-illus="pasta"></div>
+        <div class="ci-body"><div class="ci-name">Spaghetti Carbonara</div><div class="ci-meta">Roman classic</div></div>
+        <div class="ci-right"><div class="ci-price num">28,95 zł</div><div class="ci-step"><button>−</button><span class="c">1</span><button>＋</button></div></div>
+      </div>
+
+      <div class="cart-loyalty">
+        <span class="ic">★</span>
+        <div><div class="nm">Soci e amici.</div><div class="pts">You'll earn <b>84 pts</b> · join free</div></div>
+      </div>
+
+      <div class="cart-section-title">How would you like it? · come lo vuoi</div>
+      <div class="cart-fulfill">
+        <button class="ff active">Pickup<span class="it">· asporto</span></button>
+        <button class="ff">Delivery<span class="it">· consegna</span></button>
+        <button class="ff">Dine-in<span class="it">· a tavola</span></button>
+      </div>
+
+      <div class="delivery">
+        <div class="row"><span>Free delivery at 80 zł</span><b>8,25 zł to go</b></div>
+        <div class="bar"><i></i></div>
+      </div>
+
+      <div class="cart-field">
+        <label>Name <aside>· nome</aside></label>
+        <input class="cart-input" value="Giulia Rossi" />
+      </div>
+      <div class="cart-field">
+        <label>Phone <aside>· telefono</aside></label>
+        <input class="cart-input" value="+48 600 123 456" />
+      </div>
+    </div>
+
+    <div class="cart-foot">
+      <div class="tot-row"><span>Subtotal · subtotale</span><span class="v num">84,75 zł</span></div>
+      <div class="tot-row"><span>Pickup · asporto</span><span class="v num">Free</span></div>
+      <div class="tot-row grand"><span>Total · totale</span><span class="v num">84,75 zł</span></div>
+      <button class="checkout-btn">Place order <span class="it">· conferma l'ordine</span></button>
     </div>
   </div>
 
   <!-- CONFIRMATION -->
-  <div class="screen">
-    <div class="screen-label"><small>Schermo 04</small>Ordine confermato · Tracker</div>
-    <div class="device tall">
-      <div class="vp">
-        <div class="conf">
-          <div class="conf-check"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></div>
-          <h1>Grazie, Giulia!</h1>
-          <div class="it-sub">Your pizza is on its way to the oven</div>
-          <div class="order-no">ORDER #SI-4827 · KRAKÓW</div>
+  <div class="conf">
+    <div class="conf-mark"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></div>
+    <h1>Grazie, Giulia!</h1>
+    <div class="it-sub">Your pizza is on its way to the oven</div>
+    <div class="order-no">ORDER #SI-4827 · KRAKÓW</div>
 
-          <div class="conf-card surface sheen">
-            <div class="conf-eta">
-              <div><div class="lab">Ready by · pronto per le</div><div class="big num">19:42</div></div>
-              <div style="text-align:right"><div class="lab">Pickup · asporto</div><div class="big">Rynek</div></div>
-            </div>
-            <div class="track">
-              <div class="step done"><span class="dot">✓</span><div><div class="t">Order received <span class="it">· ricevuto</span></div><div class="s">19:18 · confirmed</div></div></div>
-              <div class="step done"><span class="dot">✓</span><div><div class="t">Dough stretched <span class="it">· stesa</span></div><div class="s">Giuseppe's at the bench</div></div></div>
-              <div class="step active"><span class="dot">●</span><div><div class="t">In the wood oven <span class="it">· nel forno</span></div><div class="s">485°C · 60 seconds</div></div></div>
-              <div class="step"><span class="dot">4</span><div><div class="t">Ready for pickup <span class="it">· pronto</span></div><div class="s">We'll text you</div></div></div>
-            </div>
-          </div>
-
-          <div class="conf-card surface" style="padding-top:.9rem">
-            <div class="cart-section-title" style="margin-top:0">Your order · il tuo ordine</div>
-            <div class="conf-items">
-              <div class="ir"><span>2 × Margherita</span><span class="num">55,80 zł</span></div>
-              <div class="ir"><span>1 × Spaghetti Carbonara</span><span class="num">28,95 zł</span></div>
-              <div class="ir tot"><span>Total</span><span class="num">84,75 zł</span></div>
-            </div>
-          </div>
-
-          <div class="tricolore"></div>
-        </div>
+    <div class="conf-card surface sheen">
+      <div class="conf-eta">
+        <div><div class="lab">Ready by · pronto per le</div><div class="big num">19:42</div></div>
+        <div style="text-align:right"><div class="lab">Pickup · asporto</div><div class="big">Rynek</div></div>
+      </div>
+      <div class="track">
+        <div class="step done"><span class="dot">✓</span><div><div class="t">Order received <span class="it">· ricevuto</span></div><div class="s">19:18 · confirmed</div></div></div>
+        <div class="step done"><span class="dot">✓</span><div><div class="t">Dough stretched <span class="it">· stesa</span></div><div class="s">Giuseppe's at the bench</div></div></div>
+        <div class="step active"><span class="dot">●</span><div><div class="t">In the wood oven <span class="it">· nel forno</span></div><div class="s">485°C · 60 seconds</div></div></div>
+        <div class="step"><span class="dot">4</span><div><div class="t">Ready for pickup <span class="it">· pronto</span></div><div class="s">We'll text you</div></div></div>
       </div>
     </div>
+
+    <div class="conf-card surface">
+      <div class="conf-sec">Your order · il tuo ordine</div>
+      <div class="conf-items">
+        <div class="ir"><span>2 × Margherita</span><span class="num">55,80 zł</span></div>
+        <div class="ir"><span>1 × Spaghetti Carbonara</span><span class="num">28,95 zł</span></div>
+        <div class="ir tot"><span>Total</span><span class="num">84,75 zł</span></div>
+      </div>
+    </div>
+
+    <div class="tricolore"></div>
   </div>
 </div>
 
 <!-- ============================================================
      SCREEN 5 · REWARDS (Soci)
      ============================================================ -->
-<div class="section-head">
-  <span class="clabel">Screen 05 · i soci</span>
+<div class="screen-head">
+  <span class="clabel">Schermo 05 · i soci</span>
   <h2>Rewards — Soci e amici</h2>
-  <p class="cap">The loyalty home: the Espresso-tier card rendered as dark glass (points balance, tier pill, multiplier, progress rail to the next tier, and a stats row), followed by redeemable reward tiles.</p>
+  <p class="cap">The loyalty home: the Espresso-tier card rendered as dark glass — the 56px italic points balance, the tier pill, multiplier, progress rail to the next tier and a stats row — followed by redeemable reward tiles in the live 2-column grid.</p>
 </div>
-<div class="screens">
-  <div class="screen">
-    <div class="screen-label"><small>Schermo 05</small>Rewards · Soci</div>
-    <div class="device">
-      <div class="vp">
-        <div class="rw">
-          <div class="rw-head">
-            <h1>Ciao, Giulia</h1>
-            <div class="it-sub">Soci e amici — friends of the house</div>
-          </div>
+<div class="screen-rule"></div>
 
-          <!-- ESPRESSO TIER — dark glass -->
-          <div class="tier-card surface-dark sheen">
-            <div class="tier-top">
-              <span class="tier-pill"><span class="bean"></span>Espresso tier</span>
-              <div class="tier-mult"><b>1.5×</b>points earned</div>
-            </div>
-            <div class="tier-pts">
-              <div class="big num">1 240</div>
-              <div class="lab">points · punti</div>
-            </div>
-            <div class="tier-rail">
-              <div class="meta"><span>Espresso</span><span><b>560 pts</b> to Limoncello</span></div>
-              <div class="bar"><i></i></div>
-            </div>
-            <div class="tier-stats">
-              <div class="tier-stat"><div class="v num">38</div><div class="k">Orders</div></div>
-              <div class="tier-stat"><div class="v num">14</div><div class="k">Free pizze</div></div>
-              <div class="tier-stat"><div class="v">2y</div><div class="k">A socio dal</div></div>
-            </div>
-          </div>
+<div class="page-inner">
+  <div class="rw">
+    <div class="rw-head">
+      <h1>Ciao, Giulia</h1>
+      <div class="it-sub">Soci e amici — friends of the house</div>
+    </div>
 
-          <div class="rw-section-title">Spend your points · usa i punti</div>
+    <!-- ESPRESSO TIER — dark glass -->
+    <div class="tier-card surface-dark sheen">
+      <div class="tier-top">
+        <span class="tier-pill"><span class="bean"></span>Espresso tier</span>
+        <div class="tier-mult"><b>1.5×</b>points earned</div>
+      </div>
+      <div class="tier-pts">
+        <div class="big num">1 240</div>
+        <div class="lab">points · punti</div>
+      </div>
+      <div class="tier-rail">
+        <div class="meta"><span>Espresso</span><span><b>560 pts</b> to Limoncello</span></div>
+        <div class="bar"><i></i></div>
+      </div>
+      <div class="tier-stats">
+        <div class="tier-stat"><div class="v num">38</div><div class="k">Orders</div></div>
+        <div class="tier-stat"><div class="v num">14</div><div class="k">Free pizze</div></div>
+        <div class="tier-stat"><div class="v">2y</div><div class="k">A socio dal</div></div>
+      </div>
+    </div>
 
-          <div class="reward-tile surface sheen">
-            <div class="rt-ic" data-illus="pizza"></div>
-            <div class="rt-body"><div class="rt-name">Free Margherita</div><div class="rt-desc">Any classic pizza, on the house</div></div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">800 pts</span><button class="rt-redeem">Redeem</button></div>
-          </div>
+    <div class="rw-section-title">Spend your points · usa i punti</div>
 
-          <div class="reward-tile surface sheen">
-            <div class="rt-ic" data-illus="espresso"></div>
-            <div class="rt-body"><div class="rt-name">Espresso &amp; cantucci</div><div class="rt-desc">A little Neapolitan ritual</div></div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">250 pts</span><button class="rt-redeem">Redeem</button></div>
-          </div>
+    <div class="reward-grid">
+      <div class="reward-tile surface sheen">
+        <div class="rt-ic" data-illus="pizza"></div>
+        <div class="rt-body"><div class="rt-name">Free Margherita</div><div class="rt-desc">Any classic pizza, on the house</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span class="rt-cost num">800 pts</span><button class="rt-redeem">Redeem</button></div>
+      </div>
 
-          <div class="reward-tile surface sheen">
-            <div class="rt-ic" data-illus="pasta"></div>
-            <div class="rt-body"><div class="rt-name">Carbonara for two</div><div class="rt-desc">Unlocks at Limoncello tier</div></div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="rt-cost num">1 800 pts</span><button class="rt-redeem is-locked">Locked</button></div>
-          </div>
-        </div>
+      <div class="reward-tile surface sheen">
+        <div class="rt-ic" data-illus="espresso"></div>
+        <div class="rt-body"><div class="rt-name">Espresso &amp; cantucci</div><div class="rt-desc">A little Neapolitan ritual</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span class="rt-cost num">250 pts</span><button class="rt-redeem">Redeem</button></div>
+      </div>
+
+      <div class="reward-tile surface sheen">
+        <div class="rt-ic" data-illus="pasta"></div>
+        <div class="rt-body"><div class="rt-name">Carbonara for two</div><div class="rt-desc">Unlocks at Limoncello tier</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span class="rt-cost num">1 800 pts</span><button class="rt-redeem is-locked">Locked</button></div>
       </div>
     </div>
   </div>
@@ -771,7 +865,7 @@
 <footer>
   <b>Sud Italia</b><br/>
   Napoli a Kraków &amp; Warszawa · pasta tirata a mano, lievito madre, forno a legna a 485&deg;C<br/>
-  The same screens you ship today — landing, menu, cart, order tracking, rewards — toggled between parchment &amp; liquid glass.
+  The same screens you ship today — landing, menu, cart, order tracking, rewards — toggled between parchment &amp; liquid glass, at the real storefront type scale.
 </footer>
 
 <script>
@@ -779,13 +873,13 @@
   /* Kraków wood-fired oven + Warszawa Vespa (LocationsGrid.tsx) */
   const OVEN = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="48" y="92" width="124" height="22" rx="3" stroke="#7A2B2B" stroke-width="1.8" fill="#E8D6B5"/><path d="M48 92 C 48 60, 80 38, 110 38 C 140 38, 172 60, 172 92 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#F2E2C2"/><path d="M82 92 C 82 76, 96 66, 110 66 C 124 66, 138 76, 138 92 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M96 88 C 100 80, 104 84, 108 78 C 112 84, 116 80, 120 88" stroke="#CD212A" stroke-width="1.8" fill="#CD212A" fill-opacity="0.3" stroke-linejoin="round"/><path d="M102 86 C 105 81, 108 84, 111 79 C 114 84, 117 81, 120 86" stroke="#C9A23E" stroke-width="1.2" fill="none" stroke-linejoin="round"/><rect x="100" y="22" width="14" height="20" stroke="#7A2B2B" stroke-width="1.6" fill="#B85C38" fill-opacity="0.2"/><path d="M107 18 C 110 12, 105 6, 110 0" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.6"/><path d="M178 110 L208 88" stroke="#3D2817" stroke-width="1.6" stroke-linecap="round"/><rect x="174" y="98" width="20" height="14" rx="2" transform="rotate(-30 184 105)" stroke="#3D2817" stroke-width="1.6" fill="#E8D6B5"/></svg>`;
   const VESPA = `<svg viewBox="0 0 220 140" fill="none"><path d="M10 122 L210 122" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/><rect x="32" y="48" width="46" height="26" rx="2" stroke="#7A2B2B" stroke-width="1.6" fill="#E8D6B5"/><text x="55" y="68" text-anchor="middle" font-family="Georgia" font-size="9" font-style="italic" fill="#7A2B2B">Ottaviano</text><path d="M68 100 C 60 100, 56 92, 60 82 C 64 72, 78 70, 92 72 L120 78 C 134 80, 148 82, 156 92 L162 102 C 158 110, 76 110, 68 100 Z" stroke="#7A2B2B" stroke-width="1.8" fill="#B85C38" fill-opacity="0.4" stroke-linejoin="round"/><path d="M82 78 L120 78 L122 70 L88 70 Z" stroke="#3D2817" stroke-width="1.6" fill="#3D2817"/><path d="M152 86 L168 64" stroke="#3D2817" stroke-width="1.8" stroke-linecap="round"/><circle cx="158" cy="84" r="5" stroke="#C9A23E" stroke-width="1.4" fill="#C9A23E" fill-opacity="0.6"/><circle cx="72" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="72" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/><circle cx="158" cy="112" r="11" stroke="#3D2817" stroke-width="1.8" fill="#F8EFDE"/><circle cx="158" cy="112" r="4" stroke="#3D2817" stroke-width="1.5" fill="#7A2B2B"/></svg>`;
-  const PIN = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z" stroke="#B85C38" stroke-width="1.5" fill="rgba(184,92,56,0.12)"/><circle cx="10" cy="6.5" r="2.4" stroke="#B85C38" stroke-width="1.4" fill="none"/></svg>`;
-  const CLOCK = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#B85C38" stroke-width="1.5" fill="none"/><path d="M10 5 L10 10 L13.5 12.5" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  const PIN = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z" stroke="#B85C38" stroke-width="1.5" fill="rgba(184,92,56,0.12)"/><circle cx="10" cy="6.5" r="2.4" stroke="#B85C38" stroke-width="1.4" fill="none"/></svg>`;
+  const CLOCK = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#B85C38" stroke-width="1.5" fill="none"/><path d="M10 5 L10 10 L13.5 12.5" stroke="#B85C38" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 
   /* Per-category glyphs (MenuItem.tsx CategoryIllus) — sized via [data-illus] host */
-  const PIZZA = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><circle cx="31" cy="32" r="22" fill="#C9A23E" fill-opacity="0.18" stroke="#B85C38" stroke-width="1.6"/><circle cx="31" cy="32" r="18" stroke="#7A2B2B" stroke-width="1" fill="none" opacity="0.5"/><circle cx="24" cy="28" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="38" cy="30" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="30" cy="38" r="3" fill="#CD212A" fill-opacity="0.7"/><path d="M22 35 C 24 33, 26 35, 26 37" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M36 24 C 38 22, 40 24, 40 26" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M38 38 C 40 36, 42 38, 42 40" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/></svg>`;
-  const PASTA = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><ellipse cx="31" cy="38" rx="22" ry="8" fill="#F2E2C2" stroke="#7A2B2B" stroke-width="1.4"/><path d="M12 36 C 18 30, 28 30, 31 36 C 34 42, 44 42, 50 36" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 38 C 18 32, 28 32, 31 38 C 34 44, 44 44, 50 38" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 40 C 18 34, 28 34, 31 40 C 34 46, 44 46, 50 40" stroke="#B85C38" stroke-width="1.2" fill="none"/><circle cx="22" cy="36" r="1.6" fill="#7A2B2B"/><circle cx="40" cy="38" r="1.6" fill="#7A2B2B"/><path d="M28 22 C 30 18, 34 18, 34 22" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.3"/></svg>`;
-  const ESPRESSO = `<svg width="100%" height="100%" viewBox="0 0 62 62" fill="none"><path d="M16 26 L44 26 L42 44 C 41 49, 37 52, 31 52 C 25 52, 21 49, 20 44 Z" fill="#3D2817" fill-opacity="0.2" stroke="#7A2B2B" stroke-width="1.6" stroke-linejoin="round"/><path d="M44 30 C 50 30, 52 34, 50 38 C 49 40, 46 40, 44 39" stroke="#7A2B2B" stroke-width="1.4" fill="none"/><ellipse cx="30" cy="28" rx="13" ry="3" fill="#3D2817" fill-opacity="0.5"/><path d="M26 18 C 24 14, 28 12, 26 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/><path d="M34 18 C 32 14, 36 12, 34 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/></svg>`;
+  const PIZZA = `<svg width="62" height="62" viewBox="0 0 62 62" fill="none"><circle cx="31" cy="32" r="22" fill="#C9A23E" fill-opacity="0.18" stroke="#B85C38" stroke-width="1.6"/><circle cx="31" cy="32" r="18" stroke="#7A2B2B" stroke-width="1" fill="none" opacity="0.5"/><circle cx="24" cy="28" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="38" cy="30" r="3" fill="#CD212A" fill-opacity="0.7"/><circle cx="30" cy="38" r="3" fill="#CD212A" fill-opacity="0.7"/><path d="M22 35 C 24 33, 26 35, 26 37" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M36 24 C 38 22, 40 24, 40 26" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/><path d="M38 38 C 40 36, 42 38, 42 40" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.4"/></svg>`;
+  const PASTA = `<svg width="62" height="62" viewBox="0 0 62 62" fill="none"><ellipse cx="31" cy="38" rx="22" ry="8" fill="#F2E2C2" stroke="#7A2B2B" stroke-width="1.4"/><path d="M12 36 C 18 30, 28 30, 31 36 C 34 42, 44 42, 50 36" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 38 C 18 32, 28 32, 31 38 C 34 44, 44 44, 50 38" stroke="#C9A23E" stroke-width="1.4" fill="none"/><path d="M12 40 C 18 34, 28 34, 31 40 C 34 46, 44 46, 50 40" stroke="#B85C38" stroke-width="1.2" fill="none"/><circle cx="22" cy="36" r="1.6" fill="#7A2B2B"/><circle cx="40" cy="38" r="1.6" fill="#7A2B2B"/><path d="M28 22 C 30 18, 34 18, 34 22" stroke="#4A7C59" stroke-width="1.4" fill="#4A7C59" fill-opacity="0.3"/></svg>`;
+  const ESPRESSO = `<svg width="40" height="40" viewBox="0 0 62 62" fill="none"><path d="M16 26 L44 26 L42 44 C 41 49, 37 52, 31 52 C 25 52, 21 49, 20 44 Z" fill="#3D2817" fill-opacity="0.2" stroke="#7A2B2B" stroke-width="1.6" stroke-linejoin="round"/><path d="M44 30 C 50 30, 52 34, 50 38 C 49 40, 46 40, 44 39" stroke="#7A2B2B" stroke-width="1.4" fill="none"/><ellipse cx="30" cy="28" rx="13" ry="3" fill="#3D2817" fill-opacity="0.5"/><path d="M26 18 C 24 14, 28 12, 26 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/><path d="M34 18 C 32 14, 36 12, 34 8" stroke="#8C6F4F" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.7"/></svg>`;
 
   const GLYPH = { pizza:PIZZA, pasta:PASTA, espresso:ESPRESSO };
   document.querySelectorAll('[data-illus]').forEach(el => { el.innerHTML = GLYPH[el.dataset.illus] || PIZZA; });
@@ -804,7 +898,7 @@
   document.getElementById('locGrid').innerHTML = LOCS.map(l => `
     <article class="loc-card surface sheen">
       <div class="loc-illus">${l.illus}</div>
-      <div class="tricolore" style="height:2.5px"></div>
+      <div class="tricolore" style="height:3px"></div>
       <div class="loc-body">
         <div class="loc-head">
           <div class="loc-name">${l.city}</div>
