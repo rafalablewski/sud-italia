@@ -12,8 +12,9 @@ V8 since Step 14 — all selectors live under `.v8-order-*` in
 `themes/homepage/index.css`.
 
 **Liquid Glass.** The order + summary cards (`.v8-order-card`,
-`.v8-order-summary`) are `--glass-fill` glass over the aurora; the tracker,
-ETA and points cards inherit the same material. See
+`.v8-order-summary`) are `--glass-fill` glass over the aurora; the ETA,
+loyalty, milestone and comeback accent cards are frosted tinted glass
+(tints kept) and the push-opt-in pill is `--glass-fill`. See
 [`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
 
 | Block                          | Component                                                  | V8 selector(s)                              |

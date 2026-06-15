@@ -1647,8 +1647,10 @@ body::after {
   font-family: var(--font-heading);
   font-size: 13.5px;
   color: var(--color-oxblood);
-  background: rgba(122, 43, 43, 0.06);
-  border: 1px solid rgba(122, 43, 43, 0.22);
+  background: rgba(248, 239, 222, 0.5);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 6px 14px 6px 10px;
   transition: all 0.2s ease;
@@ -3199,10 +3201,12 @@ body.v8-cart-open { overflow: hidden; }
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: #FDF8E8;
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: 0 8px 24px rgba(61, 40, 23, 0.14);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   max-height: 240px;
   overflow-y: auto;
 }
@@ -4869,10 +4873,12 @@ body.v8-cart-open { overflow: hidden; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment));
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   font-family: var(--font-body);
   color: var(--color-espresso);
 }
@@ -4939,7 +4945,9 @@ body.v8-cart-open { overflow: hidden; }
   padding: 14px 16px;
   border-radius: var(--r-md);
   border: 1px solid rgba(184, 92, 56, 0.3);
-  background: linear-gradient(135deg, rgba(184, 92, 56, 0.08), rgba(201, 162, 62, 0.1));
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.12), rgba(201, 162, 62, 0.13));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-paper);
 }
 .v8-composer-hero-name {
@@ -5090,7 +5098,9 @@ body.v8-cart-open { overflow: hidden; }
 }
 .v8-composer-pick.is-open {
   border-color: var(--color-terracotta);
-  background: linear-gradient(135deg, rgba(184, 92, 56, 0.06), rgba(201, 162, 62, 0.06));
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.1), rgba(201, 162, 62, 0.1));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -6668,7 +6678,9 @@ body.v8-detail-open { overflow: hidden; }
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, rgba(184, 92, 56, 0.08), rgba(201, 162, 62, 0.06));
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.12), rgba(201, 162, 62, 0.09));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(184, 92, 56, 0.30);
   border-radius: var(--r-md);
 }
@@ -6831,9 +6843,12 @@ body.v8-detail-open { overflow: hidden; }
   align-items: center;
   gap: 8px;
   padding: 12px 18px;
-  background: var(--color-parchment);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-ochre);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   font-family: var(--font-heading);
   font-style: italic;
   font-weight: 600;
@@ -6871,7 +6886,9 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-loyalty {
   text-align: center;
   padding: 18px;
-  background: linear-gradient(135deg, rgba(201, 162, 62, 0.14), rgba(184, 92, 56, 0.08));
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.16), rgba(184, 92, 56, 0.1));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.40);
   border-radius: var(--r-md);
   margin-bottom: 18px;
@@ -6968,7 +6985,9 @@ body.v8-detail-open { overflow: hidden; }
    Limited-time "come back" callout.
    ------------------------------------------------------------------ */
 .v8-order-comeback {
-  background: linear-gradient(135deg, rgba(184, 92, 56, 0.06), rgba(201, 162, 62, 0.06));
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.1), rgba(201, 162, 62, 0.1));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.35);
   border-radius: var(--r-md);
   padding: 14px 16px;
@@ -7095,7 +7114,9 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-milestone {
   text-align: center;
   padding: 22px 20px;
-  background: linear-gradient(135deg, rgba(201, 162, 62, 0.12), rgba(122, 43, 43, 0.05));
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.15), rgba(122, 43, 43, 0.07));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.40);
   border-radius: var(--r-md);
   margin-bottom: 18px;
@@ -7598,9 +7619,12 @@ body.v8-detail-open { overflow: hidden; }
 .v8-rewards-signin-card {
   margin-top: 18px;
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   text-align: center;
   box-shadow: var(--shadow-paper);
 }
@@ -8037,9 +8061,12 @@ body.v8-detail-open { overflow: hidden; }
   flex-direction: column;
   align-items: center;
   padding: 22px 16px;
-  background: var(--color-parchment-deep);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px dashed var(--color-line);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
 }
 .v8-rewards-loyalty-qr {
   position: relative;
@@ -8456,7 +8483,9 @@ body.v8-detail-open { overflow: hidden; }
 .v8-rewards-balance {
   text-align: center;
   padding: 22px;
-  background: linear-gradient(135deg, rgba(201, 162, 62, 0.14), rgba(184, 92, 56, 0.08));
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.16), rgba(184, 92, 56, 0.1));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.40);
   border-radius: var(--r-md);
   margin-bottom: 18px;
