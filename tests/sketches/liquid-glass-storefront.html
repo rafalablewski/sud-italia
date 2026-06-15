@@ -34,7 +34,10 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<!-- Same families AND weights as production next/font (Lora + Cormorant
+     Garamond, 400/500/600/700 + italics) so the mockup renders type 1:1
+     with the live storefront — no browser-synthesised weights. -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
 <style>
   /* ===== REAL Sud Italia V8 Tuscany tokens (themes/homepage/tokens.css) ===== */
   :root{
@@ -46,8 +49,9 @@
     --espresso:#3D2817; --espresso-soft:#6B4A30;
     --ink:#2C1810; --muted:#8C6F4F; --line:#C9B48E; --line-soft:#E0CFA8;
     --italy-green:#008C45; --italy-white:#F4F5F0; --italy-red:#CD212A;
-    --font-heading:'Cormorant Garamond',Georgia,serif;
-    --font-body:'Lora',Georgia,serif;
+    /* identical to production tokens.css --font-heading / --font-body */
+    --font-heading:'Cormorant Garamond','Playfair Display',Georgia,'Times New Roman',serif;
+    --font-body:'Lora',Georgia,'Times New Roman',serif;
     --ease:cubic-bezier(.22,1,.36,1);
   }
   *{margin:0;padding:0;box-sizing:border-box;}
