@@ -15,6 +15,14 @@ six blocks under the public layout.
 | Loyalty pitch    | `src/components/location/LoyaltySection.tsx`               |
 | Floating cart    | `src/components/cart/FloatingCartButton.tsx`               |
 
+**Liquid Glass.** The location hero is a translucent terracotta/ochre wash
+over the aurora; the `.v8-menu-card` band is transparent so the glass item
+cards read against the aurora rather than stacking glass-on-glass; each
+`.v8-mi` item card is `--glass-fill` glass with a caustic-shimmer
+illustration tile (`.v8-mi-illus`); the speed-guarantee is tinted ochre
+glass, combo cards are `--glass-fill` glass, and the search field is a
+frosted input. See [`../theme/material.md`](../theme/material.md#the-aurora-canvas--liquid-glass).
+
 ## The page contract
 
 The menu page is the **conversion surface**. Its single job: get the

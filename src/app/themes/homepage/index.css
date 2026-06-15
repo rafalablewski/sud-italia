@@ -1645,10 +1645,8 @@ body::after {
   position: relative;
   padding: 18px 20px 36px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.45) 100%),
-    var(--color-parchment);
-  border-bottom: 1px solid var(--color-line-soft);
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.14), rgba(201, 162, 62, 0.12));
+  border-bottom: 1px solid var(--glass-border);
 }
 @media (min-width: 768px) {
   .v8-loc-hero { padding: 24px 36px 48px; }
@@ -1781,9 +1779,11 @@ body::after {
    Item cards inside `.v8-menu-items` stay the existing
    <MenuItemCard /> for now — Step 10 ports the per-item V8 card. */
 
+/* The menu band is transparent — it's the container the glass item cards
+   sit inside, so it lets the aurora read behind them rather than stacking
+   glass-on-glass into a muddy double-blur. */
 .v8-menu-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
-  box-shadow: var(--shadow-paper);
+  background: transparent;
   margin: 0 auto;
   padding: 22px 18px 28px;
 }
@@ -1864,11 +1864,13 @@ body::after {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 14px 18px;
-  box-shadow: var(--shadow-paper);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   margin-bottom: 18px;
   position: relative;
 }
@@ -2028,9 +2030,12 @@ body::after {
 .v8-guarantee {
   margin: 22px 0;
   padding: 16px 18px;
-  background: linear-gradient(180deg, rgba(201, 162, 62, 0.18), rgba(201, 162, 62, 0.06));
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.20), rgba(201, 162, 62, 0.07));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(201, 162, 62, 0.5);
   border-radius: 12px;
+  box-shadow: var(--glass-edge);
   display: flex;
   gap: 14px;
   align-items: center;
@@ -2084,9 +2089,12 @@ body::after {
   .v8-combos { grid-template-columns: 1fr 1fr; }
 }
 .v8-combo-card {
-  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment));
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   padding: 16px 18px;
   display: flex;
   gap: 14px;
@@ -2238,11 +2246,13 @@ body::after {
    countdown, detail-drawer trigger) — only the markup changed. */
 
 .v8-mi {
-  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 14px;
   padding: 22px 20px 20px;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -2251,9 +2261,7 @@ body::after {
 }
 .v8-mi:hover {
   transform: translateY(-3px);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 22px 40px -22px rgba(61, 40, 23, 0.4);
+  box-shadow: var(--glass-shadow-strong), var(--glass-edge);
 }
 .v8-mi.is-unavailable {
   opacity: 0.55;
@@ -2261,8 +2269,8 @@ body::after {
 }
 .v8-mi.is-unavailable:hover { transform: none; }
 .v8-mi.is-incart {
-  border-color: rgba(74, 124, 89, 0.45);
-  box-shadow: 0 0 0 1px rgba(74, 124, 89, 0.12) inset, var(--shadow-card);
+  border-color: rgba(74, 124, 89, 0.55);
+  box-shadow: 0 0 0 1px rgba(74, 124, 89, 0.16) inset, var(--glass-shadow), var(--glass-edge);
 }
 
 /* ---- Top row: illustration + info -------------------------------- */
@@ -2273,17 +2281,29 @@ body::after {
 }
 
 .v8-mi-illus {
+  position: relative;
   flex: 0 0 84px;
   width: 84px;
   height: 84px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.16), rgba(201, 162, 62, 0.16));
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   display: grid;
   place-items: center;
   color: var(--color-terracotta-dark);
   transition: transform 0.4s ease;
+  overflow: hidden;
 }
+/* [LG-6] caustic shimmer over the per-category dish sketch. */
+.v8-mi-illus::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.45), transparent 55%);
+  animation: v8-caustic-shimmer 7s ease-in-out infinite alternate;
+}
+.v8-mi-illus > svg { position: relative; z-index: 1; }
 .v8-mi:hover .v8-mi-illus { transform: rotate(-3deg); }
 
 .v8-mi-info {
