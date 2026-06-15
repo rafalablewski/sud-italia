@@ -1846,7 +1846,7 @@ body::after {
    surface, not a generic gray placeholder. */
 
 .v8-loc-loading {
-  background: var(--color-parchment);
+  background: transparent;
   min-height: 100vh;
 }
 
@@ -3086,8 +3086,10 @@ body.v8-cart-open { overflow: hidden; }
    ------------------------------------------------------------------ */
 .v8-cart-fulfill {
   margin: 4px 20px 0;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   padding: 4px;
   display: grid;
@@ -3362,17 +3364,27 @@ body.v8-cart-open { overflow: hidden; }
 }
 .v8-cart-pair:last-child { border-bottom: none; }
 .v8-cart-pair-illus {
+  position: relative;
   flex: 0 0 56px;
   width: 56px;
   height: 56px;
   border-radius: var(--r-md);
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.16), rgba(201, 162, 62, 0.16));
+  border: 1px solid var(--glass-border);
   display: grid;
   place-items: center;
   color: var(--color-basil-deep);
-  overflow: hidden;
 }
+.v8-cart-pair-illus::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.42), transparent 55%);
+  animation: v8-caustic-shimmer 7s ease-in-out infinite alternate;
+}
+.v8-cart-pair-illus > svg { position: relative; z-index: 1; }
 .v8-cart-pair-illus img {
   width: 100%;
   height: 100%;
@@ -3861,8 +3873,8 @@ body.v8-cart-open { overflow: hidden; }
   width: 84px;
   height: 84px;
   border-radius: 50%;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.16), rgba(201, 162, 62, 0.16));
+  border: 1px solid var(--glass-border);
   display: grid;
   place-items: center;
   color: var(--color-terracotta-dark);
@@ -4172,8 +4184,10 @@ body.v8-cart-open { overflow: hidden; }
   border-color: rgba(184, 92, 56, 0.35);
 }
 .v8-cart-tod.is-late {
-  background: var(--color-espresso);
-  border-color: var(--color-espresso-soft);
+  background: var(--glass-dark);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border-dark);
   color: var(--color-parchment);
 }
 .v8-cart-tod-illus {
@@ -4489,9 +4503,12 @@ body.v8-cart-open { overflow: hidden; }
 .v8-cart-slots-empty {
   text-align: center;
   padding: 16px 20px;
-  background: var(--color-parchment-deep);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px dashed var(--color-line);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   font-family: var(--font-body);
 }
 .v8-cart-slots-empty.is-error {
@@ -5086,7 +5103,9 @@ body.v8-cart-open { overflow: hidden; }
   padding: 10px 14px;
   border: 1px solid var(--color-line);
   border-radius: var(--r-md);
-  background: var(--color-parchment);
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: inherit;
   font-family: var(--font-body);
   text-align: left;
@@ -6101,9 +6120,11 @@ body.v8-detail-open { overflow: hidden; }
   width: 100%;
   text-align: left;
   padding: 11px 14px;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
-  background: var(--color-parchment);
+  background: rgba(255, 255, 255, 0.38);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--color-espresso);
   font-size: 14.5px;
   cursor: pointer;
@@ -6268,9 +6289,12 @@ body.v8-detail-open { overflow: hidden; }
   display: flex;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   font-family: var(--font-body);
   font-style: italic;
   font-size: 13.5px;
@@ -7207,9 +7231,12 @@ body.v8-detail-open { overflow: hidden; }
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-edge);
   transition: background 0.2s, border-color 0.2s;
 }
 .v8-order-feedback-row.is-rated {
@@ -7239,8 +7266,10 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-order-feedback-textarea {
   width: 100%;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   padding: 12px 14px;
   font-family: var(--font-body);
@@ -7262,8 +7291,10 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-order-feedback-input {
   width: 100%;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   padding: 12px 14px;
   font-family: var(--font-body);
@@ -8331,7 +8362,9 @@ body.v8-detail-open { overflow: hidden; }
   flex: 1;
   text-align: center;
   padding: 14px 18px;
-  background: var(--color-parchment);
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 2px dashed var(--color-terracotta-soft);
   border-radius: var(--r-md);
   font-family: var(--font-heading);
@@ -8736,9 +8769,12 @@ body.v8-detail-open { overflow: hidden; }
 
 .v8-rewards-perks-card {
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   box-shadow: var(--shadow-paper);
 }
 .v8-rewards-perk-line {
@@ -8814,9 +8850,12 @@ body.v8-detail-open { overflow: hidden; }
    ------------------------------------------------------------------ */
 .v8-rewards-wallet {
   padding: 18px;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
   box-shadow: var(--shadow-paper);
   margin-bottom: 18px;
 }
@@ -9104,8 +9143,10 @@ body.v8-detail-open { overflow: hidden; }
 }
 .v8-notify-input {
   width: 100%;
-  background: #FBF4E1;
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   padding: 10px 12px 10px 34px;
   font-family: var(--font-body);
@@ -9187,8 +9228,10 @@ body.v8-detail-open { overflow: hidden; }
 
 /* Calories — parchment-deep editorial chip with an ochre stamp glyph */
 .v8-comp-pill.is-kcal {
-  background: var(--color-parchment-deep);
-  border-color: var(--color-line);
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-color: var(--glass-border);
   color: var(--color-espresso);
 }
 .v8-comp-pill.is-kcal .v8-comp-stamp { color: var(--color-ochre); }
@@ -9298,8 +9341,8 @@ body.v8-cart-open .v8-abandoned {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
+  background: linear-gradient(160deg, rgba(184, 92, 56, 0.16), rgba(201, 162, 62, 0.16));
+  border: 1px solid var(--glass-border);
   color: var(--color-terracotta-dark);
 }
 
