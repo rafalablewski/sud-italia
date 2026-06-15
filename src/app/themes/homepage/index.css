@@ -248,6 +248,15 @@ body::after {
 /* Fallback — browsers without backdrop-filter get opaque parchment cards
    so the storefront stays solid + legible (Safari < 9, old Edge, etc.). */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  /* Redefine the glass fill tokens to opaque so EVERY token-based surface
+     (the .v8-surface primitive AND the ~40 legacy cards that apply the
+     glass inline via these vars) degrades to a solid, legible card when
+     the browser can't blur. One place, total coverage. */
+  :root {
+    --glass-fill: var(--color-parchment);
+    --glass-fill-strong: var(--color-parchment);
+    --glass-dark: var(--color-espresso);
+  }
   .v8-surface { background: linear-gradient(180deg, #FBF4E1, var(--color-parchment)); }
   .v8-surface-strong { background: var(--color-parchment); }
   .v8-surface-dark { background: var(--color-espresso); }
@@ -6485,8 +6494,10 @@ body.v8-detail-open { overflow: hidden; }
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   font-family: var(--font-heading);
   font-weight: 600;
@@ -9067,8 +9078,10 @@ body.v8-detail-open { overflow: hidden; }
 .v8-rewards-wallet-msg {
   margin-top: 12px;
   padding: 10px 12px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-md);
   font-family: var(--font-body);
   font-style: italic;
