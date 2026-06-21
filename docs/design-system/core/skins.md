@@ -19,6 +19,13 @@ the **same element** that carries `data-theme` (light/dark). No flash. All
 Core chrome reads the `--bg`/`--ink`/`--brand`/… tokens, so a skin only
 redefines that palette.
 
+**Default light/dark per skin.** Core's own default is dark (night trucks /
+kitchen glare). Because Solare is a *daylight* skin, the layout defaults
+`data-theme` to `light` when it's active, so it presents its daylight face
+out of the box — the operator can still toggle to its warm-dim dark variant
+(persisted in `localStorage['core-theme']`, applied by the boot script,
+which wins over the server default).
+
 ## Specificity & the light/dark toggle
 
 `solare.css` loads **after** `index.css` (which `@import`s `tokens.css`),
