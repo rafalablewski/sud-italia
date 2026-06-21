@@ -44,12 +44,45 @@ literal values into `bg-italia-*` / `text-espresso` utilities — those do
   actually uses back to `var(--color-*)` (a plain stylesheet rule outranks
   Tailwind's layered utilities, so no `!important`).
 
+## The overloaded-token trap (and the fix)
+
+Two storefront tokens carry **two luminance roles**: `--color-espresso`
+is dark *text* (166×) but also a dark *surface* (footer, `.v8-ps-dark`,
+dark badges, 9×); `--color-parchment` is light *text* on those dark
+sections (64×) but also a light *surface* (cards, 80×). A single value
+can't be right for both, so a wholesale inversion flips the
+already-dark feature sections to light.
+
+Notte resolves it in two layers:
+
+1. **Global** (`body[data-skin="notte"]`) picks the majority role —
+   *text* tokens go light, *surface* tokens go dark — so most of the page
+   (light cards → dark panels, dark text → light text) is correct.
+2. **Per dark-section scope** (`.v8-pfoot`, `.v8-ps-dark`,
+   `.v8-mi-signature`, the espresso-backed cart/rewards blocks) the file
+   **re-declares the overloaded tokens** back to their dark-context
+   meaning (`--color-espresso` = deep surface, `--color-parchment` =
+   light text). Because CSS custom properties cascade by element, every
+   descendant of those sections resolves them correctly with no per-child
+   rules — the dark feature blocks stay dark with light text.
+
+## Production coverage
+
+Beyond tokens, Notte also restyles the rules that **hardcode hex**
+(bypassing tokens): `.pub-*`/`.v8-pulse-textarea` form whites + gray
+borders + placeholder; the `#FBF4E1`/`#FDF8E8`/`#F2E2C2` cream solids,
+gradient cards, pay bars and skeleton shimmer; the `#B58F36` gold borders
+→ night ochre; the `#2E5840` basil-green text; and the sticky nav's
+hardcoded light-parchment `rgba` gradient → a night-glass gradient. The
+already-light bundle/loyalty *accent* colours (rose / basil) read fine on
+the dark canvas and are left as accents.
+
 ## Skins
 
 | id        | label     | Live code                                  | Look |
 | --------- | --------- | ------------------------------------------ | ---- |
 | `default` | Trattoria | `themes/homepage/index.css` + `tokens.css` | The shipped V8 Trattoria — warm parchment canvas, oxblood brand, editorial serif. |
-| `notte`   | Notte     | `themes/homepage/skins/notte.css`          | A candle-lit night room — deep espresso canvas (`#17110d`), warm cream ink (`#f3e7d3`), ochre + terracotta glow. Dark `color-scheme`. |
+| `notte`   | Notte     | `themes/homepage/skins/notte.css`          | A candle-lit night room — deep espresso canvas (`#17110d`), warm cream ink (`#f3e7d3`), ochre + terracotta glow. Dark `color-scheme`. Production-grade: forms, cards, gradients, pay bars, nav, dark feature sections + portal overlays all covered (see below). |
 
 ## Adding a homepage skin
 

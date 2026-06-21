@@ -38,7 +38,24 @@ the operator's light/dark toggle.**
 | id          | label             | Live code                                | Look |
 | ----------- | ----------------- | ---------------------------------------- | ---- |
 | `default`   | Operator Terminal | `themes/admin-v3/index.css`              | The shipped Admin v3 — warm-neutral dark cockpit, Neapolitan burgundy accent. |
-| `blueprint` | Blueprint         | `themes/admin-v3/skins/blueprint.css`    | A cool drafting-table console — deep navy canvas (`#0a1020`), cyan brand (`#38bdf8`), blue hairlines, sharper radii. Dark + light variants. |
+| `blueprint` | Blueprint         | `themes/admin-v3/skins/blueprint.css`    | A cool drafting-table console — deep navy canvas (`#0a1020`), deep-azure brand (`#2563eb` dark / `#1366c4` light, so the hardcoded white button text clears AA), bright cyan as the accent + chart c1, blue hairlines, sharper radii, and a faint drafting grid on the base canvas. Dark + light variants. |
+
+## Production coverage
+
+Admin v3 is fully token-driven, so re-valuing `--av3-*` repaints every
+component. Two production details a token swap must respect:
+
+- **Charts follow the skin for free.** The v3-native inline-SVG charts
+  (`src/admin-v3/ui/Chart.tsx`) draw every fill/stroke as `var(--av3-c*)`
+  / `var(--av3-grid)`, and nothing consumes the JS palette in
+  `src/admin-v3/theme.ts` for rendering — so Blueprint's chart palette
+  applies with no JS change.
+- **White button text.** `.av3-btn-primary` (and the active auth/location
+  chips) hardcode `color: #fff` on `var(--av3-brand)`. Blueprint's brand
+  is therefore a **deep azure** (`#2563eb` dark / `#1366c4` light) that
+  clears WCAG AA with white text; the bright cyan it's named for lives in
+  `--av3-brand-line` (the glow) and the chart palette, where white
+  legibility doesn't apply.
 
 ## Adding an admin skin
 

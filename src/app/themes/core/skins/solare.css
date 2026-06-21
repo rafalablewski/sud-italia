@@ -48,6 +48,29 @@
   color-scheme: light;
 }
 
+/* ---- in-shell KDS board ----------------------------------------------------
+   The KDS board re-declares --bg/--ink/--tones on its OWN element, so the root
+   token block above can't reach it (custom props cascade by element proximity).
+   Mirror the daylight palette here so the in-shell board follows Solare. The
+   FULLSCREEN kiosk (`.core-kiosk .core-kds`, not under `.core-body`) is left
+   untouched — it stays a dark wall by design (kitchen glare / night trucks).
+   `.core-body .core-kds` (0,4,0) ties the base light-KDS rule and wins on load
+   order; the dark variant (0,5,0) wins outright. */
+.core[data-skin="solare"] .core-body .core-kds {
+  --bg: #fbf3e7; --panel: #fffaf1; --panel-2: #f6ecdb; --panel-3: #efe2cd;
+  --ink: #2a1d12; --ink-2: #6f5a44; --ink-3: #9c8569;
+  --line: rgba(82, 52, 22, .13); --line-2: rgba(82, 52, 22, .20);
+  --kds-veil: rgba(82, 52, 22, .06); --kds-track: rgba(82, 52, 22, .10);
+  --t-firing: #3f73b0; --t-warn: #c2831f; --t-risk: #6f51c0; --t-late: #c33b2f; --t-ready: #2f7d5b; --t-queued: #9c8569;
+}
+.core[data-skin="solare"][data-theme="dark"] .core-body .core-kds {
+  --bg: #1c150f; --panel: #251c13; --panel-2: #2c2117; --panel-3: #34281b;
+  --ink: #f3e6d2; --ink-2: #c3ad92; --ink-3: #8f7a61;
+  --line: rgba(255, 230, 200, .10); --line-2: rgba(255, 230, 200, .17);
+  --kds-veil: rgba(255, 230, 200, .07); --kds-track: rgba(255, 230, 200, .10);
+  --t-firing: #6f9bd0; --t-warn: #d99a3c; --t-risk: #9b7fd6; --t-late: #e2574f; --t-ready: #5cae79; --t-queued: #8f7a61;
+}
+
 /* Warm-dim — when the operator toggles dark, keep the terracotta identity. */
 .core[data-skin="solare"][data-theme="dark"] {
   --bg: #1c150f;

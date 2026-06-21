@@ -117,3 +117,122 @@ body[data-skin="notte"] .pub-card,
 body[data-skin="notte"] .v8-card {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 30px rgba(0, 0, 0, 0.55);
 }
+
+/* ============================================================================
+   PRODUCTION LAYER — surfaces the token swap can't reach on its own.
+   ----------------------------------------------------------------------------
+   The storefront overloads two tokens by luminance role: --color-espresso is
+   dark TEXT (166×) but also a dark SURFACE (footer, .v8-ps-dark, dark badges,
+   9×); --color-parchment is light TEXT on those dark sections (64×) but also a
+   light SURFACE (cards, 80×). The global block above resolves the majority case
+   (espresso→light text, parchment→dark surface). The blocks below fix the
+   minority by (a) RE-DECLARING the overloaded tokens at each dark-section scope
+   so they snap back to their dark-context meaning (custom props cascade by
+   element), and (b) restyling the rules that hardcode hex (bypassing tokens).
+   ========================================================================== */
+
+/* ---- (a) Dark feature sections — keep them dark with light text -------------
+   These set `background: var(--color-espresso)` + light text in the base theme
+   (strong dark accents on a light page). On the night canvas they stay dark
+   accents: re-pin espresso to a deep surface and parchment to light text, so
+   every descendant resolves correctly without per-child rules. */
+body[data-skin="notte"] .v8-pfoot,
+body[data-skin="notte"] .v8-ps-dark,
+body[data-skin="notte"] .v8-mi-signature,
+body[data-skin="notte"] .v8-cart-combo,
+body[data-skin="notte"] .v8-cart-toast,
+body[data-skin="notte"] .v8-cart-tod.is-late,
+body[data-skin="notte"] .v8-rewards-tier,
+body[data-skin="notte"] .v8-rewards-wallet-btn,
+body[data-skin="notte"] .v8-rewards-wallet-confirm-cta,
+body[data-skin="notte"] .v8-rewards-loyalty-qr-cell.is-on {
+  --color-espresso: #0d0a07;          /* deep surface (recedes below the canvas) */
+  --color-espresso-soft: #2a1d14;     /* subtle border/hairline inside the block */
+  --color-parchment: #f3e7d3;         /* light text inside the dark block */
+  --color-parchment-deep: #e8dcc8;
+  --color-ink: #f3e7d3;
+}
+
+/* ---- (b1) Form surfaces — hardcoded #fff / gray, bypass tokens ------------- */
+body[data-skin="notte"] .pub-input,
+body[data-skin="notte"] .pub-select,
+body[data-skin="notte"] .pub-card,
+body[data-skin="notte"] .v8-pulse-textarea {
+  background-color: #221a13;
+  border-color: #4a3a2c;
+  color: var(--color-foreground);
+}
+body[data-skin="notte"] .pub-input::placeholder,
+body[data-skin="notte"] .v8-pulse-textarea::placeholder { color: #9c8a6f; }
+
+/* ---- (b2) Cream solid surfaces (#FBF4E1) → raised dark panel --------------- */
+body[data-skin="notte"] .v8-cart-day,
+body[data-skin="notte"] .v8-cart-note,
+body[data-skin="notte"] .v8-cart-slot,
+body[data-skin="notte"] .v8-cart-textarea,
+body[data-skin="notte"] .v8-menu-search,
+body[data-skin="notte"] .v8-notify-input,
+body[data-skin="notte"] .v8-order-feedback-input,
+body[data-skin="notte"] .v8-order-feedback-textarea,
+body[data-skin="notte"] .v8-rewards-input,
+body[data-skin="notte"] .v8-rewards-signin-input {
+  background: #221a13;
+  border-color: #4a3a2c;
+}
+/* focus state (#FDF8E8) → a touch lighter */
+body[data-skin="notte"] .v8-address-ac-list,
+body[data-skin="notte"] .v8-cart-textarea:focus,
+body[data-skin="notte"] .v8-notify-input:focus,
+body[data-skin="notte"] .v8-order-feedback-input:focus,
+body[data-skin="notte"] .v8-order-feedback-textarea:focus,
+body[data-skin="notte"] .v8-rewards-input:focus,
+body[data-skin="notte"] .v8-rewards-signin-input:focus {
+  background: #2e231a;
+}
+
+/* ---- (b3) Cream→parchment gradient cards → dark elevated gradient ---------- */
+body[data-skin="notte"] .v8-bundle,
+body[data-skin="notte"] .v8-cart-ladder,
+body[data-skin="notte"] .v8-cat-sort-menu,
+body[data-skin="notte"] .v8-combo-card,
+body[data-skin="notte"] .v8-composer,
+body[data-skin="notte"] .v8-loc-card,
+body[data-skin="notte"] .v8-mi,
+body[data-skin="notte"] .v8-chat-fab,
+body[data-skin="notte"] .v8-float-cart {
+  background: linear-gradient(180deg, #2a2017 0%, #1f1710 100%);
+}
+/* pay bars (parchment→#F2E2C2) + skeleton shimmer */
+body[data-skin="notte"] .v8-cart-paybar,
+body[data-skin="notte"] .v8-detail-paybar {
+  background: linear-gradient(180deg, #241b13 0%, #1b140e 100%);
+}
+body[data-skin="notte"] .v8-cart-slot-skel {
+  background: linear-gradient(90deg, #241b13, #2e231a, #241b13);
+}
+
+/* ---- (b4) Gold borders (#B58F36) → night ochre ---------------------------- */
+body[data-skin="notte"] .v8-cart-perk-cta,
+body[data-skin="notte"] .v8-cart-tod-cta,
+body[data-skin="notte"] .v8-notify-cta,
+body[data-skin="notte"] .v8-mi-flag.is-gold,
+body[data-skin="notte"] .v8-order-step.is-active.is-pending .v8-order-step-dot,
+body[data-skin="notte"] .v8-rewards-combo-tag,
+body[data-skin="notte"] .v8-rewards-reward-cta,
+body[data-skin="notte"] .v8-rewards-tier-pill,
+body[data-skin="notte"] .v8-rewards-tier-tile.is-active .v8-rewards-tier-tile-name {
+  border-color: var(--color-ochre);
+}
+
+/* ---- (b5) Basil-green text (#2E5840) → night basil ------------------------ */
+body[data-skin="notte"] .v8-switcher-basil .v8-switcher-trigger,
+body[data-skin="notte"] .v8-switcher-basil .v8-switcher-opt[aria-selected="true"] .v8-switcher-opt-code,
+body[data-skin="notte"] .v8-chat-row.is-bot .v8-chat-avatar {
+  color: var(--color-basil);
+}
+
+/* ---- (b6) Sticky nav — hardcoded light parchment rgba → night glass -------- */
+body[data-skin="notte"] .v8-nav {
+  background: linear-gradient(180deg, rgba(26, 19, 13, 0.96) 0%, rgba(26, 19, 13, 0.82) 100%);
+  border-bottom-color: var(--color-line);
+}

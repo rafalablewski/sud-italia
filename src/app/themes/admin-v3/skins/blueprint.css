@@ -35,10 +35,12 @@
   --av3-fg: #e8eefb;
   --av3-muted: #a3b6d6;
   --av3-subtle: #8395b8;
-  /* brand + accent — cyan */
-  --av3-brand: #38bdf8;
-  --av3-brand-soft: color-mix(in oklab, var(--av3-brand) 18%, var(--av3-s1));
-  --av3-brand-line: color-mix(in oklab, var(--av3-brand) 42%, transparent);
+  /* brand — a deep azure so the hardcoded white button text (color:#fff on
+     var(--av3-brand)) clears WCAG AA; the bright cyan stays the accent glow +
+     chart c1, where white legibility doesn't apply. */
+  --av3-brand: #2563eb;
+  --av3-brand-soft: color-mix(in oklab, var(--av3-brand) 20%, var(--av3-s1));
+  --av3-brand-line: color-mix(in oklab, #38bdf8 46%, transparent);
   --av3-platinum: #9fb3d6;
   /* status */
   --av3-ok: #34d399;
@@ -63,6 +65,23 @@
   color-scheme: dark;
 }
 
+/* Faint drafting grid on the base canvas — the "blueprint" tell. Panels
+   (--av3-s1/s2/s3) paint over it, so it only shows through the gaps. The
+   grid + size track the cool line token but stay quiet enough not to fight
+   dense tables. Background-color keeps the canvas solid beneath the lines. */
+.av3-root[data-skin="blueprint"] {
+  background-color: var(--av3-bg);
+  background-image:
+    linear-gradient(rgba(120, 170, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 170, 255, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+[data-admin-theme="light"] .av3-root[data-skin="blueprint"] {
+  background-image:
+    linear-gradient(rgba(30, 64, 124, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 64, 124, 0.06) 1px, transparent 1px);
+}
+
 /* LIGHT — honours the operator's light toggle (deeper selector wins) */
 [data-admin-theme="light"] .av3-root[data-skin="blueprint"] {
   --av3-bg: #eef3fb;
@@ -75,7 +94,9 @@
   --av3-fg: #0f2147;
   --av3-muted: #3f5380;
   --av3-subtle: #5d72a0;
-  --av3-brand: #0c8fd6;
+  /* deep enough that white button text clears AA in light mode too */
+  --av3-brand: #1366c4;
+  --av3-brand-line: color-mix(in oklab, #0c8fd6 50%, transparent);
   --av3-platinum: #5b6f99;
   --av3-ok: #0e9f6e;
   --av3-warn: #b07d12;

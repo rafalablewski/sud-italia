@@ -34,7 +34,22 @@ flips the toggle to dark
 | id        | label     | Live code                          | Look |
 | --------- | --------- | ---------------------------------- | ---- |
 | `default` | Core Dark | `themes/core/index.css` + `tokens.css` | The shipped Core — near-black flat materials for night trucks + kitchen glare. |
-| `solare`  | Solare    | `themes/core/skins/solare.css`     | A warm-daylight Core — sun-bleached parchment surfaces (`#fbf3e7`), terracotta brand (`#c0492a`), softer radii. Light base + a warm-dim dark variant. |
+| `solare`  | Solare    | `themes/core/skins/solare.css`     | A warm-daylight Core — sun-bleached parchment surfaces (`#fbf3e7`), terracotta brand (`#c0492a`), softer radii. Light base + a warm-dim dark variant. Covers the in-shell KDS board; the fullscreen kiosk stays dark by design. |
+
+## Production coverage — the KDS board
+
+Core chrome is fully token-driven, so the root block repaints it. The one
+surface the root block can't reach is the **KDS board**: `.core-kds` and
+`.core-kiosk` re-declare `--bg`/`--ink`/tone tokens *on their own
+element*, and custom properties cascade by proximity — so the value set
+on `.core` (the root) loses to the value set on `.core-kds` itself.
+
+Solare therefore re-declares the KDS palette explicitly, scoped to the
+**in-shell** board only (`.core[data-skin="solare"] .core-body .core-kds`,
+plus a `[data-theme="dark"]` warm-dim variant). The **fullscreen kiosk**
+(`.core-kiosk .core-kds`, which is not under `.core-body`) is left as a
+dark wall on purpose — kitchen glare / night trucks — matching the base
+theme's own light/dark KDS rule.
 
 ## Adding a core skin
 
