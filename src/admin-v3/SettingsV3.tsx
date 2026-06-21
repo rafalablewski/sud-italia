@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Fingerprint, FlaskConical, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
+import { SURFACE_LABELS, THEME_SKINS, THEME_SURFACES, type ThemeSkinSettings, type ThemeSurface } from "@/lib/theme-skins";
 import { Badge, Button, Card, CardBody, CardHead, SkeletonPage, Switch } from "./ui";
 
 interface Layout {
@@ -78,13 +79,19 @@ export function SettingsV3() {
   const [ig, setIg] = useState(""); const [fb, setFb] = useState(""); const [tt, setTt] = useState("");
   const [refSingle, setRefSingle] = useState(""); const [refComp, setRefComp] = useState("");
   const [th, setTh] = useState<Record<string, string>>({});
+  // Active theme-skin per surface (homepage / admin / core). DB-global; toggles
+  // save instantly per Rule #7. Picking the Admin skin reloads so the operator
+  // sees their own surface repaint right away.
+  const [skins, setSkins] = useState<ThemeSkinSettings | null>(null);
+  const [savingSkin, setSavingSkin] = useState<ThemeSurface | null>(null);
 
   const load = useCallback(async () => {
-    const [d, m] = await Promise.all([
+    const [d, m, sk] = await Promise.all([
       fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : {})).catch(() => ({})) as Promise<Settings>,
       fetch("/api/admin/me").then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<Me | null>,
+      fetch("/api/admin/themes").then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<ThemeSkinSettings | null>,
     ]);
-    setS(d); setMe(m);
+    setS(d); setMe(m); setSkins(sk);
     setBizName(d.businessName ?? "");
     setTips((d.tipPresets ?? [0.1, 0.15, 0.2]).map((p) => Math.round(p * 100)).join(", "));
     setFeePct(String((d.processorFee?.pct ?? 0.014) * 100)); setFeeFixed(zl(d.processorFee?.fixedGrosze ?? 40));
@@ -114,6 +121,20 @@ export function SettingsV3() {
   const put = async (updates: Partial<Settings>) => {
     setS((cur) => ({ ...cur, ...updates }));
     await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+  };
+
+  // Swap the active skin for one surface. Persists instantly (Rule #7); the
+  // /admin skin needs a reload to repaint the operator's own surface (it's
+  // rendered onto data-skin server-side in the layout).
+  const saveSkin = async (surface: ThemeSurface, skinId: string) => {
+    setSkins((cur) => (cur ? { ...cur, [surface]: skinId } : cur));
+    setSavingSkin(surface);
+    try {
+      await fetch("/api/admin/themes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [surface]: skinId }) });
+      if (surface === "admin") { window.location.reload(); return; }
+    } finally {
+      setSavingSkin(null);
+    }
   };
 
   // Simulation mode flips the WHOLE app onto an isolated `sim:` namespace
@@ -501,7 +522,46 @@ export function SettingsV3() {
 
       {tab === "themes" && (
         <>
-          <div className="av3-cell-muted" style={{ fontSize: 12, marginBottom: 4 }}>Read-only inspector for the three-theme architecture (the live source of truth is the code; this mirrors <span style={{ fontFamily: "var(--av3-mono)" }}>design-system.json</span>).</div>
+          <Card>
+            <CardHead
+              title="Active skins"
+              description="Swap the whole look of a surface — its own classes, selectors & tokens. Applies to every visitor (DB-global). Saves instantly."
+              actions={<Badge tone="neutral">{THEME_SURFACES.length} surfaces</Badge>}
+            />
+            <CardBody>
+              {skins ? THEME_SURFACES.map((surface) => {
+                const active = skins[surface];
+                const activeSkin = THEME_SKINS[surface].find((sk) => sk.id === active);
+                return (
+                  <div key={surface} style={{ padding: "10px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{SURFACE_LABELS[surface]}</div>
+                      <div className="av3-cell-muted" style={{ fontSize: 11.5 }}>{activeSkin?.description}</div>
+                    </div>
+                    <div className="av3-filterchips" style={{ marginBottom: 0 }}>
+                      {THEME_SKINS[surface].map((sk) => (
+                        <button
+                          key={sk.id}
+                          type="button"
+                          className={`av3-fchip ${active === sk.id ? "is-active" : ""}`}
+                          disabled={savingSkin === surface}
+                          onClick={() => { if (active !== sk.id) saveSkin(surface, sk.id); }}
+                          title={sk.description}
+                        >
+                          <Palette style={{ width: 13, height: 13 }} /> {sk.label}
+                          {sk.id === "default" ? " · default" : ""}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }) : <div className="av3-cell-muted" style={{ fontSize: 12 }}>Loading skins…</div>}
+              <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 10 }}>
+                Picking the <strong>Admin</strong> skin reloads this page so your own surface repaints. <strong>Business</strong> & <strong>Core</strong> skins apply on those surfaces (the storefront repaints on next load; Core on next navigation).
+              </div>
+            </CardBody>
+          </Card>
+          <div className="av3-cell-muted" style={{ fontSize: 12, margin: "16px 0 4px" }}>Read-only inspector for the three-theme architecture (the live source of truth is the code; this mirrors <span style={{ fontFamily: "var(--av3-mono)" }}>design-system.json</span>).</div>
           {Object.entries(THEMES).map(([key, t]) => (
             <Card key={key}>
               <CardHead title={t.label} description={t.blurb} actions={<Badge tone="neutral">{t.files.length} files</Badge>} />

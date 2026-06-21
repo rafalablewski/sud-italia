@@ -44,6 +44,7 @@ import {
 import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { getDailyAiSpendGrosze } from "@/lib/ai/conversations";
 import { isSlotFull } from "@/lib/slot-capacity";
+import { resolveSkinSettings, type ThemeSkinSettings } from "@/lib/theme-skins";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
@@ -3784,6 +3785,30 @@ export async function updateAiModelSettings(modelId: string): Promise<AiModelSet
     const next: AiModelSettings = { modelId };
     await writeJSON("ai-model.json", next);
     return next;
+  });
+}
+
+// --- Theme skins (admin/settings → Themes) ------------------------------
+//
+// DB-global active skin per surface (homepage / admin / core). An operator
+// picks a skin in /admin/settings → Themes and it applies to EVERY visitor.
+// Persisted as a tiny `{ homepage, admin, core }` record; every read + write
+// is coerced through resolveSkinSettings() so a removed skin can never leave
+// a surface pointing at a missing stylesheet. See src/lib/theme-skins.ts.
+
+export async function getThemeSkinSettings(): Promise<ThemeSkinSettings> {
+  const saved = await readJSON<Partial<ThemeSkinSettings>>("theme-skins.json", {});
+  return resolveSkinSettings(saved);
+}
+
+export async function updateThemeSkinSettings(
+  updates: Partial<ThemeSkinSettings>,
+): Promise<ThemeSkinSettings> {
+  return withLock("theme-skins.json", async () => {
+    const current = await readJSON<Partial<ThemeSkinSettings>>("theme-skins.json", {});
+    const merged = resolveSkinSettings({ ...current, ...updates });
+    await writeJSON("theme-skins.json", merged);
+    return merged;
   });
 }
 

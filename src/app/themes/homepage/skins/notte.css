@@ -1,0 +1,119 @@
+/* ============================================================================
+   Homepage skin — "Notte"  (data-skin="notte")
+   ----------------------------------------------------------------------------
+   An alternate storefront theme: a candle-lit night room. Where the shipped
+   Trattoria skin is a warm parchment daylight canvas, Notte is deep espresso
+   with warm cream ink and an ochre/terracotta glow.
+
+   HOW IT'S SCOPED — everything sits under `body[data-skin="notte"]`. The
+   (public) layout's pre-paint boot script + HomepageSkinSync set `data-skin`
+   on <body> (not the wrapper) so the skin also reaches Rule-#4 portal overlays
+   (CartDrawer, ItemDetailDrawer, …) which mount to document.body. HomepageSkinSync
+   removes the attribute on unmount, so the skin can never leak onto /admin or
+   /core (which don't use any `.pub-*` / `italia-*` / V8 class anyway).
+
+   HOW IT REPAINTS — the storefront's bulk is `.pub-*` classes + index.css rules
+   that read `var(--color-*)`, so redefining those tokens here flips them. The
+   homepage `tokens.css` uses Tailwind's `@theme inline`, which bakes literal
+   values into `bg-italia-*` / `text-espresso` utilities — those don't follow a
+   runtime var change, so the small set of utilities the storefront actually
+   uses is re-pointed back to `var(--color-*)` below (a plain stylesheet rule
+   outranks Tailwind's layered utilities, so no `!important` is needed).
+
+   Docs: docs/design-system/homepage/skins.md  (CLAUDE.md Rule #11).
+   ========================================================================== */
+
+body[data-skin="notte"] {
+  /* canvas + foreground */
+  --color-background: #17110d;       /* espresso near-black */
+  --color-foreground: #f3e7d3;       /* warm cream ink */
+
+  /* italia-* semantic aliases (kept; remapped for night) */
+  --color-italia-red: #c0494a;       /* glowing oxblood — brand */
+  --color-italia-red-dark: #a23a3b;
+  --color-italia-green: #6fae79;     /* basil — open / active */
+  --color-italia-green-dark: #5a9466;
+  --color-italia-cream: #211812;     /* "cream" surfaces become dark panels */
+  --color-italia-cream-dark: #2b201a;
+  --color-italia-gold: #e3b75c;      /* ochre — editorial accent */
+  --color-italia-gold-dark: #c79a3f;
+  --color-italia-dark: #f3e7d3;      /* "dark ink" → light ink on dark canvas */
+  --color-italia-gray: #b8a482;      /* muted secondary text */
+  --color-italia-light-gray: #3a2c22;/* disabled / inactive line */
+
+  /* V8 named tokens */
+  --color-parchment: #211812;
+  --color-parchment-deep: #2b201a;
+  --color-paper-shadow: #0f0a07;
+  --color-terracotta: #d2754a;
+  --color-terracotta-dark: #b85c38;
+  --color-terracotta-soft: #e0966e;
+  --color-basil: #6fae79;
+  --color-basil-deep: #5a9466;
+  --color-oxblood: #c0494a;
+  --color-oxblood-soft: #d98080;
+  --color-ochre: #e3b75c;
+  --color-ochre-light: #f0d28e;
+  --color-espresso: #f3e7d3;         /* espresso was the darkest ink → invert */
+  --color-espresso-soft: #cdbb9c;
+  --color-ink: #f3e7d3;
+  --color-muted: #b8a482;
+  --color-line: #4a3a2c;
+  --color-line-soft: #3a2c22;
+
+  background: var(--color-background);
+  color: var(--color-foreground);
+  color-scheme: dark;
+}
+
+/* The (public) wrapper is the visible canvas (flex-1 fills the viewport); the
+   paper-grain + warm radial wash from index.css `body` stays cream-tinted, so
+   give the night canvas its own dark fill + a cooler ember glow. */
+body[data-skin="notte"] .homepage-canvas {
+  background-color: #17110d;
+  background-image:
+    radial-gradient(at 18% 6%, rgba(227, 183, 92, 0.10), transparent 55%),
+    radial-gradient(at 82% 94%, rgba(192, 73, 74, 0.12), transparent 55%);
+}
+
+/* ---- re-point the handful of @theme-inline utilities the storefront uses ----
+   These compiled to literal Trattoria hex; send them back through the vars
+   redefined above so a Notte cart / badge / heading repaints with the page. */
+body[data-skin="notte"] .bg-italia-cream { background-color: var(--color-italia-cream); }
+body[data-skin="notte"] .bg-italia-cream-dark { background-color: var(--color-italia-cream-dark); }
+body[data-skin="notte"] .bg-italia-red { background-color: var(--color-italia-red); }
+body[data-skin="notte"] .bg-italia-red-dark { background-color: var(--color-italia-red-dark); }
+body[data-skin="notte"] .bg-italia-green { background-color: var(--color-italia-green); }
+body[data-skin="notte"] .bg-italia-green-dark { background-color: var(--color-italia-green-dark); }
+body[data-skin="notte"] .bg-italia-gold { background-color: var(--color-italia-gold); }
+body[data-skin="notte"] .bg-italia-dark { background-color: var(--color-italia-dark); color: #17110d; }
+body[data-skin="notte"] .bg-parchment { background-color: var(--color-parchment); }
+body[data-skin="notte"] .bg-parchment-deep { background-color: var(--color-parchment-deep); }
+body[data-skin="notte"] .bg-terracotta { background-color: var(--color-terracotta); }
+body[data-skin="notte"] .bg-white { background-color: #211812; }
+
+body[data-skin="notte"] .text-italia-dark { color: var(--color-italia-dark); }
+body[data-skin="notte"] .text-italia-gray { color: var(--color-italia-gray); }
+body[data-skin="notte"] .text-italia-red { color: var(--color-oxblood-soft); }
+body[data-skin="notte"] .text-italia-gold { color: var(--color-italia-gold); }
+body[data-skin="notte"] .text-italia-gold-dark { color: var(--color-italia-gold-dark); }
+body[data-skin="notte"] .text-italia-green { color: var(--color-italia-green); }
+body[data-skin="notte"] .text-italia-green-dark { color: var(--color-italia-green-dark); }
+body[data-skin="notte"] .text-espresso { color: var(--color-espresso); }
+body[data-skin="notte"] .text-muted { color: var(--color-muted); }
+body[data-skin="notte"] .text-terracotta { color: var(--color-terracotta); }
+body[data-skin="notte"] .text-parchment { color: var(--color-parchment); }
+
+body[data-skin="notte"] .border-italia-gold { border-color: var(--color-italia-gold); }
+body[data-skin="notte"] .border-italia-red { border-color: var(--color-italia-red); }
+body[data-skin="notte"] .border-italia-dark { border-color: var(--color-line); }
+body[data-skin="notte"] .border-italia-green { border-color: var(--color-italia-green); }
+body[data-skin="notte"] .border-line { border-color: var(--color-line); }
+body[data-skin="notte"] .border-line-soft { border-color: var(--color-line-soft); }
+body[data-skin="notte"] .ring-italia-gold { --tw-ring-color: var(--color-italia-gold); }
+
+/* Lift white cards a touch off the dark canvas so paper elevation still reads. */
+body[data-skin="notte"] .pub-card,
+body[data-skin="notte"] .v8-card {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 30px rgba(0, 0, 0, 0.55);
+}

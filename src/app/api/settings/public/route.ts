@@ -8,17 +8,19 @@ import {
   getLoyaltySettings,
   getPaymentSettings,
   getSettings,
+  getThemeSkinSettings,
   LIVE_WIDGET_LIMIT,
   resolveLocationCompliance,
 } from "@/lib/store";
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
-  const [settings, appSettings, paymentSettings, integrationSettings] = await Promise.all([
+  const [settings, appSettings, paymentSettings, integrationSettings, skins] = await Promise.all([
     getLoyaltySettings(),
     getSettings(),
     getPaymentSettings(),
     getIntegrationSettings(),
+    getThemeSkinSettings(),
   ]);
   const cryptoOn = paymentSettings.methods.some((m) => m.id === "bitcoin" && m.enabled);
   // Merge over the defaults so every flag is a guaranteed boolean even for
@@ -164,5 +166,10 @@ export async function GET(req: NextRequest) {
     marketplaces: integrationSettings.connections
       .filter((c) => c.enabled && c.orderUrl)
       .map((c) => ({ provider: c.provider, url: c.orderUrl as string })),
+    /** Active storefront skin (DB-global, set in /admin/settings → Themes).
+     *  The (public) layout's pre-paint boot script + HomepageSkinSync apply
+     *  it to `data-skin` so the whole storefront repaints without a deploy.
+     *  See src/lib/theme-skins.ts. */
+    homepageSkin: skins.homepage,
   });
 }

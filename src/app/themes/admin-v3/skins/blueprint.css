@@ -1,0 +1,90 @@
+/* ============================================================================
+   Admin skin — "Blueprint"  (data-skin="blueprint")
+   ----------------------------------------------------------------------------
+   An alternate Admin v3 theme: a cool drafting-table console. Where the shipped
+   Operator Terminal is a warm-neutral dark canvas with a Neapolitan burgundy
+   accent, Blueprint is deep navy with a cyan brand and crisp blue hairlines.
+
+   HOW IT'S SCOPED — every rule sits under `.av3-root[data-skin="blueprint"]`.
+   The (shell) layout renders the active skin onto `data-skin` server-side
+   (admin is already dynamic, so no flash). All of Admin v3 reads `--av3-*`
+   tokens, so redefining the token palette here repaints the whole back-office
+   — no per-component rules needed.
+
+   This file is loaded AFTER index.css, so at equal specificity it wins; the
+   light-mode block is one selector deeper (`[data-admin-theme="light"]
+   .av3-root[data-skin="blueprint"]`, 0,3,0) so it beats index.css's own light
+   block (0,2,0) and the dark Blueprint block above it. Result: Blueprint
+   still honours the operator's light/dark toggle.
+
+   Docs: docs/design-system/admin/skins.md  (CLAUDE.md Rule #11).
+   ========================================================================== */
+
+/* DARK — default */
+.av3-root[data-skin="blueprint"] {
+  /* canvas */
+  --av3-bg: #0a1020;
+  --av3-s1: #0f1730;
+  --av3-s2: #15203f;
+  --av3-s3: #1c2a4f;
+  --av3-hover: #243561;
+  /* hairlines — cool blue ink */
+  --av3-line: rgba(120, 170, 255, 0.10);
+  --av3-line-strong: rgba(120, 170, 255, 0.20);
+  /* text */
+  --av3-fg: #e8eefb;
+  --av3-muted: #a3b6d6;
+  --av3-subtle: #8395b8;
+  /* brand + accent — cyan */
+  --av3-brand: #38bdf8;
+  --av3-brand-soft: color-mix(in oklab, var(--av3-brand) 18%, var(--av3-s1));
+  --av3-brand-line: color-mix(in oklab, var(--av3-brand) 42%, transparent);
+  --av3-platinum: #9fb3d6;
+  /* status */
+  --av3-ok: #34d399;
+  --av3-warn: #fbbf24;
+  --av3-bad: #f87171;
+  --av3-info: #60a5fa;
+  --av3-ok-soft: color-mix(in oklab, var(--av3-ok) 16%, var(--av3-s1));
+  --av3-warn-soft: color-mix(in oklab, var(--av3-warn) 16%, var(--av3-s1));
+  --av3-bad-soft: color-mix(in oklab, var(--av3-bad) 16%, var(--av3-s1));
+  --av3-info-soft: color-mix(in oklab, var(--av3-info) 16%, var(--av3-s1));
+  /* chart palette — cool spectrum */
+  --av3-c1: #38bdf8; --av3-c2: #818cf8; --av3-c3: #2dd4bf; --av3-c4: #34d399;
+  --av3-c5: #a78bfa; --av3-c6: #60a5fa; --av3-c7: #f472b6; --av3-c8: #fbbf24;
+  --av3-grid: rgba(120, 170, 255, 0.08);
+  /* geometry — sharper, technical */
+  --av3-r-sm: 3px;
+  --av3-r-md: 5px;
+  --av3-r-lg: 8px;
+  /* elevation — cool cast */
+  --av3-sh-1: 0 1px 2px rgba(2, 8, 24, 0.5);
+  --av3-sh-2: 0 10px 30px -10px rgba(2, 8, 24, 0.65);
+  color-scheme: dark;
+}
+
+/* LIGHT — honours the operator's light toggle (deeper selector wins) */
+[data-admin-theme="light"] .av3-root[data-skin="blueprint"] {
+  --av3-bg: #eef3fb;
+  --av3-s1: #ffffff;
+  --av3-s2: #f3f7fe;
+  --av3-s3: #e6eefb;
+  --av3-hover: #dbe7fa;
+  --av3-line: rgba(30, 64, 124, 0.12);
+  --av3-line-strong: rgba(30, 64, 124, 0.22);
+  --av3-fg: #0f2147;
+  --av3-muted: #3f5380;
+  --av3-subtle: #5d72a0;
+  --av3-brand: #0c8fd6;
+  --av3-platinum: #5b6f99;
+  --av3-ok: #0e9f6e;
+  --av3-warn: #b07d12;
+  --av3-bad: #d6453f;
+  --av3-info: #2b7fd0;
+  --av3-c1: #0c8fd6; --av3-c2: #5b63d6; --av3-c3: #119e8c; --av3-c4: #0e9f6e;
+  --av3-c5: #7c5cd6; --av3-c6: #2b7fd0; --av3-c7: #c84f8f; --av3-c8: #b07d12;
+  --av3-grid: rgba(30, 64, 124, 0.08);
+  --av3-sh-1: 0 1px 2px rgba(30, 64, 124, 0.07);
+  --av3-sh-2: 0 10px 30px -10px rgba(30, 64, 124, 0.2);
+  color-scheme: light;
+}

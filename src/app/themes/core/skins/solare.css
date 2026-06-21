@@ -1,0 +1,74 @@
+/* ============================================================================
+   Core skin — "Solare"  (data-skin="solare")
+   ----------------------------------------------------------------------------
+   An alternate Core theme: warm daylight for bright service. Where the shipped
+   Core theme is near-black flat for night trucks + kitchen glare, Solare is
+   sun-bleached parchment with a terracotta brand — built for a sunlit counter.
+
+   HOW IT'S SCOPED — every rule sits under `.core[data-skin="solare"]`. The
+   /core layout renders the active skin onto `data-skin` server-side (Core is
+   already dynamic, so no flash) on the SAME element that carries `data-theme`
+   (light/dark). All Core chrome reads the `--bg`/`--ink`/`--brand`/… tokens,
+   so redefining them here repaints the whole surface.
+
+   Loaded AFTER index.css (which @imports tokens.css), so the base block below
+   (`.core[data-skin="solare"]`, 0,2,0) wins at equal specificity over the
+   default `.core[data-theme="dark|light"]` palettes. It deliberately sets a
+   light palette for BOTH modes — Solare is a daylight skin — and then layers a
+   warm-dim variant for when the operator flips the light/dark toggle to dark
+   (`.core[data-skin="solare"][data-theme="dark"]`, 0,3,0, deeper → wins).
+
+   Docs: docs/design-system/core/skins.md  (CLAUDE.md Rule #11).
+   ========================================================================== */
+
+/* Base — warm daylight (also the default-mode look) */
+.core[data-skin="solare"] {
+  --bg: #fbf3e7;
+  --panel: #fffaf1;
+  --panel-2: #f6ecdb;
+  --panel-3: #efe2cd;
+  --hover: #f3e7d2;
+  --ink: #2a1d12;
+  --ink-2: #6f5a44;
+  --ink-3: #9c8569;
+  --line: rgba(82, 52, 22, 0.13);
+  --line-2: rgba(82, 52, 22, 0.20);
+  --brand: #c0492a;
+  --brand-bright: #d2603f;
+  --brand-wash: rgba(192, 73, 42, 0.12);
+  --basil: #4a7c59; --basil-wash: rgba(74, 124, 89, 0.14);
+  --amber: #c2831f; --amber-wash: rgba(201, 137, 42, 0.16);
+  --info: #3f73b0; --info-wash: rgba(63, 115, 176, 0.14);
+  --danger: #c33b2f; --danger-wash: rgba(195, 59, 47, 0.13);
+  --sh-1: 0 1px 2px rgba(82, 52, 22, 0.08);
+  --sh-2: 0 4px 14px rgba(82, 52, 22, 0.12), 0 1px 3px rgba(82, 52, 22, 0.08);
+  --sh-pop: 0 18px 48px rgba(82, 52, 22, 0.22);
+  /* softer radii for the warmer daylight feel */
+  --r-sm: 9px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
+  color-scheme: light;
+}
+
+/* Warm-dim — when the operator toggles dark, keep the terracotta identity. */
+.core[data-skin="solare"][data-theme="dark"] {
+  --bg: #1c150f;
+  --panel: #251c13;
+  --panel-2: #2c2117;
+  --panel-3: #34281b;
+  --hover: #3a2c1d;
+  --ink: #f3e6d2;
+  --ink-2: #c3ad92;
+  --ink-3: #8f7a61;
+  --line: rgba(255, 230, 200, 0.10);
+  --line-2: rgba(255, 230, 200, 0.17);
+  --brand: #d2603f;
+  --brand-bright: #e07a52;
+  --brand-wash: rgba(210, 96, 63, 0.18);
+  --basil: #5cae79; --basil-wash: rgba(92, 174, 121, 0.16);
+  --amber: #d99a3c; --amber-wash: rgba(217, 154, 60, 0.16);
+  --info: #6f9bd0; --info-wash: rgba(111, 155, 208, 0.18);
+  --danger: #e2574f; --danger-wash: rgba(226, 87, 79, 0.18);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --sh-2: 0 6px 18px rgba(0, 0, 0, 0.55);
+  --sh-pop: 0 20px 50px rgba(0, 0, 0, 0.62);
+  color-scheme: dark;
+}

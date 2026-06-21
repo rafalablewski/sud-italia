@@ -78,6 +78,42 @@ delete / rename to theme code ships in the same commit as the matching
 edit under `docs/design-system/<theme>/`. Audits (`docs/audits/`) are
 historical snapshots and never edited retroactively.
 
+## Skins — swapping a surface's whole theme
+
+Each of the three surfaces can be swapped to a **different skin** — a
+totally distinct theme with its own selector namespace, its own token
+values. This is the "switch theme" layer on top of the per-theme
+ownership above: the base theme is the `default` skin; alternates live
+beside it and are selected at runtime.
+
+- **Registry** — `src/lib/theme-skins.ts` (pure, client+server safe) is
+  the one place that lists which skins exist per surface. The `default`
+  skin is always the shipped theme (no extra CSS file).
+- **Persistence** — `getThemeSkinSettings()` /
+  `updateThemeSkinSettings()` in `src/lib/store.ts` persist a tiny
+  `{ homepage, admin, core }` record. It's **DB-global**: one operator
+  choice repaints the surface for every visitor.
+- **Control** — `/admin/settings → Themes` → **Active skins** (a picker
+  per surface; saves instantly per Rule #7). Writes go through
+  `PUT /api/admin/themes` (owner-gated, audited).
+- **Application** — each skin's CSS is scoped under a `[data-skin="<id>"]`
+  selector and is **always loaded** (inert until active):
+  - **Admin** + **Core** are already dynamic, so the layout
+    server-renders `data-skin` onto the surface root — no flash.
+  - **Homepage** stays static, so the skin is delivered via
+    `/api/settings/public` (`homepageSkin`) + a pre-paint boot script,
+    applied to `<body>` by `HomepageSkinSync` (which also reaches Rule-#4
+    portal overlays and cleans up on unmount).
+
+Per-theme detail + the example alternate skin for each surface:
+[admin/skins.md](./admin/skins.md) ·
+[core/skins.md](./core/skins.md) ·
+[homepage/skins.md](./homepage/skins.md).
+
+Per Rule #11, every skin CSS file ships with its row in the matching
+`skins.md` and its entry in [`themes.manifest.json`](./themes.manifest.json)
+(regenerate with `npm run gen:design-system`).
+
 ## The `/admin/settings` → Themes inspector
 
 The Themes tab is **data-driven**, not hand-maintained. Its per-theme
