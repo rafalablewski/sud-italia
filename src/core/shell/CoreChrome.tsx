@@ -46,40 +46,58 @@ export function CoreClock() {
 
 /**
  * Light / dark toggle. Core manages its OWN theme (independent of the admin
- * theme boot) by writing `data-theme` on the nearest `.core` wrapper. Dark is
- * the default; the choice persists to localStorage. KDS ignores this (its wall
- * is always dark) — it sets the attribute on its own scope.
+ * theme boot) by writing `data-theme` on the nearest `.core` wrapper. The
+ * default follows the server-rendered attribute (today always dark, but a
+ * future skin could render a light default); the choice persists to
+ * localStorage ONLY when the operator actually toggles, so an unchosen default
+ * never gets pinned and can re-resolve when the active skin changes. KDS
+ * ignores this (its wall is always dark) — it sets the attribute on its own scope.
  */
 export function CoreThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  // null = "not resolved yet — follow the SSR attribute". Resolved on mount
+  // from localStorage (explicit choice) or the server-rendered default.
+  const [theme, setTheme] = useState<"dark" | "light" | null>(null);
 
   useEffect(() => {
     const saved = (typeof localStorage !== "undefined" && localStorage.getItem("core-theme")) as
       | "dark"
       | "light"
       | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else {
+      // No explicit choice — adopt the skin-aware default the server rendered.
+      const ssr = document.querySelector(".core")?.getAttribute("data-theme");
+      setTheme(ssr === "light" ? "light" : "dark");
+    }
   }, []);
 
   useEffect(() => {
+    if (theme === null) return; // leave the SSR attribute untouched until resolved
     const root = document.querySelector(".core");
     if (root) root.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  const toggle = () => {
+    const next = (theme ?? "dark") === "dark" ? "light" : "dark";
+    setTheme(next);
     try {
-      localStorage.setItem("core-theme", theme);
+      localStorage.setItem("core-theme", next); // persist only on an explicit choice
     } catch {
       /* private mode — non-fatal */
     }
-  }, [theme]);
+  };
 
+  const shown = theme ?? "dark";
   return (
     <button
       type="button"
       className="core-iconbtn"
-      title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+      title={shown === "dark" ? "Switch to light" : "Switch to dark"}
       aria-label="Toggle light or dark"
-      onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      onClick={toggle}
     >
-      {theme === "dark" ? (
+      {shown === "dark" ? (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
           <circle cx="12" cy="12" r="4" />
           <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />

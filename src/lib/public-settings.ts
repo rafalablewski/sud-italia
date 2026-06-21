@@ -121,6 +121,10 @@ export interface PublicSettings {
    *  fired trigger. Empty / absent ⇒ nothing to show. Gated overall by
    *  `layout.showNpsSurvey`. */
   surveys?: PublicSurvey[];
+  /** Active storefront skin id (DB-global, set in /admin/settings → Themes).
+   *  HomepageSkinSync applies it to the (public) layout's `data-skin` so the
+   *  whole storefront repaints without a deploy. Absent ⇒ "default". */
+  homepageSkin?: string;
 }
 
 export interface PublicSurvey {

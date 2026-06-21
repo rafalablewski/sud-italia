@@ -2,6 +2,7 @@ import "../themes/core/index.css";
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { CurrencyGuard } from "@/shared/CurrencyGuard";
+import { getThemeSkinSettings } from "@/lib/store";
 import { CoreProviders } from "./CoreProviders";
 
 /**
@@ -30,13 +31,29 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
+// The layout server-renders the DB-global active skin onto `data-skin`, so the
+// surface must render per-request — otherwise a statically-prerendered /core
+// page would bake the build-time skin and ignore later swaps. Core is an
+// authenticated, noindex operator surface, so there's no caching benefit lost.
+export const dynamic = "force-dynamic";
+
 const themeBoot = `(function(){try{var t=localStorage.getItem('core-theme');if(t==='light'||t==='dark'){var el=document.currentScript&&document.currentScript.parentElement;if(el)el.setAttribute('data-theme',t);}}catch(e){}})();`;
 
-export default function CoreLayout({ children }: { children: React.ReactNode }) {
+export default async function CoreLayout({ children }: { children: React.ReactNode }) {
+  // DB-global active Core skin → `data-skin`, so the alternate skin's CSS
+  // (scoped under `.core[data-skin="…"]`) takes over. Core is already dynamic
+  // (operator surface), so the server read is free and flash-free. The
+  // independent `data-theme` (light/dark) boot script below still applies on
+  // top — a skin sets the palette, the toggle picks its light/dark variant.
+  const skins = await getThemeSkinSettings();
+  // Core's default is dark (night trucks / kitchen glare). A future skin that
+  // wants a light default can compute `data-theme` from `skins.core` here;
+  // CoreThemeToggle already adopts whatever the server renders.
   return (
     <div
       id="admin-portal-root"
       data-theme="dark"
+      data-skin={skins.core}
       className={`core ${cvUi.variable} ${cvDisplay.variable} ${cvMono.variable}`}
     >
       <script dangerouslySetInnerHTML={{ __html: themeBoot }} />

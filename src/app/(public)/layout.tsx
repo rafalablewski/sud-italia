@@ -1,5 +1,7 @@
 import "../themes/homepage/index.css";
 import { Lora, Cormorant_Garamond } from "next/font/google";
+import { THEME_SKINS } from "@/lib/theme-skins";
+import { HomepageSkinSync } from "@/components/layout/HomepageSkinSync";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
@@ -60,6 +62,16 @@ const homepageHeading = Cormorant_Garamond({
 // franchisee routes don't load this layout, so :root stays untouched there.
 const fontVarsOnRoot = `:root{--font-homepage-body:${homepageBody.style.fontFamily};--font-homepage-heading:${homepageHeading.style.fontFamily};}`;
 
+// Pre-paint storefront-skin boot. Reads the skin cached on a previous visit and
+// sets `data-skin` on <body> before first paint so repeat visits don't flash
+// the default Trattoria theme before HomepageSkinSync confirms it from the DB.
+// Same pattern as Core's `core-theme` / Admin's `sud-admin-theme` boot scripts.
+// The allowed-id list is derived from the registry so a removed skin can't be
+// re-applied from a stale cache. Public pages stay static — the authoritative
+// value still arrives via /api/settings/public (HomepageSkinSync).
+const homepageSkinIds = JSON.stringify(THEME_SKINS.homepage.map((s) => s.id));
+const skinBoot = `(function(){try{var v=localStorage.getItem('sud-homepage-skin');var ok=${homepageSkinIds};if(v&&v!=='default'&&ok.indexOf(v)>-1){document.body.setAttribute('data-skin',v);}}catch(e){}})();`;
+
 export default function PublicLayout({
   children,
 }: {
@@ -68,7 +80,9 @@ export default function PublicLayout({
   return (
     <CustomerProvider>
       <style dangerouslySetInnerHTML={{ __html: fontVarsOnRoot }} />
-      <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
+      <script dangerouslySetInnerHTML={{ __html: skinBoot }} />
+      <HomepageSkinSync />
+      <div className={`homepage-canvas ${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
         <SimulationBanner />
         <Header />
         <main className="flex-1">{children}</main>
