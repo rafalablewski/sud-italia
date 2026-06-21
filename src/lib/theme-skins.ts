@@ -41,43 +41,30 @@ export const SURFACE_LABELS: Record<ThemeSurface, string> = {
 
 /**
  * Available skins per surface. The first entry is always the `default`
- * (the surface's shipped theme); the rest are alternate skins.
+ * (the surface's shipped theme). Alternate skins get appended here as they
+ * ship — see docs/design-system/<theme>/skins.md for the add checklist.
+ * Today every surface ships only its single current theme.
  */
 export const THEME_SKINS: Record<ThemeSurface, ThemeSkin[]> = {
   homepage: [
     {
       id: "default",
       label: "Trattoria",
-      description: "The shipped V8 Trattoria storefront — warm parchment canvas, oxblood brand, editorial serif.",
-    },
-    {
-      id: "notte",
-      label: "Notte",
-      description: "A candle-lit night skin — deep espresso canvas, warm cream ink, ochre + terracotta glow.",
+      description: "The V8 Trattoria storefront — warm parchment canvas, oxblood brand, editorial serif.",
     },
   ],
   admin: [
     {
       id: "default",
       label: "Operator Terminal",
-      description: "The shipped Admin v3 — density-first warm-neutral dark cockpit with a Neapolitan burgundy accent.",
-    },
-    {
-      id: "blueprint",
-      label: "Blueprint",
-      description: "A cool technical skin — deep navy canvas, cyan brand, drafting-table hairlines.",
+      description: "Admin v3 — density-first warm-neutral dark cockpit with a Neapolitan burgundy accent.",
     },
   ],
   core: [
     {
       id: "default",
       label: "Core Dark",
-      description: "The shipped Core theme — near-black flat materials for night trucks and kitchen glare.",
-    },
-    {
-      id: "solare",
-      label: "Solare",
-      description: "A warm daylight skin — sun-bleached parchment surfaces and terracotta brand for bright service.",
+      description: "The Core theme — near-black flat materials for night trucks and kitchen glare.",
     },
   ],
 };

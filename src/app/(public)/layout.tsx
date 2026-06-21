@@ -1,5 +1,4 @@
 import "../themes/homepage/index.css";
-import "../themes/homepage/skins/notte.css";
 import { Lora, Cormorant_Garamond } from "next/font/google";
 import { THEME_SKINS } from "@/lib/theme-skins";
 import { HomepageSkinSync } from "@/components/layout/HomepageSkinSync";

@@ -47,8 +47,8 @@ export function CoreClock() {
 /**
  * Light / dark toggle. Core manages its OWN theme (independent of the admin
  * theme boot) by writing `data-theme` on the nearest `.core` wrapper. The
- * default follows the server-rendered attribute (which is skin-aware — e.g.
- * the Solare daylight skin defaults to light); the choice persists to
+ * default follows the server-rendered attribute (today always dark, but a
+ * future skin could render a light default); the choice persists to
  * localStorage ONLY when the operator actually toggles, so an unchosen default
  * never gets pinned and can re-resolve when the active skin changes. KDS
  * ignores this (its wall is always dark) — it sets the attribute on its own scope.

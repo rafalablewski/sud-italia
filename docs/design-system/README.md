@@ -80,11 +80,16 @@ historical snapshots and never edited retroactively.
 
 ## Skins — swapping a surface's whole theme
 
-Each of the three surfaces can be swapped to a **different skin** — a
+Each of the three surfaces *can* be swapped to a **different skin** — a
 totally distinct theme with its own selector namespace, its own token
 values. This is the "switch theme" layer on top of the per-theme
 ownership above: the base theme is the `default` skin; alternates live
 beside it and are selected at runtime.
+
+**Today every surface ships only its single current theme** (its
+`default` skin). The swap *mechanism* below is in place so alternates can
+be added later without new plumbing — each surface's `skins.md` has the
+add checklist.
 
 - **Registry** — `src/lib/theme-skins.ts` (pure, client+server safe) is
   the one place that lists which skins exist per surface. The `default`
@@ -105,7 +110,7 @@ beside it and are selected at runtime.
     applied to `<body>` by `HomepageSkinSync` (which also reaches Rule-#4
     portal overlays and cleans up on unmount).
 
-Per-theme detail + the example alternate skin for each surface:
+Per-theme detail + the add-a-skin checklist for each surface:
 [admin/skins.md](./admin/skins.md) ·
 [core/skins.md](./core/skins.md) ·
 [homepage/skins.md](./homepage/skins.md).

@@ -12,10 +12,6 @@
     {
      "path": "src/app/themes/core/tokens.css",
      "description": "Design tokens scoped under .core[data-theme=dark|light]. Dark is the default; light is the option. Surfaces, ink, lines, brand, semantics, elevation, type, radius, motion."
-    },
-    {
-     "path": "src/app/themes/core/skins/solare.css",
-     "description": "Alternate skin 'Solare' (data-skin=solare) — a warm-daylight Core: sun-bleached parchment surfaces + terracotta brand for bright service. Redefines the --bg/--ink/--brand token palette under .core[data-skin=solare] (light base + a warm-dim dark variant). Swap it in /admin/settings → Themes. See docs/design-system/core/skins.md."
     }
    ],
    "routes": [
@@ -45,10 +41,6 @@
     {
      "path": "src/shared/theme.ts",
      "description": "Typed mirror of the [data-admin-theme] tokens for Recharts + inline SVG + the boot script that sets the theme attribute before paint."
-    },
-    {
-     "path": "src/app/themes/admin-v3/skins/blueprint.css",
-     "description": "Alternate skin 'Blueprint' (data-skin=blueprint) for Admin v3 — a cool drafting-table console: deep navy canvas, cyan brand, blue hairlines, sharper radii. Redefines the --av3-* token palette under .av3-root[data-skin=blueprint] (dark + light variants, honouring the light/dark toggle). Swap it in /admin/settings → Themes. See docs/design-system/admin/skins.md."
     }
    ],
    "routes": [
@@ -86,10 +78,6 @@
     {
      "path": "src/app/themes/homepage/theme.ts",
      "description": "Typed JS mirror of --color-italia-* tokens. Imported into the swatches below."
-    },
-    {
-     "path": "src/app/themes/homepage/skins/notte.css",
-     "description": "Alternate skin 'Notte' (data-skin=notte) — a candle-lit night storefront: deep espresso canvas, warm cream ink, ochre/terracotta glow. Scoped under body[data-skin=notte] (set via a pre-paint boot script + HomepageSkinSync so it reaches Rule-#4 portal overlays). Redefines the --color-* tokens + re-points the @theme-inline utilities the storefront uses. Swap it in /admin/settings → Themes. See docs/design-system/homepage/skins.md."
     }
    ],
    "routes": [

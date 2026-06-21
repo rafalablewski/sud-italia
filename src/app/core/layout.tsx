@@ -1,5 +1,4 @@
 import "../themes/core/index.css";
-import "../themes/core/skins/solare.css";
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { CurrencyGuard } from "@/shared/CurrencyGuard";
@@ -47,15 +46,13 @@ export default async function CoreLayout({ children }: { children: React.ReactNo
   // independent `data-theme` (light/dark) boot script below still applies on
   // top — a skin sets the palette, the toggle picks its light/dark variant.
   const skins = await getThemeSkinSettings();
-  // A skin can carry a preferred light/dark default. Solare is a *daylight*
-  // skin, so it presents light unless the operator has explicitly toggled (the
-  // boot script below still wins from localStorage 'core-theme'). Core's own
-  // default stays dark (night trucks / kitchen glare).
-  const defaultTheme = skins.core === "solare" ? "light" : "dark";
+  // Core's default is dark (night trucks / kitchen glare). A future skin that
+  // wants a light default can compute `data-theme` from `skins.core` here;
+  // CoreThemeToggle already adopts whatever the server renders.
   return (
     <div
       id="admin-portal-root"
-      data-theme={defaultTheme}
+      data-theme="dark"
       data-skin={skins.core}
       className={`core ${cvUi.variable} ${cvDisplay.variable} ${cvMono.variable}`}
     >
