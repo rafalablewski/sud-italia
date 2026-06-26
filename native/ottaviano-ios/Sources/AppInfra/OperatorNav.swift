@@ -155,7 +155,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Till counts, drops and reconciliation."),
         OperatorNavItem("/admin/business-costs", "Business costs", "wallet.bifold.fill", .manager, .live,
                         "Fixed & variable costs feeding margin maths."),
-        OperatorNavItem("/admin/simulation", "Calculator", "chart.line.uptrend.xyaxis", .manager, .scaffold,
+        OperatorNavItem("/admin/simulation", "Calculator", "chart.line.uptrend.xyaxis", .manager, .live,
                         "What-if P&L simulator and break-even sandbox."),
     ]),
     OperatorNavSection("growth", "Growth", [

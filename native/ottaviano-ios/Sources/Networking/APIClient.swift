@@ -309,6 +309,10 @@ public extension Endpoint {
     static func adminRegulatory() -> Endpoint<[AdminRegulatory]> {
         Endpoint<[AdminRegulatory]>(.get, "admin/regulatory", requiresAuth: true)
     }
+    // Wave 8.
+    static func adminSimulation() -> Endpoint<AdminSimulation> {
+        Endpoint<AdminSimulation>(.get, "admin/simulation", requiresAuth: true)
+    }
 }
 
 /// Body for `POST /api/v1/admin/pos/order`.

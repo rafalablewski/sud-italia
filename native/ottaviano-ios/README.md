@@ -70,15 +70,19 @@ ships the matching native screen with real data. Live today:
   (the Kasavana-Smith star/plowhorse/puzzle/dog matrix via the store's
   `computeMenuEngineering`), and **Regulatory disclosures** (per-location zone
   + disclosure flags via `resolveLocationCompliance`).
+- **Operator (wave 8):** **Calculator** — a live year-one P&L projection computed
+  by the SAME pure `projectTwelveMonths` engine the web uses (assumptions +
+  12-month revenue/profit, real numbers). Read-only; the what-if levers are the
+  next increment (would POST to `saveSimulationScenario`).
 
-**49 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
-The 5 remaining render a parity scaffold (purpose + role + wiring status, never
-fake data — Rule #1); they're genuinely not simple store reads:
-**Calculator/simulation** (what-if P&L engine), **Agent HQ** and **Ops Agent**
-(stateful/streaming conversational AI), **SOC 2** (controls evidence), and
-**Capabilities** (the env-introspection deploy ledger). Also pending: Stripe
-PaymentSheet (endpoint wired; SDK added in the extracted repo) and offline
-persistence (GRDB/SwiftData).
+**50 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
+The 4 remaining render a parity scaffold (purpose + role + wiring status, never
+fake data — Rule #1): **Agent HQ** and **Ops Agent** (stateful/streaming
+conversational AI — a dedicated chat vertical), and **SOC 2** + **Capabilities**
+(hardcoded TSX content pages with no store source — mirroring them would
+duplicate the Rule #9 source of truth). Also pending: Stripe PaymentSheet
+(endpoint wired; SDK added in the extracted repo) and offline persistence
+(GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

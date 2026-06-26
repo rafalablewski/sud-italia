@@ -195,6 +195,8 @@ struct OperatorRootView: View {
             OperatorMenuEngineeringView(api: deps.api)
         case "/admin/regulatory-compliance":
             OperatorRegulatoryView(api: deps.api)
+        case "/admin/simulation":
+            OperatorCalculatorView(api: deps.api)
         default:
             OperatorSurfaceView(item: item)
         }

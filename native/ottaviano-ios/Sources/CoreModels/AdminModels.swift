@@ -497,3 +497,39 @@ public struct AdminRegulatory: Codable, Sendable, Identifiable {
     public let halalCertId: String?
     public let halalCertExpires: String?
 }
+
+// MARK: - Wave 8
+
+/// `/api/v1/admin/simulation` — the Calculator's P&L projection (route DTO).
+public struct AdminSimulation: Codable, Sendable {
+    public struct Assumptions: Codable, Sendable {
+        public let ordersPerDay: Int
+        public let avgTicketGrosze: Grosze
+        public let daysOpenPerMonth: Int
+        public let cogsPct: Double
+        public let paymentProcessorPct: Double?
+        public let setupCostGrosze: Grosze?
+    }
+    public struct PnL: Codable, Sendable {
+        public let revenue: Grosze
+        public let cogs: Grosze
+        public let labor: Grosze
+        public let fixed: Grosze
+        public let payment: Grosze
+        public let netProfit: Grosze
+    }
+    public struct MonthRow: Codable, Sendable, Identifiable {
+        public var id: Int { monthIndex }
+        public let month: String
+        public let monthIndex: Int
+        public let revenue: Grosze
+        public let cogs: Grosze
+        public let labor: Grosze
+        public let fixed: Grosze
+        public let payment: Grosze
+        public let netProfit: Grosze
+    }
+    public let assumptions: Assumptions
+    public let year1: PnL
+    public let months: [MonthRow]
+}
