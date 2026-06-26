@@ -39,7 +39,7 @@ public final class OperatorPOSStore {
         guard let q = ticket[id] else { return }
         if q <= 1 { ticket[id] = nil } else { ticket[id] = q - 1 }
     }
-    public func clear() { ticket.removeAll(); suggestions = []; currentTabID = nil }
+    public func clear() { ticket.removeAll(); suggestions = []; currentTab = nil }
 
     /// A stable signature of the ticket contents — drives the suggestions refresh.
     public var ticketSignature: String {
