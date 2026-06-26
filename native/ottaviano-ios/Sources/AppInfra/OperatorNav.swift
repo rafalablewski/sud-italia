@@ -179,7 +179,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Open, edit and configure each location."),
         OperatorNavItem("/admin/menu-engineering", "Menu engineering", "fork.knife", .manager, .live,
                         "Stars / plowhorses / puzzles / dogs matrix."),
-        OperatorNavItem("/admin/agent-hq", "Agent HQ", "cpu.fill", .manager, .scaffold,
+        OperatorNavItem("/admin/agent-hq", "Agent HQ", "cpu.fill", .manager, .live,
                         "Autonomous ops agents and their work queue."),
         OperatorNavItem("/admin/ai", "Insights", "brain.head.profile.fill", .manager, .live,
                         "AI forecasts, anomalies and recommendations."),

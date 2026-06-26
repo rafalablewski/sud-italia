@@ -321,6 +321,10 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(AgentTurnBody(message: message, conversationId: conversationId))
         return Endpoint<AgentThread>(.post, "admin/agent/turn", body: body, requiresAuth: true)
     }
+    // Wave 10 — Agent HQ.
+    static func adminAgentHQ() -> Endpoint<AgentHQ> {
+        Endpoint<AgentHQ>(.get, "admin/agent-hq", requiresAuth: true)
+    }
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }

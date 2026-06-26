@@ -551,3 +551,35 @@ public struct AgentThread: Codable, Sendable {
     public let messages: [AgentMessage]
     public let error: String?
 }
+
+// MARK: - Wave 10 (Agent HQ)
+
+/// `/api/v1/admin/agent-hq` — the autonomous-agent command center (route DTO).
+public struct AgentHQ: Codable, Sendable {
+    public struct Fleet: Codable, Sendable {
+        public let runsToday: Int
+        public let cost7dGrosze: Grosze
+        public let costMonthGrosze: Grosze
+        public let successRate7d: Double?
+        public let runs7d: Int
+    }
+    public struct Agent: Codable, Sendable, Identifiable {
+        public let id: String
+        public let name: String
+        public let title: String
+        public let status: String
+        public let spendTodayGrosze: Grosze
+    }
+    public struct Event: Codable, Sendable, Identifiable {
+        public let id: String
+        public let agentId: String
+        public let type: String
+        public let summary: String
+        public let costGrosze: Grosze?
+        public let ok: Bool?
+        public let at: String
+    }
+    public let fleet: Fleet
+    public let agents: [Agent]
+    public let events: [Event]
+}

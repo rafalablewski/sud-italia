@@ -77,14 +77,17 @@ ships the matching native screen with real data. Live today:
   reusing the server's `runAgentTurn` (tools, budget gate, persistence) via
   `/api/v1/admin/agent` + `/agent/turn`. Non-streaming (one round per send); the
   agent only sees data the operator's token scope + role allow.
+- **Operator (wave 10):** **Agent HQ** — the autonomous-agent command center:
+  live fleet KPIs, the agent roster with today's spend, and the activity
+  timeline (`getResolvedAgentConfigs` + `getAgentFleetStats` + `listAgentEvents`).
 
-**51 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
-The 3 remaining render a parity scaffold (purpose + role + wiring status, never
-fake data — Rule #1): **Agent HQ** (the autonomous-agent work queue — a separate
-vertical from the Ops Agent chat), and **SOC 2** + **Capabilities** (hardcoded
-TSX content pages with no store source — mirroring them would duplicate the
-Rule #9 source of truth). Also pending: Stripe PaymentSheet (endpoint wired; SDK
-added in the extracted repo) and offline persistence (GRDB/SwiftData).
+**52 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data — the
+honest data-backed maximum. The **only** 2 not mirrored are **SOC 2 controls**
+and **Capabilities**: both are hardcoded TSX content pages with no store/data
+source, so mirroring them in Swift would duplicate the Rule #9 source of truth
+and drift — they remain honest parity scaffolds by design. Also pending: Stripe
+PaymentSheet (endpoint wired; SDK added in the extracted repo) and offline
+persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
