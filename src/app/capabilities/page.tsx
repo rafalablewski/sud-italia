@@ -358,6 +358,27 @@ export default async function CapabilitiesPage() {
       ],
     },
     {
+      id: "native-api",
+      title: "Native platform — /api/v1 facade",
+      items: [
+        {
+          name: "Versioned API facade (/api/v1)",
+          status: "live",
+          href: "/api/v1/openapi.json",
+          summary:
+            "The stable, versioned API the two native iOS apps consume (docs/native/ — Stage 2 of the native rewrite). Single response envelope ({ data, meta } | { error: { code, message, details } }) with machine-readable error codes, the version echoed in X-Ottaviano-API, and a hand-authored OpenAPI 3.1 contract at /api/v1/openapi.json (the codegen source for the Swift CoreModels package). Read endpoints live: GET /api/v1/locations and GET /api/v1/menu?location= (public, curated DTOs, prices in grosze). Host-portable by design — relative server URL, no Vercel-only primitives — so it survives the planned Vercel exit (ARCHITECTURE §2.1). Additive-only within v1; breaking changes mint v2.",
+        },
+        {
+          name: "Native auth — JWT access + rotating refresh",
+          status: "live",
+          href: "/api/v1/auth/me",
+          envVars: ["API_JWT_SECRET", "SESSION_SECRET", "ADMIN_PASSWORD"],
+          summary:
+            "Token auth for the native apps, reusing the existing admin-user / RBAC model (no parallel identity). POST /api/v1/auth/login mirrors the web login's credential resolution (shared-owner password, or email-bound user with per-user scrypt password + optional TOTP) and returns a short-lived HS256 access JWT (15 min, src/lib/api/v1/jwt.ts) + an opaque, server-stored, rotating refresh token (30 days). POST /api/v1/auth/refresh rotates on every use with reuse/theft detection (replaying a spent token burns the whole rotation family); refresh re-resolves the live user so a re-scope/disable takes effect within one access-token lifetime. POST /api/v1/auth/logout revokes; GET /api/v1/auth/me returns the current operator. Refresh tokens persist through the standard store (Postgres in prod / filesystem in dev) as SHA-256 hashes (the secret half lives only in the device Keychain). Signing secret = API_JWT_SECRET, falling back to SESSION_SECRET/ADMIN_PASSWORD so it works in demo. JWT sign/verify is unit-tested (tests/api-v1-jwt.test.ts).",
+        },
+      ],
+    },
+    {
       id: "core-systems",
       title: "Core systems (Guest Engagement)",
       items: [

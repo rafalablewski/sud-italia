@@ -15,6 +15,7 @@ business is leaving Vercel — designed for from day one).
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 1 | System topology, backend-as-API (`/api/v1` facade), Vercel-exit portability, app architecture, offline-first sync, security, performance budgets, roadmap, **signed-off decisions** |
 | [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md) | 3a | Tokens (color/type/space/motion), theming, component catalog, accessibility gates |
 | [`APP-SHELL.md`](./APP-SHELL.md) | 3b | SwiftPM package graph, DI, typed Router, per-platform shells, launch sequence, feature-module contract |
+| [`API-V1.md`](./API-V1.md) | 2 | The `/api/v1` facade: envelope, auth/token lifecycle, endpoints, OpenAPI/codegen, host-portability |
 
 ## Decisions (signed off 2026-06-26)
 - **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.
@@ -26,9 +27,14 @@ business is leaving Vercel — designed for from day one).
 - ✅ Stage 1 — architecture spec
 - ✅ Stage 3a — design-system spec
 - ✅ Stage 3b — app-shell / navigation spec
-- ⏭️ **Stage 2** — build the `/api/v1` facade + JWT/Keychain auth + contract
-  codegen **in this repo** (real, testable here). Then bootstrap `ottaviano-ios`
-  (Stage 4 shell) on a Mac.
+- 🟡 **Stage 2 — in progress (this repo, verifiable here):** the `/api/v1`
+  facade is live — single envelope, JWT access + rotating refresh auth,
+  `auth/{login,refresh,logout,me}`, public `locations` + `menu`, and an OpenAPI
+  3.1 contract at `/api/v1/openapi.json`. See [`API-V1.md`](./API-V1.md).
+  Remaining Stage 2: derive the OpenAPI from the server Zod schemas (DECISION B),
+  wire the Swift codegen, and widen endpoint coverage (orders/KDS over SSE).
+- ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
+  contract coverage is sufficient.
 
 Open technical calls deferred to their stage: contract source (OpenAPI-from-Zod),
 persistence engine (GRDB vs SwiftData), iOS minimum. Recommendations recorded in

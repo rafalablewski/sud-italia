@@ -1,0 +1,91 @@
+# Ottaviano `/api/v1` — the native facade
+
+> **Stage 2.** The versioned, host-portable API the two native apps consume.
+> Lives in **this** repo (the backend); the apps in `ottaviano-ios` depend only
+> on this contract. Verifiable here (route handlers + unit tests). Companion to
+> `ARCHITECTURE.md` (§2, §2.1, §5).
+
+## Why a facade
+The existing 238 routes were shaped for a coupled React client. A shipped native
+binary can't tolerate silent shape changes or cookie-implicit auth. `/api/v1` is
+a thin, **additive-only** boundary with one envelope, token auth, and a published
+contract — the firewall behind which the backend can even **leave Vercel**
+without an App Store release (§2.1).
+
+## Response envelope
+Every endpoint returns exactly one shape (`src/lib/api/v1/envelope.ts`):
+```jsonc
+// success
+{ "data": <T>, "meta"?: { "nextCursor"?: "...", "deprecation"?: "...", ... } }
+// failure
+{ "error": { "code": "unauthorized", "message": "human text", "details"?: <any> } }
+```
+- `code` ∈ `bad_request | unauthorized | forbidden | not_found | conflict |
+  rate_limited | validation_failed | internal` — apps branch on **code**, never
+  the message.
+- HTTP status is derived from the code. `X-Ottaviano-API: v1` on every response.
+
+## Auth — JWT access + rotating refresh
+Reuses the existing admin-user / RBAC model — **no parallel identity system**.
+
+| Token | Form | TTL | Storage |
+|---|---|---|---|
+| Access | HS256 JWT (`src/lib/api/v1/jwt.ts`) | 15 min | app memory |
+| Refresh | opaque `<id>.<secret>`, server-stored | 30 days | device **Keychain** |
+
+- **Login** (`POST /auth/login`) mirrors the web login exactly: shared-owner
+  password, or email-bound user with per-user scrypt password + optional TOTP.
+  Returns `{ accessToken, refreshToken, expiresIn, user }`.
+- **Refresh** (`POST /auth/refresh`) **rotates** on every use. Replaying a spent
+  token trips reuse detection and **revokes the whole family** (theft
+  containment). Refresh re-resolves the *live* user, so a re-scope/disable lands
+  within one access-token lifetime.
+- **Logout** (`POST /auth/logout`) revokes the refresh token; idempotent.
+- **Me** (`GET /auth/me`, Bearer) returns the current operator.
+
+Refresh records persist via the standard store (`addApiRefreshToken` &c. in
+`store.ts`) — Postgres in prod, filesystem in dev — storing only a **SHA-256** of
+the secret. Signing secret: `API_JWT_SECRET` → falls back to
+`SESSION_SECRET`/`ADMIN_PASSWORD` so demo works with zero config.
+
+> Scope today: the facade authenticates **operators** (OttavianoKDS). Customer
+> identity stays phone-based (a later stage adds `/auth` for the customer app).
+
+## Endpoints (live)
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/v1/auth/login` | none | 5/min/IP; `{ email?, password, totp?, app? }` |
+| POST | `/api/v1/auth/refresh` | none | rotates; reuse-detecting |
+| POST | `/api/v1/auth/logout` | none | revokes refresh token |
+| GET | `/api/v1/auth/me` | Bearer | current operator |
+| GET | `/api/v1/locations` | none | active locations (curated DTO) |
+| GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
+| GET | `/api/v1/openapi.json` | none | the contract document |
+
+Money is always **minor units (grosze)** on the wire; the app formats via
+`MoneyText` (DESIGN-SYSTEM §4.2). Operator-internal fields (cost, packaging, sku)
+are never exposed on customer endpoints.
+
+## Contract & codegen
+`/api/v1/openapi.json` is an OpenAPI 3.1 document = the **single source of truth**
+for the Swift `CoreModels` package, generated with Apple's
+`swift-openapi-generator` so wire types can't drift from app models (§5). It is
+hand-authored today; a remaining Stage-2 task derives it from the server **Zod**
+schemas (DECISION B) so the contract is generated end-to-end.
+
+## Host portability (Vercel exit)
+- Server URL is **relative** (`/api/v1`) — no hostname baked into the contract.
+- No Vercel-only primitive on the request path (no Edge Middleware / KV / Blob).
+- `API_JWT_SECRET` is a plain env var, not a Vercel secret store.
+- The app reads its origin from signed remote config + a baked fallback and pins
+  to an SPKI we control, so the origin can move with no client release (§2.1).
+
+## Tests
+`tests/api-v1-jwt.test.ts` locks the access-token sign/verify round-trip, tamper
+rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.ts`.
+
+## Remaining in Stage 2
+- OpenAPI-from-Zod generation + Swift codegen wiring.
+- Order create + status, KDS feed over the existing SSE streams, idempotency-key
+  passthrough on writes.
+- `docs/native/VERCEL-EXIT.md` cutover checklist (cron, object storage, CDN).
