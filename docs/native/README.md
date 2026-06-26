@@ -38,8 +38,9 @@ business is leaving Vercel — designed for from day one).
   (`npm run gen:openapi`), the operator order spine + SSE, **customer phone-OTP
   auth + server-priced order create** (guest or customer, idempotent), and the
   `VERCEL-EXIT.md` cutover plan, and **customer order history + live tracking**
-  (ownership-gated, SSE — operator bump → customer tracker in real time).
-  Remaining Stage 2: payment (Stripe/Apple Pay) on order create.
+  (ownership-gated, SSE — operator bump → customer tracker in real time), and
+  **Stripe PaymentIntent + Apple Pay** payment (`/orders/:id/payment-intent` +
+  the `payment_intent.succeeded` webhook). **Stage 2 backend is contract-complete.**
 - ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
   contract coverage is sufficient.
 

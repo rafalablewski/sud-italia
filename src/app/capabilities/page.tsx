@@ -369,6 +369,17 @@ export default async function CapabilitiesPage() {
             "The stable, versioned API the two native iOS apps consume (docs/native/ — Stage 2 of the native rewrite). Single response envelope ({ data, meta } | { error: { code, message, details } }) with machine-readable error codes, the version echoed in X-Ottaviano-API, and an OpenAPI 3.1 contract at /api/v1/openapi.json GENERATED from the server Zod schemas (src/lib/api/v1/schemas.ts → one definition drives request validation, the inferred TS response types, and the published contract, so the wire shape can't drift from any of the three). It is the codegen source for the Swift CoreModels package (swift-openapi-generator); npm run gen:openapi writes the committed docs/native/openapi.json and a test fails CI if it drifts. Public reads: GET /api/v1/locations and GET /api/v1/menu?location= (curated DTOs, prices in grosze). Operator order spine (Bearer + location-scope enforced, reusing the live order domain): GET /api/v1/orders (board, newest-first, capped), GET /api/v1/orders/:id (detail), PATCH /api/v1/orders/:id (idempotent status bump — no-op when already at target), and GET /api/v1/orders/stream (Server-Sent Events live board for KDS, header-auth, same hybrid emitter as the web admin stream). Host-portable by design — relative server URL, no Vercel-only primitives — so it survives the planned Vercel exit (ARCHITECTURE §2.1). Additive-only within v1; breaking changes mint v2.",
         },
         {
+          name: "Native payments — Stripe PaymentIntent + Apple Pay",
+          status:
+            has("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY")
+              ? "live"
+              : "needs-config",
+          href: "/api/v1/openapi.json",
+          envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
+          summary:
+            "POST /api/v1/orders/:id/payment-intent creates a Stripe PaymentIntent for the order's server-authoritative total (order.totalAmount grosze — client never names the amount) and returns { clientSecret, publishableKey, amount, currency } for the iOS Stripe PaymentSheet, which renders Apple Pay + cards natively (automatic_payment_methods on). Idempotent per order (idempotencyKey v1-pi-<orderId>) so a retry never double-charges; ownership-gated when a customer token is present, else the hard-to-guess order id is the gate (web-checkout trust model); 503 when Stripe unset, 409 if already paid, 404 if unknown. Settlement: the /api/webhook now handles payment_intent.succeeded → updateOrder(confirmed, paidAt, stripePaymentIntentId), guarded on not-already-paid so a hosted-Checkout payment (which emits both events) can't double-run referral qualification. Verified to the Stripe boundary (503/404/409 + reaches paymentIntents.create); real keys return the client secret.",
+        },
+        {
           name: "Native customer auth (phone OTP) + order create",
           status: "live",
           href: "/api/v1/openapi.json",

@@ -65,6 +65,7 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | GET | `/api/v1/customer/orders/:id` | Bearer (customer) | one own order (ownership-gated; 404 if not theirs) |
 | GET | `/api/v1/customer/orders/:id/stream` | Bearer (customer) | **SSE** live tracker — `data: { order }` |
 | POST | `/api/v1/orders` | optional (customer) | **create order** — guest or customer; server-priced; idempotent |
+| POST | `/api/v1/orders/:id/payment-intent` | optional (customer) | **Stripe PaymentIntent** (Apple Pay/cards); server-priced; idempotent per order |
 | GET | `/api/v1/locations` | none | active locations (curated DTO) |
 | GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
 | GET | `/api/v1/orders` | Bearer | operator board, newest-first, scope-filtered, capped |
@@ -99,6 +100,29 @@ the **live tracker** (the order-tracker / Live Activity feed, APP-SHELL §5.2):
 Bearer-header SSE, ownership-checked, emitting `{ order }` on every status change.
 The operator's KDS bump (`PATCH /orders/:id`) propagates to the customer's
 tracker through the same in-process emitter — verified end-to-end.
+
+### Payment (Stripe PaymentIntent + Apple Pay)
+`POST /orders/:id/payment-intent` creates a Stripe **PaymentIntent** for the
+order's **server-authoritative total** (`order.totalAmount` grosze — the client
+never names the amount) and returns `{ clientSecret, publishableKey, amount,
+currency }`. The native app drives the **Stripe iOS PaymentSheet** with the
+client secret — which renders **Apple Pay** + cards natively (Apple Pay is a
+client config: the app's merchant id; no extra server surface). `automatic_
+payment_methods` lets every method enabled in the Stripe dashboard appear.
+Creation is **idempotent per order** (`idempotencyKey: v1-pi-<orderId>`) so a
+retry never double-charges. Ownership: a customer token must own the order; else
+the hard-to-guess order id is the gate (web-checkout model). When Stripe isn't
+configured the route returns **503** (capabilities: needs-config).
+
+Settlement is the webhook: **`payment_intent.succeeded`** → `updateOrder(status:
+confirmed, paidAt, stripePaymentIntentId)`, guarded on not-already-paid so a
+Checkout payment (which emits both `checkout.session.completed` and the intent
+event) can't double-run referral qualification. Env: `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+
+Verified up to the Stripe boundary (can't cross without real keys): 503
+unconfigured · 404 unknown · 409 already-paid · a fresh unpaid order reaches
+`paymentIntents.create`.
 
 ### Operator order spine
 `orders*` are the OttavianoKDS revenue path, reusing the live domain
@@ -149,7 +173,7 @@ hand-written DTOs (APP-SHELL §1).
 rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.ts`.
 
 ## Remaining in Stage 2
-- **Payment** on order create — Stripe / Apple Pay (`PaymentIntent` + the webhook
-  marking `paidAt`). Orders are created unpaid today; this attaches the charge.
+- ✅ **Payment** — Stripe PaymentIntent (`/orders/:id/payment-intent`) + the
+  `payment_intent.succeeded` webhook marking `paidAt`. Apple Pay via PaymentSheet.
 - ✅ Customer **order history + live tracking** — `customer/orders[/:id[/stream]]`.
 - ✅ `docs/native/VERCEL-EXIT.md` — the host-migration cutover checklist.

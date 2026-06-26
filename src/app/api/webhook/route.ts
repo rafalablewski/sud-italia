@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   clearWaSession,
+  getOrderById,
   getOrderByStripePaymentIntent,
   updateOrder,
   updateOrderStatus,
@@ -115,6 +116,45 @@ export async function POST(req: NextRequest) {
               // still gets their order.
             }
           })();
+        }
+      }
+    }
+
+    // Native apps pay via a PaymentIntent (Stripe iOS PaymentSheet), not a
+    // hosted Checkout session — so the terminal "paid" signal arrives as
+    // `payment_intent.succeeded`. Mark the order paid the same way the Checkout
+    // branch does. Guarded on the order not already being paid so a Checkout
+    // payment (which emits BOTH events) can't double-run referral qualification.
+    if (event.type === "payment_intent.succeeded") {
+      const intent = event.data.object;
+      const orderId = intent.metadata?.orderId;
+      const customerPhone = intent.metadata?.customerPhone;
+      if (orderId) {
+        const existing = await getOrderById(orderId);
+        if (existing && !existing.paidAt) {
+          await updateOrder(orderId, {
+            status: "confirmed",
+            paidAt: new Date().toISOString(),
+            stripePaymentIntentId: intent.id,
+          });
+          // First-paid-order referral qualification (mirrors the Checkout branch).
+          if (customerPhone) {
+            void (async () => {
+              try {
+                const { qualifyReferralOnFirstPaidOrder } = await import("@/lib/referral-loop");
+                const { getOrdersByPhone } = await import("@/lib/store");
+                const prior = await getOrdersByPhone(customerPhone);
+                const paidCount = prior.filter(
+                  (o) => o.id !== orderId && o.status !== "pending" && o.status !== "cancelled",
+                ).length;
+                if (paidCount === 0) {
+                  await qualifyReferralOnFirstPaidOrder(customerPhone, orderId);
+                }
+              } catch {
+                /* referral qualification is non-fatal */
+              }
+            })();
+          }
         }
       }
     }

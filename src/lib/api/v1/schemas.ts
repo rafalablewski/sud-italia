@@ -152,6 +152,16 @@ export const MenuItemSchema = z.object({
   }),
 });
 
+export const PaymentIntentSchema = z.object({
+  /** Stripe PaymentIntent client secret — the app inits PaymentSheet with this. */
+  clientSecret: z.string(),
+  /** Publishable key, so the app can configure the Stripe SDK (public value). */
+  publishableKey: z.string(),
+  amount: z.number().int().describe("Charge amount, minor units (grosze)"),
+  currency: z.string(),
+  orderId: z.string(),
+});
+
 export const OrderLineSchema = z.object({
   menuItemId: z.string(),
   name: z.string(),
@@ -191,6 +201,7 @@ export type OrderCreateBody = z.infer<typeof OrderCreateSchema>;
 export type TokenPairDTO = z.infer<typeof TokenPairSchema>;
 export type UserDTO = z.infer<typeof UserSchema>;
 export type CustomerProfileDTO = z.infer<typeof CustomerProfileSchema>;
+export type PaymentIntentDTO = z.infer<typeof PaymentIntentSchema>;
 export type LocationDTO = z.infer<typeof LocationSchema>;
 export type MenuItemDTO = z.infer<typeof MenuItemSchema>;
 export type OrderLineDTO = z.infer<typeof OrderLineSchema>;
@@ -203,6 +214,7 @@ apiRegistry.add(ErrorEnvelopeSchema, { id: "ErrorEnvelope" });
 apiRegistry.add(TokenPairSchema, { id: "TokenPair" });
 apiRegistry.add(UserSchema, { id: "User" });
 apiRegistry.add(CustomerProfileSchema, { id: "CustomerProfile" });
+apiRegistry.add(PaymentIntentSchema, { id: "PaymentIntent" });
 apiRegistry.add(LocationSchema, { id: "Location" });
 apiRegistry.add(MenuItemSchema, { id: "MenuItem" });
 apiRegistry.add(OrderLineSchema, { id: "OrderLine" });

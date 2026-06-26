@@ -30,7 +30,8 @@ export type ApiErrorCode =
   | "conflict"
   | "rate_limited"
   | "validation_failed"
-  | "internal";
+  | "internal"
+  | "service_unavailable";
 
 const STATUS_FOR: Record<ApiErrorCode, number> = {
   bad_request: 400,
@@ -41,6 +42,7 @@ const STATUS_FOR: Record<ApiErrorCode, number> = {
   rate_limited: 429,
   validation_failed: 422,
   internal: 500,
+  service_unavailable: 503,
 };
 
 export interface ApiMeta {

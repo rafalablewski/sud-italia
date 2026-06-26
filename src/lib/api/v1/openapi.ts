@@ -283,6 +283,23 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/orders/{id}/payment-intent": {
+        post: {
+          summary: "Start payment for an order (Stripe PaymentIntent / Apple Pay)",
+          description:
+            "Creates a Stripe PaymentIntent for the order's server-authoritative total " +
+            "and returns the client secret for the iOS PaymentSheet (Apple Pay + cards). " +
+            "Idempotent per order. Webhook payment_intent.succeeded marks the order paid.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Payment intent", ref("PaymentIntent")),
+            "404": ERROR_RESPONSE,
+            "409": ERROR_RESPONSE,
+            "503": ERROR_RESPONSE,
+          },
+        },
+      },
       "/orders/stream": {
         get: {
           summary: "Live operator board (Server-Sent Events; Bearer header)",

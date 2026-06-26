@@ -187,6 +187,37 @@
         ],
         "additionalProperties": false
       },
+      "PaymentIntent": {
+        "type": "object",
+        "properties": {
+          "clientSecret": {
+            "type": "string"
+          },
+          "publishableKey": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Charge amount, minor units (grosze)"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientSecret",
+          "publishableKey",
+          "amount",
+          "currency",
+          "orderId"
+        ],
+        "additionalProperties": false
+      },
       "Location": {
         "type": "object",
         "properties": {
@@ -1765,6 +1796,74 @@
             }
           },
           "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/payment-intent": {
+      "post": {
+        "summary": "Start payment for an order (Stripe PaymentIntent / Apple Pay)",
+        "description": "Creates a Stripe PaymentIntent for the order's server-authoritative total and returns the client secret for the iOS PaymentSheet (Apple Pay + cards). Idempotent per order. Webhook payment_intent.succeeded marks the order paid.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment intent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentIntent"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Error envelope",
             "content": {
               "application/json": {
