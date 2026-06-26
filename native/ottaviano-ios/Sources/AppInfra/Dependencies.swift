@@ -18,11 +18,17 @@ public struct Dependencies: Sendable {
         self.baseURL = baseURL
     }
 
-    /// Build the real graph for an app audience. `OTTAVIANO_API_BASE_URL` is the
-    /// only host reference — so the Vercel exit needs no code change (§2.1).
+    /// The deployed backend the installed apps talk to. An installed iOS app
+    /// can't read process env vars, so the production host is baked in here —
+    /// this is the ONE place to change when the backend moves (the Vercel exit,
+    /// §2.1). Not a secret; just config. A `localhost` dev override is still
+    /// honoured via the env var so the simulator can hit a local `next dev`.
+    public static let productionBaseURL = URL(string: "https://sud-italia.vercel.app/api/v1")!
+
+    /// Build the real graph for an app audience.
     public static func live(audience: TokenAudience) -> Dependencies {
         let base = ProcessInfo.processInfo.environment["OTTAVIANO_API_BASE_URL"]
-            .flatMap(URL.init(string:)) ?? URL(string: "http://localhost:3000/api/v1")!
+            .flatMap(URL.init(string:)) ?? productionBaseURL
         let tokens = TokenStore(baseURL: base, audience: audience)
         return Dependencies(
             api: APIClient(baseURL: base, tokens: tokens),

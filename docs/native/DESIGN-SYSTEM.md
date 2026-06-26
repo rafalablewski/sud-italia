@@ -40,6 +40,18 @@ Five rules the system enforces:
 Same `DesignSystem` package, two `Theme` values. A feature written against the
 theme protocol renders correctly in either app.
 
+> **Shipped palette (v0.2).** The customer `Theme.ottaviano` now mirrors the web
+> storefront's **V8 Tuscany** tokens (`src/app/themes/homepage/tokens.css`):
+> parchment surface `#F8EFDE`, oxblood brand `#7A2B2B`, terracotta action
+> `#B85C38`, basil success `#4A7C59`, ochre warning `#C9A23E`, ink text
+> `#2C1810`. Headings use the system **serif** face to echo the web's
+> Cormorant/Lora pairing without bundling font files. The shipped
+> `Theme.Palette` is the trimmed set features actually consume —
+> `accent · onAccent · brand · surface · surface2 · line · textPrimary ·
+> textSecondary · success · warning · danger` — plus `BrandWordmark`,
+> `TagChip`, and the primary/secondary `DSButton`. `Theme.kds` keeps the dark
+> operator skin with an ochre accent matching the app icon.
+
 ---
 
 ## 2. Tokens

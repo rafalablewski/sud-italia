@@ -130,6 +130,14 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(["phone": phone, "code": code])
         return Endpoint<CustomerAuthResult>(.post, "customer/auth/verify", body: body)
     }
+    // Operator auth (email + password, optional TOTP) for OttavianoKDS.
+    static func operatorLogin(email: String?, password: String, totp: String?) -> Endpoint<OperatorAuthResult> {
+        var payload: [String: String] = ["password": password, "app": "ottaviano-kds"]
+        if let email, !email.isEmpty { payload["email"] = email }
+        if let totp, !totp.isEmpty { payload["totp"] = totp }
+        let body = try? JSONEncoder().encode(payload)
+        return Endpoint<OperatorAuthResult>(.post, "auth/login", body: body)
+    }
     // Customer order detail (ownership-gated server-side).
     static func myOrder(id: String) -> Endpoint<Order> {
         Endpoint<Order>(.get, "customer/orders/\(id)", requiresAuth: true)

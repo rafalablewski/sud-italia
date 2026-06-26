@@ -3,21 +3,30 @@ import OttavianoKit
 import AppFeatures
 
 // OttavianoKDS — the operator app composition root (APP-SHELL §2, §5.1). iPad-
-// first NavigationSplitView shell in the dark operator theme. A live order board
-// proves the same APIClient + token flow the customer app uses.
+// first NavigationSplitView shell in the dark operator theme, gated on a staff
+// sign-in (unlike the customer app). A live order board + kitchen lanes prove the
+// same APIClient + token flow the customer app uses.
 @main
 struct OttavianoKDSApp: App {
-    @State private var deps = Dependencies.live(audience: .operatorApp)
+    private let deps: Dependencies
+    @State private var session: OperatorSession
     @State private var router = Router()
+
+    init() {
+        let d = Dependencies.live(audience: .operatorApp)
+        deps = d
+        _session = State(initialValue: OperatorSession(api: d.api, tokens: d.tokens))
+    }
 
     var body: some Scene {
         WindowGroup {
-            OperatorRootView()
+            OperatorRootView(session: session)
                 .environment(\.theme, .kds)
                 .environment(\.dependencies, deps)
                 .environment(router)
                 .tint(Theme.kds.color.accent)
                 .preferredColorScheme(.dark)
+                .task { await session.bootstrap() }
         }
     }
 }
@@ -37,56 +46,28 @@ enum OperatorSection: String, CaseIterable, Identifiable {
 
 struct OperatorRootView: View {
     @Environment(\.dependencies) private var deps
+    let session: OperatorSession
     @State private var selection: OperatorSection? = .board
 
     var body: some View {
-        NavigationSplitView {
-            List(OperatorSection.allCases, selection: $selection) { section in
-                Label(section.title, systemImage: section.icon).tag(section)
-            }
-            .navigationTitle("OttavianoKDS")
-        } detail: {
-            switch selection ?? .board {
-            case .board: NavigationStack { OperatorBoardView() }
-            case .kds: NavigationStack { KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse)) }
-            case .account: ContentUnavailableView("Account", systemImage: "person.crop.circle", description: Text("Next feature slice."))
-            }
-        }
-    }
-}
-
-/// Minimal live board — lists recent orders off `/api/v1/orders`, proving the
-/// operator auth + APIClient path. Full Kanban/KDS lands as the feature grows.
-struct OperatorBoardView: View {
-    @Environment(\.dependencies) private var deps
-    @Environment(\.theme) private var theme
-    @State private var orders: [Order] = []
-    @State private var error: String?
-
-    var body: some View {
-        List(orders) { order in
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(order.id).font(.headline).foregroundStyle(theme.color.textPrimary)
-                    Text(order.customerName).font(.subheadline).foregroundStyle(theme.color.textSecondary)
+        switch session.state {
+        case .unknown:
+            ProgressView().controlSize(.large)
+        case .signedOut:
+            OperatorLoginView(session: session)
+        case .signedIn:
+            NavigationSplitView {
+                List(OperatorSection.allCases, selection: $selection) { section in
+                    Label(section.title, systemImage: section.icon).tag(section)
                 }
-                Spacer()
-                Text(order.status.rawValue).font(.caption.weight(.bold))
-                    .padding(.horizontal, theme.space.sm).padding(.vertical, theme.space.xs)
-                    .background(theme.color.surface2, in: Capsule())
-                    .foregroundStyle(theme.color.accent)
-                MoneyText(order.totalAmount).foregroundStyle(theme.color.textPrimary)
+                .navigationTitle("OttavianoKDS")
+            } detail: {
+                switch selection ?? .board {
+                case .board: NavigationStack { OperatorBoardView() }
+                case .kds: NavigationStack { KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse)) }
+                case .account: NavigationStack { OperatorAccountView(session: session) }
+                }
             }
         }
-        .overlay { if let error { ContentUnavailableView("Couldn't load", systemImage: "exclamationmark.triangle", description: Text(error)) } }
-        .navigationTitle("Orders")
-        .task { await load() }
-        .refreshable { await load() }
-    }
-
-    private func load() async {
-        do { orders = try await deps.api.send(.operatorBoard(location: nil)); error = nil }
-        catch let e as APIError { if case .api(_, let m, _) = e { error = m } else { error = "Offline" } }
-        catch { self.error = "Something went wrong" }
     }
 }

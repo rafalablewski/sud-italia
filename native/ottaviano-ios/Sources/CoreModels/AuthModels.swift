@@ -32,6 +32,31 @@ public struct CustomerAuthResult: Codable, Sendable {
     }
 }
 
+/// Operator (OttavianoKDS) sign-in result from `POST /api/v1/auth/login`:
+/// TokenPair fields + the resolved staff user (flat JSON, `user` nested).
+public struct OperatorAuthResult: Codable, Sendable {
+    public struct OperatorUser: Codable, Sendable, Identifiable {
+        public let id: String
+        public let name: String?
+        public let email: String?
+        public let role: String
+        public let scope: String
+    }
+    public let accessToken: String
+    public let refreshToken: String
+    public let expiresIn: Int
+    public let refreshExpiresIn: Int?
+    public let tokenType: String
+    public let user: OperatorUser
+
+    public var tokenPair: TokenPair {
+        TokenPair(
+            accessToken: accessToken, refreshToken: refreshToken,
+            expiresIn: expiresIn, refreshExpiresIn: refreshExpiresIn, tokenType: tokenType
+        )
+    }
+}
+
 /// Body for `POST /api/v1/orders`. Server prices it; the client only sends intent.
 public struct OrderCreateRequest: Codable, Sendable {
     public struct Item: Codable, Sendable {

@@ -22,11 +22,10 @@ public struct AuthView: View {
     public var body: some View {
         VStack(spacing: theme.space.lg) {
             Spacer()
-            Image(systemName: "fork.knife.circle.fill")
-                .font(.system(size: 56)).foregroundStyle(theme.color.accent)
-            Text("Soci e amici").font(.largeTitle.italic())
-            Text("Sign in with your phone — no password.")
+            BrandWordmark(subtitle: "Soci e amici")
+            Text("Join the famiglia — sign in with your phone, no password.")
                 .font(.subheadline).foregroundStyle(theme.color.textSecondary)
+                .multilineTextAlignment(.center)
 
             switch step {
             case .phone:

@@ -8,7 +8,7 @@ import Networking
 @MainActor
 @Observable
 public final class CustomerSession {
-    public enum State: Sendable { case unknown, signedOut, signedIn }
+    public enum State: Sendable, Equatable { case unknown, signedOut, signedIn }
 
     public private(set) var state: State = .unknown
     public private(set) var profile: CustomerProfile?
