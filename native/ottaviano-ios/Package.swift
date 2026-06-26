@@ -8,7 +8,11 @@ import PackageDescription
 // app imports AppFeatures + OttavianoKit; nothing imports an app.
 let package = Package(
     name: "OttavianoKit",
-    platforms: [.iOS(.v26)],
+    // iOS 18 deployment target: builds with the latest SDK but runs on a far
+    // wider device base. Everything the apps use (TabView's Tab builder,
+    // @Observable, ContentUnavailableView, sensoryFeedback, NavigationSplitView)
+    // is available at 18, so there's no reason to gate on 26.
+    platforms: [.iOS(.v18)],
     products: [
         .library(name: "OttavianoKit", targets: ["OttavianoKit"]),
         .library(name: "AppFeatures", targets: ["AppFeatures"]),

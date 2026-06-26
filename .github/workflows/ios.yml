@@ -1,0 +1,50 @@
+name: iOS build
+
+# Compiles the two native apps on Apple's macOS runners. Scoped to the iOS
+# subtree + manual dispatch so normal web changes never spend macOS minutes.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "native/ottaviano-ios/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: native/ottaviano-ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build Ottaviano (customer)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ottaviano.xcodeproj \
+            -scheme Ottaviano \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build OttavianoKDS (operator)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ottaviano.xcodeproj \
+            -scheme OttavianoKDS \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO

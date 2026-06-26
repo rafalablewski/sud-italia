@@ -53,5 +53,5 @@ wire types then track the server automatically (ARCHITECTURE §5).
 4. Build & run on an iPhone (Ottaviano) / iPad (OttavianoKDS) simulator.
 
 ## Targets
-iOS 26+, Swift 6 (strict concurrency). iPhone-first customer app, iPad-first
+iOS 18+ deployment (built with the latest SDK), Swift 6 (strict concurrency). iPhone-first customer app, iPad-first
 operator app; both universal.
