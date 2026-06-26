@@ -8,23 +8,32 @@
 > build. They are written to match `docs/native/ARCHITECTURE.md`,
 > `DESIGN-SYSTEM.md`, and `APP-SHELL.md`.
 
-## What's here (the spine + one vertical slice)
+## What's here (the spine + working feature slices)
 ```
-Package.swift                     SwiftPM graph (OttavianoKit umbrella + Features)
+Package.swift                     SwiftPM graph (OttavianoKit umbrella + AppFeatures)
 Sources/
-  CoreModels/      Models.swift   wire DTOs (today hand-written; see Codegen below)
-  Networking/      Envelope, APIError, TokenStore, APIClient, SSEClient
-  DesignSystem/    Theme.swift    tokens + theming + DSButton + MoneyText
-  AppInfra/        Router.swift   typed Route + Router; Dependencies.swift (DI)
-  Features/Menu/   MenuStore.swift, MenuView.swift   (customer vertical slice)
+  CoreModels/      Models, AuthModels   wire DTOs (hand-written; see Codegen below)
+  Networking/      Envelope, APIError, TokenStore, APIClient (+endpoint catalogue), SSEClient
+  DesignSystem/    Theme                tokens + theming + DSButton + MoneyText
+  AppInfra/        Router, Dependencies (DI), CustomerSession (phone-OTP auth state)
+  Features/
+    Menu/          MenuStore, MenuView                    customer menu (GET /menu)
+    Auth/          AuthView                                phone → code sign-in
+    Rewards/       LoyaltyCardView                         the loyalty card (GET /customer/me)
+    Orders/        OrdersStore, OrdersListView, OrderTrackerView   history + live SSE tracker
+    KDS/           KDSStore, KDSBoardView                  operator live board (SSE) + bump
 Apps/
-  Ottaviano/       OttavianoApp.swift       customer @main + TabView shell
-  OttavianoKDS/    OttavianoKDSApp.swift     operator @main + SplitView shell
+  Ottaviano/       OttavianoApp        customer @main, auth-gated TabView (Menu/Rewards/Orders)
+  OttavianoKDS/    OttavianoKDSApp     operator @main, SplitView (Orders board + live KDS)
 ```
 
-This satisfies the Stage-4 exit criterion in spirit: the apps boot, theme,
-authenticate, and render a list that hydrates from the API — with DI + a typed
-router. Offline persistence (GRDB/SwiftData) and the remaining features land next.
+This meets the Stage-4 exit criterion and then some: both apps boot, theme,
+**authenticate** (phone OTP), and render lists that hydrate from the API; the
+customer **tracks an order live** and the operator **bumps tickets on a live SSE
+board** — exercising auth, both SSE streams, and the bump mutation against the
+real `/api/v1`. Still to come: cart + checkout + Stripe PaymentSheet (the client
+calls are wired: `createOrder` + `paymentIntent` endpoints), offline persistence
+(GRDB/SwiftData), and remaining operator surfaces (POS, tables, admin).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

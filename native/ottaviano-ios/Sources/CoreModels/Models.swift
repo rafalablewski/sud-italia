@@ -65,7 +65,9 @@ public enum OrderStatus: String, Codable, Sendable, CaseIterable {
 public struct Order: Codable, Sendable, Identifiable {
     public let id: String
     public let locationSlug: String
-    public let status: OrderStatus
+    /// `var` so an optimistic UI (KDS bump) can update a decoded copy without
+    /// the (internal) memberwise initializer being needed across modules.
+    public var status: OrderStatus
     public let fulfillmentType: String
     public let customerName: String
     public let customerPhone: String

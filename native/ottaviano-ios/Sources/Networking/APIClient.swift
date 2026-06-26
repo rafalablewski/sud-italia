@@ -121,4 +121,25 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(["status": status.rawValue])
         return Endpoint<Order>(.patch, "orders/\(orderID)", body: body, requiresAuth: true)
     }
+    // Customer auth (phone OTP).
+    static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
+        let body = try? JSONEncoder().encode(["phone": phone])
+        return Endpoint<OtpRequestResult>(.post, "customer/auth/request", body: body)
+    }
+    static func verifyOtp(phone: String, code: String) -> Endpoint<CustomerAuthResult> {
+        let body = try? JSONEncoder().encode(["phone": phone, "code": code])
+        return Endpoint<CustomerAuthResult>(.post, "customer/auth/verify", body: body)
+    }
+    // Customer order detail (ownership-gated server-side).
+    static func myOrder(id: String) -> Endpoint<Order> {
+        Endpoint<Order>(.get, "customer/orders/\(id)", requiresAuth: true)
+    }
+    // Server-priced create + payment.
+    static func createOrder(_ request: OrderCreateRequest) -> Endpoint<Order> {
+        let body = try? JSONEncoder().encode(request)
+        return Endpoint<Order>(.post, "orders", body: body, requiresAuth: true)
+    }
+    static func paymentIntent(orderID: String) -> Endpoint<PaymentIntentDTO> {
+        Endpoint<PaymentIntentDTO>(.post, "orders/\(orderID)/payment-intent", requiresAuth: true)
+    }
 }

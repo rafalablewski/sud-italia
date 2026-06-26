@@ -4,14 +4,14 @@ import PackageDescription
 // OttavianoKit — the shared spine both apps depend on (ARCHITECTURE §3, APP-SHELL
 // §1). The two app targets (Ottaviano, OttavianoKDS) are Xcode app targets in the
 // extracted repo; they import these libraries and add the thin composition roots
-// under Apps/. Dependency direction is enforced: Features → OttavianoKit; an app
-// imports Features + OttavianoKit; nothing imports an app.
+// under Apps/. Dependency direction is enforced: AppFeatures → OttavianoKit; an
+// app imports AppFeatures + OttavianoKit; nothing imports an app.
 let package = Package(
     name: "OttavianoKit",
     platforms: [.iOS(.v26)],
     products: [
         .library(name: "OttavianoKit", targets: ["OttavianoKit"]),
-        .library(name: "Features", targets: ["FeatureMenu"]),
+        .library(name: "AppFeatures", targets: ["AppFeatures"]),
     ],
     targets: [
         .target(name: "CoreModels"),
@@ -23,10 +23,11 @@ let package = Package(
             name: "OttavianoKit",
             dependencies: ["CoreModels", "Networking", "DesignSystem", "AppInfra"]
         ),
+        // One feature module (Menu / Auth / Rewards / Orders / KDS subfolders).
         .target(
-            name: "FeatureMenu",
+            name: "AppFeatures",
             dependencies: ["OttavianoKit"],
-            path: "Sources/Features/Menu"
+            path: "Sources/Features"
         ),
         .testTarget(name: "NetworkingTests", dependencies: ["Networking"]),
     ]

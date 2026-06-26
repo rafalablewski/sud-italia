@@ -60,9 +60,9 @@ public struct SSEClient: Sendable {
 }
 
 /// Frame wrappers matching the stream payloads.
-public struct OrderBoardFrame<Order: Decodable & Sendable>: Decodable, Sendable {
-    public let orders: [Order]
+public struct OrderBoardFrame<Model: Decodable & Sendable>: Decodable, Sendable {
+    public let orders: [Model]
 }
-public struct OrderTrackFrame<Order: Decodable & Sendable>: Decodable, Sendable {
-    public let order: Order
+public struct OrderTrackFrame<Model: Decodable & Sendable>: Decodable, Sendable {
+    public let order: Model
 }

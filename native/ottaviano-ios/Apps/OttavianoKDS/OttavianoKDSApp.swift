@@ -1,5 +1,6 @@
 import SwiftUI
 import OttavianoKit
+import AppFeatures
 
 // OttavianoKDS — the operator app composition root (APP-SHELL §2, §5.1). iPad-
 // first NavigationSplitView shell in the dark operator theme. A live order board
@@ -35,6 +36,7 @@ enum OperatorSection: String, CaseIterable, Identifiable {
 }
 
 struct OperatorRootView: View {
+    @Environment(\.dependencies) private var deps
     @State private var selection: OperatorSection? = .board
 
     var body: some View {
@@ -46,7 +48,7 @@ struct OperatorRootView: View {
         } detail: {
             switch selection ?? .board {
             case .board: NavigationStack { OperatorBoardView() }
-            case .kds: ContentUnavailableView("Kitchen display", systemImage: "flame", description: Text("Next feature slice."))
+            case .kds: NavigationStack { KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse)) }
             case .account: ContentUnavailableView("Account", systemImage: "person.crop.circle", description: Text("Next feature slice."))
             }
         }
