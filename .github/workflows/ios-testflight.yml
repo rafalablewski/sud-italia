@@ -3,6 +3,10 @@ name: iOS TestFlight
 # Manually triggered: archives the chosen app, signs it via the App Store Connect
 # API key (cloud-managed cert + auto provisioning), and uploads to TestFlight.
 # Requires repo secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
+# Triggered either manually (once this workflow reaches the default branch) or by
+# pushing a commit whose message contains [testflight] — the latter lets us ship
+# from a feature branch without merging to main. Append "(KDS)" to the message to
+# select the operator app; otherwise the customer app ships.
 on:
   workflow_dispatch:
     inputs:
@@ -11,9 +15,12 @@ on:
         type: choice
         options: [Ottaviano, OttavianoKDS]
         default: Ottaviano
+  push:
+    branches: ["claude/**"]
 
 jobs:
   testflight:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]') }}
     runs-on: macos-latest
     defaults:
       run:
@@ -43,4 +50,13 @@ jobs:
       - name: Archive → export → upload
         run: |
           chmod +x Scripts/testflight.sh
-          ./Scripts/testflight.sh "${{ inputs.scheme }}" "${{ github.run_number }}"
+          SCHEME="${{ inputs.scheme }}"
+          if [ -z "$SCHEME" ]; then
+            # push-triggered: pick KDS only if the commit message asks for it.
+            case "${{ github.event.head_commit.message }}" in
+              *"(KDS)"*) SCHEME="OttavianoKDS" ;;
+              *) SCHEME="Ottaviano" ;;
+            esac
+          fi
+          echo "Shipping scheme: $SCHEME"
+          ./Scripts/testflight.sh "$SCHEME" "${{ github.run_number }}"
