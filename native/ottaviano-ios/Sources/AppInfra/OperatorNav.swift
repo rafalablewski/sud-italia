@@ -87,7 +87,7 @@ public struct OperatorNavSection: Identifiable, Sendable {
 /// `.live` items are wired to real endpoints today; the rest are parity scaffolds.
 public let OPERATOR_NAV: [OperatorNavSection] = [
     OperatorNavSection("core", "Core", [
-        OperatorNavItem("/core/pos", "POS", "creditcard.and.123", .staff, .scaffold,
+        OperatorNavItem("/core/pos", "POS", "creditcard.and.123", .staff, .live,
                         "Take counter & table orders, split bills, settle payment."),
         OperatorNavItem("/core/kds", "Kitchen Display", "flame.fill", .kitchen, .live,
                         "Live ticket lanes — bump dishes from cooking to ready."),

@@ -99,6 +99,8 @@ struct OperatorRootView: View {
     @ViewBuilder
     private func detail(for item: OperatorNavItem) -> some View {
         switch item.id {
+        case "/core/pos":
+            OperatorPOSView(api: deps.api)
         case "/core/kds":
             KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse))
         case "/core/orders", "/admin/orders":

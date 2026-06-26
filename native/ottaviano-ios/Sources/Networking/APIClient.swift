@@ -283,6 +283,28 @@ public extension Endpoint {
     static func adminPermissions() -> Endpoint<AdminPermissionMatrix> {
         Endpoint<AdminPermissionMatrix>(.get, "admin/permissions", requiresAuth: true)
     }
+
+    /// POS counter sale — immediate dine-in, server-priced. Returns the Order.
+    static func posCreateOrder(locationSlug: String, items: [PosOrderBody.Line],
+                               customerName: String, customerPhone: String,
+                               tableNumber: String?) -> Endpoint<Order> {
+        let body = try? JSONEncoder().encode(PosOrderBody(
+            locationSlug: locationSlug, items: items,
+            customerName: customerName, customerPhone: customerPhone,
+            tableNumber: tableNumber?.isEmpty == false ? tableNumber : nil
+        ))
+        return Endpoint<Order>(.post, "admin/pos/order", body: body, requiresAuth: true)
+    }
+}
+
+/// Body for `POST /api/v1/admin/pos/order`.
+public struct PosOrderBody: Encodable, Sendable {
+    public struct Line: Encodable, Sendable { public let id: String; public let quantity: Int }
+    public let locationSlug: String
+    public let items: [Line]
+    public let customerName: String
+    public let customerPhone: String
+    public let tableNumber: String?
 }
 
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).

@@ -62,16 +62,19 @@ ships the matching native screen with real data. Live today:
   **Insights**, **Multi-location**, **Expansion**, **Scheduled bundles**, **Welcome**.
 - **Operator (wave 5):** **Corporate**, **Manage locations**, **Campaigns**,
   **Shift handover**, **Permission matrix**.
+- **Operator (wave 6):** **POS** — a counter-sale till that builds a ticket off
+  the live menu and charges via `POST /api/v1/admin/pos/order` (server-priced,
+  immediate dine-in, reusing the same `createOrderFromCart` path as customer
+  checkout, so KDS firing/stock/loyalty all run; the receipt phone is real).
 
-**45 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
-The 9 remaining render a parity scaffold (purpose + role + wiring status, never
-fake data — Rule #1); they're the hard tail that needs dedicated design:
-**POS** (walk-in order capture — needs a phone-less order path server-side),
-**HACCP**, **Calculator/simulation**, **Menu engineering**, **Agent HQ**,
-**Ops Agent** (conversational AI), **Regulatory disclosures**, **SOC 2**, and
-**Capabilities** (the env-introspection ledger). Also pending: Stripe PaymentSheet
-(endpoint wired; SDK added in the extracted repo) and offline persistence
-(GRDB/SwiftData).
+**46 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
+The 8 remaining render a parity scaffold (purpose + role + wiring status, never
+fake data — Rule #1); they need dedicated design rather than a store read:
+**HACCP** (no store getter yet), **Calculator/simulation**, **Menu engineering**,
+**Agent HQ**, **Ops Agent** (conversational AI), **Regulatory disclosures**,
+**SOC 2**, and **Capabilities** (the env-introspection ledger). Also pending:
+Stripe PaymentSheet (endpoint wired; SDK added in the extracted repo) and offline
+persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
