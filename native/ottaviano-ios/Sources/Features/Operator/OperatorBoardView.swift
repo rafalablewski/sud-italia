@@ -73,10 +73,10 @@ public struct OperatorBoardView: View {
 
     /// Print/render a receipt via POST /api/v1/orders/:id/receipt. Returns the
     /// text to display (printer confirmation, or the simulated preview) or an error.
-    private func printReceipt(_ order: Order) async -> Result<String, String> {
+    private func printReceipt(_ order: Order) async -> ReceiptOutcome {
         do {
             let r = try await deps.api.send(.receipt(orderID: order.id))
-            return .success(r.mode == "printed" ? "Printed to \(r.printer ?? "the printer")." : r.preview)
+            return .preview(r.mode == "printed" ? "Printed to \(r.printer ?? "the printer")." : r.preview)
         } catch let e as APIError {
             if case .api(_, let m, _) = e { return .failure(m) }
             return .failure("You appear to be offline")
@@ -178,7 +178,7 @@ private struct OperatorOrderDetailSheet: View {
     /// Settle action injected by the board (owns the api client); nil error = ok.
     let onSettle: () async -> String?
     /// Print action — success carries the text to show (printer note or preview).
-    let onPrint: () async -> Result<String, String>
+    let onPrint: () async -> ReceiptOutcome
 
     @State private var busy = false
     @State private var printing = false
@@ -266,11 +266,15 @@ private struct OperatorOrderDetailSheet: View {
         printing = true; error = nil
         defer { printing = false }
         switch await onPrint() {
-        case .success(let text): receipt = ReceiptDoc(text: text)
+        case .preview(let text): receipt = ReceiptDoc(text: text)
         case .failure(let msg): error = msg
         }
     }
 }
+
+/// Outcome of a print action. Not `Result` — `Result.Failure` must be `Error`,
+/// and we carry plain message strings either way (printer note / preview / error).
+private enum ReceiptOutcome { case preview(String); case failure(String) }
 
 private struct ReceiptDoc: Identifiable { let id = UUID(); let text: String }
 
