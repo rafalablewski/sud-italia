@@ -121,6 +121,20 @@ struct OperatorRootView: View {
             OperatorPurchaseOrdersView(api: deps.api)
         case "/core/service":
             OperatorSlotsView(api: deps.api)
+        case "/admin/menu":
+            OperatorMenuView(api: deps.api)
+        case "/admin/recipes":
+            OperatorRecipesView(api: deps.api)
+        case "/core/guest":
+            OperatorGuestView(api: deps.api)
+        case "/admin/alerts":
+            OperatorAlertsView(api: deps.api)
+        case "/admin/comms/tasks":
+            OperatorTasksView(api: deps.api)
+        case "/admin/comms/announcements":
+            OperatorAnnouncementsView(api: deps.api)
+        case "/admin/schedule":
+            OperatorScheduleView(api: deps.api)
         default:
             OperatorSurfaceView(item: item)
         }

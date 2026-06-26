@@ -188,4 +188,46 @@ public extension Endpoint {
         if let to { q["to"] = to }
         return Endpoint<AdminSummary>(.get, "admin/summary", query: q, requiresAuth: true)
     }
+
+    // Wave 2.
+    static func adminMenu(location: String) -> Endpoint<[AdminMenuItem]> {
+        Endpoint<[AdminMenuItem]>(.get, "admin/menu", query: ["location": location], requiresAuth: true)
+    }
+    /// 86 / un-86 an item. Returns `{ itemId, available }`.
+    static func adminSet86(itemId: String, available: Bool) -> Endpoint<Item86Result> {
+        let body = try? JSONEncoder().encode(Set86Body(itemId: itemId, available: available))
+        return Endpoint<Item86Result>(.patch, "admin/menu", body: body, requiresAuth: true)
+    }
+    static func adminRecipes() -> Endpoint<[AdminRecipe]> {
+        Endpoint<[AdminRecipe]>(.get, "admin/recipes", requiresAuth: true)
+    }
+    static func adminLoyalty() -> Endpoint<[AdminLoyaltyMember]> {
+        Endpoint<[AdminLoyaltyMember]>(.get, "admin/loyalty", requiresAuth: true)
+    }
+    static func adminTasks() -> Endpoint<[AdminTask]> {
+        Endpoint<[AdminTask]>(.get, "admin/tasks", requiresAuth: true)
+    }
+    static func adminSetTaskStatus(id: String, status: String) -> Endpoint<AdminTask> {
+        let body = try? JSONEncoder().encode(["id": id, "status": status])
+        return Endpoint<AdminTask>(.patch, "admin/tasks", body: body, requiresAuth: true)
+    }
+    static func adminAlerts() -> Endpoint<[AdminAlert]> {
+        Endpoint<[AdminAlert]>(.get, "admin/alerts", requiresAuth: true)
+    }
+    static func adminAnnouncements() -> Endpoint<[AdminAnnouncement]> {
+        Endpoint<[AdminAnnouncement]>(.get, "admin/announcements", requiresAuth: true)
+    }
+    static func adminSchedule(from: String? = nil, to: String? = nil) -> Endpoint<[AdminShift]> {
+        var q: [String: String] = [:]
+        if let from { q["from"] = from }
+        if let to { q["to"] = to }
+        return Endpoint<[AdminShift]>(.get, "admin/schedule", query: q, requiresAuth: true)
+    }
 }
+
+/// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).
+public struct Item86Result: Codable, Sendable {
+    public let itemId: String
+    public let available: Bool
+}
+private struct Set86Body: Encodable { let itemId: String; let available: Bool }

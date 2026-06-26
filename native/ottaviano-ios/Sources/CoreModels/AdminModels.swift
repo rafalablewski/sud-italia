@@ -136,3 +136,95 @@ public struct AdminSummary: Codable, Sendable {
     public let topItems: [TopItem]
     public let dailyStats: [DailyStat]
 }
+
+// MARK: - Wave 2
+
+/// `/api/v1/admin/menu` — operator menu row (price + cost + availability).
+public struct AdminMenuItem: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let price: Grosze
+    public let cost: Grosze
+    public let category: String
+    public let available: Bool
+    public let tags: [String]
+    public let menuRole: String?
+    public let sku: String?
+    public let prepTimeMinutes: Int?
+    public let isLimited: Bool
+}
+
+/// `/api/v1/admin/recipes` — chain-wide recipe with resolved names (Rule #10).
+public struct AdminRecipe: Codable, Sendable, Identifiable {
+    public struct Line: Codable, Sendable, Identifiable {
+        public var id: String { name }
+        public let name: String
+        public let unit: String
+        public let quantity: Double
+    }
+    public let id: String
+    public let menuItemId: String
+    public let dishName: String
+    public let yieldPortions: Int
+    public let prepTimeMinutes: Int?
+    public let ingredients: [Line]
+}
+
+/// `/api/v1/admin/loyalty` — enrolled member (LoyaltyMember).
+public struct AdminLoyaltyMember: Codable, Sendable, Identifiable {
+    public var id: String { phone }
+    public let phone: String
+    public let name: String
+    public let lastName: String?
+    public let nickname: String?
+    public let email: String?
+    public let signedUpAt: String
+    public let dob: String?
+}
+
+/// `/api/v1/admin/tasks` — a shift to-do (Task).
+public struct AdminTask: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let detail: String?
+    public let assigneeName: String
+    public let priority: String
+    public let dueDate: String?
+    public let status: String
+    public let createdAt: String
+}
+
+/// `/api/v1/admin/alerts` — an operational notification (Notification).
+public struct AdminAlert: Codable, Sendable, Identifiable {
+    public let id: String
+    public let type: String
+    public let title: String
+    public let message: String
+    public let locationSlug: String?
+    public let createdAt: String
+    public let read: Bool
+}
+
+/// `/api/v1/admin/announcements` — a team broadcast (route DTO).
+public struct AdminAnnouncement: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let body: String
+    public let createdByName: String
+    public let pinned: Bool
+    public let createdAt: String
+    public let readCount: Int
+}
+
+/// `/api/v1/admin/schedule` — a scheduled shift with staff name (route DTO).
+public struct AdminShift: Codable, Sendable, Identifiable {
+    public let id: String
+    public let staffId: String
+    public let staffName: String
+    public let locationSlug: String
+    public let startAt: String
+    public let endAt: String
+    public let role: String
+    public let status: String
+}

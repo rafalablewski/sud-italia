@@ -47,17 +47,20 @@ serve an admin surface's data (bearer-authed, role-gated, location-scoped) and
 ships the matching native screen with real data. Live today:
 
 - **Customer:** the whole order path + Rewards + Orders + tracking.
-- **Operator:** Dashboard, Orders board, KDS lanes, **Reports** (`/admin/summary`),
+- **Operator (wave 1):** Dashboard, Orders board, KDS lanes, **Reports**,
   **Customers**, **Staff**, **Suppliers**, **Feedback**, **Inventory**,
-  **Purchase orders**, and **Service/slots** — each off a new `/api/v1/admin/*`
-  endpoint (see `src/app/api/v1/admin/`).
+  **Purchase orders**, **Service/slots**.
+- **Operator (wave 2):** **Menu** (with live 86-ing), **Recipes**, **Guest**
+  (loyalty members), **Alerts**, **Tasks** (mark done), **Announcements**,
+  **Schedule** — each off a `/api/v1/admin/*` endpoint (see `src/app/api/v1/admin/`).
+  Menu 86-ing and Tasks done-state are the first **write** surfaces (PATCH).
 
 Surfaces not yet in a wave render a parity scaffold that states purpose + role +
 wiring status (never fake data — Rule #1) and go live as later waves cover them.
-Remaining waves: POS + Guest engagement (Core), Menu/Recipes editors, Schedule,
-Cash, Growth, Intelligence and System surfaces; plus Stripe PaymentSheet (the
-`paymentIntent` endpoint is wired; the SDK is added in the extracted repo) and
-offline persistence (GRDB/SwiftData).
+Remaining: POS (order capture), HACCP/Waste/Handover, Cash, Business costs,
+Calculator, the Growth suite, Intelligence and System surfaces; plus Stripe
+PaymentSheet (the `paymentIntent` endpoint is wired; the SDK is added in the
+extracted repo) and offline persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
