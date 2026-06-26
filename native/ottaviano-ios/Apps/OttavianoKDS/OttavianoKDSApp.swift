@@ -3,9 +3,12 @@ import OttavianoKit
 import AppFeatures
 
 // OttavianoKDS — the operator app composition root (APP-SHELL §2, §5.1). iPad-
-// first NavigationSplitView shell in the dark operator theme, gated on a staff
-// sign-in (unlike the customer app). A live order board + kitchen lanes prove the
-// same APIClient + token flow the customer app uses.
+// first NavigationSplitView in the dark operator theme, gated on a staff sign-in.
+// The sidebar mirrors the WEB operator IA exactly: the Core surfaces
+// (POS/KDS/Orders/Guest/Service) plus every /admin section, role-filtered by the
+// signed-in staff member's rank — owner/admin sees all, a franchise manager sees
+// their scope, a chef (kitchen) sees the line. This is the "KDS has everything
+// admin and core has" parity contract (see Sources/AppInfra/OperatorNav.swift).
 @main
 struct OttavianoKDSApp: App {
     private let deps: Dependencies
@@ -31,23 +34,18 @@ struct OttavianoKDSApp: App {
     }
 }
 
-enum OperatorSection: String, CaseIterable, Identifiable {
-    case board, kds, account
-    var id: String { rawValue }
-    var title: String { rawValue == "kds" ? "Kitchen" : rawValue.capitalized }
-    var icon: String {
-        switch self {
-        case .board: "list.bullet.rectangle"
-        case .kds: "flame"
-        case .account: "person.crop.circle"
-        }
-    }
-}
-
 struct OperatorRootView: View {
     @Environment(\.dependencies) private var deps
+    @Environment(\.theme) private var theme
     let session: OperatorSession
-    @State private var selection: OperatorSection? = .board
+
+    @State private var selection: OperatorNavItem?
+    @State private var showAccount = false
+
+    /// The staff role drives the rail — the same gate as the web admin sidebar
+    /// (`filterNavForRoleV3`). Unknown/legacy roles fall to the lowest rank.
+    private var role: OperatorRole { OperatorRole.from(session.user?.role) }
+    private var sections: [OperatorNavSection] { filteredNav(for: role) }
 
     var body: some View {
         switch session.state {
@@ -56,18 +54,59 @@ struct OperatorRootView: View {
         case .signedOut:
             OperatorLoginView(session: session)
         case .signedIn:
-            NavigationSplitView {
-                List(OperatorSection.allCases, selection: $selection) { section in
-                    Label(section.title, systemImage: section.icon).tag(section)
-                }
-                .navigationTitle("OttavianoKDS")
-            } detail: {
-                switch selection ?? .board {
-                case .board: NavigationStack { OperatorBoardView() }
-                case .kds: NavigationStack { KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse)) }
-                case .account: NavigationStack { OperatorAccountView(session: session) }
+            shell
+        }
+    }
+
+    private var shell: some View {
+        NavigationSplitView {
+            List(selection: $selection) {
+                ForEach(sections) { section in
+                    Section(section.label) {
+                        ForEach(section.items) { item in
+                            Label(item.label, systemImage: item.icon).tag(item)
+                        }
+                    }
                 }
             }
+            .navigationTitle("OttavianoKDS")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showAccount = true } label: { Image(systemName: "person.crop.circle") }
+                        .accessibilityLabel("Account")
+                }
+            }
+            .sheet(isPresented: $showAccount) {
+                NavigationStack { OperatorAccountView(session: session) }
+            }
+        } detail: {
+            NavigationStack {
+                detail(for: selection ?? defaultItem)
+            }
+        }
+        .onAppear { if selection == nil { selection = defaultItem } }
+    }
+
+    /// First landing surface: the dashboard for managers+, the KDS lanes for a
+    /// chef (kitchen rank has no admin reach, so the board is their home).
+    private var defaultItem: OperatorNavItem {
+        operatorNavItem(id: role == .kitchen ? "/core/kds" : "/admin")
+            ?? sections.first!.items.first!
+    }
+
+    /// Route a nav item to its native surface. `.live` items render real data off
+    /// `/api/v1`; the rest render the parity surface (Rule #1 — no fabricated data).
+    @ViewBuilder
+    private func detail(for item: OperatorNavItem) -> some View {
+        switch item.id {
+        case "/core/kds":
+            KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse))
+        case "/core/orders", "/admin/orders":
+            OperatorBoardView()
+        case "/admin":
+            OperatorDashboardView()
+        default:
+            OperatorSurfaceView(item: item)
         }
     }
 }

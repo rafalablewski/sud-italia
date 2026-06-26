@@ -215,6 +215,45 @@ period, **Universal Links** so QR/table codes open the app to the right route.
 
 ---
 
+### 5.3 Realized navigation — web-layout parity
+
+The shells above are realized in the seed with one hard rule: **the native IA
+mirrors the web IA 1:1.** There is an exact priority — the web is the source of
+truth and the apps reproduce its layout, not the other way around.
+
+**Customer (`Ottaviano`)** — `TabView` mirroring the storefront sections:
+
+| Tab | Web counterpart | Native surface |
+|---|---|---|
+| Order | `/`, `/locations/[slug]` | `MenuView` — hero + location switcher + sectioned menu with add-to-cart; cart sheet → `CartView` checkout |
+| Rewards | `/rewards`, LoyaltySection | `LoyaltyCardView` behind `SignInGate` |
+| Orders | order history + tracking | `OrdersListView` → `OrderTrackerView` (live SSE) |
+| More | AboutSection, LoyaltySection, locations, privacy | `AccountView` |
+
+The order path is live and guest-capable (Rule #6): `CartStore` → `POST
+/api/v1/orders` (server-priced) → confirmation → live tracking.
+
+**Operator (`OttavianoKDS`)** — `NavigationSplitView` sidebar generated from
+`OPERATOR_NAV` (`Sources/AppInfra/OperatorNav.swift`), a 1:1 mirror of
+`src/admin-v3/nav.config.ts` (sections: Overview · Operations · Inventory ·
+People · Customers · Finance · Growth · Intelligence · System) **plus** the Core
+surfaces from `CoreNav.tsx` (POS · KDS · Orders · Guest · Service). The rail is
+role-filtered by `filteredNav(for:)`, the native twin of `filterNavForRoleV3`,
+using the same rank table as `src/lib/admin-roles.ts` (owner 100 · franchisee 70
+· manager 50 · staff 20 · kitchen 10). Each item declares a `kind`:
+
+- **`.live`** — rendered natively against `/api/v1` today: the Dashboard
+  (`OperatorDashboardView`, real KPIs off the order board), the Orders board
+  (`OperatorBoardView`), and the KDS lanes (`KDSBoardView`).
+- **`.scaffold`** — the parity surface (`OperatorSurfaceView`): states the web
+  page it mirrors, its role gate, and an honest "pending /api/v1" wiring status.
+  It carries **no fabricated data** (Rule #1); it exists so the layout is complete
+  and goes live as the facade is extended to that surface (ARCHITECTURE §5).
+
+**Keep them in lockstep:** when the web admin nav or Core nav changes, update
+`OPERATOR_NAV` in the same change — it is the contract that holds the two apps at
+parity.
+
 ## 6. Launch sequence (deterministic, offline-tolerant)
 
 ```

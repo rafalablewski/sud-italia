@@ -15,25 +15,40 @@ Sources/
   CoreModels/      Models, AuthModels   wire DTOs (hand-written; see Codegen below)
   Networking/      Envelope, APIError, TokenStore, APIClient (+endpoint catalogue), SSEClient
   DesignSystem/    Theme                tokens + theming + DSButton + MoneyText
-  AppInfra/        Router, Dependencies (DI), CustomerSession (phone-OTP auth state)
+  AppInfra/        Router, Dependencies (DI), CustomerSession, OperatorSession,
+                   OperatorNav        the operator IA — 1:1 mirror of the web admin
+                                      nav.config.ts + Core surfaces, role-ranked
   Features/
-    Menu/          MenuStore, MenuView                    customer menu (GET /menu)
-    Auth/          AuthView                                phone → code sign-in
+    Menu/          MenuStore, MenuView                    customer storefront + add-to-cart
+    Cart/          CartStore, CartView                    cart → checkout → confirmation (guest-capable)
+    Locations/     LocationPickerView (+ LocationsStore)  switch restaurant (GET /locations)
+    Account/       AccountView                            "More": famiglia / soci / locations / account
+    Auth/          AuthView, SignInGate                   phone → code sign-in (zero-friction)
     Rewards/       LoyaltyCardView                         the loyalty card (GET /customer/me)
     Orders/        OrdersStore, OrdersListView, OrderTrackerView   history + live SSE tracker
     KDS/           KDSStore, KDSBoardView                  operator live board (SSE) + bump
+    Operator/      OperatorBoardView, OperatorDashboardView,
+                   OperatorLoginView, OperatorSurfaceView  the admin+core shell surfaces
 Apps/
-  Ottaviano/       OttavianoApp        customer @main, auth-gated TabView (Menu/Rewards/Orders)
-  OttavianoKDS/    OttavianoKDSApp     operator @main, SplitView (Orders board + live KDS)
+  Ottaviano/       OttavianoApp     customer @main, TabView: Order · Rewards · Orders · More
+  OttavianoKDS/    OttavianoKDSApp  operator @main, SplitView whose sidebar is the FULL
+                                    web operator IA (Core + every /admin section), role-filtered
 ```
 
-This meets the Stage-4 exit criterion and then some: both apps boot, theme,
-**authenticate** (phone OTP), and render lists that hydrate from the API; the
-customer **tracks an order live** and the operator **bumps tickets on a live SSE
-board** — exercising auth, both SSE streams, and the bump mutation against the
-real `/api/v1`. Still to come: cart + checkout + Stripe PaymentSheet (the client
-calls are wired: `createOrder` + `paymentIntent` endpoints), offline persistence
-(GRDB/SwiftData), and remaining operator surfaces (POS, tables, admin).
+**Web-layout parity** is the goal: the apps mirror the web IA exactly. The
+customer app reproduces the storefront's tabs and the full order path
+(browse → add to cart → guest/customer checkout via `POST /orders`, server-priced
+→ confirmation → live tracking). The operator app's sidebar reproduces the web
+admin rail section-for-section (`src/admin-v3/nav.config.ts`) plus the Core
+surfaces (`CoreNav.tsx`), gated by the signed-in staff member's role rank exactly
+like `filterNavForRoleV3` — owner sees all, a franchise manager their scope, a
+chef the line. Surfaces backed by `/api/v1` today (**Dashboard, Orders board,
+KDS lanes**, plus the whole customer path) render **live data**; the remaining
+admin surfaces render a parity scaffold that states purpose + role + wiring
+status (never fake data — Rule #1) and go live as the `/api/v1` facade is
+extended to cover them. Still to come: Stripe PaymentSheet (the `paymentIntent`
+endpoint is wired; the SDK is added in the extracted repo), offline persistence
+(GRDB/SwiftData), and `/api/v1` coverage for the admin data surfaces.
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

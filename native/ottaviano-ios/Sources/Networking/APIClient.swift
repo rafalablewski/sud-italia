@@ -142,10 +142,14 @@ public extension Endpoint {
     static func myOrder(id: String) -> Endpoint<Order> {
         Endpoint<Order>(.get, "customer/orders/\(id)", requiresAuth: true)
     }
-    // Server-priced create + payment.
+    // Server-priced create + payment. Zero-friction (Rule #6): the POST is
+    // guest-capable — `customerName`+`customerPhone` in the body identify a guest,
+    // so it must NOT force auth (an unauthenticated guest has no token to attach).
+    // A signed-in customer still gets linked: we pass their profile phone in the
+    // body and the server associates the order by phone.
     static func createOrder(_ request: OrderCreateRequest) -> Endpoint<Order> {
         let body = try? JSONEncoder().encode(request)
-        return Endpoint<Order>(.post, "orders", body: body, requiresAuth: true)
+        return Endpoint<Order>(.post, "orders", body: body, requiresAuth: false)
     }
     static func paymentIntent(orderID: String) -> Endpoint<PaymentIntentDTO> {
         Endpoint<PaymentIntentDTO>(.post, "orders/\(orderID)/payment-intent", requiresAuth: true)
