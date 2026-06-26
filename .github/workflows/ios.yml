@@ -38,6 +38,7 @@ jobs:
             -project Ottaviano.xcodeproj \
             -scheme Ottaviano \
             -destination 'generic/platform=iOS Simulator' \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Build OttavianoKDS (operator)
@@ -47,4 +48,5 @@ jobs:
             -project Ottaviano.xcodeproj \
             -scheme OttavianoKDS \
             -destination 'generic/platform=iOS Simulator' \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO
