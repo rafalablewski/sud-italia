@@ -15,8 +15,8 @@ public struct KDSBoardView: View {
     public var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: theme.space.lg) {
-                lane("Cooking", store.cooking, accent: theme.color.warning)
-                lane("Ready", store.ready, accent: theme.color.success)
+                lane("Cooking", store.cooking)
+                lane("Ready", store.ready)
             }
             .padding(theme.space.lg)
         }
@@ -33,49 +33,26 @@ public struct KDSBoardView: View {
         .onDisappear { store.stop() }
     }
 
-    private func lane(_ title: String, _ orders: [Order], accent: Color) -> some View {
+    private func lane(_ title: String, _ orders: [Order]) -> some View {
         VStack(alignment: .leading, spacing: theme.space.md) {
-            HStack {
-                Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
-                Text("\(orders.count)").font(.caption.weight(.bold)).foregroundStyle(accent)
+            DSSectionHeader(title) {
+                DSBadge("\(orders.count)", tone: orders.isEmpty ? .neutral : .accent)
             }
             if orders.isEmpty {
-                Text("All clear").font(.footnote).foregroundStyle(theme.color.textSecondary)
+                DSEmptyState("All clear", systemImage: "checkmark.seal.fill")
+                    .frame(maxWidth: .infinity)
             }
-            ForEach(orders) { order in ticket(order, accent: accent) }
+            // KDSTicket owns its own age-driven state colour (fresh→cooking→late);
+            // the lane `accent` only tints the count badge. Each ticket is
+            // Equatable so a single bump doesn't redraw the whole lane.
+            ForEach(orders) { order in
+                KDSTicket(order: order, bumpTitle: bumpLabel(order.status)) {
+                    await store.bumpForward(order)
+                }
+                .equatable()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    private func ticket(_ order: Order, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
-            HStack {
-                Text(order.id).font(.subheadline.weight(.bold)).foregroundStyle(theme.color.textPrimary)
-                Spacer()
-                Text(order.fulfillmentType).font(.caption).foregroundStyle(theme.color.textSecondary)
-            }
-            ForEach(order.items) { line in
-                Text("\(line.quantity)× \(line.name)").foregroundStyle(theme.color.textPrimary)
-                if let notes = line.notes, !notes.isEmpty {
-                    Text(notes).font(.caption.italic()).foregroundStyle(theme.color.warning)
-                }
-            }
-            if let label = bumpLabel(order.status) {
-                Button { Task { await store.bumpForward(order) } } label: {
-                    Text(label).font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(theme.color.onAccent)
-                        .background(accent, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                }
-                .buttonStyle(.plain)
-                .sensoryFeedback(.success, trigger: order.status)
-            }
-        }
-        .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2).fill(accent).frame(width: 4)
-        }
     }
 
     private func bumpLabel(_ s: OrderStatus) -> String? {

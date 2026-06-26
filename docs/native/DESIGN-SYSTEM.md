@@ -165,6 +165,24 @@ zero-cost and side-effect-free.
 Each is a small, reusable `View` in `DesignSystem`, with a Preview gallery. Below
 are the contracts + representative sketches; full set lives in the package.
 
+> **Shipped (v0.3).** The token foundation + first component wave are in the
+> `DesignSystem` target and consumed by features:
+> - **Tokens on `Theme`:** the generated two-skin `Palette` + shared **`radius`**
+>   scale (generated from the web Core `--r-*`), **`elevation`** (card/pop shadow
+>   tokens), **`motion`** (snappy/smooth/immediate springs), and the **`TextRole`**
+>   Dynamic-Type ramp via `Text(…).textRole(.title)`. Status helpers
+>   (`successSoft`/`warningSoft`/`dangerSoft`/`info`/`infoSoft`, derived to match
+>   the web `*-wash` ~16%-alpha construction) and the **KDS ticket lifecycle**
+>   (`ticketState(elapsedMinutes:)` → fresh/cooking/late + `ticketColor`).
+> - **Components:** `DSButton`, `BrandWordmark`, `TagChip`, `MoneyText` (existing)
+>   plus **`DSCard`**, **`DSBadge`** (icon-carrying status pill), **`DSSectionHeader`**,
+>   **`DSEmptyState`** (over `ContentUnavailableView`), **`DSStepper`**, **`MetricTile`**,
+>   and the headline **`KDSTicket`** (age-timer ticket; `Equatable` so a lane only
+>   redraws changed tickets) — now driving `KDSBoardView`.
+> - **Gallery:** `#Preview` blocks render the set in both skins (the living
+>   Storybook, §6). Still pending: `POSKeypad`, `DSTextField`, `DSToast`, snapshot/
+>   contrast test harness.
+
 ### 4.1 Primitives
 - **`DSButton`** — `variant: .primary | .secondary | .tonal | .ghost | .destructive`,
   `size: .sm | .md | .lg`, loading + disabled states, 44pt min target, haptic on
@@ -247,7 +265,9 @@ A screen is **not done** until:
 ## 7. Mapping to the staged plan
 This package is **Stage 3a**; it must land (tokens + the §4.1 primitives +
 `MoneyText`/`KDSTicket`/`POSKeypad`) before Stage 4 (the app shell) can render
-anything real. Feature stages (5) consume it and may *propose* new components —
+anything real. **Status:** tokens + the §4.1 primitives + `MoneyText` +
+`KDSTicket` shipped (v0.3, see §4 "Shipped"); `POSKeypad` is the remaining
+domain component before the operator POS feature is theme-complete. Feature stages (5) consume it and may *propose* new components —
 which are added here, with a gallery entry + snapshot, never inline in a feature.
 This is the design-system analogue of the web repo's Rule #11: the catalog is the
 source of truth; a one-off component in a feature is a bug.

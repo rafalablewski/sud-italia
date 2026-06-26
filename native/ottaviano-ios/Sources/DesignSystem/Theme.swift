@@ -25,8 +25,39 @@ public struct Theme: Sendable {
         public let xs: CGFloat = 4, sm: CGFloat = 8, md: CGFloat = 12
         public let lg: CGFloat = 16, xl: CGFloat = 24, xxl: CGFloat = 32
     }
+    /// Shared radius scale — pulled from the web Core `--r-*` tokens (generated,
+    /// see Tokens.generated.swift). Radius isn't brand-specific so both skins share it.
+    public struct RadiusScale: Sendable {
+        public let sm = GeneratedTokens.radiusSM
+        public let md = GeneratedTokens.radiusMD
+        public let lg = GeneratedTokens.radiusLG
+        public let xl = GeneratedTokens.radiusXL
+        public let pill = GeneratedTokens.radiusPill
+    }
+    /// Elevation is material-first (DESIGN-SYSTEM §2.3); these shadow tokens are
+    /// reserved for cards that must lift off content. Tuned to the web Core `--sh-*` feel.
+    public struct Elevation: Sendable {
+        public struct Shadow: Sendable {
+            public let color: Color, radius: CGFloat, x: CGFloat, y: CGFloat
+            public init(_ color: Color, _ radius: CGFloat, _ x: CGFloat, _ y: CGFloat) {
+                self.color = color; self.radius = radius; self.x = x; self.y = y
+            }
+        }
+        public let card = Shadow(.black.opacity(0.18), 10, 0, 4)
+        public let pop = Shadow(.black.opacity(0.32), 28, 0, 16)
+    }
+    /// Spring-based, interruptible motion (DESIGN-SYSTEM §2.4). Reduce Motion is
+    /// honoured at the call site via `.dsAnimation` / `@Environment(\.accessibilityReduceMotion)`.
+    public struct Motion: Sendable {
+        public let snappy = Animation.spring(duration: 0.28, bounce: 0.18)
+        public let smooth = Animation.spring(duration: 0.42, bounce: 0.0)
+        public let immediate = Animation.spring(duration: 0.18, bounce: 0.0)
+    }
     public let color: Palette
     public let space = Spacing()
+    public let radius = RadiusScale()
+    public let elevation = Elevation()
+    public let motion = Motion()
     public let cornerRadius: CGFloat
     /// Editorial serif design echoing the web's Cormorant/Lora pairing. iOS has
     /// no Cormorant bundled, so we lean on the system serif face — same mood,
@@ -155,5 +186,90 @@ public struct MoneyText: View {
         f.currencyCode = "PLN"
         f.locale = Locale(identifier: "pl_PL")
         return f.string(from: NSNumber(value: Double(grosze) / 100.0)) ?? "\(grosze) gr"
+    }
+}
+
+// MARK: - Typography ramp (DESIGN-SYSTEM §2.2)
+
+/// Semantic text roles. Built on Dynamic-Type text styles so every role scales
+/// with the user's setting — DS rule #1 ("Dynamic Type or it doesn't ship"). No
+/// fixed `.system(size:)` in feature code; reach for a role.
+public enum TextRole: Sendable {
+    case displayXL, display, titleL, title, headline, body, bodyEmphasis, callout, caption, mono
+}
+
+public extension Theme {
+    /// Resolve a role to a Font. Headings use the skin's `headingDesign` (serif on
+    /// the customer app, default on KDS); `mono` uses monospaced for numerics/timers.
+    func font(_ role: TextRole) -> Font {
+        switch role {
+        case .displayXL:    return .system(.largeTitle, design: headingDesign).weight(.bold)
+        case .display:      return .system(.title, design: headingDesign).weight(.semibold)
+        case .titleL:       return .system(.title2, design: headingDesign).weight(.bold)
+        case .title:        return .system(.title3, design: headingDesign).weight(.semibold)
+        case .headline:     return .system(.headline)
+        case .body:         return .system(.body)
+        case .bodyEmphasis: return .system(.body).weight(.semibold)
+        case .callout:      return .system(.callout)
+        case .caption:      return .system(.caption)
+        case .mono:         return .system(.body, design: .monospaced)
+        }
+    }
+}
+
+private struct TextRoleModifier: ViewModifier {
+    @Environment(\.theme) private var theme
+    let role: TextRole
+    func body(content: Content) -> some View {
+        content.font(theme.font(role)).modifier(MonoDigits(on: role == .mono))
+    }
+}
+private struct MonoDigits: ViewModifier {
+    let on: Bool
+    func body(content: Content) -> some View { on ? AnyView(content.monospacedDigit()) : AnyView(content) }
+}
+
+public extension View {
+    /// `Text("Margherita").textRole(.title)` — themed, Dynamic-Type-scaling type.
+    func textRole(_ role: TextRole) -> some View { modifier(TextRoleModifier(role: role)) }
+
+    /// Apply a card/pop shadow token.
+    func dsShadow(_ s: Theme.Elevation.Shadow) -> some View {
+        shadow(color: s.color, radius: s.radius, x: s.x, y: s.y)
+    }
+
+    /// Reduce-Motion-aware animation: drops to no animation when the user asks.
+    @ViewBuilder
+    func dsAnimation<V: Equatable>(_ animation: Animation, value: V, reduceMotion: Bool) -> some View {
+        self.animation(reduceMotion ? nil : animation, value: value)
+    }
+}
+
+// MARK: - Status + KDS-ticket lifecycle colors (DESIGN-SYSTEM §2.1)
+
+public extension Theme {
+    // Soft fills mirror the web Core `*-wash` tokens, which are the base hue at
+    // ~16% alpha — so deriving them by opacity is faithful, not a fudge.
+    var successSoft: Color { color.success.opacity(0.16) }
+    var warningSoft: Color { color.warning.opacity(0.16) }
+    var dangerSoft: Color { color.danger.opacity(0.16) }
+    /// Informational accent — the web Core `--info` blue (shared; not brand).
+    var info: Color { Color(hex: 0x5B8BD0) }
+    var infoSoft: Color { info.opacity(0.16) }
+
+    /// A KDS ticket ages through three states by elapsed minutes (DESIGN-SYSTEM
+    /// §4.2 KDSTicket): fresh → cooking → late. Thresholds are operator-tunable.
+    enum TicketState: Sendable, Equatable { case fresh, cooking, late }
+    func ticketState(elapsedMinutes: Double, cooking: Double = 5, late: Double = 12) -> TicketState {
+        if elapsedMinutes >= late { return .late }
+        if elapsedMinutes >= cooking { return .cooking }
+        return .fresh
+    }
+    func ticketColor(_ s: TicketState) -> Color {
+        switch s {
+        case .fresh: return color.success
+        case .cooking: return color.warning
+        case .late: return color.danger
+        }
     }
 }

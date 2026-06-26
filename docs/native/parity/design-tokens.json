@@ -95,5 +95,12 @@
       },
       "cornerRadius": 14
     }
+  },
+  "radius": {
+    "sm": 7,
+    "md": 10,
+    "lg": 14,
+    "xl": 20,
+    "pill": 999
   }
 }

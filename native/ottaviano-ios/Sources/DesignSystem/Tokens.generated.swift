@@ -40,4 +40,11 @@ public enum GeneratedTokens {
 
     public static let ottavianoCornerRadius: CGFloat = 16
     public static let kdsCornerRadius: CGFloat = 14
+
+    // Shared radius scale — web Core --r-* (radius is not brand-specific).
+    public static let radiusSM: CGFloat = 7    // core --r-sm
+    public static let radiusMD: CGFloat = 10   // core --r-md
+    public static let radiusLG: CGFloat = 14   // core --r-lg
+    public static let radiusXL: CGFloat = 20   // core --r-xl
+    public static let radiusPill: CGFloat = 999 // core --pill
 }
