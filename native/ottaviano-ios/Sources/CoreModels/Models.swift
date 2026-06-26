@@ -52,6 +52,8 @@ public struct OrderLine: Codable, Sendable, Identifiable {
     public var id: String { menuItemId + "-" + (notes ?? "") }
     public let menuItemId: String
     public let name: String
+    /// Menu category — drives the KDS station filter. Optional for resilience.
+    public let category: String?
     public let quantity: Int
     public let unitPrice: Grosze
     public let notes: String?

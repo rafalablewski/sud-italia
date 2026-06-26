@@ -31,8 +31,8 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped:** **recall** — `POST /api/v1/orders/:id/recall` (completed→ready,
   audited) + a native "Recall" toolbar action that un-bumps the last completed
   ticket (the mis-tap undo).
-- **Deferred (facade-gated):** **station filter** needs `category` on the Order
-  line DTO (not in `/api/v1` yet). Noted, not faked.
+- **Shipped:** **station filter** — `category` added to the order-line DTO; a
+  native station Menu filters the lanes (web STATION_FILTERS semantics).
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) 🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -41,9 +41,11 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Native now:** single-ticket counter sale off the live menu → `ChargeSheet`
   with guest capture + a **Card/Cash** payment step (**`POSKeypad`** cash tender
   with change-due; total stays server-priced via `POST /api/v1/admin/pos/order`).
-- **Deferred (facade-gated):** **tabs** (`/api/admin/pos/tabs`), **coursing**
-  (`fire-course`), and **combo/cross-sell** all need their `/api/v1` endpoints.
-  These are the real POS gaps — *not* split-bill.
+- **Shipped:** **cross-sell** — `POST /api/v1/admin/pos/suggestions` runs the
+  storefront getCartSuggestions engine; native shows add-chips on the ticket bar.
+- **Deferred (facade-gated):** **tabs** (multi-ticket) + **coursing** (fire-by-
+  course) need their `/api/v1` endpoints + a chunk of native state — the remaining
+  real POS depth (still *not* split-bill, which the web doesn't do).
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
@@ -57,9 +59,10 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   audited) wired into the detail sheet; the DTO already carried `channel`/`paidAt`
   so the native model now decodes them (paid/channel badges + an "unpaid" row
   marker).
-- **Deferred (facade-gated):** **Print receipt** needs its v1 endpoint (ESC/POS +
-  browser fallback); a **channel dropdown** filter is a small native add on top of
-  the now-decoded field. Noted in-line, not faked.
+- **Shipped:** **Print receipt** — `POST /api/v1/orders/:id/receipt`; native shows
+  the printer confirmation or a shareable plain-text preview (no-hardware fallback).
+- **Deferred (native-only polish):** a **channel dropdown** filter on top of the
+  now-decoded field (shown as a badge today).
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
 - **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
@@ -96,13 +99,13 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **DS adoption sweep** — done (no fixed-size text remains; KPIs on `MetricTile`).
 - ✅ **KDS 3-lane parity** — done (New/Firing/Ready).
 - ✅ **Orders search + scope + inspect** — done (read path).
-- ✅ **KDS recall** — `POST /api/v1/orders/:id/recall` + native Recall toolbar.
-- ✅ **Orders settle** — `POST /api/v1/orders/:id/settle` + native Mark-paid;
-  `channel`/`paidAt` now decoded (badges + unpaid marker).
-- ⏳ **Still facade-gated** (need `/api/v1` work, then native is a small UI add):
-  - KDS ticket-line **`category`** (station filter).
-  - Orders **print receipt** endpoint; a channel-dropdown filter (native-only add).
-  - POS **tabs**, **coursing**, **combo/cross-sell** endpoints.
+- ✅ **KDS recall** (`/recall`) + **station filter** (`category` DTO + native Menu).
+- ✅ **Orders settle** (`/settle`) + **print receipt** (`/receipt`); `channel`/
+  `paidAt` decoded (badges + unpaid marker).
+- ✅ **POS cross-sell** — `/admin/pos/suggestions` + native add-chips.
+- ⏳ **Still facade-gated** (the remaining real depth):
+  - POS **tabs** (multi-ticket) + **coursing** (fire-by-course) — endpoints + native state.
+  - Orders **channel dropdown** filter (native-only; field already decoded).
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.

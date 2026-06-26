@@ -29,12 +29,28 @@ public final class OperatorPOSStore {
         catch { state = .failed("Something went wrong") }
     }
 
+    /// Cross-sell chips for the current ticket (the four-slot complete-your-meal
+    /// panel), off /api/v1/admin/pos/suggestions. Refreshed when the ticket changes.
+    public private(set) var suggestions: [PosSuggestion] = []
+
     public func add(_ item: AdminMenuItem) { ticket[item.id, default: 0] += 1 }
+    public func add(byId id: String) { if let item = menuById[id] { add(item) } }
     public func remove(_ id: String) {
         guard let q = ticket[id] else { return }
         if q <= 1 { ticket[id] = nil } else { ticket[id] = q - 1 }
     }
-    public func clear() { ticket.removeAll() }
+    public func clear() { ticket.removeAll(); suggestions = [] }
+
+    /// A stable signature of the ticket contents — drives the suggestions refresh.
+    public var ticketSignature: String {
+        ticket.map { "\($0.key):\($0.value)" }.sorted().joined(separator: ",")
+    }
+
+    public func refreshSuggestions() async {
+        guard !ticket.isEmpty else { suggestions = []; return }
+        suggestions = (try? await api.send(
+            .posSuggestions(locationSlug: location, itemIds: Array(ticket.keys)))) ?? []
+    }
 
     public var lineCount: Int { ticket.values.reduce(0, +) }
     public var isEmpty: Bool { ticket.isEmpty }
@@ -102,6 +118,7 @@ public struct OperatorPOSView: View {
         .navigationTitle("POS — \(store.location.capitalized)")
         .navigationBarTitleDisplayMode(.inline)
         .task { if case .loading = store.state { await store.load() } }
+        .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
     }
 
@@ -125,6 +142,27 @@ public struct OperatorPOSView: View {
 
     private var ticketBar: some View {
         VStack(spacing: theme.space.sm) {
+            if !store.suggestions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: theme.space.sm) {
+                        ForEach(store.suggestions) { s in
+                            Button { store.add(byId: s.id) } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text(s.name)
+                                    MoneyText(s.price)
+                                }
+                                .textRole(.caption)
+                                .padding(.horizontal, theme.space.sm).padding(.vertical, 6)
+                                .foregroundStyle(theme.color.accent)
+                                .background(theme.color.accent.opacity(0.14), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add \(s.name), \(s.reason)")
+                        }
+                    }
+                }
+            }
             HStack {
                 Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s")").font(.subheadline).foregroundStyle(theme.color.textSecondary)
                 Spacer()

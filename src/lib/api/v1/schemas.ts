@@ -165,6 +165,7 @@ export const PaymentIntentSchema = z.object({
 export const OrderLineSchema = z.object({
   menuItemId: z.string(),
   name: z.string(),
+  category: z.string().describe("Menu category (drives the KDS station filter)"),
   quantity: z.number().int(),
   unitPrice: z.number().int().describe("Minor units (grosze)"),
   notes: z.string().nullable(),

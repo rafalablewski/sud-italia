@@ -129,6 +129,15 @@ public extension Endpoint {
     static func settle(orderID: String) -> Endpoint<Order> {
         Endpoint<Order>(.post, "orders/\(orderID)/settle", requiresAuth: true)
     }
+    /// Render/print a thermal receipt — mode=printed, or simulated with a preview.
+    static func receipt(orderID: String) -> Endpoint<ReceiptResult> {
+        Endpoint<ReceiptResult>(.post, "orders/\(orderID)/receipt", requiresAuth: true)
+    }
+    /// Cross-sell chips for a POS ticket (the four-slot complete-your-meal panel).
+    static func posSuggestions(locationSlug: String, itemIds: [String]) -> Endpoint<[PosSuggestion]> {
+        let body = try? JSONEncoder().encode(PosSuggestionsBody(locationSlug: locationSlug, itemIds: itemIds))
+        return Endpoint<[PosSuggestion]>(.post, "admin/pos/suggestions", body: body, requiresAuth: true)
+    }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
         let body = try? JSONEncoder().encode(["phone": phone])
@@ -358,3 +367,21 @@ public struct Item86Result: Codable, Sendable {
     public let available: Bool
 }
 private struct Set86Body: Encodable { let itemId: String; let available: Bool }
+
+/// Result of `POST /api/v1/orders/:id/receipt`. `printed` → streamed to the
+/// printer; `simulated` → `preview` is the exact plain-text receipt to show/share.
+public struct ReceiptResult: Codable, Sendable {
+    public let mode: String
+    public let bytes: Int
+    public let preview: String
+    public let printer: String?
+}
+
+/// A POS cross-sell chip (`POST /api/v1/admin/pos/suggestions`).
+public struct PosSuggestion: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let price: Grosze
+    public let reason: String
+}
+private struct PosSuggestionsBody: Encodable { let locationSlug: String; let itemIds: [String] }

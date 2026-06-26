@@ -47,7 +47,11 @@ public struct OperatorBoardView: View {
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $detail) { order in
-            OperatorOrderDetailSheet(order: order) { await settle(order) }
+            OperatorOrderDetailSheet(
+                order: order,
+                onSettle: { await settle(order) },
+                onPrint: { await printReceipt(order) }
+            )
         }
     }
 
@@ -62,6 +66,18 @@ public struct OperatorBoardView: View {
             if case .api(_, let m, _) = e { return m }
             return "You appear to be offline"
         } catch { return "Something went wrong" }
+    }
+
+    /// Print/render a receipt via POST /api/v1/orders/:id/receipt. Returns the
+    /// text to display (printer confirmation, or the simulated preview) or an error.
+    private func printReceipt(_ order: Order) async -> Result<String, String> {
+        do {
+            let r = try await deps.api.send(.receipt(orderID: order.id))
+            return .success(r.mode == "printed" ? "Printed to \(r.printer ?? "the printer")." : r.preview)
+        } catch let e as APIError {
+            if case .api(_, let m, _) = e { return .failure(m) }
+            return .failure("You appear to be offline")
+        } catch { return .failure("Something went wrong") }
     }
 
     /// Client-side filter over the loaded board — scope (current vs all) + a
@@ -136,9 +152,13 @@ private struct OperatorOrderDetailSheet: View {
     let order: Order
     /// Settle action injected by the board (owns the api client); nil error = ok.
     let onSettle: () async -> String?
+    /// Print action — success carries the text to show (printer note or preview).
+    let onPrint: () async -> Result<String, String>
 
     @State private var busy = false
+    @State private var printing = false
     @State private var error: String?
+    @State private var receipt: ReceiptDoc?
 
     private var isPaid: Bool { order.paidAt != nil }
 
@@ -187,15 +207,19 @@ private struct OperatorOrderDetailSheet: View {
                         }
                     }
 
-                    if !isPaid {
-                        DSButton(busy ? "Settling…" : "Mark paid") { Task { await settle() } }
-                            .disabled(busy)
+                    VStack(spacing: theme.space.sm) {
+                        if !isPaid {
+                            DSButton(busy ? "Settling…" : "Mark paid") { Task { await settle() } }
+                                .disabled(busy)
+                        }
+                        DSButton(printing ? "Printing…" : "Print receipt", prominent: false) {
+                            Task { await runPrint() }
+                        }
+                        .disabled(printing)
                     }
                     if let error {
                         Text(error).textRole(.caption).foregroundStyle(theme.color.danger)
                     }
-                    Text("Print receipt lands with its facade endpoint (/api/v1).")
-                        .textRole(.caption).foregroundStyle(theme.color.textSecondary)
                 }
                 .padding(theme.space.lg)
             }
@@ -203,6 +227,7 @@ private struct OperatorOrderDetailSheet: View {
             .navigationTitle("Order \(order.id)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .sheet(item: $receipt) { doc in ReceiptPreview(text: doc.text) }
         }
     }
 
@@ -210,6 +235,42 @@ private struct OperatorOrderDetailSheet: View {
         busy = true; error = nil
         defer { busy = false }
         if let msg = await onSettle() { error = msg } else { dismiss() }
+    }
+
+    private func runPrint() async {
+        printing = true; error = nil
+        defer { printing = false }
+        switch await onPrint() {
+        case .success(let text): receipt = ReceiptDoc(text: text)
+        case .failure(let msg): error = msg
+        }
+    }
+}
+
+private struct ReceiptDoc: Identifiable { let id = UUID(); let text: String }
+
+/// Plain-text receipt preview (the no-printer fallback) — shareable to AirPrint /
+/// a print-bridge / Notes. Monospaced so the ESC/POS layout reads true.
+private struct ReceiptPreview: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let text: String
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                Text(text).textRole(.mono)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(theme.space.lg)
+            }
+            .background(theme.color.surface)
+            .navigationTitle("Receipt")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Close") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { ShareLink(item: text) }
+            }
+        }
     }
 }
 
