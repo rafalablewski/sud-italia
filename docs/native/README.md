@@ -41,8 +41,15 @@ business is leaving Vercel — designed for from day one).
   (ownership-gated, SSE — operator bump → customer tracker in real time), and
   **Stripe PaymentIntent + Apple Pay** payment (`/orders/:id/payment-intent` +
   the `payment_intent.succeeded` webhook). **Stage 2 backend is contract-complete.**
-- ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
-  contract coverage is sufficient.
+- 🟡 **Stage 4 — started:** the SwiftUI app seed lives at
+  [`native/ottaviano-ios/`](../../native/ottaviano-ios/) — SwiftPM spine
+  (CoreModels, Networking with APIClient/TokenStore/SSE, DesignSystem, AppInfra
+  Router+DI), a customer Menu vertical slice, and both app composition roots
+  (Ottaviano TabView / OttavianoKDS SplitView) wired to the live `/api/v1`.
+  **Authored, not compiled here** (no SwiftUI toolchain in the web container) —
+  extract to the dedicated `ottaviano-ios` repo and build in Xcode on a Mac, with
+  `swift-openapi-generator` pointed at `openapi.json` to replace the hand-written
+  models. See that folder's README.
 
 Open technical calls deferred to their stage: contract source (OpenAPI-from-Zod),
 persistence engine (GRDB vs SwiftData), iOS minimum. Recommendations recorded in
