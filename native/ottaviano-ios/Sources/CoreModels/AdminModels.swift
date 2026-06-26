@@ -325,3 +325,72 @@ public struct AdminSurvey: Codable, Sendable, Identifiable {
     public let responseCount: Int
     public let avgRating: Double
 }
+
+// MARK: - Wave 4
+
+/// `/api/v1/admin/settings?surface=` — a flat, read-only settings projection.
+public struct SettingsSurface: Codable, Sendable {
+    public struct Field: Codable, Sendable { public let label: String; public let value: String }
+    public let surface: String
+    public let title: String
+    public let fields: [Field]
+}
+
+/// Shared per-location KPI row (used by insights + multi-location).
+public struct AdminLocationKPI: Codable, Sendable, Identifiable {
+    public var id: String { locationSlug }
+    public let locationSlug: String
+    public let city: String
+    public let revenue: Grosze
+    public let profit: Grosze
+    public let profitMargin: Double
+    public let orderCount: Int
+    public let avgOrderValue: Double
+    public let cancellationRate: Double
+}
+
+/// `/api/v1/admin/insights` — analytics rollup (route DTO).
+public struct AdminInsights: Codable, Sendable {
+    public struct NamedSale: Codable, Sendable, Identifiable {
+        public var id: String { name }
+        public let name: String
+        public let quantity: Int
+        public let revenue: Grosze
+    }
+    public struct PeakHour: Codable, Sendable, Identifiable {
+        public var id: Int { hour }
+        public let hour: Int
+        public let orderCount: Int
+        public let revenue: Grosze
+    }
+    public let avgItemsPerOrder: Double
+    public let cancelledOrders: Int
+    public let cancellationRate: Double
+    public let topSellers: [NamedSale]
+    public let worstSellers: [NamedSale]
+    public let peakHours: [PeakHour]
+    public let locationComparison: [AdminLocationKPI]
+}
+
+/// `/api/v1/admin/expansion` — new-site readiness summary (route DTO).
+public struct AdminExpansion: Codable, Sendable, Identifiable {
+    public var id: String { locationSlug }
+    public let locationSlug: String
+    public let city: String?
+    public let total: Int
+    public let done: Int
+    public let pct: Int
+    public let updatedAt: String
+}
+
+/// `/api/v1/admin/scheduled-bundles` — a recurring bundle intent (route DTO).
+public struct AdminScheduledBundle: Codable, Sendable, Identifiable {
+    public let id: String
+    public let bundleName: String
+    public let customerPhone: String
+    public let locationSlug: String
+    public let weekday: String
+    public let readyAt: String
+    public let itemCount: Int
+    public let status: String
+}

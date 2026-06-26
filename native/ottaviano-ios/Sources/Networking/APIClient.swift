@@ -249,6 +249,23 @@ public extension Endpoint {
     static func adminSurveys() -> Endpoint<[AdminSurvey]> {
         Endpoint<[AdminSurvey]>(.get, "admin/surveys", requiresAuth: true)
     }
+
+    // Wave 4.
+    static func adminSettings(surface: String) -> Endpoint<SettingsSurface> {
+        Endpoint<SettingsSurface>(.get, "admin/settings", query: ["surface": surface], requiresAuth: true)
+    }
+    static func adminInsights() -> Endpoint<AdminInsights> {
+        Endpoint<AdminInsights>(.get, "admin/insights", requiresAuth: true)
+    }
+    static func adminLocations() -> Endpoint<[AdminLocationKPI]> {
+        Endpoint<[AdminLocationKPI]>(.get, "admin/locations", requiresAuth: true)
+    }
+    static func adminExpansion() -> Endpoint<[AdminExpansion]> {
+        Endpoint<[AdminExpansion]>(.get, "admin/expansion", requiresAuth: true)
+    }
+    static func adminScheduledBundles() -> Endpoint<[AdminScheduledBundle]> {
+        Endpoint<[AdminScheduledBundle]>(.get, "admin/scheduled-bundles", requiresAuth: true)
+    }
 }
 
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).

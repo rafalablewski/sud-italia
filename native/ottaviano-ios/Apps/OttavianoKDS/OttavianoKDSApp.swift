@@ -151,6 +151,32 @@ struct OperatorRootView: View {
             OperatorWasteView(api: deps.api)
         case "/admin/surveys":
             OperatorSurveysView(api: deps.api)
+        case "/admin/welcome":
+            OperatorWelcomeView(role: role)
+        case "/admin/ai":
+            OperatorInsightsView()
+        case "/admin/locations":
+            OperatorMultiLocationView(api: deps.api)
+        case "/admin/expansion":
+            OperatorExpansionView(api: deps.api)
+        case "/admin/scheduled-bundles":
+            OperatorScheduledBundlesView(api: deps.api)
+        case "/admin/settings":
+            OperatorSettingsView(api: deps.api, surface: "general", title: "Settings")
+        case "/admin/payments":
+            OperatorSettingsView(api: deps.api, surface: "payments", title: "Payments")
+        case "/admin/qr-ordering":
+            OperatorSettingsView(api: deps.api, surface: "qr", title: "QR ordering")
+        case "/admin/integrations":
+            OperatorSettingsView(api: deps.api, surface: "integrations", title: "Integrations")
+        case "/admin/currency":
+            OperatorSettingsView(api: deps.api, surface: "currency", title: "Currency")
+        case "/admin/languages":
+            OperatorSettingsView(api: deps.api, surface: "languages", title: "Languages")
+        case "/admin/upsell":
+            OperatorSettingsView(api: deps.api, surface: "upsell", title: "Upsell")
+        case "/admin/crosssell":
+            OperatorSettingsView(api: deps.api, surface: "upsell", title: "Cross-sell")
         default:
             OperatorSurfaceView(item: item)
         }

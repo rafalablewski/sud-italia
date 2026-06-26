@@ -54,18 +54,21 @@ ships the matching native screen with real data. Live today:
   (loyalty members), **Alerts**, **Tasks** (mark done), **Announcements**,
   **Schedule**. Menu 86-ing and Tasks done-state are the first **write** surfaces.
 - **Operator (wave 3):** **Users & roles**, **Audit log**, **Cash**, **Business
-  costs**, **Compliance**, **Events**, **Waste log**, **Pulse surveys** — each off
-  a `/api/v1/admin/*` endpoint (see `src/app/api/v1/admin/`). Users exposes only
-  safe profile fields (never password/MFA/passkey secrets).
+  costs**, **Compliance**, **Events**, **Waste log**, **Pulse surveys**. Users
+  exposes only safe profile fields (never password/MFA/passkey secrets).
+- **Operator (wave 4):** **Settings, Payments, QR ordering, Integrations,
+  Currency, Languages, Upsell, Cross-sell** (one generic settings endpoint +
+  renderer — these config objects hold no secrets, those live in env), plus
+  **Insights**, **Multi-location**, **Expansion**, **Scheduled bundles**, and a
+  native **Welcome**.
 
-27 of the operator surfaces are now live. Surfaces not yet in a wave render a
+**40 of ~55 operator surfaces are now live.** Surfaces not yet in a wave render a
 parity scaffold that states purpose + role + wiring status (never fake data —
-Rule #1). Remaining: POS (order capture), HACCP/Handover, the Calculator,
-the Growth suite (Campaigns/Upsell/Cross-sell/Bundles/Integrations), Intelligence
-(Multi-location/Menu-engineering/Insights/Agent/Expansion) and the rest of System
-(Permissions/Regulatory/SOC2/Capabilities/Payments/QR/Currency/Languages/Settings);
-plus Stripe PaymentSheet (endpoint wired; SDK added in the extracted repo) and
-offline persistence (GRDB/SwiftData).
+Rule #1). Remaining (heavier — mostly mutations/AI): POS order capture, HACCP,
+Handover, Calculator/simulation, Menu engineering, Agent HQ, Ops Agent,
+Permissions, Regulatory disclosures, SOC 2, Capabilities, Campaigns, Corporate,
+Manage locations; plus Stripe PaymentSheet (endpoint wired; SDK added in the
+extracted repo) and offline persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
