@@ -34,17 +34,25 @@
  * open tab once so it picks up the fresh chunks without a manual hard-refresh.
  */
 
-const VERSION = "v5";
+const VERSION = "v7";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 
 const STATIC_ASSETS = [
+  // Precache only public, non-redirecting assets — the two app manifests +
+  // their icons + the storefront/operator-door shells. The auth-gated app
+  // homes (/operator, /admin) redirect to /login when signed out, and
+  // precaching a redirected response via addAll is a footgun (atomic reject /
+  // bad cache key); they're served network-first at runtime instead.
   "/",
-  "/admin",
+  "/offline",
   "/admin/login",
   "/manifest.json",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
+  "/ottaviano-kds.webmanifest",
+  "/icons/ottaviano/icon-192.png",
+  "/icons/ottaviano/icon-512.png",
+  "/icons/kds/icon-192.png",
+  "/icons/kds/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -126,7 +134,15 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(req)
-            .then((cached) => cached || caches.match("/admin") || caches.match("/")),
+            .then(
+              (cached) =>
+                cached ||
+                caches.match("/admin") ||
+                caches.match("/") ||
+                // Last resort: the branded offline page (precached) so an
+                // installed app never shows the browser's raw error screen.
+                caches.match("/offline"),
+            ),
         ),
     );
     return;

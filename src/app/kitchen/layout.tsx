@@ -1,6 +1,7 @@
 import "../themes/base/index.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
+import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";
 
 // Kitchen surfaces are admin-themed (they use .admin-bg, glass-card,
 // font-heading, etc.) so they pull in the Admin theme CSS and font
@@ -20,7 +21,11 @@ const kitchenDisplay = Fraunces({
 export const metadata: Metadata = {
   title: "Kitchen | Ottaviano",
   robots: "noindex, nofollow",
+  // Kitchen display is part of the OttavianoKDS operator app.
+  ...kdsAppMetadata,
 };
+
+export const viewport: Viewport = kdsAppViewport;
 
 export default function KitchenLayout({
   children,

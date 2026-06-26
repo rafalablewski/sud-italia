@@ -1,6 +1,7 @@
 import "../../themes/admin-v3/index.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";
 import { AdminShellV3 } from "@/admin-v3/AdminShellV3";
 import { CurrencyGuard } from "@/shared/CurrencyGuard";
 import { SimulationBanner } from "@/components/system/SimulationBanner";
@@ -16,7 +17,13 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono",
 export const metadata: Metadata = {
   title: "Admin v3 | Ottaviano",
   robots: "noindex, nofollow",
+  // Part of the OttavianoKDS operator app — install from here and you get the
+  // KDS home-screen icon, not the customer one.
+  ...kdsAppMetadata,
 };
+
+// Dark KDS theme colour + safe-area cover for the operator app.
+export const viewport: Viewport = kdsAppViewport;
 
 // The layout server-renders the DB-global active skin onto `data-skin`, so the
 // surface must render per-request — otherwise the few statically-prerendered

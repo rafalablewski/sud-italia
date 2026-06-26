@@ -16,6 +16,7 @@ import {
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
 import { FamilyWalletPanel } from "@/components/loyalty/FamilyWalletPanel";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import {
   Star,
   Trophy,
@@ -133,6 +134,14 @@ function SignInSection() {
         <p className="v8-rewards-signin-hint">
           Just your phone number — no password, no email required.
         </p>
+
+        {/* Carry the loyalty card in your pocket: install the Ottaviano
+            customer PWA. The button self-hides once already installed and
+            falls back to an iOS Share-sheet how-to (see InstallAppButton). */}
+        <div className="mt-5 flex flex-col items-center gap-2">
+          <InstallAppButton appName="Ottaviano" tone="light" />
+          <span className="v8-rewards-signin-hint">Add the app for your card &amp; perks on the go.</span>
+        </div>
       </div>
     </div>
   );

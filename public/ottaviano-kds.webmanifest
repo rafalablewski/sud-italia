@@ -1,0 +1,61 @@
+{
+  "id": "/operator?app=kds",
+  "name": "OttavianoKDS — Admin & Core",
+  "short_name": "OttavianoKDS",
+  "description": "Operator app for Ottaviano: kitchen display, point of sale, orders and the full back-office admin — built for tablets and iPads.",
+  "start_url": "/operator?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070A0F",
+  "theme_color": "#11161F",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icons/kds/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/kds/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/kds/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kitchen display",
+      "short_name": "KDS",
+      "url": "/core/kds?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/kds/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Point of sale",
+      "short_name": "POS",
+      "url": "/core/pos?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/kds/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Orders",
+      "short_name": "Orders",
+      "url": "/core/orders?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/kds/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin back-office",
+      "short_name": "Admin",
+      "url": "/admin?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/kds/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["business", "productivity", "food"],
+  "lang": "pl",
+  "dir": "ltr"
+}

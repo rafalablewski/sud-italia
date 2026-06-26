@@ -1,0 +1,74 @@
+name: iOS TestFlight
+
+# Manually triggered: archives the chosen app, signs it via the App Store Connect
+# API key (cloud-managed cert + auto provisioning), and uploads to TestFlight.
+# Requires repo secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
+# Triggered either manually (once this workflow reaches the default branch) or by
+# pushing a commit whose message contains [testflight] — the latter lets us ship
+# from a feature branch without merging to main. Append "(KDS)" to the message to
+# select the operator app; otherwise the customer app ships.
+on:
+  workflow_dispatch:
+    inputs:
+      scheme:
+        description: Which app to ship
+        type: choice
+        options: [Ottaviano, OttavianoKDS]
+        default: Ottaviano
+  push:
+    branches: ["claude/**"]
+
+jobs:
+  testflight:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]') }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: native/ottaviano-ios
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Apple requires apps be built with the iOS 26 SDK (Xcode 26+) to upload.
+      # macos-latest ships several Xcodes; select the newest 26.x explicitly so
+      # uploads never fail validation on a runner that defaulted to Xcode 16.
+      - name: Select Xcode 26
+        run: |
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$XC" ]; then echo "No Xcode 26 found:"; ls -d /Applications/Xcode_*.app; exit 1; fi
+          echo "Using $XC"
+          sudo xcode-select -switch "$XC/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Install App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          # Sanity: confirm it looks like a PEM private key (no secret printed).
+          head -1 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 | grep -q "BEGIN PRIVATE KEY" \
+            && echo "API key looks valid" || echo "WARNING: key does not start with BEGIN PRIVATE KEY"
+
+      - name: Archive → export → upload
+        run: |
+          chmod +x Scripts/testflight.sh
+          SCHEME="${{ inputs.scheme }}"
+          if [ -z "$SCHEME" ]; then
+            # push-triggered: pick KDS only if the commit message asks for it.
+            case "${{ github.event.head_commit.message }}" in
+              *"(KDS)"*) SCHEME="OttavianoKDS" ;;
+              *) SCHEME="Ottaviano" ;;
+            esac
+          fi
+          echo "Shipping scheme: $SCHEME"
+          ./Scripts/testflight.sh "$SCHEME" "${{ github.run_number }}"
