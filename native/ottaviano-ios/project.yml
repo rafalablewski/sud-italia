@@ -19,7 +19,11 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
-    MARKETING_VERSION: "0.2.0"
+    # Bumped above the stray 0.2.1 build already in TestFlight so the parity
+    # release supersedes it — TestFlight compares this (CFBundleShortVersionString)
+    # first, so a build that's merely newer by date/build-number but a LOWER
+    # version is never offered as an update. Keep this ahead of every prior upload.
+    MARKETING_VERSION: "0.3.0"
     CURRENT_PROJECT_VERSION: "1"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
