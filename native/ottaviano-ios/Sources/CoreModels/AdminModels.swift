@@ -228,3 +228,100 @@ public struct AdminShift: Codable, Sendable, Identifiable {
     public let role: String
     public let status: String
 }
+
+// MARK: - Wave 3
+
+/// `/api/v1/admin/users` — staff account (safe fields only; no secrets).
+public struct AdminUser: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let email: String?
+    public let role: String
+    public let status: String
+    public let locationSlug: String?
+    public let locationSlugs: [String]?
+    public let mfaEnabled: Bool
+    public let hasPasskeys: Bool
+    public let createdAt: String
+}
+
+/// `/api/v1/admin/audit-log` — a privileged-action entry (route DTO).
+public struct AdminAuditEntry: Codable, Sendable, Identifiable {
+    public let id: String
+    public let actor: String
+    public let action: String
+    public let entityType: String?
+    public let entityId: String?
+    public let occurredAt: String
+}
+
+/// `/api/v1/admin/cash` — a till session summary (route DTO).
+public struct AdminCashSession: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let openedAt: String
+    public let openedBy: String
+    public let openingFloat: Grosze
+    public let dropCount: Int
+    public let dropsTotal: Grosze
+    public let closingCountGrosze: Grosze?
+    public let varianceGrosze: Grosze?
+    public let closedAt: String?
+    public let open: Bool
+}
+
+/// `/api/v1/admin/business-costs` — a recurring cost (route DTO).
+public struct AdminBusinessCost: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let category: String
+    public let vendor: String?
+    public let amountGrosze: Grosze
+    public let frequency: String
+    public let locationSlug: String?
+    public let nextDueDate: String?
+}
+
+/// `/api/v1/admin/compliance` — a licence/inspection with expiry (route DTO).
+public struct AdminComplianceItem: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let kind: String
+    public let title: String
+    public let expiresAt: String
+    public let expired: Bool
+    public let lastRenewedAt: String?
+}
+
+/// `/api/v1/admin/events` — an event / large-party booking (route DTO).
+public struct AdminEvent: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let locationSlug: String
+    public let date: String
+    public let status: String
+    public let expectedAttendance: Int?
+    public let actualRevenueGrosze: Grosze?
+}
+
+/// `/api/v1/admin/waste` — a wastage entry (route DTO).
+public struct AdminWasteEntry: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let item: String
+    public let quantity: Double
+    public let unit: String
+    public let reason: String
+    public let estimatedCostGrosze: Grosze?
+    public let recordedAt: String
+}
+
+/// `/api/v1/admin/surveys` — a pulse survey with response rollup (route DTO).
+public struct AdminSurvey: Codable, Sendable, Identifiable {
+    public let id: String
+    public let question: String
+    public let trigger: String
+    public let active: Bool
+    public let responseCount: Int
+    public let avgRating: Double
+}

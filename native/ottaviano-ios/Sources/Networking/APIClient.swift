@@ -223,6 +223,32 @@ public extension Endpoint {
         if let to { q["to"] = to }
         return Endpoint<[AdminShift]>(.get, "admin/schedule", query: q, requiresAuth: true)
     }
+
+    // Wave 3.
+    static func adminUsers() -> Endpoint<[AdminUser]> {
+        Endpoint<[AdminUser]>(.get, "admin/users", requiresAuth: true)
+    }
+    static func adminAuditLog() -> Endpoint<[AdminAuditEntry]> {
+        Endpoint<[AdminAuditEntry]>(.get, "admin/audit-log", requiresAuth: true)
+    }
+    static func adminCash() -> Endpoint<[AdminCashSession]> {
+        Endpoint<[AdminCashSession]>(.get, "admin/cash", requiresAuth: true)
+    }
+    static func adminBusinessCosts() -> Endpoint<[AdminBusinessCost]> {
+        Endpoint<[AdminBusinessCost]>(.get, "admin/business-costs", requiresAuth: true)
+    }
+    static func adminCompliance() -> Endpoint<[AdminComplianceItem]> {
+        Endpoint<[AdminComplianceItem]>(.get, "admin/compliance", requiresAuth: true)
+    }
+    static func adminEvents() -> Endpoint<[AdminEvent]> {
+        Endpoint<[AdminEvent]>(.get, "admin/events", requiresAuth: true)
+    }
+    static func adminWaste() -> Endpoint<[AdminWasteEntry]> {
+        Endpoint<[AdminWasteEntry]>(.get, "admin/waste", requiresAuth: true)
+    }
+    static func adminSurveys() -> Endpoint<[AdminSurvey]> {
+        Endpoint<[AdminSurvey]>(.get, "admin/surveys", requiresAuth: true)
+    }
 }
 
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).

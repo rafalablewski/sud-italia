@@ -52,15 +52,20 @@ ships the matching native screen with real data. Live today:
   **Purchase orders**, **Service/slots**.
 - **Operator (wave 2):** **Menu** (with live 86-ing), **Recipes**, **Guest**
   (loyalty members), **Alerts**, **Tasks** (mark done), **Announcements**,
-  **Schedule** — each off a `/api/v1/admin/*` endpoint (see `src/app/api/v1/admin/`).
-  Menu 86-ing and Tasks done-state are the first **write** surfaces (PATCH).
+  **Schedule**. Menu 86-ing and Tasks done-state are the first **write** surfaces.
+- **Operator (wave 3):** **Users & roles**, **Audit log**, **Cash**, **Business
+  costs**, **Compliance**, **Events**, **Waste log**, **Pulse surveys** — each off
+  a `/api/v1/admin/*` endpoint (see `src/app/api/v1/admin/`). Users exposes only
+  safe profile fields (never password/MFA/passkey secrets).
 
-Surfaces not yet in a wave render a parity scaffold that states purpose + role +
-wiring status (never fake data — Rule #1) and go live as later waves cover them.
-Remaining: POS (order capture), HACCP/Waste/Handover, Cash, Business costs,
-Calculator, the Growth suite, Intelligence and System surfaces; plus Stripe
-PaymentSheet (the `paymentIntent` endpoint is wired; the SDK is added in the
-extracted repo) and offline persistence (GRDB/SwiftData).
+27 of the operator surfaces are now live. Surfaces not yet in a wave render a
+parity scaffold that states purpose + role + wiring status (never fake data —
+Rule #1). Remaining: POS (order capture), HACCP/Handover, the Calculator,
+the Growth suite (Campaigns/Upsell/Cross-sell/Bundles/Integrations), Intelligence
+(Multi-location/Menu-engineering/Insights/Agent/Expansion) and the rest of System
+(Permissions/Regulatory/SOC2/Capabilities/Payments/QR/Currency/Languages/Settings);
+plus Stripe PaymentSheet (endpoint wired; SDK added in the extracted repo) and
+offline persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
