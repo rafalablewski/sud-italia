@@ -331,7 +331,12 @@ private struct AgentTurnBody: Encodable { let message: String; let conversationI
 
 /// Body for `POST /api/v1/admin/pos/order`.
 public struct PosOrderBody: Encodable, Sendable {
-    public struct Line: Encodable, Sendable { public let id: String; public let quantity: Int }
+    public struct Line: Encodable, Sendable {
+        public let id: String; public let quantity: Int
+        // Explicit public init — feature code (AppFeatures) builds these, and the
+        // synthesized memberwise init of a public struct is only `internal`.
+        public init(id: String, quantity: Int) { self.id = id; self.quantity = quantity }
+    }
     public let locationSlug: String
     public let items: [Line]
     public let customerName: String

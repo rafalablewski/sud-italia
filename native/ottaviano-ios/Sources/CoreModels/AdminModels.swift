@@ -542,6 +542,11 @@ public struct AgentMessage: Codable, Sendable, Identifiable {
     public let role: String   // "user" | "assistant"
     public let text: String
     public let createdAt: String
+    /// Explicit public init — the synthesized memberwise init is `internal`, so
+    /// feature code (a different module) can't build optimistic messages without this.
+    public init(id: String, role: String, text: String, createdAt: String) {
+        self.id = id; self.role = role; self.text = text; self.createdAt = createdAt
+    }
 }
 
 /// `/api/v1/admin/agent` (GET) + `/agent/turn` (POST) — the Ops-Agent thread.

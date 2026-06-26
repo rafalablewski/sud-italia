@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const guard = requireRole(req, "manager");
   if ("error" in guard) return guard.error;
   try {
-    const suppliers = await getSuppliers();
+    const suppliers = [...(await getSuppliers())]; // copy before sort — getter may return a shared/cached ref
     suppliers.sort((a, b) => a.name.localeCompare(b.name));
     return apiOk(suppliers, { count: suppliers.length });
   } catch (err) {

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const date = req.nextUrl.searchParams.get("date")?.trim() || undefined;
   try {
     const all = await getSlots(undefined, date);
-    const slots = (filter.slugs === null ? all : all.filter((s) => filter.slugs!.includes(s.locationSlug)))
+    const slots = (filter.slugs === null ? [...all] : all.filter((s) => filter.slugs!.includes(s.locationSlug)))
       .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     return apiOk(slots, { count: slots.length });
   } catch (err) {

@@ -14,8 +14,11 @@ public final class LocationsStore {
 
     public func load() async {
         guard !loaded else { return }
-        if let locs = try? await api.send(.locations()) { locations = locs }
-        loaded = true
+        // Only latch `loaded` on success, so a failed first load can be retried.
+        if let locs = try? await api.send(.locations()) {
+            locations = locs
+            loaded = true
+        }
     }
 
     public func location(_ slug: String) -> Location? { locations.first { $0.slug == slug } }

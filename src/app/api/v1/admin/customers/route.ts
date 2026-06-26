@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const guard = requireRole(req, "staff");
   if ("error" in guard) return guard.error;
   try {
-    const customers = await getCustomers();
+    const customers = [...(await getCustomers())]; // copy before sort — getter may return a shared/cached ref
     customers.sort((a, b) => b.totalSpentGrosze - a.totalSpentGrosze);
     return apiOk(customers, { count: customers.length });
   } catch (err) {

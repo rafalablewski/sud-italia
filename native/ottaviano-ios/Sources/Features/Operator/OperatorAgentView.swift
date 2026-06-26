@@ -34,14 +34,20 @@ public final class OperatorAgentStore {
         sending = true
         defer { sending = false }
         // Optimistic echo of the user's message; the reload reconciles to truth.
-        messages.append(AgentMessage(id: "local-\(messages.count)", role: "user", text: trimmed, createdAt: ""))
+        let localId = "local-\(messages.count)"
+        messages.append(AgentMessage(id: localId, role: "user", text: trimmed, createdAt: ""))
         do {
             let thread = try await api.send(.adminAgentTurn(message: trimmed, conversationId: conversationId))
             conversationId = thread.conversationId
             messages = thread.messages
             error = thread.error
-        } catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { self.error = "The agent could not respond" }
+        } catch let e as APIError {
+            messages.removeAll { $0.id == localId }   // roll back the optimistic echo
+            error = OperatorListLoader<Int>.message(e)
+        } catch {
+            messages.removeAll { $0.id == localId }
+            self.error = "The agent could not respond"
+        }
     }
 }
 

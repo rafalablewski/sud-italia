@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const guard = requireRole(req, "staff");
   if ("error" in guard) return guard.error;
   try {
-    const members = await getLoyaltyMembers();
+    const members = [...(await getLoyaltyMembers())]; // copy before sort — getter may return a shared/cached ref
     members.sort((a, b) => (b.signedUpAt ?? "").localeCompare(a.signedUpAt ?? ""));
     return apiOk(members, { count: members.length });
   } catch (err) {

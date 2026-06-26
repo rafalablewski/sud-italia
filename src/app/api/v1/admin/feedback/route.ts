@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if ("error" in filter) return filter.error;
   try {
     const all = await getFeedback();
-    const list = filter.slugs === null ? all : all.filter((f) => filter.slugs!.includes(f.locationSlug));
+    const list = filter.slugs === null ? [...all] : all.filter((f) => filter.slugs!.includes(f.locationSlug));
     list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const avg = list.length
       ? Math.round((list.reduce((s, f) => s + f.overallRating, 0) / list.length) * 10) / 10

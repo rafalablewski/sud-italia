@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if ("error" in filter) return filter.error;
   try {
     const all = await getStaff();
-    const staff = filter.slugs === null ? all : all.filter((s) => filter.slugs!.includes(s.locationSlug));
+    const staff = filter.slugs === null ? [...all] : all.filter((s) => filter.slugs!.includes(s.locationSlug));
     staff.sort((a, b) => a.name.localeCompare(b.name));
     return apiOk(staff, { count: staff.length });
   } catch (err) {

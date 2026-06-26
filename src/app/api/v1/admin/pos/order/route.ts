@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
   if (!scopeAllows(guard.claims.scope, locationSlug)) {
     return apiError("forbidden", `Not authorized for location "${locationSlug}"`);
   }
-  const items = (body.items ?? [])
-    .filter((i): i is { id: string; quantity: number } => typeof i.id === "string" && Number(i.quantity) > 0)
+  const items = (Array.isArray(body.items) ? body.items : [])
+    .filter((i): i is { id: string; quantity: number } => typeof i?.id === "string" && Number(i?.quantity) > 0)
     .map((i) => ({ id: i.id, quantity: Math.floor(Number(i.quantity)) }));
   if (items.length === 0) return apiError("validation_failed", "At least one item is required");
   if (!body.customerName?.trim()) return apiError("validation_failed", "customerName is required");

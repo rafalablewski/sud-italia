@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   if ("error" in guard) return guard.error;
   const allowed = scopedLocations(guard.claims.scope); // null = unrestricted
   try {
-    let alerts = await getNotifications();
+    let alerts = [...(await getNotifications())]; // copy before sort — getter may return a shared/cached ref
     if (allowed) alerts = alerts.filter((n) => !n.locationSlug || allowed.includes(n.locationSlug));
     alerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return apiOk(alerts, { count: alerts.length, unread: alerts.filter((a) => !a.read).length });
