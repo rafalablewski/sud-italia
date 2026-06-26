@@ -12,6 +12,7 @@ import {
 import { isAuthenticated, getCurrentAdminUser } from "@/lib/admin-auth";
 import { CORE_SURFACES } from "@/core/routes";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
+import { OperatorPushOptInButton } from "@/components/pwa/OperatorPushOptInButton";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,10 @@ export default async function OperatorHome() {
             </p>
           )}
         </div>
-        <InstallAppButton appName="OttavianoKDS" tone="dark" />
+        <div className="flex flex-wrap items-center gap-3">
+          <OperatorPushOptInButton />
+          <InstallAppButton appName="OttavianoKDS" tone="dark" />
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

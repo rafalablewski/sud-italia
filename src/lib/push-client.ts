@@ -31,9 +31,16 @@ export type PushOptInResult =
   | "no-key"
   | "error";
 
-export async function ensurePushSubscription(
+/**
+ * Shared subscribe dance: permission → PushManager.subscribe(VAPID) → POST the
+ * subscription to `registerUrl`. `extraBody` carries channel-specific fields
+ * (the customer flow sends `phone`; the operator flow sends nothing — identity
+ * comes from the admin cookie). Backs both the customer and operator buttons.
+ */
+async function subscribeAndRegister(
   vapidPublicKey: string | undefined,
-  phone?: string,
+  registerUrl: string,
+  extraBody: Record<string, unknown> = {},
 ): Promise<PushOptInResult> {
   if (typeof window === "undefined") return "unsupported";
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
@@ -64,13 +71,13 @@ export async function ensurePushSubscription(
     };
     if (!raw.endpoint || !raw.keys?.p256dh || !raw.keys?.auth) return "error";
 
-    const res = await fetch("/api/push/subscribe", {
+    const res = await fetch(registerUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         endpoint: raw.endpoint,
         keys: { p256dh: raw.keys.p256dh, auth: raw.keys.auth },
-        phone,
+        ...extraBody,
       }),
     });
     if (!res.ok) return "error";
@@ -78,4 +85,20 @@ export async function ensurePushSubscription(
   } catch {
     return "error";
   }
+}
+
+/** Customer push opt-in → /api/push/subscribe (cookie identifies the phone). */
+export async function ensurePushSubscription(
+  vapidPublicKey: string | undefined,
+  phone?: string,
+): Promise<PushOptInResult> {
+  return subscribeAndRegister(vapidPublicKey, "/api/push/subscribe", phone ? { phone } : {});
+}
+
+/** Operator push opt-in → /api/admin/push/subscribe (admin cookie identifies the
+ *  user). Wakes the OttavianoKDS tablet on new orders / refunds / cash variance. */
+export async function ensureAdminPushSubscription(
+  vapidPublicKey: string | undefined,
+): Promise<PushOptInResult> {
+  return subscribeAndRegister(vapidPublicKey, "/api/admin/push/subscribe");
 }
