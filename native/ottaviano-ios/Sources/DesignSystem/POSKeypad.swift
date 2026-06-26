@@ -63,7 +63,7 @@ public struct POSKeypad: View {
         .foregroundStyle(theme.color.textPrimary)
         .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
         .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
-        .sensoryFeedback(.impact(weight: .rigid), trigger: grosze)
+        .sensoryFeedback(.impact(flexibility: .rigid), trigger: grosze)
         .modifier(KeyShortcut(key: k))
         .accessibilityLabel(k == "⌫" ? "Delete" : k)
     }
