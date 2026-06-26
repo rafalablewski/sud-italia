@@ -179,9 +179,16 @@ are the contracts + representative sketches; full set lives in the package.
 >   **`DSEmptyState`** (over `ContentUnavailableView`), **`DSStepper`**, **`MetricTile`**,
 >   and the headline **`KDSTicket`** (age-timer ticket; `Equatable` so a lane only
 >   redraws changed tickets) — now driving `KDSBoardView`.
-> - **Gallery:** `#Preview` blocks render the set in both skins (the living
->   Storybook, §6). Still pending: `POSKeypad`, `DSTextField`, `DSToast`, snapshot/
->   contrast test harness.
+> - **Inputs & overlays:** **`DSTextField`** (label/error/icon slots + keyboard
+>   config; drives `OperatorLoginView`), **`DSToast`** (+ auto-dismiss `.dsToast`
+>   modifier), and **`POSKeypad`** (grosze-exact till pad with quick-cash +
+>   hardware-keyboard support; drives the POS cash-tender flow).
+> - **Gallery + gate:** `#Preview` blocks render the set in both skins (the living
+>   Storybook, §6). **Contrast is gated** — `tests/native-contrast.test.ts` (web
+>   CI) and `Tests/DesignSystemTests/ContrastTests.swift` (iOS CI) assert WCAG on
+>   the shipping tokens: the operator skin to full AA-body, the customer skin to
+>   AA-body for primary text + AA-large floor elsewhere. Still pending: snapshot /
+>   Dynamic-Type-XXXL image tests (need a simulator — iOS-repo CI).
 
 ### 4.1 Primitives
 - **`DSButton`** — `variant: .primary | .secondary | .tonal | .ghost | .destructive`,
@@ -266,8 +273,10 @@ A screen is **not done** until:
 This package is **Stage 3a**; it must land (tokens + the §4.1 primitives +
 `MoneyText`/`KDSTicket`/`POSKeypad`) before Stage 4 (the app shell) can render
 anything real. **Status:** tokens + the §4.1 primitives + `MoneyText` +
-`KDSTicket` shipped (v0.3, see §4 "Shipped"); `POSKeypad` is the remaining
-domain component before the operator POS feature is theme-complete. Feature stages (5) consume it and may *propose* new components —
+`KDSTicket` + `POSKeypad` + `DSTextField`/`DSToast` shipped (v0.3, see §4
+"Shipped"), with WCAG contrast gated in CI. The operator POS/KDS/login features
+are theme-complete; the remaining work is the design-system **adoption sweep** of
+the older Operator screens (see `parity/SCREEN-AUDIT.md` action items). Feature stages (5) consume it and may *propose* new components —
 which are added here, with a gallery entry + snapshot, never inline in a feature.
 This is the design-system analogue of the web repo's Rule #11: the catalog is the
 source of truth; a one-off component in a feature is a bug.

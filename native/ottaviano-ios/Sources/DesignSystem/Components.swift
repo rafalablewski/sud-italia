@@ -103,7 +103,7 @@ public struct DSSectionHeader<Trailing: View>: View {
     public init(
         _ title: String,
         subtitle: String? = nil,
-        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
     ) {
         self.title = title; self.subtitle = subtitle; self.trailing = trailing
     }

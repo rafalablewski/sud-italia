@@ -34,10 +34,15 @@ public struct OperatorLoginView: View {
                         .foregroundStyle(theme.color.textSecondary)
 
                     VStack(spacing: theme.space.md) {
-                        field("Email (optional)", text: $email, content: .emailAddress, secure: false)
-                        field("Password", text: $password, content: .password, secure: true)
+                        DSTextField("Email (optional)", text: $email, systemImage: "envelope",
+                                    keyboard: .emailAddress, contentType: .emailAddress,
+                                    autocapitalization: .never, autocorrect: false)
+                        DSTextField("Password", text: $password, secure: true, systemImage: "lock",
+                                    contentType: .password)
                         if session.mfaRequired {
-                            field("Authentication code", text: $totp, content: .oneTimeCode, secure: false)
+                            DSTextField("Authentication code", text: $totp, systemImage: "key",
+                                        keyboard: .numberPad, contentType: .oneTimeCode,
+                                        autocapitalization: .never, autocorrect: false)
                                 .transition(.opacity)
                         }
                     }
@@ -63,23 +68,6 @@ public struct OperatorLoginView: View {
             }
         }
         .animation(theme.snappy, value: session.mfaRequired)
-    }
-
-    private func field(_ placeholder: String, text: Binding<String>, content: UITextContentType, secure: Bool) -> some View {
-        Group {
-            if secure {
-                SecureField(placeholder, text: text)
-            } else {
-                TextField(placeholder, text: text)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            }
-        }
-        .textContentType(content)
-        .foregroundStyle(theme.color.textPrimary)
-        .padding()
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func signIn() {

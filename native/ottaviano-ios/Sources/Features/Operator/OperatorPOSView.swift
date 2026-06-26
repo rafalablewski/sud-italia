@@ -155,6 +155,9 @@ private struct ChargeSheet: View {
     @State private var table = ""
     @State private var error: String?
     @State private var doneOrderId: String?
+    @State private var tender: Tender = .card
+    @State private var cash: Grosze = 0
+    private enum Tender: Hashable { case card, cash }
 
     var body: some View {
         NavigationStack {
@@ -189,10 +192,31 @@ private struct ChargeSheet: View {
                             TextField("Phone", text: $phone).keyboardType(.phonePad).textContentType(.telephoneNumber)
                             TextField("Table (optional)", text: $table).keyboardType(.numberPad)
                         }
+                        Section("Payment") {
+                            Picker("Method", selection: $tender) {
+                                Text("Card").tag(Tender.card)
+                                Text("Cash").tag(Tender.cash)
+                            }
+                            .pickerStyle(.segmented)
+                            if tender == .cash {
+                                // Order total stays server-priced; the keypad is a
+                                // till aid that computes change for the cashier.
+                                POSKeypad(grosze: $cash)
+                                    .listRowInsets(EdgeInsets(top: theme.space.sm, leading: theme.space.md,
+                                                              bottom: theme.space.sm, trailing: theme.space.md))
+                                HStack {
+                                    Text("Change due").foregroundStyle(theme.color.textSecondary)
+                                    Spacer()
+                                    MoneyText(max(0, cash - store.total)).font(.headline)
+                                        .foregroundStyle(cash >= store.total ? theme.color.success : theme.color.textSecondary)
+                                }
+                            }
+                        }
                         if let error { Section { Text(error).font(.footnote).foregroundStyle(theme.color.danger) } }
                         Section {
                             DSButton(store.sending ? "Sending…" : "Send to kitchen") { Task { await charge() } }
-                                .disabled(store.sending || name.isEmpty || phone.count < 7)
+                                .disabled(store.sending || name.isEmpty || phone.count < 7
+                                          || (tender == .cash && cash < store.total))
                         }
                     }
                 }
