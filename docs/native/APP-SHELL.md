@@ -244,7 +244,12 @@ using the same rank table as `src/lib/admin-roles.ts` (owner 100 · franchisee 7
 
 - **`.live`** — rendered natively against `/api/v1` today: the Dashboard
   (`OperatorDashboardView`, real KPIs off the order board), the Orders board
-  (`OperatorBoardView`), and the KDS lanes (`KDSBoardView`).
+  (`OperatorBoardView`), the KDS lanes (`KDSBoardView`), **Reports**
+  (`OperatorReportsView` ← `/api/v1/admin/summary`), and the **Customers, Staff,
+  Suppliers, Feedback, Inventory, Purchase orders** and **Service/slots** screens
+  (`OperatorScreens.swift` ← the `/api/v1/admin/*` read endpoints). Each new
+  endpoint is bearer-authed, role-gated (`requireRole`, mirroring `ROLE_RANK`),
+  and location-scoped (`resolveLocationFilter`).
 - **`.scaffold`** — the parity surface (`OperatorSurfaceView`): states the web
   page it mirrors, its role gate, and an honest "pending /api/v1" wiring status.
   It carries **no fabricated data** (Rule #1); it exists so the layout is complete

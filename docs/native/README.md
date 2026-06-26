@@ -53,9 +53,12 @@ business is leaving Vercel — designed for from day one).
     surfaces (`CoreNav.tsx`), **role-filtered** by the signed-in staff rank exactly
     like `filterNavForRoleV3` (owner → all, franchisee → scope, kitchen → line).
     See [`Sources/AppInfra/OperatorNav.swift`](../../native/ottaviano-ios/Sources/AppInfra/OperatorNav.swift).
-  Surfaces with `/api/v1` coverage (Dashboard, Orders board, KDS, the whole
-  customer path) render **live**; the rest are parity scaffolds (purpose + role +
-  honest wiring status, never fake data — Rule #1) pending facade expansion.
+  Live today: the whole customer path, and the operator Dashboard, Orders board,
+  KDS, **Reports, Customers, Staff, Suppliers, Feedback, Inventory, Purchase
+  orders and Service/slots** — each off a new bearer-authed, role-gated
+  `/api/v1/admin/*` endpoint (`src/app/api/v1/admin/`). Remaining surfaces are
+  parity scaffolds (purpose + role + honest wiring status, never fake data —
+  Rule #1) going live wave by wave as the facade expands.
   **Authored, not compiled here** (no SwiftUI toolchain in the web container) —
   extract to the dedicated `ottaviano-ios` repo and build in Xcode on a Mac, with
   `swift-openapi-generator` pointed at `openapi.json` to replace the hand-written

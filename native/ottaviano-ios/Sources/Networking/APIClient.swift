@@ -154,4 +154,38 @@ public extension Endpoint {
     static func paymentIntent(orderID: String) -> Endpoint<PaymentIntentDTO> {
         Endpoint<PaymentIntentDTO>(.post, "orders/\(orderID)/payment-intent", requiresAuth: true)
     }
+
+    // Operator admin reads (OttavianoKDS) — mirror the web /admin/* data over the
+    // bearer-authed, role-gated /api/v1/admin facade. `location` scopes to a site.
+    static func adminCustomers() -> Endpoint<[AdminCustomer]> {
+        Endpoint<[AdminCustomer]>(.get, "admin/customers", requiresAuth: true)
+    }
+    static func adminStaff(location: String? = nil) -> Endpoint<[AdminStaff]> {
+        Endpoint<[AdminStaff]>(.get, "admin/staff", query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
+    static func adminSuppliers() -> Endpoint<[AdminSupplier]> {
+        Endpoint<[AdminSupplier]>(.get, "admin/suppliers", requiresAuth: true)
+    }
+    static func adminFeedback(location: String? = nil) -> Endpoint<[AdminFeedback]> {
+        Endpoint<[AdminFeedback]>(.get, "admin/feedback", query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
+    static func adminInventory(location: String? = nil) -> Endpoint<[AdminStockRow]> {
+        Endpoint<[AdminStockRow]>(.get, "admin/inventory", query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
+    static func adminSlots(location: String? = nil, date: String? = nil) -> Endpoint<[AdminSlot]> {
+        var q: [String: String] = [:]
+        if let location { q["location"] = location }
+        if let date { q["date"] = date }
+        return Endpoint<[AdminSlot]>(.get, "admin/slots", query: q, requiresAuth: true)
+    }
+    static func adminPurchaseOrders(location: String? = nil) -> Endpoint<[AdminPurchaseOrder]> {
+        Endpoint<[AdminPurchaseOrder]>(.get, "admin/purchase-orders", query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
+    static func adminSummary(location: String? = nil, from: String? = nil, to: String? = nil) -> Endpoint<AdminSummary> {
+        var q: [String: String] = [:]
+        if let location { q["location"] = location }
+        if let from { q["from"] = from }
+        if let to { q["to"] = to }
+        return Endpoint<AdminSummary>(.get, "admin/summary", query: q, requiresAuth: true)
+    }
 }
