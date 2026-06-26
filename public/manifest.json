@@ -1,24 +1,46 @@
 {
-  "name": "Ottaviano - Italian Restaurant",
+  "id": "/?app=ottaviano",
+  "name": "Ottaviano — Order & Rewards",
   "short_name": "Ottaviano",
-  "description": "Authentic Italian dining. Order Neapolitan pizza, pasta, and more from our restaurants across Poland.",
-  "start_url": "/",
+  "description": "Order authentic Neapolitan pizza, pasta and more from Ottaviano in Kraków and Warszawa — and carry your loyalty card in your pocket.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFF8F0",
   "theme_color": "#C8102E",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/ottaviano/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/ottaviano/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/ottaviano/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Order now",
+      "short_name": "Order",
+      "url": "/?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/ottaviano/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My loyalty card",
+      "short_name": "Rewards",
+      "url": "/rewards?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/ottaviano/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "categories": ["food", "lifestyle"],

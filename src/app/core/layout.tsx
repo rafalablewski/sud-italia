@@ -1,6 +1,7 @@
 import "../themes/core/index.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";
 import { CurrencyGuard } from "@/shared/CurrencyGuard";
 import { getThemeSkinSettings } from "@/lib/store";
 import { CoreProviders } from "./CoreProviders";
@@ -29,7 +30,11 @@ const cvMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-core-mono"
 export const metadata: Metadata = {
   title: "Core | Ottaviano",
   robots: "noindex, nofollow",
+  // Core is the heart of the OttavianoKDS operator app (POS / KDS / Orders).
+  ...kdsAppMetadata,
 };
+
+export const viewport: Viewport = kdsAppViewport;
 
 // The layout server-renders the DB-global active skin onto `data-skin`, so the
 // surface must render per-request — otherwise a statically-prerendered /core

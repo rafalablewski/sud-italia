@@ -1,6 +1,7 @@
 import "../themes/admin-v3/index.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";
 
 // The universal team door shares the LoginForm with /admin/login, both now on
 // the live admin design (v3 "Operator Terminal"). It lives outside the
@@ -17,7 +18,13 @@ const loginMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-m
 export const metadata: Metadata = {
   title: "Sign in | Ottaviano",
   robots: "noindex, nofollow",
+  // The universal team door is the OttavianoKDS sign-in: Core + /operator bounce
+  // unauthenticated operators here, so it must keep the KDS app identity (not the
+  // customer one) through the install/login moment.
+  ...kdsAppMetadata,
 };
+
+export const viewport: Viewport = kdsAppViewport;
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (

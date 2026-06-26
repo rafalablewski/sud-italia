@@ -1,6 +1,7 @@
 import "../../themes/admin-v3/index.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";
 
 /**
  * Admin (owner) login — shell-less, but on the live admin design (v3 "Operator
@@ -18,7 +19,11 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono",
 export const metadata: Metadata = {
   title: "Admin sign in | Ottaviano",
   robots: "noindex, nofollow",
+  // The operator sign-in door is the OttavianoKDS app — install from here too.
+  ...kdsAppMetadata,
 };
+
+export const viewport: Viewport = kdsAppViewport;
 
 export default function AdminLoginLayout({ children }: { children: React.ReactNode }) {
   return (

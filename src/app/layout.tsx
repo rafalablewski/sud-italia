@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
+import { ottavianoAppMetadata, ottavianoAppViewport } from "@/lib/pwa";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 // Fonts are loaded by each route-group layout, not here — so a homepage
@@ -9,14 +10,10 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 // don't live under a themed group (e.g. /franchisee) get system-ui
 // fallback unless they declare their own layout that loads fonts.
 
-export const viewport: Viewport = {
-  // viewport-fit=cover unlocks env(safe-area-inset-*) on notched phones —
-  // the mobile admin's topbar + bottom-nav rely on it to clear the notch
-  // and home indicator.
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+// Customer-app (Ottaviano) viewport: width/scale + viewport-fit=cover (unlocks
+// env(safe-area-inset-*) on notched phones) plus the brand-red theme colour.
+// Operator routes override this with the dark KDS viewport in their layouts.
+export const viewport: Viewport = ottavianoAppViewport;
 
 export const metadata: Metadata = {
   title: {
@@ -33,12 +30,10 @@ export const metadata: Metadata = {
     "pizza Kraków",
     "pizza Warszawa",
   ],
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: SITE_NAME,
-  },
+  // Customer app (Ottaviano): manifest + apple-web-app title + touch icon.
+  // Operator layouts (admin / core / kitchen / operator) override these via
+  // kdsAppMetadata so those subtrees install as OttavianoKDS instead.
+  ...ottavianoAppMetadata,
   openGraph: {
     type: "website",
     locale: "pl_PL",

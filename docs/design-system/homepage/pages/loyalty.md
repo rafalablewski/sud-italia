@@ -52,6 +52,13 @@ loyalty-invite chip.
   `Join · iscriviti` CTA — phone-only auto-enrolment, no password.
 - `.v8-rewards-signin-hint` — italic Lora muted "Just your phone
   number — no password, no email required."
+- **Install CTA** — below the hint, `<InstallAppButton appName="Ottaviano"
+  tone="light" />` (`src/components/pwa/InstallAppButton.tsx`) offers
+  "Install Ottaviano" so guests can keep the loyalty card on their home
+  screen. It is theme-agnostic (inline brand-red styling, not a `.v8-*`
+  form), self-hides when the app is already installed, and on iOS opens a
+  portal how-to (Rule #4). One of the two installable PWAs — see the
+  Capabilities ledger "Installable apps" group.
 
 ### Dashboard (authenticated)
 
