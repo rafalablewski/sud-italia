@@ -41,11 +41,24 @@ business is leaving Vercel — designed for from day one).
   (ownership-gated, SSE — operator bump → customer tracker in real time), and
   **Stripe PaymentIntent + Apple Pay** payment (`/orders/:id/payment-intent` +
   the `payment_intent.succeeded` webhook). **Stage 2 backend is contract-complete.**
-- 🟡 **Stage 4 — started:** the SwiftUI app seed lives at
+- 🟡 **Stage 4 — web-layout parity in progress:** the SwiftUI app seed lives at
   [`native/ottaviano-ios/`](../../native/ottaviano-ios/) — SwiftPM spine
   (CoreModels, Networking with APIClient/TokenStore/SSE, DesignSystem, AppInfra
-  Router+DI), a customer Menu vertical slice, and both app composition roots
-  (Ottaviano TabView / OttavianoKDS SplitView) wired to the live `/api/v1`.
+  Router+DI), and both apps now mirror the **web information architecture**:
+  - **Ottaviano (customer)** — TabView `Order · Rewards · Orders · More`, with the
+    full order path (browse → add-to-cart → location switch → guest/customer
+    checkout via server-priced `POST /orders` → confirmation → live SSE tracking).
+  - **OttavianoKDS (operator)** — NavigationSplitView whose sidebar is a 1:1 Swift
+    mirror of the web admin rail (`src/admin-v3/nav.config.ts`) plus the Core
+    surfaces (`CoreNav.tsx`), **role-filtered** by the signed-in staff rank exactly
+    like `filterNavForRoleV3` (owner → all, franchisee → scope, kitchen → line).
+    See [`Sources/AppInfra/OperatorNav.swift`](../../native/ottaviano-ios/Sources/AppInfra/OperatorNav.swift).
+  Live today: the whole customer path, and the operator Dashboard, Orders board,
+  KDS, **Reports, Customers, Staff, Suppliers, Feedback, Inventory, Purchase
+  orders and Service/slots** — each off a new bearer-authed, role-gated
+  `/api/v1/admin/*` endpoint (`src/app/api/v1/admin/`). Remaining surfaces are
+  parity scaffolds (purpose + role + honest wiring status, never fake data —
+  Rule #1) going live wave by wave as the facade expands.
   **Authored, not compiled here** (no SwiftUI toolchain in the web container) —
   extract to the dedicated `ottaviano-ios` repo and build in Xcode on a Mac, with
   `swift-openapi-generator` pointed at `openapi.json` to replace the hand-written

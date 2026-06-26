@@ -15,25 +15,79 @@ Sources/
   CoreModels/      Models, AuthModels   wire DTOs (hand-written; see Codegen below)
   Networking/      Envelope, APIError, TokenStore, APIClient (+endpoint catalogue), SSEClient
   DesignSystem/    Theme                tokens + theming + DSButton + MoneyText
-  AppInfra/        Router, Dependencies (DI), CustomerSession (phone-OTP auth state)
+  AppInfra/        Router, Dependencies (DI), CustomerSession, OperatorSession,
+                   OperatorNav        the operator IA — 1:1 mirror of the web admin
+                                      nav.config.ts + Core surfaces, role-ranked
   Features/
-    Menu/          MenuStore, MenuView                    customer menu (GET /menu)
-    Auth/          AuthView                                phone → code sign-in
+    Menu/          MenuStore, MenuView                    customer storefront + add-to-cart
+    Cart/          CartStore, CartView                    cart → checkout → confirmation (guest-capable)
+    Locations/     LocationPickerView (+ LocationsStore)  switch restaurant (GET /locations)
+    Account/       AccountView                            "More": famiglia / soci / locations / account
+    Auth/          AuthView, SignInGate                   phone → code sign-in (zero-friction)
     Rewards/       LoyaltyCardView                         the loyalty card (GET /customer/me)
     Orders/        OrdersStore, OrdersListView, OrderTrackerView   history + live SSE tracker
     KDS/           KDSStore, KDSBoardView                  operator live board (SSE) + bump
+    Operator/      OperatorBoardView, OperatorDashboardView,
+                   OperatorLoginView, OperatorSurfaceView  the admin+core shell surfaces
 Apps/
-  Ottaviano/       OttavianoApp        customer @main, auth-gated TabView (Menu/Rewards/Orders)
-  OttavianoKDS/    OttavianoKDSApp     operator @main, SplitView (Orders board + live KDS)
+  Ottaviano/       OttavianoApp     customer @main, TabView: Order · Rewards · Orders · More
+  OttavianoKDS/    OttavianoKDSApp  operator @main, SplitView whose sidebar is the FULL
+                                    web operator IA (Core + every /admin section), role-filtered
 ```
 
-This meets the Stage-4 exit criterion and then some: both apps boot, theme,
-**authenticate** (phone OTP), and render lists that hydrate from the API; the
-customer **tracks an order live** and the operator **bumps tickets on a live SSE
-board** — exercising auth, both SSE streams, and the bump mutation against the
-real `/api/v1`. Still to come: cart + checkout + Stripe PaymentSheet (the client
-calls are wired: `createOrder` + `paymentIntent` endpoints), offline persistence
-(GRDB/SwiftData), and remaining operator surfaces (POS, tables, admin).
+**Web-layout parity** is the goal: the apps mirror the web IA exactly. The
+customer app reproduces the storefront's tabs and the full order path
+(browse → add to cart → guest/customer checkout via `POST /orders`, server-priced
+→ confirmation → live tracking). The operator app's sidebar reproduces the web
+admin rail section-for-section (`src/admin-v3/nav.config.ts`) plus the Core
+surfaces (`CoreNav.tsx`), gated by the signed-in staff member's role rank exactly
+like `filterNavForRoleV3` — owner sees all, a franchise manager their scope, a
+chef the line. The native rebuild is proceeding in **waves** — each wave extends `/api/v1` to
+serve an admin surface's data (bearer-authed, role-gated, location-scoped) and
+ships the matching native screen with real data. Live today:
+
+- **Customer:** the whole order path + Rewards + Orders + tracking.
+- **Operator (wave 1):** Dashboard, Orders board, KDS lanes, **Reports**,
+  **Customers**, **Staff**, **Suppliers**, **Feedback**, **Inventory**,
+  **Purchase orders**, **Service/slots**.
+- **Operator (wave 2):** **Menu** (with live 86-ing), **Recipes**, **Guest**
+  (loyalty members), **Alerts**, **Tasks** (mark done), **Announcements**,
+  **Schedule**. Menu 86-ing and Tasks done-state are the first **write** surfaces.
+- **Operator (wave 3):** **Users & roles**, **Audit log**, **Cash**, **Business
+  costs**, **Compliance**, **Events**, **Waste log**, **Pulse surveys**. Users
+  exposes only safe profile fields (never password/MFA/passkey secrets).
+- **Operator (wave 4):** **Settings, Payments, QR ordering, Integrations,
+  Currency, Languages, Upsell, Cross-sell** (one generic settings endpoint +
+  renderer — these config objects hold no secrets, those live in env), plus
+  **Insights**, **Multi-location**, **Expansion**, **Scheduled bundles**, **Welcome**.
+- **Operator (wave 5):** **Corporate**, **Manage locations**, **Campaigns**,
+  **Shift handover**, **Permission matrix**.
+- **Operator (wave 6):** **POS** — a counter-sale till that builds a ticket off
+  the live menu and charges via `POST /api/v1/admin/pos/order` (server-priced,
+  immediate dine-in, reusing the same `createOrderFromCart` path as customer
+  checkout, so KDS firing/stock/loyalty all run; the receipt phone is real).
+- **Operator (wave 7):** **HACCP** (temperature log), **Menu engineering**
+  (the Kasavana-Smith star/plowhorse/puzzle/dog matrix via the store's
+  `computeMenuEngineering`), and **Regulatory disclosures** (per-location zone
+  + disclosure flags via `resolveLocationCompliance`).
+- **Operator (wave 8):** **Calculator** — a live year-one P&L projection computed
+  by the SAME pure `projectTwelveMonths` engine the web uses (assumptions +
+  12-month revenue/profit, real numbers). Read-only; what-if levers are next.
+- **Operator (wave 9):** **Ops Agent** — a chat with the operations copilot,
+  reusing the server's `runAgentTurn` (tools, budget gate, persistence) via
+  `/api/v1/admin/agent` + `/agent/turn`. Non-streaming (one round per send); the
+  agent only sees data the operator's token scope + role allow.
+- **Operator (wave 10):** **Agent HQ** — the autonomous-agent command center:
+  live fleet KPIs, the agent roster with today's spend, and the activity
+  timeline (`getResolvedAgentConfigs` + `getAgentFleetStats` + `listAgentEvents`).
+
+**52 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data — the
+honest data-backed maximum. The **only** 2 not mirrored are **SOC 2 controls**
+and **Capabilities**: both are hardcoded TSX content pages with no store/data
+source, so mirroring them in Swift would duplicate the Rule #9 source of truth
+and drift — they remain honest parity scaffolds by design. Also pending: Stripe
+PaymentSheet (endpoint wired; SDK added in the extracted repo) and offline
+persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is
