@@ -297,6 +297,20 @@ public extension Endpoint {
     }
 }
 
+public extension Endpoint {
+    // Wave 7.
+    static func adminHaccp() -> Endpoint<[AdminTempLog]> {
+        Endpoint<[AdminTempLog]>(.get, "admin/haccp", requiresAuth: true)
+    }
+    static func adminMenuEngineering(window: Int? = nil) -> Endpoint<[AdminMenuEngineeringLine]> {
+        Endpoint<[AdminMenuEngineeringLine]>(.get, "admin/menu-engineering",
+            query: window.map { ["window": String($0)] } ?? [:], requiresAuth: true)
+    }
+    static func adminRegulatory() -> Endpoint<[AdminRegulatory]> {
+        Endpoint<[AdminRegulatory]>(.get, "admin/regulatory", requiresAuth: true)
+    }
+}
+
 /// Body for `POST /api/v1/admin/pos/order`.
 public struct PosOrderBody: Encodable, Sendable {
     public struct Line: Encodable, Sendable { public let id: String; public let quantity: Int }

@@ -457,3 +457,43 @@ public struct AdminPermissionMatrix: Codable, Sendable {
     public let roles: [String]
     public let groups: [Group]
 }
+
+// MARK: - Wave 7
+
+/// `/api/v1/admin/haccp` — a temperature reading. `tempCelsius` is TENTHS of a
+/// degree (−50 = −5.0 °C); divide by 10 for display.
+public struct AdminTempLog: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let sensor: String
+    public let tempCelsius: Int
+    public let status: String
+    public let recordedBy: String?
+    public let recordedAt: String
+    public var celsius: Double { Double(tempCelsius) / 10.0 }
+}
+
+/// `/api/v1/admin/menu-engineering` — one Kasavana-Smith matrix line (route DTO).
+public struct AdminMenuEngineeringLine: Codable, Sendable, Identifiable {
+    public var id: String { menuItemId }
+    public let menuItemId: String
+    public let name: String
+    public let category: String
+    public let unitsSold: Int
+    public let gpPerUnit: Grosze
+    public let revenue: Grosze
+    public let quadrant: String
+    public let menuRole: String?
+}
+
+/// `/api/v1/admin/regulatory` — per-location disclosure config (route DTO).
+public struct AdminRegulatory: Codable, Sendable, Identifiable {
+    public var id: String { locationSlug }
+    public let locationSlug: String
+    public let city: String
+    public let zone: String
+    public let dohGrade: String?
+    public let calorieDisclosureRequired: Bool
+    public let halalCertId: String?
+    public let halalCertExpires: String?
+}

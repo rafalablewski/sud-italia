@@ -189,6 +189,12 @@ struct OperatorRootView: View {
             OperatorHandoverView(api: deps.api)
         case "/admin/permissions":
             OperatorPermissionsView(api: deps.api)
+        case "/admin/haccp":
+            OperatorHaccpView(api: deps.api)
+        case "/admin/menu-engineering":
+            OperatorMenuEngineeringView(api: deps.api)
+        case "/admin/regulatory-compliance":
+            OperatorRegulatoryView(api: deps.api)
         default:
             OperatorSurfaceView(item: item)
         }
