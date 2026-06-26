@@ -96,3 +96,11 @@ html { scroll-behavior: smooth; }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Installed-PWA (home-screen) polish. StandaloneClass tags <html> when the app
+   runs standalone; drop the browser rubber-band overscroll so it feels native.
+   No visual change in a normal browser tab. */
+html[data-display-mode="standalone"],
+html[data-display-mode="standalone"] body {
+  overscroll-behavior-y: none;
+}

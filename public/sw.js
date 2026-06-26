@@ -34,7 +34,7 @@
  * open tab once so it picks up the fresh chunks without a manual hard-refresh.
  */
 
-const VERSION = "v6";
+const VERSION = "v7";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 
@@ -45,6 +45,7 @@ const STATIC_ASSETS = [
   // precaching a redirected response via addAll is a footgun (atomic reject /
   // bad cache key); they're served network-first at runtime instead.
   "/",
+  "/offline",
   "/admin/login",
   "/manifest.json",
   "/ottaviano-kds.webmanifest",
@@ -133,7 +134,15 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(req)
-            .then((cached) => cached || caches.match("/admin") || caches.match("/")),
+            .then(
+              (cached) =>
+                cached ||
+                caches.match("/admin") ||
+                caches.match("/") ||
+                // Last resort: the branded offline page (precached) so an
+                // installed app never shows the browser's raw error screen.
+                caches.match("/offline"),
+            ),
         ),
     );
     return;

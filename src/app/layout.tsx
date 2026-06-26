@@ -3,6 +3,7 @@ import "./globals.css";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import { ottavianoAppMetadata, ottavianoAppViewport } from "@/lib/pwa";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { StandaloneClass } from "@/components/pwa/StandaloneClass";
 
 // Fonts are loaded by each route-group layout, not here — so a homepage
 // font change can't move admin and vice versa. See the per-theme
@@ -57,6 +58,7 @@ export default function RootLayout({
     <html lang="pl" className="h-full">
       <body className="min-h-full flex flex-col antialiased">
         <ServiceWorkerRegistrar />
+        <StandaloneClass />
         {children}
       </body>
     </html>

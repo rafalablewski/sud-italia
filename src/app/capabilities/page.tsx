@@ -1635,7 +1635,9 @@ export default async function CapabilitiesPage() {
         {
           name: "Service worker + offline shell",
           status: "live",
-          summary: "Cache-first shell, stale-while-revalidate for menu/settings.",
+          href: "/offline",
+          summary:
+            "Network-first HTML navigations (fresh on every load, cached as fallback) + stale-while-revalidate for menu/public-settings + on-demand static asset caching. When a navigation fails with nothing cached, the SW serves a branded /offline page so an installed app never shows the browser's raw error screen (precached; adapts light/dark for both the customer and operator shells). StandaloneClass tags <html data-display-mode=standalone> on home-screen launch so the installed PWA drops browser rubber-band overscroll and the install button self-hides — native-feel polish for both Ottaviano and OttavianoKDS. SW VERSION bump triggers reinstall → old-cache purge on already-installed clients.",
         },
         {
           name: "IndexedDB outbox + bg sync",
