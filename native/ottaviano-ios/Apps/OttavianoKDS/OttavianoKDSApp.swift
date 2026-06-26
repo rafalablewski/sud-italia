@@ -87,6 +87,6 @@ struct OperatorBoardView: View {
     private func load() async {
         do { orders = try await deps.api.send(.operatorBoard(location: nil)); error = nil }
         catch let e as APIError { if case .api(_, let m, _) = e { error = m } else { error = "Offline" } }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
     }
 }

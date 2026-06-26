@@ -61,7 +61,7 @@ public struct AuthView: View {
                 step = .code
             } catch let e as APIError {
                 error = message(e)
-            } catch { error = "Couldn't send the code" }
+            } catch { self.error = "Couldn't send the code" }
         }
     }
 
@@ -71,7 +71,7 @@ public struct AuthView: View {
             defer { busy = false }
             do { try await session.verify(phone: phone, code: code) }
             catch let e as APIError { error = message(e) }
-            catch { error = "Sign-in failed" }
+            catch { self.error = "Sign-in failed" }
         }
     }
 

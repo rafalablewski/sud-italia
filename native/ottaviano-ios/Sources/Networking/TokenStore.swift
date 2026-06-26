@@ -58,7 +58,7 @@ public actor TokenStore {
     public func refresh() async throws -> String {
         if let task = refreshTask { return try await task.value }
         let task = Task<String, Error> { [self] in
-            defer { Task { await clearRefreshTask() } }
+            defer { clearRefreshTask() }
             guard let refreshToken = Keychain.load(keychainKey) else { throw APIError.authExpired }
             let pair = try await postRefresh(refreshToken)
             adopt(pair)

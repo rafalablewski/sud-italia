@@ -90,7 +90,7 @@ public struct OrderTrackerView: View {
     private func follow() async {
         // Initial snapshot, then live updates.
         do { order = try await api.send(.myOrder(id: orderID)) }
-        catch { error = "Couldn't load this order" ; return }
+        catch { self.error = "Couldn't load this order"; return }
         do {
             let stream = sse.stream("customer/orders/\(orderID)/stream", as: OrderTrackFrame<Order>.self)
             for try await frame in stream { order = frame.order }
