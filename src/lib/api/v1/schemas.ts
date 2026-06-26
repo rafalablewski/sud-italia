@@ -40,6 +40,42 @@ export const RefreshBodySchema = z.object({ refreshToken: z.string().min(3) });
 export const LogoutBodySchema = z.object({ refreshToken: z.string().min(3) });
 export const OrderStatusPatchSchema = z.object({ status: z.enum(ORDER_STATUSES) });
 
+/** Customer app phone-OTP login (Rule #6: zero-friction, no passwords). */
+export const CustomerAuthRequestSchema = z.object({ phone: z.string().min(6) });
+export const CustomerAuthVerifySchema = z.object({
+  phone: z.string().min(6),
+  code: z.string().regex(/^\d{6}$/, "6-digit code"),
+});
+
+/** Customer / guest order creation — server prices authoritatively from item
+ *  ids (never trusts client totals). Phone/name come from the customer token
+ *  when present, else required here for guest checkout. */
+const OrderItemInputSchema = z.object({
+  id: z.string(),
+  quantity: z.number().int().positive(),
+  notes: z.string().max(140).optional(),
+  selectedModifiers: z
+    .array(z.object({ groupId: z.string(), optionId: z.string() }))
+    .optional(),
+});
+export const OrderCreateSchema = z.object({
+  locationSlug: z.string(),
+  items: z.array(OrderItemInputSchema).min(1),
+  fulfillmentType: z.enum(["takeout", "delivery", "dine-in"]),
+  customerName: z.string().min(1).optional(),
+  customerPhone: z.string().optional(),
+  slotId: z.string().optional(),
+  slotDate: z.string().optional(),
+  slotTime: z.string().optional(),
+  immediate: z.boolean().optional(),
+  tableNumber: z.string().optional(),
+  deliveryAddress: z.string().optional(),
+  partySize: z.number().int().positive().optional(),
+  tipAmount: z.number().int().nonnegative().optional(),
+  appliedBundleId: z.string().optional(),
+  channel: z.enum(["web", "whatsapp", "qr"]).optional(),
+});
+
 // ── Response DTOs ──────────────────────────────────────────────────────────
 
 export const ErrorEnvelopeSchema = z.object({
@@ -64,6 +100,16 @@ export const UserSchema = z.object({
   email: z.string().nullable(),
   role: z.string(),
   scope: z.string(),
+});
+
+export const CustomerProfileSchema = z.object({
+  phone: z.string(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  points: z.number().int().describe("Total loyalty points (earned + manual)"),
+  tier: z.string(),
+  orderCount: z.number().int(),
+  totalSpentGrosze: z.number().int(),
 });
 
 export const LocationSchema = z.object({
@@ -141,8 +187,10 @@ export const OrderSchema = z.object({
 // ── Inferred TS types (consumed by the DTO mappers + routes) ───────────────
 
 export type LoginBody = z.infer<typeof LoginBodySchema>;
+export type OrderCreateBody = z.infer<typeof OrderCreateSchema>;
 export type TokenPairDTO = z.infer<typeof TokenPairSchema>;
 export type UserDTO = z.infer<typeof UserSchema>;
+export type CustomerProfileDTO = z.infer<typeof CustomerProfileSchema>;
 export type LocationDTO = z.infer<typeof LocationSchema>;
 export type MenuItemDTO = z.infer<typeof MenuItemSchema>;
 export type OrderLineDTO = z.infer<typeof OrderLineSchema>;
@@ -154,6 +202,7 @@ export const apiRegistry = z.registry<{ id: string }>();
 apiRegistry.add(ErrorEnvelopeSchema, { id: "ErrorEnvelope" });
 apiRegistry.add(TokenPairSchema, { id: "TokenPair" });
 apiRegistry.add(UserSchema, { id: "User" });
+apiRegistry.add(CustomerProfileSchema, { id: "CustomerProfile" });
 apiRegistry.add(LocationSchema, { id: "Location" });
 apiRegistry.add(MenuItemSchema, { id: "MenuItem" });
 apiRegistry.add(OrderLineSchema, { id: "OrderLine" });

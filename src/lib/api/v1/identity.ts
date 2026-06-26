@@ -1,5 +1,6 @@
-import { getAdminUsers } from "@/lib/store";
+import { getAdminUsers, getCustomer } from "@/lib/store";
 import { sessionLocationScope } from "@/lib/user-locations";
+import { normalizePlPhoneE164 } from "@/lib/phone";
 import type { IdentityForToken } from "./auth";
 
 /**
@@ -24,5 +25,23 @@ export async function resolveOperatorIdentity(userId: string): Promise<IdentityF
     role: hit.role,
     name: hit.name,
     email: hit.email,
+  };
+}
+
+/**
+ * Resolve a customer identity (Ottaviano app) for token issue/refresh. The
+ * subject IS the E.164 phone — customer identity is phone-based and zero-
+ * friction (Rule #6), there's no account to disable, so this always resolves.
+ * Name/email are hydrated from the rollup when the customer has ordered before.
+ */
+export async function resolveCustomerIdentity(rawPhone: string): Promise<IdentityForToken | null> {
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  const c = await getCustomer(phone);
+  return {
+    userId: phone,
+    scope: "customer",
+    role: "customer",
+    name: c?.name ?? undefined,
+    email: c?.email ?? undefined,
   };
 }

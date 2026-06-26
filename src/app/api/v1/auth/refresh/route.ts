@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { rotateTokens, type RefreshError } from "@/lib/api/v1/auth";
-import { resolveOperatorIdentity } from "@/lib/api/v1/identity";
+import { resolveOperatorIdentity, resolveCustomerIdentity } from "@/lib/api/v1/identity";
 import { RefreshBodySchema } from "@/lib/api/v1/schemas";
 import { logger } from "@/lib/logger";
 
@@ -39,8 +39,12 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return apiError("validation_failed", "Missing refreshToken");
 
   try {
+    // The refresh record's audience picks the resolver: a customer token's
+    // subject is a phone, an operator token's is an admin-user id.
     const result = await rotateTokens(parsed.data.refreshToken, (rec) =>
-      resolveOperatorIdentity(rec.userId),
+      rec.aud === "ottaviano"
+        ? resolveCustomerIdentity(rec.userId)
+        : resolveOperatorIdentity(rec.userId),
     );
     if (!result.ok) {
       return apiError("unauthorized", MESSAGE_FOR[result.reason], { reason: result.reason });

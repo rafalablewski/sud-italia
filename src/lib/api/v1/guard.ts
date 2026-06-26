@@ -15,10 +15,20 @@ import type { JwtClaims } from "./jwt";
 
 export type Guarded = { claims: JwtClaims } | { error: NextResponse };
 
-/** Require a valid Bearer access token. */
+/** Require a valid Bearer access token (any audience). */
 export function requireOperator(req: NextRequest): Guarded {
   const claims = authenticateBearer(req);
   if (!claims) return { error: apiError("unauthorized", "Missing or invalid access token") };
+  return { claims };
+}
+
+/** Require a valid CUSTOMER token (Ottaviano app). The subject is the phone. */
+export function requireCustomer(req: NextRequest): Guarded {
+  const claims = authenticateBearer(req);
+  if (!claims) return { error: apiError("unauthorized", "Missing or invalid access token") };
+  if (claims.aud !== "ottaviano" || claims.role !== "customer") {
+    return { error: apiError("forbidden", "Customer token required") };
+  }
   return { claims };
 }
 

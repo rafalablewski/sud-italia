@@ -14739,3 +14739,106 @@ export async function revokeApiRefreshTokenFamily(family: string): Promise<numbe
     return n;
   });
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Native /api/v1 customer OTP challenges + order idempotency (Stage 2).
+//
+// OTP: phone-based one-time codes for the customer app login (zero-friction,
+// no passwords — Rule #6). Only a SHA-256 of the code is persisted, with a
+// short TTL + an attempt counter so a code can't be brute-forced. Order
+// idempotency: maps an Idempotency-Key hash → the created order id so a retried
+// POST /api/v1/orders returns the same order instead of double-charging.
+// Both ride the standard readJSON/writeJSON/withLock substrate (Rule #2).
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface OtpChallenge {
+  /** E.164 phone the challenge is bound to. */
+  phone: string;
+  /** SHA-256 (hex) of the numeric code — the code itself is never stored. */
+  codeHash: string;
+  expiresAt: number;
+  /** Verify attempts consumed (caps brute force). */
+  attempts: number;
+  createdAt: number;
+}
+
+const OTP_KEY = "api-otp-challenges.json";
+
+function pruneOtp(list: OtpChallenge[], nowSec: number): OtpChallenge[] {
+  return list.filter((c) => c.expiresAt > nowSec);
+}
+
+/** Upsert the active challenge for a phone (one live code per phone). */
+export async function setOtpChallenge(challenge: OtpChallenge): Promise<void> {
+  await withLock(OTP_KEY, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const list = pruneOtp(await readJSON<OtpChallenge[]>(OTP_KEY, []), now).filter(
+      (c) => c.phone !== challenge.phone,
+    );
+    list.push(challenge);
+    await writeJSON(OTP_KEY, list);
+  });
+}
+
+export async function getOtpChallenge(phone: string): Promise<OtpChallenge | undefined> {
+  const now = Math.floor(Date.now() / 1000);
+  const list = pruneOtp(await readJSON<OtpChallenge[]>(OTP_KEY, []), now);
+  return list.find((c) => c.phone === phone);
+}
+
+/** Record a failed verify attempt; returns the new attempt count (0 if gone). */
+export async function bumpOtpAttempt(phone: string): Promise<number> {
+  return withLock(OTP_KEY, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const list = pruneOtp(await readJSON<OtpChallenge[]>(OTP_KEY, []), now);
+    const hit = list.find((c) => c.phone === phone);
+    if (!hit) {
+      await writeJSON(OTP_KEY, list);
+      return 0;
+    }
+    hit.attempts += 1;
+    await writeJSON(OTP_KEY, list);
+    return hit.attempts;
+  });
+}
+
+export async function clearOtpChallenge(phone: string): Promise<void> {
+  await withLock(OTP_KEY, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const list = pruneOtp(await readJSON<OtpChallenge[]>(OTP_KEY, []), now).filter(
+      (c) => c.phone !== phone,
+    );
+    await writeJSON(OTP_KEY, list);
+  });
+}
+
+interface ApiOrderIdempotencyRecord {
+  hash: string;
+  orderId: string;
+  createdAt: number;
+}
+
+const ORDER_IDEM_KEY = "api-order-idempotency.json";
+
+/** Resolve a prior order id for an Idempotency-Key hash (24h window). */
+export async function getApiOrderIdempotency(hash: string): Promise<string | undefined> {
+  const cutoff = Math.floor(Date.now() / 1000) - 24 * 60 * 60;
+  const list = await readJSON<ApiOrderIdempotencyRecord[]>(ORDER_IDEM_KEY, []);
+  const hit = list.find((r) => r.hash === hash && r.createdAt > cutoff);
+  return hit?.orderId;
+}
+
+/** Bind an Idempotency-Key hash to a created order id (first writer wins). */
+export async function saveApiOrderIdempotency(hash: string, orderId: string): Promise<void> {
+  await withLock(ORDER_IDEM_KEY, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - 24 * 60 * 60;
+    const list = (await readJSON<ApiOrderIdempotencyRecord[]>(ORDER_IDEM_KEY, [])).filter(
+      (r) => r.createdAt > cutoff,
+    );
+    if (!list.some((r) => r.hash === hash)) {
+      list.push({ hash, orderId, createdAt: now });
+      await writeJSON(ORDER_IDEM_KEY, list);
+    }
+  });
+}

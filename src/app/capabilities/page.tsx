@@ -369,7 +369,15 @@ export default async function CapabilitiesPage() {
             "The stable, versioned API the two native iOS apps consume (docs/native/ — Stage 2 of the native rewrite). Single response envelope ({ data, meta } | { error: { code, message, details } }) with machine-readable error codes, the version echoed in X-Ottaviano-API, and an OpenAPI 3.1 contract at /api/v1/openapi.json GENERATED from the server Zod schemas (src/lib/api/v1/schemas.ts → one definition drives request validation, the inferred TS response types, and the published contract, so the wire shape can't drift from any of the three). It is the codegen source for the Swift CoreModels package (swift-openapi-generator); npm run gen:openapi writes the committed docs/native/openapi.json and a test fails CI if it drifts. Public reads: GET /api/v1/locations and GET /api/v1/menu?location= (curated DTOs, prices in grosze). Operator order spine (Bearer + location-scope enforced, reusing the live order domain): GET /api/v1/orders (board, newest-first, capped), GET /api/v1/orders/:id (detail), PATCH /api/v1/orders/:id (idempotent status bump — no-op when already at target), and GET /api/v1/orders/stream (Server-Sent Events live board for KDS, header-auth, same hybrid emitter as the web admin stream). Host-portable by design — relative server URL, no Vercel-only primitives — so it survives the planned Vercel exit (ARCHITECTURE §2.1). Additive-only within v1; breaking changes mint v2.",
         },
         {
-          name: "Native auth — JWT access + rotating refresh",
+          name: "Native customer auth (phone OTP) + order create",
+          status: "live",
+          href: "/api/v1/openapi.json",
+          envVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM"],
+          summary:
+            "The Ottaviano customer app's zero-friction surface (Rule #6, no passwords). POST /api/v1/customer/auth/request sends a 6-digit phone code (SHA-256 at rest, 5-min TTL, attempt-capped, double rate-limited) via the SMS provider — with no provider configured, in non-prod, the code is returned as devCode so the flow is testable; POST /api/v1/customer/auth/verify exchanges it for a CUSTOMER token pair (aud ottaviano, subject = phone) reusing the same JWT + rotating-refresh infra as operators (the refresh route branches the identity resolver on audience). GET /api/v1/customer/me returns the loyalty profile (points/tier from the live rollup). POST /api/v1/orders creates an order for a logged-in customer (phone from token) OR a guest (name+phone in body) — NEVER self-priced: it delegates to the shared createOrderFromCart (live menu lookup, bundle/combo math, delivery fee, slot-capacity claim, min-order/availability enforcement — the exact path the web checkout uses), with Idempotency-Key retry safety (a repeat returns the original order). Orders are created unpaid; Stripe/Apple Pay payment is a later increment. SMS needs Twilio; everything else works in demo.",
+        },
+        {
+          name: "Native operator auth — JWT access + rotating refresh",
           status: "live",
           href: "/api/v1/auth/me",
           envVars: ["API_JWT_SECRET", "SESSION_SECRET", "ADMIN_PASSWORD"],

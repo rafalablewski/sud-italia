@@ -6,6 +6,9 @@ import {
   RefreshBodySchema,
   LogoutBodySchema,
   OrderStatusPatchSchema,
+  CustomerAuthRequestSchema,
+  CustomerAuthVerifySchema,
+  OrderCreateSchema,
 } from "./schemas";
 
 /**
@@ -115,6 +118,46 @@ export function buildOpenApiDocument(): JsonObject {
           responses: { "200": dataResponse("User", ref("User")), "401": ERROR_RESPONSE },
         },
       },
+      "/customer/auth/request": {
+        post: {
+          summary: "Send a phone login code (customer app)",
+          requestBody: jsonBody(CustomerAuthRequestSchema),
+          responses: {
+            "200": dataResponse("Code sent (devCode present only in non-prod with no SMS provider)", {
+              type: "object",
+            }),
+            "422": ERROR_RESPONSE,
+            "429": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/customer/auth/verify": {
+        post: {
+          summary: "Verify code → customer token pair",
+          requestBody: jsonBody(CustomerAuthVerifySchema),
+          responses: {
+            "200": dataResponse("Tokens + customer", {
+              allOf: [
+                ref("TokenPair"),
+                { type: "object", properties: { customer: { type: "object" } } },
+              ],
+            }),
+            "401": ERROR_RESPONSE,
+            "422": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/customer/me": {
+        get: {
+          summary: "Signed-in customer profile + loyalty",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            "200": dataResponse("Customer profile", ref("CustomerProfile")),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+          },
+        },
+      },
       "/locations": {
         get: {
           summary: "Active locations (public)",
@@ -154,6 +197,21 @@ export function buildOpenApiDocument(): JsonObject {
             "200": dataResponse("Orders, newest first", { type: "array", items: ref("Order") }, true),
             "401": ERROR_RESPONSE,
             "403": ERROR_RESPONSE,
+          },
+        },
+        post: {
+          summary: "Create an order (customer app / guest) — server-priced, idempotent",
+          description:
+            "Zero-friction: no auth required (guest supplies name+phone); a customer " +
+            "Bearer token supplies the phone instead. Pass an Idempotency-Key header to " +
+            "make retries safe. Created unpaid; payment is a later increment.",
+          requestBody: jsonBody(OrderCreateSchema),
+          responses: {
+            "201": dataResponse("Created order", ref("Order"), true),
+            "200": dataResponse("Existing order (idempotent replay)", ref("Order"), true),
+            "409": ERROR_RESPONSE,
+            "422": ERROR_RESPONSE,
+            "429": ERROR_RESPONSE,
           },
         },
       },

@@ -16,6 +16,7 @@ business is leaving Vercel — designed for from day one).
 | [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md) | 3a | Tokens (color/type/space/motion), theming, component catalog, accessibility gates |
 | [`APP-SHELL.md`](./APP-SHELL.md) | 3b | SwiftPM package graph, DI, typed Router, per-platform shells, launch sequence, feature-module contract |
 | [`API-V1.md`](./API-V1.md) | 2 | The `/api/v1` facade: envelope, auth/token lifecycle, endpoints, OpenAPI/codegen, host-portability |
+| [`VERCEL-EXIT.md`](./VERCEL-EXIT.md) | infra | Host-migration cutover plan — portable runtime, cron/CDN/storage swaps, zero-downtime sequence |
 
 ## Decisions (signed off 2026-06-26)
 - **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.
@@ -34,8 +35,10 @@ business is leaving Vercel — designed for from day one).
   schemas** (DECISION B ✅ — one definition drives validation, the TS response
   types, and the contract), plus the operator order spine + live SSE board. See
   [`API-V1.md`](./API-V1.md). Committed codegen artifact: `docs/native/openapi.json`
-  (`npm run gen:openapi`). Remaining Stage 2: order-create (customer checkout +
-  payment) and the `VERCEL-EXIT.md` cutover checklist.
+  (`npm run gen:openapi`), the operator order spine + SSE, **customer phone-OTP
+  auth + server-priced order create** (guest or customer, idempotent), and the
+  `VERCEL-EXIT.md` cutover plan. Remaining Stage 2: payment (Stripe/Apple Pay)
+  on order create + customer order-history endpoints.
 - ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
   contract coverage is sufficient.
 

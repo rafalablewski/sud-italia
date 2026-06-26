@@ -58,6 +58,10 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/auth/refresh` | none | rotates; reuse-detecting |
 | POST | `/api/v1/auth/logout` | none | revokes refresh token |
 | GET | `/api/v1/auth/me` | Bearer | current operator |
+| POST | `/api/v1/customer/auth/request` | none | send phone OTP (3/min/phone); `devCode` only in non-prod w/o SMS |
+| POST | `/api/v1/customer/auth/verify` | none | code → **customer** token pair (aud `ottaviano`); single-use, attempt-capped |
+| GET | `/api/v1/customer/me` | Bearer (customer) | profile + loyalty points/tier |
+| POST | `/api/v1/orders` | optional (customer) | **create order** — guest or customer; server-priced; idempotent |
 | GET | `/api/v1/locations` | none | active locations (curated DTO) |
 | GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
 | GET | `/api/v1/orders` | Bearer | operator board, newest-first, scope-filtered, capped |
@@ -65,6 +69,24 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | PATCH | `/api/v1/orders/:id` | Bearer | status bump (KDS); **idempotent** (no-op at target) |
 | GET | `/api/v1/orders/stream` | Bearer | **SSE** live board — `data: { orders }` frames |
 | GET | `/api/v1/openapi.json` | none | the contract document |
+
+### Customer auth (phone OTP) + order create
+The Ottaviano app logs in with a **phone code** — zero-friction, no passwords
+(Rule #6). `request` sends a 6-digit code (hashed at rest, 5-min TTL,
+attempt-capped) via the configured SMS provider; with no provider, in non-prod,
+the code is returned as `devCode` so the flow is testable. `verify` exchanges it
+for a **customer** token pair (aud `ottaviano`, subject = phone), reusing the
+same JWT + rotating-refresh infra as operators (the refresh route branches the
+identity resolver on `aud`). `customer/me` returns the loyalty profile.
+
+**`POST /api/v1/orders`** creates an order — for a logged-in customer (phone from
+the token) **or a guest** (name + phone in the body). It is **never** trusted to
+price itself: it delegates to the shared `createOrderFromCart`, which looks up
+the live menu, applies bundle/combo math + delivery fee, claims slot capacity,
+and enforces min-order/availability — the exact path the web checkout uses.
+An `Idempotency-Key` header makes retries safe (a repeat with the same key + body
+returns the original order, `meta.idempotent=true`). Orders are created unpaid;
+payment (Stripe / Apple Pay) layers on later.
 
 ### Operator order spine
 `orders*` are the OttavianoKDS revenue path, reusing the live domain
@@ -115,7 +137,8 @@ hand-written DTOs (APP-SHELL §1).
 rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.ts`.
 
 ## Remaining in Stage 2
-- **Order create** (customer checkout) — payment-coupled (Stripe / Apple Pay) +
-  needs the phone-based customer-auth surface; its own focused increment. Server
-  must price authoritatively from item ids (never trust client totals).
-- `docs/native/VERCEL-EXIT.md` cutover checklist (cron, object storage, CDN).
+- **Payment** on order create — Stripe / Apple Pay (`PaymentIntent` + the webhook
+  marking `paidAt`). Orders are created unpaid today; this attaches the charge.
+- Customer **order history / tracking** endpoints (the customer's own orders by
+  phone), now that customer auth exists.
+- ✅ `docs/native/VERCEL-EXIT.md` — the host-migration cutover checklist.
