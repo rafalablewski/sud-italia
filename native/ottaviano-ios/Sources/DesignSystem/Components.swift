@@ -193,9 +193,10 @@ public struct MetricTile: View {
     private let delta: String?
     private let deltaUp: Bool
     private let icon: String?
+    private let tint: Color?
 
-    public init(label: String, value: String, delta: String? = nil, deltaUp: Bool = true, icon: String? = nil) {
-        self.label = label; self.value = value; self.delta = delta; self.deltaUp = deltaUp; self.icon = icon
+    public init(label: String, value: String, delta: String? = nil, deltaUp: Bool = true, icon: String? = nil, tint: Color? = nil) {
+        self.label = label; self.value = value; self.delta = delta; self.deltaUp = deltaUp; self.icon = icon; self.tint = tint
     }
 
     public var body: some View {
@@ -204,7 +205,7 @@ public struct MetricTile: View {
                 HStack {
                     Text(label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
                     Spacer()
-                    if let icon { Image(systemName: icon).foregroundStyle(theme.color.accent) }
+                    if let icon { Image(systemName: icon).foregroundStyle(tint ?? theme.color.accent) }
                 }
                 Text(value).textRole(.titleL).foregroundStyle(theme.color.textPrimary)
                 if let delta {

@@ -57,7 +57,10 @@ public final class KDSStore {
         if let board = try? await api.send(.operatorBoard(location: location)) { orders = board }
     }
 
-    public var cooking: [Order] { orders.filter { $0.status == .confirmed || $0.status == .preparing } }
+    // Three lanes, 1:1 with the web KDS board (New · Firing · Ready·Expo —
+    // src/core/kds/kds-board.ts KDS_COLUMNS): confirmed → preparing → ready.
+    public var incoming: [Order] { orders.filter { $0.status == .pending || $0.status == .confirmed } }
+    public var cooking: [Order] { orders.filter { $0.status == .preparing } }
     public var ready: [Order] { orders.filter { $0.status == .ready } }
 
     static func nextStatus(_ s: OrderStatus) -> OrderStatus? {

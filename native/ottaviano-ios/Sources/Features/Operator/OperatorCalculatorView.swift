@@ -89,7 +89,7 @@ public struct OperatorCalculatorView: View {
 
     private func moneyTile(_ label: String, _ grosze: Grosze, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: theme.space.xs) {
-            MoneyText(grosze).font(.system(size: 20, weight: .bold)).foregroundStyle(theme.color.textPrimary)
+            MoneyText(grosze).textRole(.titleL).foregroundStyle(theme.color.textPrimary)
             Text(label).font(.caption).foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

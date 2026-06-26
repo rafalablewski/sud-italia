@@ -10,6 +10,9 @@ public struct OperatorBoardView: View {
     @State private var orders: [Order] = []
     @State private var loaded = false
     @State private var error: String?
+    @State private var query = ""
+    @State private var showAll = false
+    @State private var detail: Order?
 
     public init() {}
 
@@ -17,17 +20,24 @@ public struct OperatorBoardView: View {
         ScrollView {
             VStack(spacing: theme.space.lg) {
                 summary
+                filterBar
                 if let error, orders.isEmpty {
                     ContentUnavailableView("Couldn't load the board", systemImage: "exclamationmark.triangle", description: Text(error))
                         .padding(.top, theme.space.xxl)
-                } else if loaded && orders.isEmpty {
-                    ContentUnavailableView("No orders yet", systemImage: "tray", description: Text("New orders land here the moment they're placed."))
-                        .padding(.top, theme.space.xxl)
+                } else if loaded && shown.isEmpty {
+                    ContentUnavailableView(
+                        orders.isEmpty ? "No orders yet" : "No orders match",
+                        systemImage: "tray",
+                        description: Text(orders.isEmpty ? "New orders land here the moment they're placed." : "Try a different search or scope.")
+                    )
+                    .padding(.top, theme.space.xxl)
                 } else {
-                    section("Incoming", orders.filter { [.pending, .confirmed].contains($0.status) }, accent: theme.color.accent)
-                    section("Cooking", orders.filter { $0.status == .preparing }, accent: theme.color.warning)
-                    section("Ready", orders.filter { $0.status == .ready }, accent: theme.color.success)
-                    section("Done", orders.filter { [.completed, .delivered, .pickedUp].contains($0.status) }, accent: theme.color.textSecondary)
+                    section("Incoming", shown.filter { [.pending, .confirmed].contains($0.status) }, accent: theme.color.accent)
+                    section("Cooking", shown.filter { $0.status == .preparing }, accent: theme.color.warning)
+                    section("Ready", shown.filter { $0.status == .ready }, accent: theme.color.success)
+                    if showAll {
+                        section("Done", shown.filter { [.completed, .delivered, .pickedUp].contains($0.status) }, accent: theme.color.textSecondary)
+                    }
                 }
             }
             .padding(theme.space.lg)
@@ -36,36 +46,56 @@ public struct OperatorBoardView: View {
         .navigationTitle("Orders")
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $detail) { OperatorOrderDetailSheet(order: $0) }
+    }
+
+    /// Client-side filter over the loaded board — scope (current vs all) + a
+    /// free-text search over id / guest / phone, mirroring the web Orders
+    /// surface's filter bar (channel + paid filters await those DTO fields).
+    private var shown: [Order] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return orders.filter { o in
+            if !showAll, [.completed, .delivered, .pickedUp, .cancelled].contains(o.status) { return false }
+            if !q.isEmpty {
+                let hay = "\(o.id) \(o.customerName) \(o.customerPhone)".lowercased()
+                if !hay.contains(q) { return false }
+            }
+            return true
+        }
     }
 
     private var summary: some View {
         HStack(spacing: theme.space.md) {
-            stat("New", orders.filter { [.pending, .confirmed].contains($0.status) }.count, theme.color.accent)
-            stat("Cooking", orders.filter { $0.status == .preparing }.count, theme.color.warning)
-            stat("Ready", orders.filter { $0.status == .ready }.count, theme.color.success)
+            MetricTile(label: "New", value: "\(orders.filter { [.pending, .confirmed].contains($0.status) }.count)", tint: theme.color.accent)
+            MetricTile(label: "Cooking", value: "\(orders.filter { $0.status == .preparing }.count)", tint: theme.color.warning)
+            MetricTile(label: "Ready", value: "\(orders.filter { $0.status == .ready }.count)", tint: theme.color.success)
         }
     }
 
-    private func stat(_ label: String, _ count: Int, _ accent: Color) -> some View {
-        VStack(spacing: 2) {
-            Text("\(count)").font(.system(size: 30, weight: .bold)).monospacedDigit().foregroundStyle(accent)
-            Text(label).font(.caption).foregroundStyle(theme.color.textSecondary)
+    private var filterBar: some View {
+        HStack(spacing: theme.space.md) {
+            DSTextField("", text: $query, placeholder: "order id, guest or phone…",
+                        systemImage: "magnifyingglass", autocapitalization: .never, autocorrect: false)
+            Picker("Scope", selection: $showAll) {
+                Text("Current").tag(false)
+                Text("All").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 160)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     @ViewBuilder
     private func section(_ title: String, _ list: [Order], accent: Color) -> some View {
         if !list.isEmpty {
             VStack(alignment: .leading, spacing: theme.space.sm) {
-                HStack {
-                    Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
-                    Text("\(list.count)").font(.caption.weight(.bold)).foregroundStyle(accent)
+                DSSectionHeader(title) { DSBadge("\(list.count)", tone: .accent) }
+                ForEach(list) { order in
+                    Button { detail = order } label: {
+                        OperatorOrderRow(order: order, accent: accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-                ForEach(list) { OperatorOrderRow(order: $0, accent: accent) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -79,6 +109,68 @@ public struct OperatorBoardView: View {
             if case .api(_, let m, _) = e { error = m } else { error = "You appear to be offline" }
         } catch { self.error = "Something went wrong" }
         loaded = true
+    }
+}
+
+/// Read-only order detail — the native twin of the web Orders detail dialog
+/// (inspect the full ticket). Settle (mark-paid) + print-receipt land when the
+/// `/api/v1` facade exposes them; surfaced honestly here rather than faked.
+private struct OperatorOrderDetailSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let order: Order
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.space.lg) {
+                    DSCard {
+                        VStack(alignment: .leading, spacing: theme.space.xs) {
+                            Text(order.customerName).textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
+                            Text(order.customerPhone).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                            HStack(spacing: theme.space.sm) {
+                                DSBadge(order.status.rawValue.capitalized, tone: .info)
+                                DSBadge(order.fulfillmentType.capitalized)
+                                if !order.slotTime.isEmpty { DSBadge(order.slotTime) }
+                            }
+                            .padding(.top, theme.space.xs)
+                        }
+                    }
+                    DSSectionHeader("Ticket")
+                    DSCard {
+                        VStack(alignment: .leading, spacing: theme.space.sm) {
+                            ForEach(order.items) { line in
+                                HStack(alignment: .top, spacing: theme.space.sm) {
+                                    Text("\(line.quantity)×").textRole(.mono).foregroundStyle(theme.color.accent)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(line.name).textRole(.body).foregroundStyle(theme.color.textPrimary)
+                                        if let n = line.notes, !n.isEmpty {
+                                            Text(n).textRole(.caption).italic().foregroundStyle(theme.color.warning)
+                                        }
+                                    }
+                                    Spacer()
+                                    MoneyText(line.unitPrice * line.quantity).textRole(.body).foregroundStyle(theme.color.textSecondary)
+                                }
+                            }
+                            Divider().overlay(theme.color.line)
+                            HStack {
+                                Text("Total").textRole(.bodyEmphasis)
+                                Spacer()
+                                MoneyText(order.totalAmount).textRole(.bodyEmphasis)
+                            }
+                            .foregroundStyle(theme.color.textPrimary)
+                        }
+                    }
+                    Text("Settle & print receipt land with the POS facade wave (/api/v1).")
+                        .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                }
+                .padding(theme.space.lg)
+            }
+            .background(theme.color.surface)
+            .navigationTitle("Order \(order.id)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+        }
     }
 }
 

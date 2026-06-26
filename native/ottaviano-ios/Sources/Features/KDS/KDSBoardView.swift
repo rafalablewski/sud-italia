@@ -15,7 +15,8 @@ public struct KDSBoardView: View {
     public var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: theme.space.lg) {
-                lane("Cooking", store.cooking)
+                lane("New", store.incoming)
+                lane("Firing", store.cooking)
                 lane("Ready", store.ready)
             }
             .padding(theme.space.lg)
@@ -57,7 +58,8 @@ public struct KDSBoardView: View {
 
     private func bumpLabel(_ s: OrderStatus) -> String? {
         switch s {
-        case .pending, .confirmed, .preparing: "Bump → Ready"
+        case .pending, .confirmed: "Start firing"
+        case .preparing: "Bump to pass"
         case .ready: "Complete"
         default: nil
         }
