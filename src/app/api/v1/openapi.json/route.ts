@@ -114,6 +114,63 @@ const spec = {
           teamLead: { type: ["string", "null"] },
         },
       },
+      OrderLine: {
+        type: "object",
+        required: ["menuItemId", "name", "quantity", "unitPrice"],
+        properties: {
+          menuItemId: { type: "string" },
+          name: { type: "string" },
+          quantity: { type: "integer" },
+          unitPrice: { type: "integer", description: "Minor units (grosze)" },
+          notes: { type: ["string", "null"] },
+          modifiers: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { groupId: { type: "string" }, optionId: { type: "string" } },
+            },
+          },
+        },
+      },
+      Order: {
+        type: "object",
+        required: ["id", "locationSlug", "status", "items", "totalAmount", "createdAt"],
+        properties: {
+          id: { type: "string" },
+          locationSlug: { type: "string" },
+          status: {
+            type: "string",
+            enum: [
+              "pending",
+              "confirmed",
+              "preparing",
+              "ready",
+              "assigned",
+              "picked_up",
+              "delivered",
+              "completed",
+              "cancelled",
+            ],
+          },
+          fulfillmentType: { type: "string", enum: ["takeout", "delivery", "dine-in"] },
+          channel: { type: "string", enum: ["web", "whatsapp", "qr"] },
+          customerName: { type: "string" },
+          customerPhone: { type: "string" },
+          items: { type: "array", items: { $ref: "#/components/schemas/OrderLine" } },
+          totalAmount: { type: "integer", description: "Minor units (grosze)" },
+          tipAmount: { type: ["integer", "null"] },
+          deliveryFee: { type: ["integer", "null"] },
+          partySize: { type: ["integer", "null"] },
+          tableId: { type: ["string", "null"] },
+          specialInstructions: { type: ["string", "null"] },
+          slotDate: { type: "string" },
+          slotTime: { type: "string" },
+          createdAt: { type: "string", format: "date-time" },
+          paidAt: { type: ["string", "null"] },
+          estimatedReadyAt: { type: ["string", "null"] },
+          queuePosition: { type: ["integer", "null"] },
+        },
+      },
       MenuItem: {
         type: "object",
         required: ["id", "name", "price", "currency", "category", "available"],
@@ -280,6 +337,118 @@ const spec = {
               },
             },
           },
+        },
+      },
+    },
+    "/orders": {
+      get: {
+        summary: "Operator order board (location-scoped)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "location", in: "query", required: false, schema: { type: "string" } },
+          {
+            name: "since",
+            in: "query",
+            required: false,
+            schema: { type: "string", format: "date-time" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Orders, newest first",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { type: "array", items: { $ref: "#/components/schemas/Order" } },
+                    meta: { type: "object" },
+                  },
+                },
+              },
+            },
+          },
+          "401": ERROR_RESPONSE,
+          "403": ERROR_RESPONSE,
+        },
+      },
+    },
+    "/orders/{id}": {
+      get: {
+        summary: "Order detail (location-scoped)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": {
+            description: "Order",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { data: { $ref: "#/components/schemas/Order" } },
+                },
+              },
+            },
+          },
+          "401": ERROR_RESPONSE,
+          "403": ERROR_RESPONSE,
+          "404": ERROR_RESPONSE,
+        },
+      },
+      patch: {
+        summary: "Advance order status (KDS bump) — idempotent",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { $ref: "#/components/schemas/Order/properties/status" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated order (meta.changed=false on a no-op)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Order" },
+                    meta: { type: "object" },
+                  },
+                },
+              },
+            },
+          },
+          "401": ERROR_RESPONSE,
+          "403": ERROR_RESPONSE,
+          "404": ERROR_RESPONSE,
+          "422": ERROR_RESPONSE,
+        },
+      },
+    },
+    "/orders/stream": {
+      get: {
+        summary: "Live operator board (Server-Sent Events; Bearer header)",
+        description:
+          "SSE stream; each `data:` frame is { orders: Order[] }. Location-scoped " +
+          "like /orders. The native app reads it as an AsyncSequence.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "location", in: "query", required: false, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": { description: "text/event-stream of { orders }" },
+          "401": ERROR_RESPONSE,
+          "403": ERROR_RESPONSE,
         },
       },
     },

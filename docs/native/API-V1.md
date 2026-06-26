@@ -60,7 +60,23 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | GET | `/api/v1/auth/me` | Bearer | current operator |
 | GET | `/api/v1/locations` | none | active locations (curated DTO) |
 | GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
+| GET | `/api/v1/orders` | Bearer | operator board, newest-first, scope-filtered, capped |
+| GET | `/api/v1/orders/:id` | Bearer | order detail (scope-checked) |
+| PATCH | `/api/v1/orders/:id` | Bearer | status bump (KDS); **idempotent** (no-op at target) |
+| GET | `/api/v1/orders/stream` | Bearer | **SSE** live board — `data: { orders }` frames |
 | GET | `/api/v1/openapi.json` | none | the contract document |
+
+### Operator order spine
+`orders*` are the OttavianoKDS revenue path, reusing the live domain
+(`getOrders`/`getOrderById`/`updateOrderStatus`) — **no pricing reimplemented**.
+Every call is **location-scoped** against the token's scope (`guard.ts`,
+the native analogue of `requireLocationAccess`): a Kraków-scoped operator can't
+read or bump a Warszawa order. The stream is the realtime spine (ARCHITECTURE
+§4): the app opens it with a Bearer header (URLSession can; `EventSource`
+can't — fine for a native client) and consumes `{ orders: Order[] }` frames as
+an `AsyncSequence`, backed by the same in-process emitter + 10s backstop + 25s
+ping as the web admin board. Status bumps are idempotent so an offline-replayed
+or double-tapped bump can't error.
 
 Money is always **minor units (grosze)** on the wire; the app formats via
 `MoneyText` (DESIGN-SYSTEM §4.2). Operator-internal fields (cost, packaging, sku)
@@ -86,6 +102,7 @@ rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.t
 
 ## Remaining in Stage 2
 - OpenAPI-from-Zod generation + Swift codegen wiring.
-- Order create + status, KDS feed over the existing SSE streams, idempotency-key
-  passthrough on writes.
+- **Order create** (customer checkout) — payment-coupled (Stripe / Apple Pay) +
+  needs the phone-based customer-auth surface; its own focused increment. Server
+  must price authoritatively from item ids (never trust client totals).
 - `docs/native/VERCEL-EXIT.md` cutover checklist (cron, object storage, CDN).
