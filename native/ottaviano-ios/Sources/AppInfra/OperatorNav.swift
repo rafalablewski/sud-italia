@@ -121,7 +121,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Fridge & cooking temperature compliance log."),
         OperatorNavItem("/admin/waste", "Waste log", "trash.fill", .staff, .live,
                         "Record spoilage and wastage against par."),
-        OperatorNavItem("/admin/handover", "Shift handover", "arrow.left.arrow.right.square.fill", .manager, .scaffold,
+        OperatorNavItem("/admin/handover", "Shift handover", "arrow.left.arrow.right.square.fill", .manager, .live,
                         "End-of-shift notes and open issues for the next lead."),
     ]),
     OperatorNavSection("inventory", "Inventory", [
@@ -141,7 +141,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
     OperatorNavSection("customers", "Customers", [
         OperatorNavItem("/admin/customers", "Customers", "person.crop.circle.fill", .staff, .live,
                         "CRM — profiles, history, segments and consent."),
-        OperatorNavItem("/admin/corporate", "Corporate", "briefcase.fill", .manager, .scaffold,
+        OperatorNavItem("/admin/corporate", "Corporate", "briefcase.fill", .manager, .live,
                         "Corporate accounts, pre-orders and invoicing."),
         OperatorNavItem("/admin/feedback", "Feedback", "bubble.left.and.bubble.right.fill", .manager, .live,
                         "Reviews and sentiment, with AI summaries."),
@@ -159,7 +159,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "What-if P&L simulator and break-even sandbox."),
     ]),
     OperatorNavSection("growth", "Growth", [
-        OperatorNavItem("/admin/growth", "Campaigns", "paperplane.fill", .manager, .scaffold,
+        OperatorNavItem("/admin/growth", "Campaigns", "paperplane.fill", .manager, .live,
                         "Loyalty, referral and win-back campaigns."),
         OperatorNavItem("/admin/upsell", "Upsell", "arrow.up.forward.circle.fill", .manager, .live,
                         "Cart upsell rules and performance."),
@@ -175,7 +175,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
     OperatorNavSection("intelligence", "Intelligence", [
         OperatorNavItem("/admin/locations", "Multi-location", "map.fill", .owner, .live,
                         "Cross-location rollup and HQ comparison."),
-        OperatorNavItem("/admin/locations/manage", "Manage locations", "mappin.and.ellipse", .owner, .scaffold,
+        OperatorNavItem("/admin/locations/manage", "Manage locations", "mappin.and.ellipse", .owner, .live,
                         "Open, edit and configure each location."),
         OperatorNavItem("/admin/menu-engineering", "Menu engineering", "fork.knife", .manager, .scaffold,
                         "Stars / plowhorses / puzzles / dogs matrix."),
@@ -191,7 +191,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
     OperatorNavSection("system", "System", [
         OperatorNavItem("/admin/users", "Users & roles", "checkmark.shield.fill", .owner, .live,
                         "Staff accounts, roles, MFA and WebAuthn."),
-        OperatorNavItem("/admin/permissions", "Permission matrix", "square.grid.3x3.fill", .owner, .scaffold,
+        OperatorNavItem("/admin/permissions", "Permission matrix", "square.grid.3x3.fill", .owner, .live,
                         "Granular per-page permission grants."),
         OperatorNavItem("/admin/compliance", "Compliance", "calendar.badge.checkmark", .manager, .live,
                         "Recurring compliance tasks and due dates."),

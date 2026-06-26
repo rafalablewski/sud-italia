@@ -394,3 +394,66 @@ public struct AdminScheduledBundle: Codable, Sendable, Identifiable {
     public let itemCount: Int
     public let status: String
 }
+
+// MARK: - Wave 5
+
+/// `/api/v1/admin/corporate` — a corporate/B2B account (route DTO).
+public struct AdminCorporate: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let slug: String
+    public let memberCount: Int
+    public let billingEmail: String?
+    public let locationSlug: String?
+}
+
+/// `/api/v1/admin/manage-locations` — a location with status (route DTO).
+public struct AdminManagedLocation: Codable, Sendable, Identifiable {
+    public var id: String { slug }
+    public let slug: String
+    public let name: String
+    public let city: String
+    public let address: String
+    public let isActive: Bool
+    public let servesAlcohol: Bool
+    public let displayOrder: Int
+}
+
+/// `/api/v1/admin/campaigns` — a WhatsApp broadcast campaign (route DTO).
+public struct AdminCampaign: Codable, Sendable, Identifiable {
+    public let id: String
+    public let template: String
+    public let audienceLabel: String
+    public let sentCount: Int
+    public let failedCount: Int
+    public let total: Int
+    public let status: String
+    public let createdAt: String
+}
+
+/// `/api/v1/admin/handover` — a shift handover record (route DTO).
+public struct AdminHandover: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let shift: String
+    public let outgoingManager: String
+    public let incomingManager: String?
+    public let cashVarianceGrosze: Grosze?
+    public let tempChecksOk: Bool
+    public let equipmentOk: Bool
+    public let managerComment: String?
+    public let recordedAt: String
+}
+
+/// `/api/v1/admin/permissions` — the role × permission-group matrix (route DTO).
+public struct AdminPermissionMatrix: Codable, Sendable {
+    public struct Grant: Codable, Sendable { public let role: String; public let granted: Int }
+    public struct Group: Codable, Sendable, Identifiable {
+        public let id: String
+        public let label: String
+        public let total: Int
+        public let grants: [Grant]
+    }
+    public let roles: [String]
+    public let groups: [Group]
+}

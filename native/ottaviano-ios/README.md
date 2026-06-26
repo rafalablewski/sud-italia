@@ -59,16 +59,19 @@ ships the matching native screen with real data. Live today:
 - **Operator (wave 4):** **Settings, Payments, QR ordering, Integrations,
   Currency, Languages, Upsell, Cross-sell** (one generic settings endpoint +
   renderer — these config objects hold no secrets, those live in env), plus
-  **Insights**, **Multi-location**, **Expansion**, **Scheduled bundles**, and a
-  native **Welcome**.
+  **Insights**, **Multi-location**, **Expansion**, **Scheduled bundles**, **Welcome**.
+- **Operator (wave 5):** **Corporate**, **Manage locations**, **Campaigns**,
+  **Shift handover**, **Permission matrix**.
 
-**40 of ~55 operator surfaces are now live.** Surfaces not yet in a wave render a
-parity scaffold that states purpose + role + wiring status (never fake data —
-Rule #1). Remaining (heavier — mostly mutations/AI): POS order capture, HACCP,
-Handover, Calculator/simulation, Menu engineering, Agent HQ, Ops Agent,
-Permissions, Regulatory disclosures, SOC 2, Capabilities, Campaigns, Corporate,
-Manage locations; plus Stripe PaymentSheet (endpoint wired; SDK added in the
-extracted repo) and offline persistence (GRDB/SwiftData).
+**45 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
+The 9 remaining render a parity scaffold (purpose + role + wiring status, never
+fake data — Rule #1); they're the hard tail that needs dedicated design:
+**POS** (walk-in order capture — needs a phone-less order path server-side),
+**HACCP**, **Calculator/simulation**, **Menu engineering**, **Agent HQ**,
+**Ops Agent** (conversational AI), **Regulatory disclosures**, **SOC 2**, and
+**Capabilities** (the env-introspection ledger). Also pending: Stripe PaymentSheet
+(endpoint wired; SDK added in the extracted repo) and offline persistence
+(GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

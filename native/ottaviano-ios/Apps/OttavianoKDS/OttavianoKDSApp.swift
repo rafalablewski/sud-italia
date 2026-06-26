@@ -177,6 +177,16 @@ struct OperatorRootView: View {
             OperatorSettingsView(api: deps.api, surface: "upsell", title: "Upsell")
         case "/admin/crosssell":
             OperatorSettingsView(api: deps.api, surface: "upsell", title: "Cross-sell")
+        case "/admin/corporate":
+            OperatorCorporateView(api: deps.api)
+        case "/admin/locations/manage":
+            OperatorManageLocationsView(api: deps.api)
+        case "/admin/growth":
+            OperatorCampaignsView(api: deps.api)
+        case "/admin/handover":
+            OperatorHandoverView(api: deps.api)
+        case "/admin/permissions":
+            OperatorPermissionsView(api: deps.api)
         default:
             OperatorSurfaceView(item: item)
         }

@@ -266,6 +266,23 @@ public extension Endpoint {
     static func adminScheduledBundles() -> Endpoint<[AdminScheduledBundle]> {
         Endpoint<[AdminScheduledBundle]>(.get, "admin/scheduled-bundles", requiresAuth: true)
     }
+
+    // Wave 5.
+    static func adminCorporate() -> Endpoint<[AdminCorporate]> {
+        Endpoint<[AdminCorporate]>(.get, "admin/corporate", requiresAuth: true)
+    }
+    static func adminManageLocations() -> Endpoint<[AdminManagedLocation]> {
+        Endpoint<[AdminManagedLocation]>(.get, "admin/manage-locations", requiresAuth: true)
+    }
+    static func adminCampaigns() -> Endpoint<[AdminCampaign]> {
+        Endpoint<[AdminCampaign]>(.get, "admin/campaigns", requiresAuth: true)
+    }
+    static func adminHandover() -> Endpoint<[AdminHandover]> {
+        Endpoint<[AdminHandover]>(.get, "admin/handover", requiresAuth: true)
+    }
+    static func adminPermissions() -> Endpoint<AdminPermissionMatrix> {
+        Endpoint<AdminPermissionMatrix>(.get, "admin/permissions", requiresAuth: true)
+    }
 }
 
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).
