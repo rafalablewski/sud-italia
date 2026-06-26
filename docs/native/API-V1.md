@@ -61,6 +61,9 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/customer/auth/request` | none | send phone OTP (3/min/phone); `devCode` only in non-prod w/o SMS |
 | POST | `/api/v1/customer/auth/verify` | none | code → **customer** token pair (aud `ottaviano`); single-use, attempt-capped |
 | GET | `/api/v1/customer/me` | Bearer (customer) | profile + loyalty points/tier |
+| GET | `/api/v1/customer/orders` | Bearer (customer) | the customer's own orders (history + active) |
+| GET | `/api/v1/customer/orders/:id` | Bearer (customer) | one own order (ownership-gated; 404 if not theirs) |
+| GET | `/api/v1/customer/orders/:id/stream` | Bearer (customer) | **SSE** live tracker — `data: { order }` |
 | POST | `/api/v1/orders` | optional (customer) | **create order** — guest or customer; server-priced; idempotent |
 | GET | `/api/v1/locations` | none | active locations (curated DTO) |
 | GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
@@ -87,6 +90,15 @@ and enforces min-order/availability — the exact path the web checkout uses.
 An `Idempotency-Key` header makes retries safe (a repeat with the same key + body
 returns the original order, `meta.idempotent=true`). Orders are created unpaid;
 payment (Stripe / Apple Pay) layers on later.
+
+**Order history + tracking.** `customer/orders` lists the customer's own orders
+(by token phone, newest-first, pending included so a just-placed order shows).
+`customer/orders/:id` returns one — **ownership-gated**: a non-owned or missing
+id is a uniform **404** (never 403, so ids can't be probed). `…/:id/stream` is
+the **live tracker** (the order-tracker / Live Activity feed, APP-SHELL §5.2):
+Bearer-header SSE, ownership-checked, emitting `{ order }` on every status change.
+The operator's KDS bump (`PATCH /orders/:id`) propagates to the customer's
+tracker through the same in-process emitter — verified end-to-end.
 
 ### Operator order spine
 `orders*` are the OttavianoKDS revenue path, reusing the live domain
@@ -139,6 +151,5 @@ rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.t
 ## Remaining in Stage 2
 - **Payment** on order create — Stripe / Apple Pay (`PaymentIntent` + the webhook
   marking `paidAt`). Orders are created unpaid today; this attaches the charge.
-- Customer **order history / tracking** endpoints (the customer's own orders by
-  phone), now that customer auth exists.
+- ✅ Customer **order history + live tracking** — `customer/orders[/:id[/stream]]`.
 - ✅ `docs/native/VERCEL-EXIT.md` — the host-migration cutover checklist.

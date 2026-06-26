@@ -37,8 +37,9 @@ business is leaving Vercel — designed for from day one).
   [`API-V1.md`](./API-V1.md). Committed codegen artifact: `docs/native/openapi.json`
   (`npm run gen:openapi`), the operator order spine + SSE, **customer phone-OTP
   auth + server-priced order create** (guest or customer, idempotent), and the
-  `VERCEL-EXIT.md` cutover plan. Remaining Stage 2: payment (Stripe/Apple Pay)
-  on order create + customer order-history endpoints.
+  `VERCEL-EXIT.md` cutover plan, and **customer order history + live tracking**
+  (ownership-gated, SSE — operator bump → customer tracker in real time).
+  Remaining Stage 2: payment (Stripe/Apple Pay) on order create.
 - ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
   contract coverage is sufficient.
 

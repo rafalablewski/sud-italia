@@ -158,6 +158,48 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/customer/orders": {
+        get: {
+          summary: "The customer's own orders (history + active)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "since", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+          ],
+          responses: {
+            "200": dataResponse("Orders, newest first", { type: "array", items: ref("Order") }, true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/customer/orders/{id}": {
+        get: {
+          summary: "One of the customer's own orders (ownership-gated)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Order", ref("Order")),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/customer/orders/{id}/stream": {
+        get: {
+          summary: "Live order tracking (SSE; Bearer header)",
+          description:
+            "SSE; each `data:` frame is { order: Order }. Ownership-gated. Powers the " +
+            "order tracker / Live Activity.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": { description: "text/event-stream of { order }" },
+            "401": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+          },
+        },
+      },
       "/locations": {
         get: {
           summary: "Active locations (public)",
