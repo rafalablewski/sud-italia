@@ -86,6 +86,34 @@ public struct Order: Codable, Sendable, Identifiable {
     public let estimatedReadyAt: String?
 }
 
+/// An open POS check (Tabs). Lines carry id+qty(+course) only; prices resolve
+/// server-side at send/charge. Mirrors the web PosTab.
+public struct PosTabLine: Codable, Sendable {
+    public let menuItemId: String
+    public let quantity: Int
+    public let course: String?
+}
+
+public struct PosTab: Codable, Sendable, Identifiable {
+    public let id: String
+    public let locationSlug: String
+    public let name: String
+    public let channel: String?
+    public let status: String
+    public let items: [PosTabLine]
+    public let tableId: String?
+    public let covers: Int?
+    public let customerName: String?
+    public let customerPhone: String?
+    public let coursed: Bool?
+    public let sentKds: Bool
+    public let orderId: String?
+    public let createdAt: String
+    public let updatedAt: String
+
+    public var lineCount: Int { items.reduce(0) { $0 + $1.quantity } }
+}
+
 public struct PaymentIntentDTO: Codable, Sendable {
     public let clientSecret: String
     public let publishableKey: String

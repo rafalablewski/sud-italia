@@ -43,9 +43,11 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   with change-due; total stays server-priced via `POST /api/v1/admin/pos/order`).
 - **Shipped:** **cross-sell** — `POST /api/v1/admin/pos/suggestions` runs the
   storefront getCartSuggestions engine; native shows add-chips on the ticket bar.
-- **Deferred (facade-gated):** **tabs** (multi-ticket) + **coursing** (fire-by-
-  course) need their `/api/v1` endpoints + a chunk of native state — the remaining
-  real POS depth (still *not* split-bill, which the web doesn't do).
+- **Shipped:** **tabs** — `/api/v1/admin/pos/tabs` CRUD + a native Tabs surface
+  (open several checks, load one into the ticket, save back, void; charge via the
+  counter-sale path).
+- **Deferred (planned):** **coursing** (fire-by-course) — needs a shared `fireTab`
+  server extraction; scoped in `POS-TABS-PLAN.md`. (Still *not* split-bill.)
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
@@ -61,8 +63,8 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   marker).
 - **Shipped:** **Print receipt** — `POST /api/v1/orders/:id/receipt`; native shows
   the printer confirmation or a shareable plain-text preview (no-hardware fallback).
-- **Deferred (native-only polish):** a **channel dropdown** filter on top of the
-  now-decoded field (shown as a badge today).
+- **Shipped:** **channel dropdown** filter in the Orders filter bar (scope +
+  channel, over the decoded field).
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
 - **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
@@ -102,10 +104,11 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **KDS recall** (`/recall`) + **station filter** (`category` DTO + native Menu).
 - ✅ **Orders settle** (`/settle`) + **print receipt** (`/receipt`); `channel`/
   `paidAt` decoded (badges + unpaid marker).
-- ✅ **POS cross-sell** — `/admin/pos/suggestions` + native add-chips.
-- ⏳ **Still facade-gated** (the remaining real depth):
-  - POS **tabs** (multi-ticket) + **coursing** (fire-by-course) — endpoints + native state.
-  - Orders **channel dropdown** filter (native-only; field already decoded).
+- ✅ **POS cross-sell** (`/admin/pos/suggestions`) + **tabs** (`/admin/pos/tabs`
+  CRUD + native load/save/void/charge).
+- ✅ **Orders channel dropdown** filter.
+- ⏳ **Planned (one piece left):** POS **coursing** (fire-by-course) — a shared
+  `fireTab` server extraction + native course UI; scoped in `POS-TABS-PLAN.md`.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.

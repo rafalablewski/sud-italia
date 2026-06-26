@@ -3,7 +3,7 @@ import CoreModels
 
 /// A typed request against `/api/v1`.
 public struct Endpoint<Response: Decodable & Sendable>: Sendable {
-    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH" }
+    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH", put = "PUT", delete = "DELETE" }
     public let method: Method
     public let path: String
     public let query: [String: String]
@@ -137,6 +137,23 @@ public extension Endpoint {
     static func posSuggestions(locationSlug: String, itemIds: [String]) -> Endpoint<[PosSuggestion]> {
         let body = try? JSONEncoder().encode(PosSuggestionsBody(locationSlug: locationSlug, itemIds: itemIds))
         return Endpoint<[PosSuggestion]>(.post, "admin/pos/suggestions", body: body, requiresAuth: true)
+    }
+
+    // POS open checks (Tabs) — several concurrent checks per till, persisted server-
+    // side. Lines are id+qty(+course); prices resolve at send/charge.
+    static func posTabs(location: String) -> Endpoint<[PosTab]> {
+        Endpoint<[PosTab]>(.get, "admin/pos/tabs", query: ["location": location], requiresAuth: true)
+    }
+    static func posTabOpen(location: String, name: String?) -> Endpoint<PosTab> {
+        let body = try? JSONEncoder().encode(["name": name ?? "New tab"])
+        return Endpoint<PosTab>(.post, "admin/pos/tabs", query: ["location": location], body: body, requiresAuth: true)
+    }
+    static func posTabSave(_ tab: PosTabSaveBody) -> Endpoint<PosTab> {
+        let body = try? JSONEncoder().encode(tab)
+        return Endpoint<PosTab>(.put, "admin/pos/tabs", body: body, requiresAuth: true)
+    }
+    static func posTabVoid(id: String, location: String) -> Endpoint<TabDeleteResult> {
+        Endpoint<TabDeleteResult>(.delete, "admin/pos/tabs", query: ["id": id, "location": location], requiresAuth: true)
     }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
@@ -385,3 +402,41 @@ public struct PosSuggestion: Codable, Sendable, Identifiable {
     public let reason: String
 }
 private struct PosSuggestionsBody: Encodable { let locationSlug: String; let itemIds: [String] }
+
+/// Body for `PUT /api/v1/admin/pos/tabs` — edit an open check. Lines are id+qty
+/// (+course); the server resolves prices/discounts at send/charge.
+public struct PosTabSaveBody: Encodable, Sendable {
+    public struct Line: Encodable, Sendable {
+        public let menuItemId: String
+        public let quantity: Int
+        public let course: String?
+        public init(menuItemId: String, quantity: Int, course: String? = nil) {
+            self.menuItemId = menuItemId; self.quantity = quantity; self.course = course
+        }
+    }
+    public let id: String
+    public let locationSlug: String
+    public let name: String?
+    public let channel: String?
+    public let status: String?
+    public let items: [Line]
+    public let tableId: String?
+    public let covers: Int?
+    public let customerName: String?
+    public let customerPhone: String?
+    public let coursed: Bool?
+    public init(id: String, locationSlug: String, items: [Line], name: String? = nil,
+                channel: String? = nil, status: String? = nil, tableId: String? = nil,
+                covers: Int? = nil, customerName: String? = nil, customerPhone: String? = nil,
+                coursed: Bool? = nil) {
+        self.id = id; self.locationSlug = locationSlug; self.items = items; self.name = name
+        self.channel = channel; self.status = status; self.tableId = tableId; self.covers = covers
+        self.customerName = customerName; self.customerPhone = customerPhone; self.coursed = coursed
+    }
+}
+
+/// Result of `DELETE /api/v1/admin/pos/tabs`.
+public struct TabDeleteResult: Codable, Sendable {
+    public let deleted: Bool
+    public let id: String
+}

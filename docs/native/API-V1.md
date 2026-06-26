@@ -76,6 +76,7 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/orders/:id/receipt` | Bearer | render/print receipt — `{ mode, preview }` (printed or simulated); audited |
 | GET | `/api/v1/orders/stream` | Bearer | **SSE** live board — `data: { orders }` frames |
 | POST | `/api/v1/admin/pos/suggestions` | Bearer (staff+) | cross-sell chips for a ticket (`{ locationSlug, itemIds }`) |
+| GET/POST/PUT/DELETE | `/api/v1/admin/pos/tabs` | Bearer (staff+) | open checks (Tabs) — list / open / edit / void; lines are id+qty(+course), prices server-resolved |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create

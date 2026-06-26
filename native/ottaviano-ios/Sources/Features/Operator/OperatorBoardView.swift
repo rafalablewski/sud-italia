@@ -12,6 +12,7 @@ public struct OperatorBoardView: View {
     @State private var error: String?
     @State private var query = ""
     @State private var showAll = false
+    @State private var channel = "all"
     @State private var detail: Order?
 
     public init() {}
@@ -87,12 +88,20 @@ public struct OperatorBoardView: View {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         return orders.filter { o in
             if !showAll, [.completed, .delivered, .pickedUp, .cancelled].contains(o.status) { return false }
+            if channel != "all", (o.channel ?? "web") != channel { return false }
             if !q.isEmpty {
                 let hay = "\(o.id) \(o.customerName) \(o.customerPhone)".lowercased()
                 if !hay.contains(q) { return false }
             }
             return true
         }
+    }
+
+    /// Channels present on the board, for the filter menu.
+    private var channels: [String] {
+        var set = Set<String>()
+        for o in orders { set.insert(o.channel ?? "web") }
+        return ["all"] + set.sorted()
     }
 
     private var summary: some View {
@@ -104,15 +113,29 @@ public struct OperatorBoardView: View {
     }
 
     private var filterBar: some View {
-        HStack(spacing: theme.space.md) {
+        VStack(spacing: theme.space.sm) {
             DSTextField("", text: $query, placeholder: "order id, guest or phone…",
                         systemImage: "magnifyingglass", autocapitalization: .never, autocorrect: false)
-            Picker("Scope", selection: $showAll) {
-                Text("Current").tag(false)
-                Text("All").tag(true)
+            HStack(spacing: theme.space.md) {
+                Picker("Scope", selection: $showAll) {
+                    Text("Current").tag(false)
+                    Text("All").tag(true)
+                }
+                .pickerStyle(.segmented)
+                Menu {
+                    ForEach(channels, id: \.self) { c in
+                        Button(c == "all" ? "All channels" : c.uppercased()) { channel = c }
+                    }
+                } label: {
+                    Label(channel == "all" ? "All channels" : channel.uppercased(),
+                          systemImage: "antenna.radiowaves.left.and.right")
+                        .textRole(.caption)
+                        .padding(.horizontal, theme.space.md).frame(minHeight: 32)
+                        .background(theme.color.surface2, in: Capsule())
+                        .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
+                }
+                .foregroundStyle(theme.color.textPrimary)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 160)
         }
     }
 

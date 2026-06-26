@@ -39,7 +39,7 @@ public final class OperatorPOSStore {
         guard let q = ticket[id] else { return }
         if q <= 1 { ticket[id] = nil } else { ticket[id] = q - 1 }
     }
-    public func clear() { ticket.removeAll(); suggestions = [] }
+    public func clear() { ticket.removeAll(); suggestions = []; currentTabID = nil }
 
     /// A stable signature of the ticket contents — drives the suggestions refresh.
     public var ticketSignature: String {
@@ -50,6 +50,41 @@ public final class OperatorPOSStore {
         guard !ticket.isEmpty else { suggestions = []; return }
         suggestions = (try? await api.send(
             .posSuggestions(locationSlug: location, itemIds: Array(ticket.keys)))) ?? []
+    }
+
+    // ── Tabs (open checks) — several concurrent checks per till, persisted via
+    //    /api/v1/admin/pos/tabs. A tab is loaded into the working ticket, edited
+    //    with the normal add/remove, saved back, and charged through the same
+    //    counter-sale path. Coursing (fire-by-course) is the next wave (PLAN).
+    public private(set) var tabs: [PosTab] = []
+    public private(set) var currentTabID: String?
+    public var currentTabName: String? { tabs.first { $0.id == currentTabID }?.name }
+
+    public func refreshTabs() async {
+        tabs = (try? await api.send(.posTabs(location: location))) ?? []
+    }
+    public func openTab(name: String?) async {
+        guard let tab = try? await api.send(.posTabOpen(location: location, name: name)) else { return }
+        await refreshTabs()
+        load(tab: tab)
+    }
+    public func voidTab(_ id: String) async {
+        _ = try? await api.send(.posTabVoid(id: id, location: location))
+        if currentTabID == id { clear() }
+        await refreshTabs()
+    }
+    /// Pull a saved check into the working ticket.
+    public func load(tab: PosTab) {
+        ticket = Dictionary(tab.items.map { ($0.menuItemId, $0.quantity) }, uniquingKeysWith: +)
+        currentTabID = tab.id
+    }
+    /// Persist the working ticket onto the current tab.
+    public func saveCurrentTab() async {
+        guard let id = currentTabID else { return }
+        let lines = ticket.map { PosTabSaveBody.Line(menuItemId: $0.key, quantity: $0.value) }
+        if let saved = try? await api.send(.posTabSave(PosTabSaveBody(id: id, locationSlug: location, items: lines))) {
+            if let i = tabs.firstIndex(where: { $0.id == id }) { tabs[i] = saved } else { tabs.insert(saved, at: 0) }
+        }
     }
 
     public var lineCount: Int { ticket.values.reduce(0, +) }
@@ -87,6 +122,7 @@ public struct OperatorPOSView: View {
     @Environment(\.theme) private var theme
     @State private var store: OperatorPOSStore
     @State private var showCharge = false
+    @State private var showTabs = false
 
     public init(api: APIClient, location: String = "krakow") {
         _store = State(initialValue: OperatorPOSStore(api: api, location: location))
@@ -117,9 +153,18 @@ public struct OperatorPOSView: View {
         }
         .navigationTitle("POS — \(store.location.capitalized)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showTabs = true } label: {
+                    Label("Tabs (\(store.tabs.count))", systemImage: "rectangle.stack.fill")
+                }
+            }
+        }
         .task { if case .loading = store.state { await store.load() } }
+        .task { await store.refreshTabs() }
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
+        .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
     }
 
     private func categories(_ items: [AdminMenuItem]) -> [String] {
@@ -142,6 +187,15 @@ public struct OperatorPOSView: View {
 
     private var ticketBar: some View {
         VStack(spacing: theme.space.sm) {
+            if let name = store.currentTabName {
+                HStack {
+                    Label(name, systemImage: "rectangle.stack.fill")
+                        .font(.caption.weight(.semibold)).foregroundStyle(theme.color.accent)
+                    Spacer()
+                    Button("Save to tab") { Task { await store.saveCurrentTab() } }
+                        .buttonStyle(.bordered).controlSize(.small)
+                }
+            }
             if !store.suggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: theme.space.sm) {
@@ -269,5 +323,58 @@ private struct ChargeSheet: View {
         error = nil
         let result = await store.charge(name: name, phone: phone, table: table)
         if let id = result.orderId { doneOrderId = id } else { error = result.error }
+    }
+}
+
+/// Open checks (Tabs) — list, open a new check, load one into the working ticket,
+/// or void it. Editing happens in the main till (add/remove + "Save to tab");
+/// charging reuses the counter-sale path. Coursing is the next wave (POS-TABS-PLAN).
+private struct TabsSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let store: OperatorPOSStore
+    @State private var newName = ""
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("New check") {
+                    HStack {
+                        TextField("Name (optional)", text: $newName)
+                        Button("Open") {
+                            Task { await store.openTab(name: newName.isEmpty ? nil : newName); newName = ""; dismiss() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                Section("Open checks") {
+                    if store.tabs.isEmpty {
+                        Text("No open checks").foregroundStyle(theme.color.textSecondary)
+                    }
+                    ForEach(store.tabs) { tab in
+                        Button { store.load(tab: tab); dismiss() } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(tab.name).foregroundStyle(theme.color.textPrimary)
+                                    Text("\(tab.lineCount) item\(tab.lineCount == 1 ? "" : "s") · \(tab.status)")
+                                        .font(.caption).foregroundStyle(theme.color.textSecondary)
+                                }
+                                Spacer()
+                                if tab.id == store.currentTabID {
+                                    Image(systemName: "checkmark").foregroundStyle(theme.color.accent)
+                                }
+                            }
+                        }
+                        .swipeActions {
+                            Button("Void", role: .destructive) { Task { await store.voidTab(tab.id) } }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Tabs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .task { await store.refreshTabs() }
+        }
     }
 }
