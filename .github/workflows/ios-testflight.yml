@@ -60,15 +60,23 @@ jobs:
             && echo "API key looks valid" || echo "WARNING: key does not start with BEGIN PRIVATE KEY"
 
       - name: Archive → export → upload
+        # Pass the (attacker-influenceable) commit message + inputs through env,
+        # never inline `${{ }}` in the script — otherwise quotes/specials in a
+        # commit message break the shell (or worse, inject). GitHub's own
+        # script-injection guidance.
+        env:
+          INPUT_SCHEME: ${{ inputs.scheme }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           chmod +x Scripts/testflight.sh
-          SCHEME="${{ inputs.scheme }}"
+          SCHEME="$INPUT_SCHEME"
           if [ -z "$SCHEME" ]; then
             # push-triggered: pick KDS only if the commit message asks for it.
-            case "${{ github.event.head_commit.message }}" in
+            case "$COMMIT_MSG" in
               *"(KDS)"*) SCHEME="OttavianoKDS" ;;
               *) SCHEME="Ottaviano" ;;
             esac
           fi
           echo "Shipping scheme: $SCHEME"
-          ./Scripts/testflight.sh "$SCHEME" "${{ github.run_number }}"
+          ./Scripts/testflight.sh "$SCHEME" "$RUN_NUMBER"
