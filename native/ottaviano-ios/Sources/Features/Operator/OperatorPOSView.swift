@@ -54,19 +54,34 @@ public final class OperatorPOSStore {
 
     // ── Tabs (open checks) — several concurrent checks per till, persisted via
     //    /api/v1/admin/pos/tabs. A tab is loaded into the working ticket, edited
-    //    with the normal add/remove, saved back, and charged through the same
-    //    counter-sale path. Coursing (fire-by-course) is the next wave (PLAN).
+    //    with the normal add/remove, saved back, fired to the KDS (whole or
+    //    course-by-course) and charged — all through the shared server actuator
+    //    (@/lib/pos/fireTab), so prices/discounts/coursing resolve server-side.
     public private(set) var tabs: [PosTab] = []
-    public private(set) var currentTabID: String?
-    public var currentTabName: String? { tabs.first { $0.id == currentTabID }?.name }
+    public private(set) var currentTab: PosTab?
+    public var currentTabID: String? { currentTab?.id }
+    public var currentTabName: String? { currentTab?.name }
+    public var isCoursed: Bool { currentTab?.coursed ?? false }
+    public var firedCourses: [String] { currentTab?.firedCourses ?? [] }
+
+    /// Native twin of web `defaultCourseForCategory` — lines bucket by category.
+    static func defaultCourse(_ category: String?) -> String {
+        switch category {
+        case "antipasti": return "starter"
+        case "desserts": return "dessert"
+        case "drinks": return "drink"
+        default: return "main" // pizza / pasta / panini
+        }
+    }
 
     public func refreshTabs() async {
         tabs = (try? await api.send(.posTabs(location: location))) ?? []
+        if let id = currentTab?.id { currentTab = tabs.first { $0.id == id } ?? currentTab }
     }
     public func openTab(name: String?) async {
         guard let tab = try? await api.send(.posTabOpen(location: location, name: name)) else { return }
-        await refreshTabs()
         load(tab: tab)
+        await refreshTabs()
     }
     public func voidTab(_ id: String) async {
         _ = try? await api.send(.posTabVoid(id: id, location: location))
@@ -76,15 +91,61 @@ public final class OperatorPOSStore {
     /// Pull a saved check into the working ticket.
     public func load(tab: PosTab) {
         ticket = Dictionary(tab.items.map { ($0.menuItemId, $0.quantity) }, uniquingKeysWith: +)
-        currentTabID = tab.id
+        currentTab = tab
     }
-    /// Persist the working ticket onto the current tab.
-    public func saveCurrentTab() async {
-        guard let id = currentTabID else { return }
-        let lines = ticket.map { PosTabSaveBody.Line(menuItemId: $0.key, quantity: $0.value) }
-        if let saved = try? await api.send(.posTabSave(PosTabSaveBody(id: id, locationSlug: location, items: lines))) {
-            if let i = tabs.firstIndex(where: { $0.id == id }) { tabs[i] = saved } else { tabs.insert(saved, at: 0) }
+
+    private func ticketLinesForSave(coursed: Bool) -> [PosTabSaveBody.Line] {
+        ticket.map { id, qty in
+            PosTabSaveBody.Line(menuItemId: id, quantity: qty,
+                                course: coursed ? Self.defaultCourse(menuById[id]?.category) : nil)
         }
+    }
+
+    /// Persist the working ticket onto the current tab. `coursed` overrides the
+    /// tab's coursing flag when provided (the dine-in toggle).
+    @discardableResult
+    public func saveCurrentTab(coursed: Bool? = nil) async -> PosTab? {
+        guard let id = currentTabID else { return nil }
+        let effectiveCoursed = coursed ?? isCoursed
+        let body = PosTabSaveBody(id: id, locationSlug: location,
+                                  items: ticketLinesForSave(coursed: effectiveCoursed),
+                                  coursed: effectiveCoursed)
+        guard let saved = try? await api.send(.posTabSave(body)) else { return nil }
+        currentTab = saved
+        if let i = tabs.firstIndex(where: { $0.id == id }) { tabs[i] = saved } else { tabs.insert(saved, at: 0) }
+        return saved
+    }
+
+    public func setCoursed(_ on: Bool) async { await saveCurrentTab(coursed: on) }
+
+    /// Fire the current tab to the kitchen — whole, or named courses. Saves the
+    /// latest ticket first so the server fires off current truth.
+    public func fireCurrentTab(courses: [String]? = nil) async -> String? {
+        guard let id = currentTabID else { return "No open tab" }
+        await saveCurrentTab()
+        do {
+            _ = try await api.send(.posTabFire(id: id, location: location,
+                                               courses: courses, fireAll: courses == nil))
+            await refreshTabs()
+            return nil
+        } catch let e as APIError {
+            if case .api(_, let m, _) = e { return m }
+            return "You appear to be offline"
+        } catch { return "Something went wrong" }
+    }
+
+    /// Charge the current tab (settle + close). Clears the till on success.
+    public func chargeCurrentTab() async -> String? {
+        guard let id = currentTabID else { return "No open tab" }
+        do {
+            _ = try await api.send(.posTabCharge(id: id, location: location))
+            clear()
+            await refreshTabs()
+            return nil
+        } catch let e as APIError {
+            if case .api(_, let m, _) = e { return m }
+            return "You appear to be offline"
+        } catch { return "Something went wrong" }
     }
 
     public var lineCount: Int { ticket.values.reduce(0, +) }
@@ -123,6 +184,7 @@ public struct OperatorPOSView: View {
     @State private var store: OperatorPOSStore
     @State private var showCharge = false
     @State private var showTabs = false
+    @State private var tabMessage: String?
 
     public init(api: APIClient, location: String = "krakow") {
         _store = State(initialValue: OperatorPOSStore(api: api, location: location))
@@ -165,6 +227,7 @@ public struct OperatorPOSView: View {
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
         .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
+        .dsToast($tabMessage)
     }
 
     private func categories(_ items: [AdminMenuItem]) -> [String] {
@@ -192,7 +255,12 @@ public struct OperatorPOSView: View {
                     Label(name, systemImage: "rectangle.stack.fill")
                         .font(.caption.weight(.semibold)).foregroundStyle(theme.color.accent)
                     Spacer()
-                    Button("Save to tab") { Task { await store.saveCurrentTab() } }
+                    Toggle("Coursed", isOn: Binding(
+                        get: { store.isCoursed },
+                        set: { v in Task { await store.setCoursed(v) } }
+                    ))
+                    .toggleStyle(.button).controlSize(.small)
+                    Button("Save") { Task { await store.saveCurrentTab() } }
                         .buttonStyle(.bordered).controlSize(.small)
                 }
             }
@@ -225,7 +293,27 @@ public struct OperatorPOSView: View {
             HStack(spacing: theme.space.md) {
                 Button("Clear", role: .destructive) { store.clear() }
                     .buttonStyle(.bordered)
-                DSButton("Charge") { showCharge = true }
+                if store.currentTabID != nil {
+                    if store.isCoursed {
+                        Menu {
+                            ForEach(["starter", "main", "dessert", "drink"], id: \.self) { c in
+                                Button(store.firedCourses.contains(c) ? "✓ \(c.capitalized)" : c.capitalized) {
+                                    Task { tabMessage = await store.fireCurrentTab(courses: [c]) ?? "Fired \(c)" }
+                                }
+                            }
+                            Divider()
+                            Button("Fire all") { Task { tabMessage = await store.fireCurrentTab() ?? "Sent to kitchen" } }
+                        } label: {
+                            Label("Fire", systemImage: "flame.fill").frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        DSButton("Send") { Task { tabMessage = await store.fireCurrentTab() ?? "Sent to kitchen" } }
+                    }
+                    DSButton("Charge tab") { Task { tabMessage = await store.chargeCurrentTab() ?? "Charged" } }
+                } else {
+                    DSButton("Charge") { showCharge = true }
+                }
             }
         }
         .padding(theme.space.lg)

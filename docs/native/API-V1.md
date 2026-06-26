@@ -77,6 +77,8 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | GET | `/api/v1/orders/stream` | Bearer | **SSE** live board — `data: { orders }` frames |
 | POST | `/api/v1/admin/pos/suggestions` | Bearer (staff+) | cross-sell chips for a ticket (`{ locationSlug, itemIds }`) |
 | GET/POST/PUT/DELETE | `/api/v1/admin/pos/tabs` | Bearer (staff+) | open checks (Tabs) — list / open / edit / void; lines are id+qty(+course), prices server-resolved |
+| POST | `/api/v1/admin/pos/tabs/:id/fire` | Bearer (staff+) | send to KDS / fire course(s) (`{ courses?, fireAll? }`); shared `fireTab`, idempotent |
+| POST | `/api/v1/admin/pos/tabs/:id/charge` | Bearer (staff+) | settle + close the tab; shared `chargeTab`, idempotent |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create

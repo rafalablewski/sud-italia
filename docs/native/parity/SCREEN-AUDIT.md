@@ -46,8 +46,10 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped:** **tabs** — `/api/v1/admin/pos/tabs` CRUD + a native Tabs surface
   (open several checks, load one into the ticket, save back, void; charge via the
   counter-sale path).
-- **Deferred (planned):** **coursing** (fire-by-course) — needs a shared `fireTab`
-  server extraction; scoped in `POS-TABS-PLAN.md`. (Still *not* split-bill.)
+- **Shipped:** **coursing** — a shared `@/lib/pos/fireTab` actuator (web + v1 fire
+  through one implementation) + `/api/v1/admin/pos/tabs/:id/{fire,charge}`; native
+  Coursed toggle + Fire-course menu + Charge-tab (courses auto-assign by category).
+  Manual per-line recourse is the only follow-up. (Still *not* split-bill.)
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
@@ -107,8 +109,10 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **POS cross-sell** (`/admin/pos/suggestions`) + **tabs** (`/admin/pos/tabs`
   CRUD + native load/save/void/charge).
 - ✅ **Orders channel dropdown** filter.
-- ⏳ **Planned (one piece left):** POS **coursing** (fire-by-course) — a shared
-  `fireTab` server extraction + native course UI; scoped in `POS-TABS-PLAN.md`.
+- ✅ **POS coursing** — shared `fireTab` actuator + v1 fire/charge + native course UI.
+- ⏳ **On-device verification only** — every source-resolvable parity item is now
+  shipped; what remains is walking both apps side-by-side on a simulator (needs a
+  Mac) and manual per-line recourse polish.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.

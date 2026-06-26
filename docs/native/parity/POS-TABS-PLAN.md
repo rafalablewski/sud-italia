@@ -1,12 +1,12 @@
-# POS Tabs + Coursing — build plan
+# POS Tabs + Coursing — build plan & record
 
-> The Tabs **spine** is shipped: the `/api/v1/admin/pos/tabs` CRUD facade (list /
-> open / edit / void, location-scoped, prices server-resolved) and a native Tabs
-> surface (open several checks, load one into the working ticket, save it back,
-> void it; charge reuses the counter-sale path). This doc scopes the **one
-> remaining piece** — *coursing* (fire a sit-down service course-by-course) — which
-> needs a server refactor and a Mac to build/verify iteratively, so it's planned
-> here rather than rushed in blind.
+> **Status: SHIPPED** (kept as the design record). The Tabs spine *and* coursing
+> are now built: the `/api/v1/admin/pos/tabs` CRUD facade, the shared
+> `@/lib/pos/fireTab` actuator (web + v1 fire/charge through one implementation),
+> `/api/v1/admin/pos/tabs/:id/{fire,charge}`, and a native Tabs surface with a
+> Coursed toggle + Fire-course menu + Charge-tab. The only follow-up is **manual
+> per-line recourse** (today courses auto-assign by category, matching the web
+> default) and **on-device verification** — both want a Mac in the loop.
 
 ## What "coursing" is (web behaviour, resolved)
 From `src/core/pos/CorePos.tsx` + `src/lib/pos-coursing.ts`:

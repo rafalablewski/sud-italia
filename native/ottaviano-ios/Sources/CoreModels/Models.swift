@@ -106,6 +106,8 @@ public struct PosTab: Codable, Sendable, Identifiable {
     public let customerName: String?
     public let customerPhone: String?
     public let coursed: Bool?
+    /// Server-owned: which courses have been fired to the kitchen so far.
+    public let firedCourses: [String]?
     public let sentKds: Bool
     public let orderId: String?
     public let createdAt: String

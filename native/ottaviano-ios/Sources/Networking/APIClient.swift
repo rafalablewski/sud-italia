@@ -155,6 +155,15 @@ public extension Endpoint {
     static func posTabVoid(id: String, location: String) -> Endpoint<TabDeleteResult> {
         Endpoint<TabDeleteResult>(.delete, "admin/pos/tabs", query: ["id": id, "location": location], requiresAuth: true)
     }
+    /// Send to KDS / fire course(s). Omit courses (or fireAll) to fire everything.
+    static func posTabFire(id: String, location: String, courses: [String]? = nil, fireAll: Bool = false) -> Endpoint<TabFireResult> {
+        let body = try? JSONEncoder().encode(TabFireBody(courses: courses, fireAll: fireAll))
+        return Endpoint<TabFireResult>(.post, "admin/pos/tabs/\(id)/fire", query: ["location": location], body: body, requiresAuth: true)
+    }
+    /// Charge (settle) the tab and close it.
+    static func posTabCharge(id: String, location: String) -> Endpoint<TabChargeResult> {
+        Endpoint<TabChargeResult>(.post, "admin/pos/tabs/\(id)/charge", query: ["location": location], requiresAuth: true)
+    }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
         let body = try? JSONEncoder().encode(["phone": phone])
@@ -439,4 +448,19 @@ public struct PosTabSaveBody: Encodable, Sendable {
 public struct TabDeleteResult: Codable, Sendable {
     public let deleted: Bool
     public let id: String
+}
+
+private struct TabFireBody: Encodable { let courses: [String]?; let fireAll: Bool }
+
+/// Result of `POST /api/v1/admin/pos/tabs/:id/fire`.
+public struct TabFireResult: Codable, Sendable {
+    public let order: Order
+    public let firedCourses: [String]
+}
+
+/// Result of `POST /api/v1/admin/pos/tabs/:id/charge`.
+public struct TabChargeResult: Codable, Sendable {
+    public let ok: Bool
+    public let orderId: String
+    public let totalAmount: Grosze
 }
