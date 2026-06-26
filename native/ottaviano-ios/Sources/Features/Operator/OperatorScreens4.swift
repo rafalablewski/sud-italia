@@ -53,7 +53,7 @@ public struct OperatorSettingsView: View {
     private func load() async {
         do { data = try await api.send(.adminSettings(surface: surface)); error = nil }
         catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
     }
 }
 
@@ -136,7 +136,7 @@ public struct OperatorInsightsView: View {
     private func load() async {
         do { data = try await deps.api.send(.adminInsights()); error = nil }
         catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
     }
 }
 

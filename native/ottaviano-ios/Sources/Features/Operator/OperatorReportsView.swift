@@ -117,7 +117,7 @@ public struct OperatorReportsView: View {
         catch let e as APIError {
             if case .api(_, let m, _) = e { error = m } else if case .transport = e { error = "You appear to be offline" }
             else { error = "Something went wrong" }
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
         loaded = true
     }
 }

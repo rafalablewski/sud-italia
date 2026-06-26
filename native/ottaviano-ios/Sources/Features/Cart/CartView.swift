@@ -183,6 +183,6 @@ public struct CartView: View {
             if case .api(_, let m, _) = e { error = m }
             else if case .transport = e { error = "You appear to be offline" }
             else { error = "Couldn't place the order" }
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
     }
 }

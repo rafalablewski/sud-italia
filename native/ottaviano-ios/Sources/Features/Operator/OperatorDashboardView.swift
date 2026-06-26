@@ -104,7 +104,7 @@ public struct OperatorDashboardView: View {
             error = nil
         } catch let e as APIError {
             if case .api(_, let m, _) = e { error = m } else { error = "You appear to be offline" }
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
         loaded = true
     }
 }

@@ -25,7 +25,7 @@ public final class OperatorAgentStore {
             messages = thread.messages
             error = nil
         } catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
     }
 
     public func send(_ text: String) async {
@@ -41,7 +41,7 @@ public final class OperatorAgentStore {
             messages = thread.messages
             error = thread.error
         } catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { error = "The agent could not respond" }
+        catch { self.error = "The agent could not respond" }
     }
 }
 
