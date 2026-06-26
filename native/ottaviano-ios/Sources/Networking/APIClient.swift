@@ -313,7 +313,17 @@ public extension Endpoint {
     static func adminSimulation() -> Endpoint<AdminSimulation> {
         Endpoint<AdminSimulation>(.get, "admin/simulation", requiresAuth: true)
     }
+    // Wave 9 — Ops Agent.
+    static func adminAgentThread() -> Endpoint<AgentThread> {
+        Endpoint<AgentThread>(.get, "admin/agent", requiresAuth: true)
+    }
+    static func adminAgentTurn(message: String, conversationId: String?) -> Endpoint<AgentThread> {
+        let body = try? JSONEncoder().encode(AgentTurnBody(message: message, conversationId: conversationId))
+        return Endpoint<AgentThread>(.post, "admin/agent/turn", body: body, requiresAuth: true)
+    }
 }
+
+private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
 
 /// Body for `POST /api/v1/admin/pos/order`.
 public struct PosOrderBody: Encodable, Sendable {

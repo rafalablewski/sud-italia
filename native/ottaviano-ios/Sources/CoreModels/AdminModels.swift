@@ -533,3 +533,21 @@ public struct AdminSimulation: Codable, Sendable {
     public let year1: PnL
     public let months: [MonthRow]
 }
+
+// MARK: - Wave 9 (Ops Agent)
+
+/// A single chat message in an Ops-Agent thread.
+public struct AgentMessage: Codable, Sendable, Identifiable {
+    public let id: String
+    public let role: String   // "user" | "assistant"
+    public let text: String
+    public let createdAt: String
+}
+
+/// `/api/v1/admin/agent` (GET) + `/agent/turn` (POST) — the Ops-Agent thread.
+public struct AgentThread: Codable, Sendable {
+    public let conversationId: String?
+    public let title: String?
+    public let messages: [AgentMessage]
+    public let error: String?
+}

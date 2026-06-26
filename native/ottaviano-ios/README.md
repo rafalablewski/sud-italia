@@ -72,17 +72,19 @@ ships the matching native screen with real data. Live today:
   + disclosure flags via `resolveLocationCompliance`).
 - **Operator (wave 8):** **Calculator** — a live year-one P&L projection computed
   by the SAME pure `projectTwelveMonths` engine the web uses (assumptions +
-  12-month revenue/profit, real numbers). Read-only; the what-if levers are the
-  next increment (would POST to `saveSimulationScenario`).
+  12-month revenue/profit, real numbers). Read-only; what-if levers are next.
+- **Operator (wave 9):** **Ops Agent** — a chat with the operations copilot,
+  reusing the server's `runAgentTurn` (tools, budget gate, persistence) via
+  `/api/v1/admin/agent` + `/agent/turn`. Non-streaming (one round per send); the
+  agent only sees data the operator's token scope + role allow.
 
-**50 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
-The 4 remaining render a parity scaffold (purpose + role + wiring status, never
-fake data — Rule #1): **Agent HQ** and **Ops Agent** (stateful/streaming
-conversational AI — a dedicated chat vertical), and **SOC 2** + **Capabilities**
-(hardcoded TSX content pages with no store source — mirroring them would
-duplicate the Rule #9 source of truth). Also pending: Stripe PaymentSheet
-(endpoint wired; SDK added in the extracted repo) and offline persistence
-(GRDB/SwiftData).
+**51 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data.
+The 3 remaining render a parity scaffold (purpose + role + wiring status, never
+fake data — Rule #1): **Agent HQ** (the autonomous-agent work queue — a separate
+vertical from the Ops Agent chat), and **SOC 2** + **Capabilities** (hardcoded
+TSX content pages with no store source — mirroring them would duplicate the
+Rule #9 source of truth). Also pending: Stripe PaymentSheet (endpoint wired; SDK
+added in the extracted repo) and offline persistence (GRDB/SwiftData).
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

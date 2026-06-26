@@ -197,6 +197,8 @@ struct OperatorRootView: View {
             OperatorRegulatoryView(api: deps.api)
         case "/admin/simulation":
             OperatorCalculatorView(api: deps.api)
+        case "/admin/ai/agent":
+            OperatorAgentView(api: deps.api)
         default:
             OperatorSurfaceView(item: item)
         }

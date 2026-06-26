@@ -183,7 +183,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Autonomous ops agents and their work queue."),
         OperatorNavItem("/admin/ai", "Insights", "brain.head.profile.fill", .manager, .live,
                         "AI forecasts, anomalies and recommendations."),
-        OperatorNavItem("/admin/ai/agent", "Ops Agent", "bot", .manager, .scaffold,
+        OperatorNavItem("/admin/ai/agent", "Ops Agent", "bot", .manager, .live,
                         "Conversational ops copilot over your data."),
         OperatorNavItem("/admin/expansion", "Expansion", "map", .owner, .live,
                         "Site selection and new-market modelling."),
