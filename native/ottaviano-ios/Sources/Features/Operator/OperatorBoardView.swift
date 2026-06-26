@@ -18,14 +18,16 @@ public struct OperatorBoardView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView {
+        // Compute the filter once per render — `shown` trims/lowercases/filters.
+        let visible = shown
+        return ScrollView {
             VStack(spacing: theme.space.lg) {
                 summary
                 filterBar
                 if let error, orders.isEmpty {
                     ContentUnavailableView("Couldn't load the board", systemImage: "exclamationmark.triangle", description: Text(error))
                         .padding(.top, theme.space.xxl)
-                } else if loaded && shown.isEmpty {
+                } else if loaded && visible.isEmpty {
                     ContentUnavailableView(
                         orders.isEmpty ? "No orders yet" : "No orders match",
                         systemImage: "tray",
@@ -33,11 +35,11 @@ public struct OperatorBoardView: View {
                     )
                     .padding(.top, theme.space.xxl)
                 } else {
-                    section("Incoming", shown.filter { [.pending, .confirmed].contains($0.status) }, accent: theme.color.accent)
-                    section("Cooking", shown.filter { $0.status == .preparing }, accent: theme.color.warning)
-                    section("Ready", shown.filter { $0.status == .ready }, accent: theme.color.success)
+                    section("Incoming", visible.filter { [.pending, .confirmed].contains($0.status) }, accent: theme.color.accent)
+                    section("Cooking", visible.filter { $0.status == .preparing }, accent: theme.color.warning)
+                    section("Ready", visible.filter { $0.status == .ready }, accent: theme.color.success)
                     if showAll {
-                        section("Done", shown.filter { [.completed, .delivered, .pickedUp].contains($0.status) }, accent: theme.color.textSecondary)
+                        section("Done", visible.filter { [.completed, .delivered, .pickedUp].contains($0.status) }, accent: theme.color.textSecondary)
                     }
                 }
             }

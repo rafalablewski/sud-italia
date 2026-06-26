@@ -20,12 +20,13 @@ export async function POST(req: NextRequest) {
   const guard = requireRole(req, "staff");
   if ("error" in guard) return guard.error;
 
-  let body: { locationSlug?: string; itemIds?: unknown };
+  let body: { locationSlug?: string; itemIds?: unknown } | null = null;
   try {
     body = await req.json();
   } catch {
     return apiError("bad_request", "Body must be valid JSON");
   }
+  if (!body || typeof body !== "object") return apiError("bad_request", "Body must be an object");
   const locationSlug = typeof body.locationSlug === "string" ? body.locationSlug.toLowerCase() : "";
   const itemIds = Array.isArray(body.itemIds) ? body.itemIds.filter((x): x is string => typeof x === "string") : [];
   if (!locationSlug) return apiError("validation_failed", "locationSlug is required");

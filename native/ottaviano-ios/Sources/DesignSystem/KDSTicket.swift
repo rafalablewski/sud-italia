@@ -20,8 +20,11 @@ public struct KDSTicket: View, Equatable {
     }
 
     // Equatable on the data only — the closures don't affect the render. This is
-    // what lets SwiftUI skip untouched tickets when one updates.
-    public static func == (lhs: KDSTicket, rhs: KDSTicket) -> Bool {
+    // what lets SwiftUI skip untouched tickets when one updates. `nonisolated`
+    // because `View` is @MainActor but `Equatable.==` is a nonisolated requirement;
+    // the witness only reads immutable Sendable storage (order / bumpTitle), so it's
+    // safe off the main actor (Swift 6 strict concurrency).
+    nonisolated public static func == (lhs: KDSTicket, rhs: KDSTicket) -> Bool {
         lhs.order.id == rhs.order.id
             && lhs.order.status == rhs.order.status
             && lhs.bumpTitle == rhs.bumpTitle
@@ -100,12 +103,23 @@ public struct KDSTicket: View, Equatable {
         switch s { case .fresh: "fresh"; case .cooking: "cooking"; case .late: "late" }
     }
 
-    private static func parseISO(_ s: String) -> Date? {
+    // Cached formatters — `parseISO` runs on every periodic tick for every ticket,
+    // and ISO8601DateFormatter init is costly. `nonisolated(unsafe)` because the
+    // type isn't Sendable but access is confined to the main actor (KDS rendering),
+    // so there's no real race.
+    nonisolated(unsafe) private static let isoFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
+        return f
+    }()
+    nonisolated(unsafe) private static let isoPlain: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
+        return f
+    }()
+    private static func parseISO(_ s: String) -> Date? {
+        if let d = isoFractional.date(from: s) { return d }
+        return isoPlain.date(from: s)
     }
 }
 

@@ -74,12 +74,13 @@ interface TabPut {
 export async function PUT(req: NextRequest) {
   const guard = requireRole(req, "staff");
   if ("error" in guard) return guard.error;
-  let body: TabPut;
+  let body: TabPut | null = null;
   try {
     body = await req.json();
   } catch {
     return apiError("bad_request", "Body must be valid JSON");
   }
+  if (!body || typeof body !== "object") return apiError("bad_request", "Body must be an object");
   const loc = body.locationSlug?.trim().toLowerCase();
   if (!body.id || !loc) return apiError("validation_failed", "id and locationSlug are required");
   if (!scopeAllows(guard.claims.scope, loc)) return apiError("forbidden", `Not authorized for location "${loc}"`);
