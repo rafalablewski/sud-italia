@@ -34,42 +34,24 @@ public struct Theme: Sendable {
     public let headingDesign: Font.Design
     public let snappy = Animation.spring(duration: 0.28, bounce: 0.18)
 
+    // The two skins' palettes + corner radii are GENERATED from the web token CSS
+    // (`GeneratedTokens` in Tokens.generated.swift) so they cannot drift from the
+    // storefront / Core themes — see scripts/gen-native-tokens.ts. Only the
+    // editorial type design (a native structural choice) is set here.
+
     /// Ottaviano (customer) — V8 Tuscany: oxblood + terracotta on warm parchment.
     public static let ottaviano = Theme(
-        color: .init(
-            accent: Color(hex: 0xB85C38),       // terracotta — primary action
-            onAccent: Color(hex: 0xF8EFDE),     // parchment
-            brand: Color(hex: 0x7A2B2B),        // oxblood — brand burgundy
-            surface: Color(hex: 0xF8EFDE),      // parchment
-            surface2: Color(hex: 0xFBF5E9),     // parchment, lifted
-            line: Color(hex: 0xE0CFA8),         // line-soft
-            textPrimary: Color(hex: 0x2C1810),  // ink
-            textSecondary: Color(hex: 0x8C6F4F),// muted
-            success: Color(hex: 0x4A7C59),      // basil
-            warning: Color(hex: 0xC9A23E),      // ochre
-            danger: Color(hex: 0xB23A3A)
-        ),
-        cornerRadius: 16,
+        color: GeneratedTokens.ottaviano,
+        cornerRadius: GeneratedTokens.ottavianoCornerRadius,
         headingDesign: .serif
     )
 
-    /// OttavianoKDS (operator) — dark, dense, status-forward; ochre accent to
-    /// match the app icon and the brand's editorial gold.
+    /// OttavianoKDS (operator) — the dark web Core skin (near-black panels,
+    /// brand-red primary, amber/green/red status) carried verbatim from
+    /// themes/core/tokens.css so the operator app matches the Core surfaces 1:1.
     public static let kds = Theme(
-        color: .init(
-            accent: Color(hex: 0xE8B23A),       // ochre
-            onAccent: Color(hex: 0x11161F),
-            brand: Color(hex: 0xE8B23A),
-            surface: Color(hex: 0x0B0F16),
-            surface2: Color(hex: 0x16202C),
-            line: Color(hex: 0x2B3A4D),
-            textPrimary: .white,
-            textSecondary: Color(white: 0.62),
-            success: Color(hex: 0x33C26A),
-            warning: Color(hex: 0xE8B23A),
-            danger: Color(hex: 0xE1556B)
-        ),
-        cornerRadius: 14,
+        color: GeneratedTokens.kds,
+        cornerRadius: GeneratedTokens.kdsCornerRadius,
         headingDesign: .default
     )
 }

@@ -6,6 +6,8 @@
     "dev": "next dev",
     "gen:design-system": "tsx scripts/gen-design-system-manifest.ts",
     "gen:openapi": "tsx scripts/gen-openapi.ts",
+    "gen:native": "tsx scripts/gen-native-nav.ts && tsx scripts/gen-native-tokens.ts",
+    "check:native": "tsx scripts/gen-native-nav.ts --check && tsx scripts/gen-native-tokens.ts --check",
     "scaffold:admin-page": "tsx scripts/scaffold-admin-page.ts",
     "prebuild": "npm run gen:design-system",
     "build": "next build",
