@@ -31,6 +31,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Apple requires apps be built with the iOS 26 SDK (Xcode 26+) to upload.
+      # macos-latest ships several Xcodes; select the newest 26.x explicitly so
+      # uploads never fail validation on a runner that defaulted to Xcode 16.
+      - name: Select Xcode 26
+        run: |
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$XC" ]; then echo "No Xcode 26 found:"; ls -d /Applications/Xcode_*.app; exit 1; fi
+          echo "Using $XC"
+          sudo xcode-select -switch "$XC/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
