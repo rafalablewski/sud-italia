@@ -145,3 +145,8 @@ Deploys to Vercel from `main`. CI (`.github/workflows/ci.yml`) runs
 `tsc --noEmit`, `eslint`, and `next build` on every PR — the build step
 catches Next-specific issues (server-only imports in client components,
 route validation) that tsc + lint miss.
+
+**Turning features on:** every integration (payments, push, SMS, email, …) is
+flag-gated by env vars. For a plain-language, non-developer walkthrough of which
+keys switch on what — and how to confirm each via `/admin/capabilities` — see
+[`docs/GO-LIVE.md`](docs/GO-LIVE.md).
