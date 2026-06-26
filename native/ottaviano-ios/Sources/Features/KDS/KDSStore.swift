@@ -10,6 +10,9 @@ import OttavianoKit
 public final class KDSStore {
     public private(set) var orders: [Order] = []
     public private(set) var connected = false
+    /// The last ticket bumped to completed — the mis-tap recall target, mirroring
+    /// the web KDS "recall last completed" insurance. Cleared once recalled.
+    public private(set) var lastCompletedID: String?
 
     private let api: APIClient
     private let sse: SSEClient
@@ -49,8 +52,19 @@ public final class KDSStore {
         if let i = orders.firstIndex(where: { $0.id == order.id }) {
             orders[i].status = next
         }
+        if next == .completed { lastCompletedID = order.id } // arm the recall undo
         do { _ = try await api.send(.bump(orderID: order.id, to: next)) }
         catch { await reload() } // revert to truth on failure
+    }
+
+    /// Recall the last ticket bumped to completed (completed → ready) — the
+    /// mis-tap undo. Reuses POST /api/v1/orders/:id/recall; the next SSE frame
+    /// brings the recalled ticket back onto the Ready lane.
+    public func recallLast() async {
+        guard let id = lastCompletedID else { return }
+        lastCompletedID = nil
+        do { _ = try await api.send(.recall(orderID: id)) }
+        catch { await reload() }
     }
 
     private func reload() async {

@@ -28,9 +28,11 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   web columns this pass (`KDSStore.incoming/cooking/ready`) — each a
   `DSSectionHeader` + count `DSBadge`, tickets via **`KDSTicket`** (age timer
   fresh→cooking→late), forward bump over SSE/PATCH, per-lane `DSEmptyState`.
+- **Shipped:** **recall** — `POST /api/v1/orders/:id/recall` (completed→ready,
+  audited) + a native "Recall" toolbar action that un-bumps the last completed
+  ticket (the mis-tap undo).
 - **Deferred (facade-gated):** **station filter** needs `category` on the Order
-  line DTO (not in `/api/v1` yet); **recall** needs the v1 facade to expose the
-  recall transition (web uses a non-v1 `/api/admin` route). Both noted, not faked.
+  line DTO (not in `/api/v1` yet). Noted, not faked.
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) 🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -51,9 +53,13 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Native now:** KPI trio via **`MetricTile`**, a **search field + Current/All
   scope** toggle (`shown` filter), `DSSectionHeader` sections, and **tappable rows
   → read-only order detail sheet** (the inspect path) — added this pass.
-- **Deferred (facade-gated):** **channel + paid** filters need `channel`/`paidAt`
-  on the Order DTO; **Mark paid** + **Print receipt** need the v1 settle/print
-  endpoints. The detail sheet says so in-line rather than showing dead buttons.
+- **Shipped:** **Mark paid** — `POST /api/v1/orders/:id/settle` (idempotent,
+  audited) wired into the detail sheet; the DTO already carried `channel`/`paidAt`
+  so the native model now decodes them (paid/channel badges + an "unpaid" row
+  marker).
+- **Deferred (facade-gated):** **Print receipt** needs its v1 endpoint (ESC/POS +
+  browser fallback); a **channel dropdown** filter is a small native add on top of
+  the now-decoded field. Noted in-line, not faked.
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
 - **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
@@ -90,9 +96,12 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **DS adoption sweep** — done (no fixed-size text remains; KPIs on `MetricTile`).
 - ✅ **KDS 3-lane parity** — done (New/Firing/Ready).
 - ✅ **Orders search + scope + inspect** — done (read path).
-- ⏳ **Facade-gated** (need `/api/v1` work, then native is a small UI add):
-  - KDS **recall** transition + ticket-line **`category`** (station filter).
-  - Orders **channel/paidAt** DTO fields + **settle/print** endpoints.
+- ✅ **KDS recall** — `POST /api/v1/orders/:id/recall` + native Recall toolbar.
+- ✅ **Orders settle** — `POST /api/v1/orders/:id/settle` + native Mark-paid;
+  `channel`/`paidAt` now decoded (badges + unpaid marker).
+- ⏳ **Still facade-gated** (need `/api/v1` work, then native is a small UI add):
+  - KDS ticket-line **`category`** (station filter).
+  - Orders **print receipt** endpoint; a channel-dropdown filter (native-only add).
   - POS **tabs**, **coursing**, **combo/cross-sell** endpoints.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in

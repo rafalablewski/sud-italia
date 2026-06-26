@@ -69,6 +69,9 @@ public struct Order: Codable, Sendable, Identifiable {
     /// the (internal) memberwise initializer being needed across modules.
     public var status: OrderStatus
     public let fulfillmentType: String
+    /// Order channel — web / qr / whatsapp / pos (DTO defaults to "web"). Optional
+    /// for resilience against any frame that predates the field.
+    public let channel: String?
     public let customerName: String
     public let customerPhone: String
     public let items: [OrderLine]
@@ -76,6 +79,8 @@ public struct Order: Codable, Sendable, Identifiable {
     public let slotDate: String
     public let slotTime: String
     public let createdAt: String
+    /// Set when the order has been settled (paid). Nil = unpaid.
+    public let paidAt: String?
     public let estimatedReadyAt: String?
 }
 

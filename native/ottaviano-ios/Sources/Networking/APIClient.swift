@@ -121,6 +121,14 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(["status": status.rawValue])
         return Endpoint<Order>(.patch, "orders/\(orderID)", body: body, requiresAuth: true)
     }
+    /// Recall a mis-bumped completion (completed → ready) — the expo mis-tap undo.
+    static func recall(orderID: String) -> Endpoint<Order> {
+        Endpoint<Order>(.post, "orders/\(orderID)/recall", requiresAuth: true)
+    }
+    /// Settle (mark paid) an order at the counter. Idempotent server-side.
+    static func settle(orderID: String) -> Endpoint<Order> {
+        Endpoint<Order>(.post, "orders/\(orderID)/settle", requiresAuth: true)
+    }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
         let body = try? JSONEncoder().encode(["phone": phone])

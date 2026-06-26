@@ -24,6 +24,14 @@ public struct KDSBoardView: View {
         .background(theme.color.surface)
         .navigationTitle("Kitchen")
         .toolbar {
+            if store.lastCompletedID != nil {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { Task { await store.recallLast() } } label: {
+                        Label("Recall", systemImage: "arrow.uturn.backward")
+                    }
+                    .tint(theme.color.warning)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Circle().fill(store.connected ? theme.color.success : theme.color.danger)
                     .frame(width: 10, height: 10)

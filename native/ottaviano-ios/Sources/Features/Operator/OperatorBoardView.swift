@@ -46,7 +46,22 @@ public struct OperatorBoardView: View {
         .navigationTitle("Orders")
         .task { await load() }
         .refreshable { await load() }
-        .sheet(item: $detail) { OperatorOrderDetailSheet(order: $0) }
+        .sheet(item: $detail) { order in
+            OperatorOrderDetailSheet(order: order) { await settle(order) }
+        }
+    }
+
+    /// Settle (mark paid) via POST /api/v1/orders/:id/settle, then refresh the
+    /// board. Returns an error message on failure, nil on success.
+    private func settle(_ order: Order) async -> String? {
+        do {
+            _ = try await deps.api.send(.settle(orderID: order.id))
+            await load()
+            return nil
+        } catch let e as APIError {
+            if case .api(_, let m, _) = e { return m }
+            return "You appear to be offline"
+        } catch { return "Something went wrong" }
     }
 
     /// Client-side filter over the loaded board — scope (current vs all) + a
@@ -112,13 +127,20 @@ public struct OperatorBoardView: View {
     }
 }
 
-/// Read-only order detail — the native twin of the web Orders detail dialog
-/// (inspect the full ticket). Settle (mark-paid) + print-receipt land when the
-/// `/api/v1` facade exposes them; surfaced honestly here rather than faked.
+/// Order detail — the native twin of the web Orders detail dialog: inspect the
+/// full ticket and **settle** (mark paid) over POST /api/v1/orders/:id/settle.
+/// Print-receipt still awaits its facade endpoint (noted in-line, not faked).
 private struct OperatorOrderDetailSheet: View {
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     let order: Order
+    /// Settle action injected by the board (owns the api client); nil error = ok.
+    let onSettle: () async -> String?
+
+    @State private var busy = false
+    @State private var error: String?
+
+    private var isPaid: Bool { order.paidAt != nil }
 
     var body: some View {
         NavigationStack {
@@ -131,7 +153,10 @@ private struct OperatorOrderDetailSheet: View {
                             HStack(spacing: theme.space.sm) {
                                 DSBadge(order.status.rawValue.capitalized, tone: .info)
                                 DSBadge(order.fulfillmentType.capitalized)
-                                if !order.slotTime.isEmpty { DSBadge(order.slotTime) }
+                                DSBadge((order.channel ?? "web").uppercased())
+                                DSBadge(isPaid ? "Paid" : "Unpaid",
+                                        tone: isPaid ? .success : .warning,
+                                        systemImage: isPaid ? "checkmark.circle.fill" : "creditcard")
                             }
                             .padding(.top, theme.space.xs)
                         }
@@ -161,7 +186,15 @@ private struct OperatorOrderDetailSheet: View {
                             .foregroundStyle(theme.color.textPrimary)
                         }
                     }
-                    Text("Settle & print receipt land with the POS facade wave (/api/v1).")
+
+                    if !isPaid {
+                        DSButton(busy ? "Settling…" : "Mark paid") { Task { await settle() } }
+                            .disabled(busy)
+                    }
+                    if let error {
+                        Text(error).textRole(.caption).foregroundStyle(theme.color.danger)
+                    }
+                    Text("Print receipt lands with its facade endpoint (/api/v1).")
                         .textRole(.caption).foregroundStyle(theme.color.textSecondary)
                 }
                 .padding(theme.space.lg)
@@ -171,6 +204,12 @@ private struct OperatorOrderDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
         }
+    }
+
+    private func settle() async {
+        busy = true; error = nil
+        defer { busy = false }
+        if let msg = await onSettle() { error = msg } else { dismiss() }
     }
 }
 
@@ -199,6 +238,9 @@ struct OperatorOrderRow: View {
                     .padding(.horizontal, theme.space.sm).padding(.vertical, 3)
                     .background(accent.opacity(0.18), in: Capsule())
                     .foregroundStyle(accent)
+                if order.paidAt == nil {
+                    Text("unpaid").font(.caption2.weight(.semibold)).foregroundStyle(theme.color.warning)
+                }
                 if !order.slotTime.isEmpty {
                     Text(order.slotTime).font(.caption2).foregroundStyle(theme.color.textSecondary)
                 }

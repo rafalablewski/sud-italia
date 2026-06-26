@@ -283,6 +283,39 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/orders/{id}/recall": {
+        post: {
+          summary: "Recall a mis-bumped order (completed → ready)",
+          description:
+            "Un-bump a fat-fingered completion so the ticket reappears on the expo " +
+            "column. Only completed orders are recallable; otherwise 409.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Recalled order", ref("Order"), true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+            "409": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/orders/{id}/settle": {
+        post: {
+          summary: "Mark an order paid (counter settle) — idempotent",
+          description:
+            "Stamps paidAt (cash / terminal at the counter) and confirms a pending " +
+            "order so it fires. meta.changed=false when already paid.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Settled order (meta.changed=false if already paid)", ref("Order"), true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+          },
+        },
+      },
       "/orders/{id}/payment-intent": {
         post: {
           summary: "Start payment for an order (Stripe PaymentIntent / Apple Pay)",

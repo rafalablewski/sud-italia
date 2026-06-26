@@ -56,6 +56,13 @@ test("maps core fields + defaults channel to web", () => {
   assert.equal(dto.items[0].unitPrice, 2790);
 });
 
+test("exposes paidAt + channel — the fields settle + the Orders filter read", () => {
+  assert.equal(toOrderDTO(order()).paidAt, null); // unpaid → null
+  const settled = toOrderDTO(order({ paidAt: "2026-06-26T17:00:00.000Z", channel: "pos" }));
+  assert.equal(settled.paidAt, "2026-06-26T17:00:00.000Z");
+  assert.equal(settled.channel, "pos");
+});
+
 test("maps line notes + modifiers, nulls absent optionals", () => {
   const dto = toOrderDTO(
     order({
