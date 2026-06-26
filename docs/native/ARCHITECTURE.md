@@ -6,7 +6,7 @@
 > Where a decision is genuinely the owner's, it is flagged **[DECISION]** and
 > listed in §13.
 
-**Status:** Draft for sign-off · **Author role:** Founding iOS Staff Engineer / Principal Architect
+**Status:** §13 decisions signed off (2026-06-26) — see §13 · **Author role:** Founding iOS Staff Engineer / Principal Architect
 **Targets:** iPhone + iPad, universal · iOS 26 (latest stable) minimum · Swift 6, strict concurrency
 
 ---
@@ -109,6 +109,32 @@ existing domain/store functions and emit a single envelope:
 > **Why not GraphQL?** The domain is REST-shaped and already 238 endpoints deep.
 > A v1 facade reuses that investment in days; a GraphQL layer is a quarter of work
 > for marginal client benefit at this stage. Revisit at multi-tenant scale.
+
+### 2.1 Host portability — the Vercel exit (signed-off constraint)
+The backend stays, **but it will leave Vercel 100%**. The `/api/v1` facade is
+therefore designed host-agnostic from day one so the native apps never feel the
+migration:
+
+- **The contract is the firewall.** Apps depend only on `/api/v1` + the JWT/SSE
+  semantics — never on a hostname, a Vercel feature, or a deploy detail. Move the
+  origin behind the same contract (just repoint the base URL / DNS) and the
+  shipped apps keep working. This is *why* the versioned facade matters even more
+  given the exit.
+- **No Vercel-only primitives on the critical path.** Avoid coupling to Vercel
+  Edge Middleware, Vercel Cron, Vercel KV/Blob, or Image Optimization as
+  load-bearing. The app already abstracts persistence (`readJSON`/`writeJSON` over
+  Neon **or** filesystem) and locks/rate-limits over Upstash — keep that
+  portability. Target a **portable runtime**: the Next app as a self-hostable
+  Node server (`output: "standalone"`) in a container, or a small dedicated API
+  service, behind any reverse proxy.
+- **Portable equivalents to line up before the cutover:** cron dispatcher
+  (Vercel Cron → a container scheduler / Postgres-backed queue), object storage
+  (→ S3-compatible, already used for backups), edge/CDN (→ any CDN), and a
+  config/secrets story that isn't Vercel env-only. Tracked as a pre-cutover
+  checklist in a future `docs/native/VERCEL-EXIT.md` (Stage 2+).
+- **Base-URL & cert agility in the app:** the `APIClient` reads its origin from a
+  signed remote config with a baked-in fallback, and pinning is to a SPKI we
+  control (not a Vercel-managed leaf), so DNS/host moves need no App Store release.
 
 ---
 
@@ -320,17 +346,20 @@ customer app on a shaky operations core is worthless.
 
 ## 13. Open decisions (need owner sign-off before Stage 2)
 
-- **[A] Backend strategy** — *Recommend:* keep the Next.js/Postgres backend, add a
-  versioned `/api/v1` facade; do **not** rewrite the server. (Confirm.)
-- **[B] Contract source of truth** — *Recommend:* generate OpenAPI from the existing
-  Zod schemas, generate Swift models from that. Alt: hand-authored shared contract.
-- **[C] Persistence engine** — *Recommend:* GRDB (operator) + SwiftData (customer).
-  Alt: SwiftData everywhere (less code, less control).
-- **[D] Code location** — *Recommend:* `/api/v1` facade in this repo now; native apps
-  in a dedicated `ottaviano-ios` repo. Alt: monorepo `ios/` here.
-- **[E] iOS minimum version** — *Recommend:* iOS 26 only (latest), to use the newest
-  SwiftUI/Observation/SwiftData without back-compat tax. Alt: N-1 for reach.
+- **[A] Backend strategy** — ✅ **CONFIRMED:** keep the Next.js/Postgres backend +
+  versioned `/api/v1` facade; do **not** rewrite the server. **Added constraint:**
+  the business is **leaving Vercel 100%** in future, so the facade + infra are
+  built host-portable from day one (see §2.1).
+- **[B] Contract source of truth** — *Open (Stage 2 call). Recommend:* generate
+  OpenAPI from the existing Zod schemas, generate Swift models from that.
+- **[C] Persistence engine** — *Open (Stage 4 call). Recommend:* GRDB (operator) +
+  SwiftData (customer).
+- **[D] Code location** — ✅ **CONFIRMED:** native apps in a dedicated
+  **`ottaviano-ios`** repo; this repo stays the backend and hosts the `/api/v1`
+  facade. The API contract is the seam between the two repos.
+- **[E] iOS minimum version** — *Open. Recommend:* iOS 26 only (latest).
 
-> On sign-off, **Stage 2 begins in this repo** (the API facade + auth + contract
-> codegen) because it is real, testable work that can be done here and unblocks
-> everything native.
+> **Sign-off (2026-06-26):** A and D confirmed as above. **Next:** author the
+> **Stage 3 design-system** (`DESIGN-SYSTEM.md`) and **navigation/app-shell**
+> (`APP-SHELL.md`) specs as durable source artifacts (owner's directive), ahead
+> of writing the API facade code. B/C/E resolved when their stage begins.
