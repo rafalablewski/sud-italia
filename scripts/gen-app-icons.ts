@@ -112,9 +112,38 @@ async function emit(name: string, svg: string, opaqueBg: string): Promise<void> 
   console.log(`✓ ${name}: icon-192, icon-512, maskable-512, apple-touch-180`);
 }
 
+/** Emit the single 1024×1024 opaque App Store icon + asset-catalog Contents.json
+ *  into the iOS app's AppIcon.appiconset (Xcode derives all other sizes). App
+ *  Store icons must be fully opaque — flatten onto the brand field. */
+async function emitIos(svg: string, opaqueBg: string, appDir: string): Promise<void> {
+  const dir = join(
+    process.cwd(),
+    "native",
+    "ottaviano-ios",
+    appDir,
+    "Assets.xcassets",
+    "AppIcon.appiconset",
+  );
+  await mkdir(dir, { recursive: true });
+  const png = await sharp(Buffer.from(svg), { density: 512 })
+    .resize(1024, 1024, { fit: "contain" })
+    .flatten({ background: opaqueBg })
+    .png()
+    .toBuffer();
+  await writeFile(join(dir, "icon-1024.png"), png);
+  const contents = {
+    images: [{ filename: "icon-1024.png", idiom: "universal", platform: "ios", size: "1024x1024" }],
+    info: { author: "xcode", version: 1 },
+  };
+  await writeFile(join(dir, "Contents.json"), JSON.stringify(contents, null, 2) + "\n");
+  console.log(`✓ iOS AppIcon → ${appDir}`);
+}
+
 async function main(): Promise<void> {
   await emit("ottaviano", ottavianoSvg(), "#A60C22");
   await emit("kds", kdsSvg(), "#070A0F");
+  await emitIos(ottavianoSvg(), "#A60C22", "Apps/Ottaviano");
+  await emitIos(kdsSvg(), "#070A0F", "Apps/OttavianoKDS");
 }
 
 main().catch((e) => {

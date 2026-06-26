@@ -1,0 +1,46 @@
+name: iOS TestFlight
+
+# Manually triggered: archives the chosen app, signs it via the App Store Connect
+# API key (cloud-managed cert + auto provisioning), and uploads to TestFlight.
+# Requires repo secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
+on:
+  workflow_dispatch:
+    inputs:
+      scheme:
+        description: Which app to ship
+        type: choice
+        options: [Ottaviano, OttavianoKDS]
+        default: Ottaviano
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: native/ottaviano-ios
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Install App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          # Sanity: confirm it looks like a PEM private key (no secret printed).
+          head -1 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 | grep -q "BEGIN PRIVATE KEY" \
+            && echo "API key looks valid" || echo "WARNING: key does not start with BEGIN PRIVATE KEY"
+
+      - name: Archive → export → upload
+        run: |
+          chmod +x Scripts/testflight.sh
+          ./Scripts/testflight.sh "${{ inputs.scheme }}" "${{ github.run_number }}"
