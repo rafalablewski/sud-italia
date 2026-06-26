@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
+import type { MenuItemDTO } from "@/lib/api/v1/schemas";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const items = await getMenuWithOverrides(slug);
   return apiOk(
-    items.map((m) => ({
+    items.map((m): MenuItemDTO => ({
       id: m.id,
       name: m.name,
       description: m.description,

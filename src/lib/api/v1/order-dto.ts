@@ -1,4 +1,5 @@
 import type { Order, CartItem } from "@/data/types";
+import type { OrderDTO, OrderLineDTO } from "./schemas";
 
 /**
  * The on-the-wire order shape for the OttavianoKDS operator app (Orders board +
@@ -6,40 +7,12 @@ import type { Order, CartItem } from "@/data/types";
  * endpoints AND unit-tested. Money stays in grosze; the app formats via
  * `MoneyText`. Stripe ids, refunds, disputes and food cost are deliberately
  * NOT exposed on this operator-ops surface.
+ *
+ * `OrderDTO`/`OrderLineDTO` are inferred from the Zod contract (schemas.ts), so
+ * if this mapper's output drifts from the published contract it fails to
+ * compile — the drift firewall (ARCHITECTURE §5).
  */
-
-export interface OrderLineDTO {
-  menuItemId: string;
-  name: string;
-  quantity: number;
-  /** Unit price in grosze (line subtotal = price × quantity + modifier deltas). */
-  unitPrice: number;
-  notes: string | null;
-  modifiers: { groupId: string; optionId: string }[];
-}
-
-export interface OrderDTO {
-  id: string;
-  locationSlug: string;
-  status: Order["status"];
-  fulfillmentType: Order["fulfillmentType"];
-  channel: Order["channel"];
-  customerName: string;
-  customerPhone: string;
-  items: OrderLineDTO[];
-  totalAmount: number;
-  tipAmount: number | null;
-  deliveryFee: number | null;
-  partySize: number | null;
-  tableId: string | null;
-  specialInstructions: string | null;
-  slotDate: string;
-  slotTime: string;
-  createdAt: string;
-  paidAt: string | null;
-  estimatedReadyAt: string | null;
-  queuePosition: number | null;
-}
+export type { OrderDTO, OrderLineDTO } from "./schemas";
 
 function lineToDTO(line: CartItem): OrderLineDTO {
   return {

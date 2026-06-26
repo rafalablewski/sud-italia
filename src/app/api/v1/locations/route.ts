@@ -1,4 +1,5 @@
 import { apiOk } from "@/lib/api/v1/envelope";
+import type { LocationDTO } from "@/lib/api/v1/schemas";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET() {
   return apiOk(
     locations
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map((l) => ({
+      .map((l): LocationDTO => ({
         slug: l.slug,
         name: l.name,
         city: l.city,

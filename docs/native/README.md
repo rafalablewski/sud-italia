@@ -30,9 +30,12 @@ business is leaving Vercel — designed for from day one).
 - 🟡 **Stage 2 — in progress (this repo, verifiable here):** the `/api/v1`
   facade is live — single envelope, JWT access + rotating refresh auth,
   `auth/{login,refresh,logout,me}`, public `locations` + `menu`, and an OpenAPI
-  3.1 contract at `/api/v1/openapi.json`. See [`API-V1.md`](./API-V1.md).
-  Remaining Stage 2: derive the OpenAPI from the server Zod schemas (DECISION B),
-  wire the Swift codegen, and widen endpoint coverage (orders/KDS over SSE).
+  3.1 contract at `/api/v1/openapi.json` **generated from the server Zod
+  schemas** (DECISION B ✅ — one definition drives validation, the TS response
+  types, and the contract), plus the operator order spine + live SSE board. See
+  [`API-V1.md`](./API-V1.md). Committed codegen artifact: `docs/native/openapi.json`
+  (`npm run gen:openapi`). Remaining Stage 2: order-create (customer checkout +
+  payment) and the `VERCEL-EXIT.md` cutover checklist.
 - ⏭️ **Stage 4** — bootstrap `ottaviano-ios` (the app shell) on a Mac once the
   contract coverage is sufficient.
 

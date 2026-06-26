@@ -1,15 +1,13 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { requireOperator, scopeAllows } from "@/lib/api/v1/guard";
 import { toOrderDTO } from "@/lib/api/v1/order-dto";
+import { OrderStatusPatchSchema } from "@/lib/api/v1/schemas";
 import { getOrderById, updateOrderStatus } from "@/lib/store";
 import { ORDER_STATUSES } from "@/data/types";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
-
-const patchSchema = z.object({ status: z.enum(ORDER_STATUSES) });
 
 /** `GET /api/v1/orders/:id` — order detail (Bearer, location-scoped). */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -41,7 +39,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   } catch {
     return apiError("bad_request", "Body must be valid JSON");
   }
-  const parsed = patchSchema.safeParse(raw);
+  const parsed = OrderStatusPatchSchema.safeParse(raw);
   if (!parsed.success) {
     return apiError("validation_failed", "Invalid status", {
       allowed: ORDER_STATUSES,

@@ -1,14 +1,12 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { rotateTokens, type RefreshError } from "@/lib/api/v1/auth";
 import { resolveOperatorIdentity } from "@/lib/api/v1/identity";
+import { RefreshBodySchema } from "@/lib/api/v1/schemas";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({ refreshToken: z.string().min(3) });
 
 const MESSAGE_FOR: Record<RefreshError, string> = {
   malformed: "Malformed refresh token",
@@ -37,7 +35,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return apiError("bad_request", "Body must be valid JSON");
   }
-  const parsed = bodySchema.safeParse(raw);
+  const parsed = RefreshBodySchema.safeParse(raw);
   if (!parsed.success) return apiError("validation_failed", "Missing refreshToken");
 
   try {

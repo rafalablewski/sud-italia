@@ -82,12 +82,26 @@ Money is always **minor units (grosze)** on the wire; the app formats via
 `MoneyText` (DESIGN-SYSTEM §4.2). Operator-internal fields (cost, packaging, sku)
 are never exposed on customer endpoints.
 
-## Contract & codegen
-`/api/v1/openapi.json` is an OpenAPI 3.1 document = the **single source of truth**
-for the Swift `CoreModels` package, generated with Apple's
-`swift-openapi-generator` so wire types can't drift from app models (§5). It is
-hand-authored today; a remaining Stage-2 task derives it from the server **Zod**
-schemas (DECISION B) so the contract is generated end-to-end.
+## Contract & codegen — generated from Zod (DECISION B ✅)
+The contract is **one definition, three consumers**: the Zod schemas in
+`src/lib/api/v1/schemas.ts` drive (1) **runtime request validation**, (2) the
+**TypeScript response types** (`z.infer` — the DTO mappers return these, so a
+drifting response fails to compile), and (3) the **OpenAPI 3.1 document**
+(`openapi.ts` via `z.toJSONSchema` over a `z.registry()`, emitting shared
+`#/components/schemas/*` `$ref`s). The wire shape therefore cannot drift from the
+validator, the server types, or the published contract.
+
+- `GET /api/v1/openapi.json` serves the generated document live.
+- `npm run gen:openapi` writes the committed copy `docs/native/openapi.json` —
+  the input for the iOS repo's `swift-openapi-generator` (→ the Swift
+  `CoreModels` package) and a reviewable diff when the contract changes.
+- `tests/api-v1-openapi.test.ts` guards it: every `$ref` resolves, all expected
+  operations exist, the mapper output round-trips through the schema, and the
+  committed artifact is in sync (CI fails if you forget `gen:openapi`).
+
+**Swift side (in `ottaviano-ios`):** add a `swift-openapi-generator` build
+plugin pointed at `openapi.json` → `CoreModels` is generated at build time; no
+hand-written DTOs (APP-SHELL §1).
 
 ## Host portability (Vercel exit)
 - Server URL is **relative** (`/api/v1`) — no hostname baked into the contract.
@@ -101,7 +115,6 @@ schemas (DECISION B) so the contract is generated end-to-end.
 rejection, expiry, and type checks. Run: `npx tsx --test tests/api-v1-jwt.test.ts`.
 
 ## Remaining in Stage 2
-- OpenAPI-from-Zod generation + Swift codegen wiring.
 - **Order create** (customer checkout) — payment-coupled (Stripe / Apple Pay) +
   needs the phone-based customer-auth surface; its own focused increment. Server
   must price authoritatively from item ids (never trust client totals).

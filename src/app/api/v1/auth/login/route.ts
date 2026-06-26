@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { verifyPassword } from "@/lib/admin-auth";
 import { sessionLocationScope } from "@/lib/user-locations";
 import { getAdminUsers } from "@/lib/store";
@@ -8,16 +7,10 @@ import { verifyTotp } from "@/lib/totp";
 import { rateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { issueTokenPair, type AppAudience, type IdentityForToken } from "@/lib/api/v1/auth";
+import { LoginBodySchema } from "@/lib/api/v1/schemas";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  email: z.string().trim().email().optional(),
-  password: z.string().min(1),
-  totp: z.string().trim().optional(),
-  app: z.enum(["ottaviano", "ottaviano-kds"]).optional(),
-});
 
 /**
  * `POST /api/v1/auth/login` — native operator sign-in.
@@ -49,7 +42,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return apiError("bad_request", "Body must be valid JSON");
   }
-  const parsed = bodySchema.safeParse(raw);
+  const parsed = LoginBodySchema.safeParse(raw);
   if (!parsed.success) {
     return apiError("validation_failed", "Invalid login payload", parsed.error.flatten());
   }
