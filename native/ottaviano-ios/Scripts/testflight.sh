@@ -8,7 +8,10 @@
 set -euo pipefail
 
 SCHEME="$1"
-BUILD_NUMBER="${2:-1}"
+# 2nd arg is advisory (logging only). The build number is the committed
+# CURRENT_PROJECT_VERSION in project.yml (e.g. 0.3.0.1), bumped +1 per release —
+# we no longer override it from CI so the version is deterministic + reviewable.
+BUILD_NUMBER="${2:-?}"
 TEAM_ID="T4WC9M8Y3S"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -21,14 +24,13 @@ AUTH=(-allowProvisioningUpdates
   -authenticationKeyID "$ASC_KEY_ID"
   -authenticationKeyIssuerID "$ASC_ISSUER_ID")
 
-echo "── Archiving $SCHEME (build $BUILD_NUMBER) ──"
+echo "── Archiving $SCHEME (version from project.yml; CI run $BUILD_NUMBER) ──"
 xcodebuild archive \
   -project Ottaviano.xcodeproj \
   -scheme "$SCHEME" \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
   "${AUTH[@]}" \
-  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   -quiet
 
 echo "── Exporting IPA ──"
