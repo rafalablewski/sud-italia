@@ -19,13 +19,16 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
-    # Release (user-facing) version — keep at the current marketing version.
+    # Release (user-facing) version.
     MARKETING_VERSION: "0.3.0"
-    # Build number (CFBundleVersion). Scheme: <marketing>.<build>, bumped +1 on
-    # every TestFlight upload — 0.3.0.1, 0.3.0.2, … This is the source of truth
-    # (the testflight script no longer overrides it); increment the last digit
-    # each release. Must always increase for App Store Connect to accept the build.
-    CURRENT_PROJECT_VERSION: "0.3.0.1"
+    # Build number (CFBundleVersion) — a plain, monotonically increasing INTEGER,
+    # bumped +1 on every TestFlight upload (45, 46, 47, …). It must be strictly
+    # greater than every prior build's number, and Apple compares build numbers
+    # numerically component-by-component — so a dotted "0.3.0.x" sorts BELOW the
+    # existing integer builds (e.g. 0.3.0 (31), 0.2.0 (44)) and TestFlight treats
+    # it as older. Integers above the current max (44) avoid that. Source of truth
+    # here (the testflight script no longer overrides it); bump +1 each release.
+    CURRENT_PROJECT_VERSION: "45"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 targets:
