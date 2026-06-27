@@ -49,8 +49,18 @@ theme protocol renders correctly in either app.
 > `Theme.Palette` is the trimmed set features actually consume —
 > `accent · onAccent · brand · surface · surface2 · line · textPrimary ·
 > textSecondary · success · warning · danger` — plus `BrandWordmark`,
-> `TagChip`, and the primary/secondary `DSButton`. `Theme.kds` keeps the dark
-> operator skin with an ochre accent matching the app icon.
+> `TagChip`, and the primary/secondary `DSButton`. `Theme.kds` is the dark
+> operator skin carried **verbatim from the web Core theme**
+> (`src/app/themes/core/tokens.css`, dark): near-black `--bg #100f12` surface,
+> brand-red `--brand #d23a55` primary, amber/green/red status — so the operator
+> app matches the web Core surfaces 1:1.
+>
+> **Both palettes are generated, not transcribed.** `Tokens.generated.swift`
+> (the `GeneratedTokens.ottaviano` / `.kds` palettes that `Theme` consumes) is
+> emitted from the web token CSS by `scripts/gen-native-tokens.ts`, with a
+> provenance comment per field, and CI fails on drift (`npm run check:native`).
+> See `docs/native/parity/README.md`. This is why the KDS accent is the web Core
+> brand red rather than the earlier hand-picked ochre — the web token wins.
 
 ---
 
@@ -155,6 +165,31 @@ zero-cost and side-effect-free.
 Each is a small, reusable `View` in `DesignSystem`, with a Preview gallery. Below
 are the contracts + representative sketches; full set lives in the package.
 
+> **Shipped (v0.3).** The token foundation + first component wave are in the
+> `DesignSystem` target and consumed by features:
+> - **Tokens on `Theme`:** the generated two-skin `Palette` + shared **`radius`**
+>   scale (generated from the web Core `--r-*`), **`elevation`** (card/pop shadow
+>   tokens), **`motion`** (snappy/smooth/immediate springs), and the **`TextRole`**
+>   Dynamic-Type ramp via `Text(…).textRole(.title)`. Status helpers
+>   (`successSoft`/`warningSoft`/`dangerSoft`/`info`/`infoSoft`, derived to match
+>   the web `*-wash` ~16%-alpha construction) and the **KDS ticket lifecycle**
+>   (`ticketState(elapsedMinutes:)` → fresh/cooking/late + `ticketColor`).
+> - **Components:** `DSButton`, `BrandWordmark`, `TagChip`, `MoneyText` (existing)
+>   plus **`DSCard`**, **`DSBadge`** (icon-carrying status pill), **`DSSectionHeader`**,
+>   **`DSEmptyState`** (over `ContentUnavailableView`), **`DSStepper`**, **`MetricTile`**,
+>   and the headline **`KDSTicket`** (age-timer ticket; `Equatable` so a lane only
+>   redraws changed tickets) — now driving `KDSBoardView`.
+> - **Inputs & overlays:** **`DSTextField`** (label/error/icon slots + keyboard
+>   config; drives `OperatorLoginView`), **`DSToast`** (+ auto-dismiss `.dsToast`
+>   modifier), and **`POSKeypad`** (grosze-exact till pad with quick-cash +
+>   hardware-keyboard support; drives the POS cash-tender flow).
+> - **Gallery + gate:** `#Preview` blocks render the set in both skins (the living
+>   Storybook, §6). **Contrast is gated** — `tests/native-contrast.test.ts` (web
+>   CI) and `Tests/DesignSystemTests/ContrastTests.swift` (iOS CI) assert WCAG on
+>   the shipping tokens: the operator skin to full AA-body, the customer skin to
+>   AA-body for primary text + AA-large floor elsewhere. Still pending: snapshot /
+>   Dynamic-Type-XXXL image tests (need a simulator — iOS-repo CI).
+
 ### 4.1 Primitives
 - **`DSButton`** — `variant: .primary | .secondary | .tonal | .ghost | .destructive`,
   `size: .sm | .md | .lg`, loading + disabled states, 44pt min target, haptic on
@@ -237,7 +272,11 @@ A screen is **not done** until:
 ## 7. Mapping to the staged plan
 This package is **Stage 3a**; it must land (tokens + the §4.1 primitives +
 `MoneyText`/`KDSTicket`/`POSKeypad`) before Stage 4 (the app shell) can render
-anything real. Feature stages (5) consume it and may *propose* new components —
+anything real. **Status:** tokens + the §4.1 primitives + `MoneyText` +
+`KDSTicket` + `POSKeypad` + `DSTextField`/`DSToast` shipped (v0.3, see §4
+"Shipped"), with WCAG contrast gated in CI. The operator POS/KDS/login features
+are theme-complete; the remaining work is the design-system **adoption sweep** of
+the older Operator screens (see `parity/SCREEN-AUDIT.md` action items). Feature stages (5) consume it and may *propose* new components —
 which are added here, with a gallery entry + snapshot, never inline in a feature.
 This is the design-system analogue of the web repo's Rule #11: the catalog is the
 source of truth; a one-off component in a feature is a bug.

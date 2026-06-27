@@ -14,10 +14,13 @@ Package.swift                     SwiftPM graph (OttavianoKit umbrella + AppFeat
 Sources/
   CoreModels/      Models, AuthModels   wire DTOs (hand-written; see Codegen below)
   Networking/      Envelope, APIError, TokenStore, APIClient (+endpoint catalogue), SSEClient
-  DesignSystem/    Theme                tokens + theming + DSButton + MoneyText
+  DesignSystem/    Theme                theming + DSButton + MoneyText
+                   Tokens.generated     ⚙︎ the two skins' palettes — generated from
+                                        the web token CSS (gen-native-tokens.ts)
   AppInfra/        Router, Dependencies (DI), CustomerSession, OperatorSession,
-                   OperatorNav        the operator IA — 1:1 mirror of the web admin
-                                      nav.config.ts + Core surfaces, role-ranked
+                   OperatorNav          types + role enum + filteredNav(for:)
+                   OperatorNav.generated ⚙︎ OPERATOR_NAV — generated 1:1 from the web
+                                        admin nav.config.ts + Core surfaces (gen-native-nav.ts)
   Features/
     Menu/          MenuStore, MenuView                    customer storefront + add-to-cart
     Cart/          CartStore, CartView                    cart → checkout → confirmation (guest-capable)

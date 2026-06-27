@@ -1,12 +1,16 @@
 import SwiftUI
 import OttavianoKit
 
-/// The kitchen display — two lanes (Cooking / Ready) of ticket cards, bump to
-/// advance. Live over SSE; large touch targets for the line (DESIGN-SYSTEM §4.2
+/// The kitchen display — three lanes (New / Firing / Ready) of ticket cards, bump
+/// to advance, with a station filter (1:1 with the web KDS columns + station
+/// filters). Live over SSE; large touch targets for the line (DESIGN-SYSTEM §4.2
 /// KDSTicket). iPad-first; lanes stack on iPhone.
 public struct KDSBoardView: View {
     @Environment(\.theme) private var theme
     @State private var store: KDSStore
+    /// Station filter (nil = all). Mirrors the web STATION_FILTERS; a ticket shows
+    /// when it has any line for the focused station.
+    @State private var station: String?
 
     public init(store: KDSStore) {
         _store = State(initialValue: store)
@@ -15,14 +19,31 @@ public struct KDSBoardView: View {
     public var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: theme.space.lg) {
-                lane("Cooking", store.cooking, accent: theme.color.warning)
-                lane("Ready", store.ready, accent: theme.color.success)
+                lane("New", filtered(store.incoming))
+                lane("Firing", filtered(store.cooking))
+                lane("Ready", filtered(store.ready))
             }
             .padding(theme.space.lg)
         }
         .background(theme.color.surface)
         .navigationTitle("Kitchen")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button("All stations") { station = nil }
+                    ForEach(stations, id: \.self) { s in Button(s.capitalized) { station = s } }
+                } label: {
+                    Label(station?.capitalized ?? "All stations", systemImage: "line.3.horizontal.decrease.circle")
+                }
+            }
+            if store.lastCompletedID != nil {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { Task { await store.recallLast() } } label: {
+                        Label("Recall", systemImage: "arrow.uturn.backward")
+                    }
+                    .tint(theme.color.warning)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Circle().fill(store.connected ? theme.color.success : theme.color.danger)
                     .frame(width: 10, height: 10)
@@ -33,54 +54,46 @@ public struct KDSBoardView: View {
         .onDisappear { store.stop() }
     }
 
-    private func lane(_ title: String, _ orders: [Order], accent: Color) -> some View {
+    /// Stations present on the board right now, for the filter menu.
+    private var stations: [String] {
+        var set = Set<String>()
+        for o in store.orders { for l in o.items { if let c = l.category { set.insert(c) } } }
+        return set.sorted()
+    }
+
+    /// Apply the station filter — a ticket shows when any of its lines is for the
+    /// focused station (web `groupTicketsByColumn` semantics).
+    private func filtered(_ orders: [Order]) -> [Order] {
+        guard let station else { return orders }
+        return orders.filter { $0.items.contains { $0.category == station } }
+    }
+
+    private func lane(_ title: String, _ orders: [Order]) -> some View {
         VStack(alignment: .leading, spacing: theme.space.md) {
-            HStack {
-                Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
-                Text("\(orders.count)").font(.caption.weight(.bold)).foregroundStyle(accent)
+            DSSectionHeader(title) {
+                DSBadge("\(orders.count)", tone: orders.isEmpty ? .neutral : .accent)
             }
             if orders.isEmpty {
-                Text("All clear").font(.footnote).foregroundStyle(theme.color.textSecondary)
+                DSEmptyState("All clear", systemImage: "checkmark.seal.fill")
+                    .frame(maxWidth: .infinity)
             }
-            ForEach(orders) { order in ticket(order, accent: accent) }
+            // KDSTicket owns its own age-driven state colour (fresh→cooking→late);
+            // the lane `accent` only tints the count badge. Each ticket is
+            // Equatable so a single bump doesn't redraw the whole lane.
+            ForEach(orders) { order in
+                KDSTicket(order: order, bumpTitle: bumpLabel(order.status)) {
+                    await store.bumpForward(order)
+                }
+                .equatable()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    private func ticket(_ order: Order, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
-            HStack {
-                Text(order.id).font(.subheadline.weight(.bold)).foregroundStyle(theme.color.textPrimary)
-                Spacer()
-                Text(order.fulfillmentType).font(.caption).foregroundStyle(theme.color.textSecondary)
-            }
-            ForEach(order.items) { line in
-                Text("\(line.quantity)× \(line.name)").foregroundStyle(theme.color.textPrimary)
-                if let notes = line.notes, !notes.isEmpty {
-                    Text(notes).font(.caption.italic()).foregroundStyle(theme.color.warning)
-                }
-            }
-            if let label = bumpLabel(order.status) {
-                Button { Task { await store.bumpForward(order) } } label: {
-                    Text(label).font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(theme.color.onAccent)
-                        .background(accent, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                }
-                .buttonStyle(.plain)
-                .sensoryFeedback(.success, trigger: order.status)
-            }
-        }
-        .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2).fill(accent).frame(width: 4)
-        }
-    }
-
     private func bumpLabel(_ s: OrderStatus) -> String? {
         switch s {
-        case .pending, .confirmed, .preparing: "Bump → Ready"
+        case .pending, .confirmed: "Start firing"
+        case .preparing: "Bump to pass"
         case .ready: "Complete"
         default: nil
         }

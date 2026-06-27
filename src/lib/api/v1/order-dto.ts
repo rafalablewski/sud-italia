@@ -18,6 +18,7 @@ function lineToDTO(line: CartItem): OrderLineDTO {
   return {
     menuItemId: line.menuItem.id,
     name: line.menuItem.name,
+    category: line.menuItem.category,
     quantity: line.quantity,
     unitPrice: line.menuItem.price,
     notes: line.notes ?? null,

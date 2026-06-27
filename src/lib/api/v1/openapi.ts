@@ -283,6 +283,94 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/orders/{id}/recall": {
+        post: {
+          summary: "Recall a mis-bumped order (completed → ready)",
+          description:
+            "Un-bump a fat-fingered completion so the ticket reappears on the expo " +
+            "column. Only completed orders are recallable; otherwise 409.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Recalled order", ref("Order"), true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+            "409": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/orders/{id}/settle": {
+        post: {
+          summary: "Mark an order paid (counter settle) — idempotent",
+          description:
+            "Stamps paidAt (cash / terminal at the counter) and confirms a pending " +
+            "order so it fires. meta.changed=false when already paid.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Settled order (meta.changed=false if already paid)", ref("Order"), true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/orders/{id}/receipt": {
+        post: {
+          summary: "Render/print a thermal receipt",
+          description:
+            "mode=printed when a printer host is configured, else mode=simulated " +
+            "with the exact plain-text preview the app can show or share.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": dataResponse("Receipt result", {
+              type: "object",
+              properties: {
+                mode: { type: "string", enum: ["printed", "simulated"] },
+                bytes: { type: "integer" },
+                preview: { type: "string" },
+                printer: { type: "string" },
+              },
+            }),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+            "503": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/admin/pos/suggestions": {
+        post: {
+          summary: "Cross-sell suggestions for a POS ticket",
+          description:
+            "Runs the storefront getCartSuggestions engine over the ticket's item " +
+            "ids against the live menu. Body { locationSlug, itemIds }.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            "200": dataResponse(
+              "Suggested items",
+              {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    name: { type: "string" },
+                    price: { type: "integer" },
+                    reason: { type: "string" },
+                  },
+                },
+              },
+              true,
+            ),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "422": ERROR_RESPONSE,
+          },
+        },
+      },
       "/orders/{id}/payment-intent": {
         post: {
           summary: "Start payment for an order (Stripe PaymentIntent / Apple Pay)",

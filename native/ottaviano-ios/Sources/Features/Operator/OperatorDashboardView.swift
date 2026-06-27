@@ -25,12 +25,12 @@ public struct OperatorDashboardView: View {
                         .padding(.top, theme.space.xxl)
                 } else {
                     LazyVGrid(columns: cols, spacing: theme.space.md) {
-                        tile("Live orders", "\(liveCount)", "list.bullet", theme.color.accent)
-                        tile("In the kitchen", "\(cookingCount)", "flame.fill", theme.color.warning)
-                        tile("Ready", "\(readyCount)", "checkmark.circle.fill", theme.color.success)
-                        tile("Completed", "\(completedCount)", "bag.fill", theme.color.textSecondary)
-                        tileMoney("Revenue (board)", revenueGrosze, "banknote.fill", theme.color.success)
-                        tileMoney("Avg ticket", avgTicketGrosze, "chart.bar.fill", theme.color.accent)
+                        MetricTile(label: "Live orders", value: "\(liveCount)", icon: "list.bullet", tint: theme.color.accent)
+                        MetricTile(label: "In the kitchen", value: "\(cookingCount)", icon: "flame.fill", tint: theme.color.warning)
+                        MetricTile(label: "Ready", value: "\(readyCount)", icon: "checkmark.circle.fill", tint: theme.color.success)
+                        MetricTile(label: "Completed", value: "\(completedCount)", icon: "bag.fill", tint: theme.color.textSecondary)
+                        MetricTile(label: "Revenue (board)", value: MoneyText.format(revenueGrosze), icon: "banknote.fill", tint: theme.color.success)
+                        MetricTile(label: "Avg ticket", value: MoneyText.format(avgTicketGrosze), icon: "chart.bar.fill", tint: theme.color.accent)
                     }
                     recent
                 }
@@ -45,37 +45,13 @@ public struct OperatorDashboardView: View {
 
     private var recent: some View {
         VStack(alignment: .leading, spacing: theme.space.sm) {
-            Text("Latest orders").font(.headline).foregroundStyle(theme.color.textPrimary)
+            DSSectionHeader("Latest orders")
             if loaded && orders.isEmpty {
-                Text("No orders on the board yet.").font(.footnote).foregroundStyle(theme.color.textSecondary)
+                Text("No orders on the board yet.").textRole(.caption).foregroundStyle(theme.color.textSecondary)
             }
             ForEach(orders.prefix(8)) { OperatorOrderRow(order: $0, accent: accent(for: $0.status)) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func tile(_ label: String, _ value: String, _ icon: String, _ accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-            Image(systemName: icon).foregroundStyle(accent)
-            Text(value).font(.system(size: 30, weight: .bold)).monospacedDigit().foregroundStyle(theme.color.textPrimary)
-            Text(label).font(.caption).foregroundStyle(theme.color.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
-    }
-
-    private func tileMoney(_ label: String, _ grosze: Grosze, _ icon: String, _ accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-            Image(systemName: icon).foregroundStyle(accent)
-            MoneyText(grosze).font(.system(size: 26, weight: .bold)).foregroundStyle(theme.color.textPrimary)
-            Text(label).font(.caption).foregroundStyle(theme.color.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     // Derived, all from real board data.

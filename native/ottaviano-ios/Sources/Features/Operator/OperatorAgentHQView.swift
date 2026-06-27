@@ -97,7 +97,7 @@ public struct OperatorAgentHQView: View {
 
     private func tile(_ label: String, _ value: String, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: theme.space.xs) {
-            Text(value).font(.system(size: 24, weight: .bold)).monospacedDigit().foregroundStyle(theme.color.textPrimary)
+            Text(value).textRole(.titleL).monospacedDigit().foregroundStyle(theme.color.textPrimary)
             Text(label).font(.caption).foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -108,7 +108,7 @@ public struct OperatorAgentHQView: View {
 
     private func moneyTile(_ label: String, _ grosze: Grosze, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: theme.space.xs) {
-            MoneyText(grosze).font(.system(size: 20, weight: .bold)).foregroundStyle(theme.color.textPrimary)
+            MoneyText(grosze).textRole(.titleL).foregroundStyle(theme.color.textPrimary)
             Text(label).font(.caption).foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

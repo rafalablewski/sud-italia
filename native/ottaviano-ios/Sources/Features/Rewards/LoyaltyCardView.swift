@@ -43,7 +43,7 @@ public struct LoyaltyCardView: View {
                     .background(.white.opacity(0.2), in: Capsule())
             }
             Spacer(minLength: theme.space.xl)
-            Text("\(p?.points ?? 0)").font(.system(size: 44, weight: .heavy)).monospacedDigit()
+            Text("\(p?.points ?? 0)").textRole(.displayXL).monospacedDigit()
             Text("points").font(.subheadline).opacity(0.85)
             Text(p?.name ?? p?.phone ?? "")
                 .font(.footnote).opacity(0.85)

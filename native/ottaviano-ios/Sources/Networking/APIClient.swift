@@ -3,7 +3,7 @@ import CoreModels
 
 /// A typed request against `/api/v1`.
 public struct Endpoint<Response: Decodable & Sendable>: Sendable {
-    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH" }
+    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH", put = "PUT", delete = "DELETE" }
     public let method: Method
     public let path: String
     public let query: [String: String]
@@ -120,6 +120,49 @@ public extension Endpoint {
     static func bump(orderID: String, to status: OrderStatus) -> Endpoint<Order> {
         let body = try? JSONEncoder().encode(["status": status.rawValue])
         return Endpoint<Order>(.patch, "orders/\(orderID)", body: body, requiresAuth: true)
+    }
+    /// Recall a mis-bumped completion (completed → ready) — the expo mis-tap undo.
+    static func recall(orderID: String) -> Endpoint<Order> {
+        Endpoint<Order>(.post, "orders/\(orderID)/recall", requiresAuth: true)
+    }
+    /// Settle (mark paid) an order at the counter. Idempotent server-side.
+    static func settle(orderID: String) -> Endpoint<Order> {
+        Endpoint<Order>(.post, "orders/\(orderID)/settle", requiresAuth: true)
+    }
+    /// Render/print a thermal receipt — mode=printed, or simulated with a preview.
+    static func receipt(orderID: String) -> Endpoint<ReceiptResult> {
+        Endpoint<ReceiptResult>(.post, "orders/\(orderID)/receipt", requiresAuth: true)
+    }
+    /// Cross-sell chips for a POS ticket (the four-slot complete-your-meal panel).
+    static func posSuggestions(locationSlug: String, itemIds: [String]) -> Endpoint<[PosSuggestion]> {
+        let body = try? JSONEncoder().encode(PosSuggestionsBody(locationSlug: locationSlug, itemIds: itemIds))
+        return Endpoint<[PosSuggestion]>(.post, "admin/pos/suggestions", body: body, requiresAuth: true)
+    }
+
+    // POS open checks (Tabs) — several concurrent checks per till, persisted server-
+    // side. Lines are id+qty(+course); prices resolve at send/charge.
+    static func posTabs(location: String) -> Endpoint<[PosTab]> {
+        Endpoint<[PosTab]>(.get, "admin/pos/tabs", query: ["location": location], requiresAuth: true)
+    }
+    static func posTabOpen(location: String, name: String?) -> Endpoint<PosTab> {
+        let body = try? JSONEncoder().encode(["name": name ?? "New tab"])
+        return Endpoint<PosTab>(.post, "admin/pos/tabs", query: ["location": location], body: body, requiresAuth: true)
+    }
+    static func posTabSave(_ tab: PosTabSaveBody) -> Endpoint<PosTab> {
+        let body = try? JSONEncoder().encode(tab)
+        return Endpoint<PosTab>(.put, "admin/pos/tabs", body: body, requiresAuth: true)
+    }
+    static func posTabVoid(id: String, location: String) -> Endpoint<TabDeleteResult> {
+        Endpoint<TabDeleteResult>(.delete, "admin/pos/tabs", query: ["id": id, "location": location], requiresAuth: true)
+    }
+    /// Send to KDS / fire course(s). Omit courses (or fireAll) to fire everything.
+    static func posTabFire(id: String, location: String, courses: [String]? = nil, fireAll: Bool = false) -> Endpoint<TabFireResult> {
+        let body = try? JSONEncoder().encode(TabFireBody(courses: courses, fireAll: fireAll))
+        return Endpoint<TabFireResult>(.post, "admin/pos/tabs/\(id)/fire", query: ["location": location], body: body, requiresAuth: true)
+    }
+    /// Charge (settle) the tab and close it.
+    static func posTabCharge(id: String, location: String) -> Endpoint<TabChargeResult> {
+        Endpoint<TabChargeResult>(.post, "admin/pos/tabs/\(id)/charge", query: ["location": location], requiresAuth: true)
     }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
@@ -350,3 +393,74 @@ public struct Item86Result: Codable, Sendable {
     public let available: Bool
 }
 private struct Set86Body: Encodable { let itemId: String; let available: Bool }
+
+/// Result of `POST /api/v1/orders/:id/receipt`. `printed` → streamed to the
+/// printer; `simulated` → `preview` is the exact plain-text receipt to show/share.
+public struct ReceiptResult: Codable, Sendable {
+    public let mode: String
+    public let bytes: Int
+    public let preview: String
+    public let printer: String?
+}
+
+/// A POS cross-sell chip (`POST /api/v1/admin/pos/suggestions`).
+public struct PosSuggestion: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let price: Grosze
+    public let reason: String
+}
+private struct PosSuggestionsBody: Encodable { let locationSlug: String; let itemIds: [String] }
+
+/// Body for `PUT /api/v1/admin/pos/tabs` — edit an open check. Lines are id+qty
+/// (+course); the server resolves prices/discounts at send/charge.
+public struct PosTabSaveBody: Encodable, Sendable {
+    public struct Line: Encodable, Sendable {
+        public let menuItemId: String
+        public let quantity: Int
+        public let course: String?
+        public init(menuItemId: String, quantity: Int, course: String? = nil) {
+            self.menuItemId = menuItemId; self.quantity = quantity; self.course = course
+        }
+    }
+    public let id: String
+    public let locationSlug: String
+    public let name: String?
+    public let channel: String?
+    public let status: String?
+    public let items: [Line]
+    public let tableId: String?
+    public let covers: Int?
+    public let customerName: String?
+    public let customerPhone: String?
+    public let coursed: Bool?
+    public init(id: String, locationSlug: String, items: [Line], name: String? = nil,
+                channel: String? = nil, status: String? = nil, tableId: String? = nil,
+                covers: Int? = nil, customerName: String? = nil, customerPhone: String? = nil,
+                coursed: Bool? = nil) {
+        self.id = id; self.locationSlug = locationSlug; self.items = items; self.name = name
+        self.channel = channel; self.status = status; self.tableId = tableId; self.covers = covers
+        self.customerName = customerName; self.customerPhone = customerPhone; self.coursed = coursed
+    }
+}
+
+/// Result of `DELETE /api/v1/admin/pos/tabs`.
+public struct TabDeleteResult: Codable, Sendable {
+    public let deleted: Bool
+    public let id: String
+}
+
+private struct TabFireBody: Encodable { let courses: [String]?; let fireAll: Bool }
+
+/// Result of `POST /api/v1/admin/pos/tabs/:id/fire`.
+public struct TabFireResult: Codable, Sendable {
+    public let order: Order
+    public let firedCourses: [String]
+}
+
+/// Result of `POST /api/v1/admin/pos/tabs/:id/charge`.
+public struct TabChargeResult: Codable, Sendable {
+    public let ok: Bool
+    public let orderId: String
+    public let totalAmount: Grosze
+}
