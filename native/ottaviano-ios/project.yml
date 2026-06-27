@@ -19,8 +19,13 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "1"
+    # Release (user-facing) version — keep at the current marketing version.
+    MARKETING_VERSION: "0.3.0"
+    # Build number (CFBundleVersion). Scheme: <marketing>.<build>, bumped +1 on
+    # every TestFlight upload — 0.3.0.1, 0.3.0.2, … This is the source of truth
+    # (the testflight script no longer overrides it); increment the last digit
+    # each release. Must always increase for App Store Connect to accept the build.
+    CURRENT_PROJECT_VERSION: "0.3.0.1"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 targets:
