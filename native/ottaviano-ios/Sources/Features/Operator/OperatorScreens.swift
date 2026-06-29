@@ -23,7 +23,7 @@ public struct OperatorCustomersView: View {
                 })
             },
             search: { "\($0.name ?? "") \($0.phone)" },
-            detail: { c in AnyView(CustomerDetailView(c: c)) },
+            detail: { c, _ in AnyView(CustomerDetailView(c: c)) },
             row: { c in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: c.name ?? c.phone)
@@ -147,26 +147,93 @@ struct SupplierDetailView: View {
     }
 }
 
-/// Stock-item detail — the AdminStockRow DTO's fields (Rule #1). On-hand vs par
-/// vs reorder, with the low-stock verdict the server already computed.
+/// Stock-item detail — the AdminStockRow DTO's fields (Rule #1) **plus** a live
+/// adjust action: nudge the delta, Apply, and it POSTs an `adjust` movement
+/// (`POST /api/v1/admin/inventory`), updates the on-hand in place and reloads the
+/// list. Manager+ on the server; a non-manager token just gets a 403 surfaced.
 struct StockDetailView: View {
     @Environment(\.theme) private var theme
     let r: AdminStockRow
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var onHand: Double
+    @State private var delta: Double = 0
+    @State private var busy = false
+    @State private var error: String?
+
+    init(r: AdminStockRow, api: APIClient, reload: @escaping () async -> Void) {
+        self.r = r; self.api = api; self.reload = reload
+        _onHand = State(initialValue: r.onHand)
+    }
+
     private func fmt(_ d: Double) -> String { d == d.rounded() ? String(Int(d)) : String(format: "%.1f", d) }
+    private var low: Bool { onHand <= r.reorderPoint }
+
     var body: some View {
         OperatorDetailSheet(
             leading: .icon("shippingbox.fill"),
             title: r.name,
-            badge: r.low ? ("Low stock", .danger) : ("In stock", .success),
+            badge: low ? ("Low stock", .danger) : ("In stock", .success),
             meta: meta
         ) {
             OperatorStatBand([
-                OperatorStatTile("On hand", "\(fmt(r.onHand)) \(r.unit)", subTone: r.low ? theme.color.danger : nil),
+                OperatorStatTile("On hand", "\(fmt(onHand)) \(r.unit)"),
                 OperatorStatTile("Par level", "\(fmt(r.parLevel)) \(r.unit)"),
                 OperatorStatTile("Reorder at", "\(fmt(r.reorderPoint)) \(r.unit)"),
             ])
+            adjustCard
         }
     }
+
+    private var adjustCard: some View {
+        DSCard {
+            VStack(alignment: .leading, spacing: theme.space.md) {
+                Text("ADJUST STOCK").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                HStack(spacing: theme.space.lg) {
+                    stepButton("minus") { delta -= 1 }
+                    VStack(spacing: 2) {
+                        Text("\(delta >= 0 ? "+" : "")\(fmt(delta)) \(r.unit)")
+                            .textRole(.title).monospacedDigit()
+                            .foregroundStyle(delta == 0 ? theme.color.textSecondary : theme.color.accent)
+                        Text("→ \(fmt(onHand + delta)) \(r.unit) on hand").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    stepButton("plus") { delta += 1 }
+                }
+                if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                DSButton(busy ? "Applying…" : "Apply adjustment") { Task { await apply() } }
+                    .disabled(delta == 0 || busy)
+                    .opacity(delta == 0 || busy ? 0.5 : 1)
+            }
+        }
+    }
+
+    private func stepButton(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.headline).frame(width: 48, height: 48)
+                .foregroundStyle(theme.color.accent)
+                .background(theme.color.surface, in: Circle())
+                .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: delta)
+    }
+
+    private func apply() async {
+        guard delta != 0 else { return }
+        busy = true; error = nil
+        do {
+            let updated = try await api.send(.adminAdjustStock(
+                ingredientId: r.ingredientId, locationSlug: r.locationSlug, delta: delta))
+            onHand = updated.onHand
+            delta = 0
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminStockRow>.message(e)
+        } catch { error = "Couldn't adjust stock" }
+        busy = false
+    }
+
     private var meta: [OperatorMetaRow] {
         var m = [OperatorMetaRow("tag.fill", "\(r.category.capitalized) · \(r.locationSlug.capitalized)")]
         if let c = r.lastCountedAt { m.append(OperatorMetaRow("calendar", "Last counted \(c.prefix(10))")) }
@@ -192,7 +259,7 @@ public struct OperatorStaffView: View {
                 })
             },
             search: { "\($0.name) \($0.role) \($0.locationSlug)" },
-            detail: { s in AnyView(StaffDetailView(s: s)) },
+            detail: { s, _ in AnyView(StaffDetailView(s: s)) },
             row: { s in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: s.name)
@@ -264,7 +331,7 @@ public struct OperatorSuppliersView: View {
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
             search: { "\($0.name) \($0.contactName ?? "")" },
-            detail: { s in AnyView(SupplierDetailView(s: s)) },
+            detail: { s, _ in AnyView(SupplierDetailView(s: s)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -412,7 +479,7 @@ public struct OperatorInventoryView: View {
                 })
             },
             search: { "\($0.name) \($0.locationSlug)" },
-            detail: { r in AnyView(StockDetailView(r: r)) },
+            detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
             row: { r in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

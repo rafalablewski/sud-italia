@@ -399,6 +399,14 @@ public extension Endpoint {
             estimatedCostGrosze: estimatedCostGrosze, notes: notes))
         return Endpoint<AdminWasteEntry>(.post, "admin/waste", body: body, requiresAuth: true)
     }
+    /// Adjust an ingredient's on-hand for a location by a SIGNED delta (manager).
+    /// Records an `adjust` stock movement server-side; returns the updated row.
+    static func adminAdjustStock(ingredientId: String, locationSlug: String, delta: Double,
+                                 reason: String? = nil) -> Endpoint<AdminStockRow> {
+        let body = try? JSONEncoder().encode(AdjustStockBody(
+            ingredientId: ingredientId, locationSlug: locationSlug, delta: delta, reason: reason))
+        return Endpoint<AdminStockRow>(.post, "admin/inventory", body: body, requiresAuth: true)
+    }
 }
 
 public extension Endpoint {
@@ -438,6 +446,9 @@ private struct LogTempBody: Encodable {
 private struct LogWasteBody: Encodable {
     let locationSlug: String; let item: String; let quantity: Double; let unit: String
     let reason: String; let estimatedCostGrosze: Int?; let notes: String?
+}
+private struct AdjustStockBody: Encodable {
+    let ingredientId: String; let locationSlug: String; let delta: Double; let reason: String?
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }

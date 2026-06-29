@@ -118,6 +118,26 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ---
 
+## Wave D — first write surface beyond the existing ones (done this pass)
+
+The Admin write surfaces that already had `/api/v1` endpoints (HACCP, Waste,
+Cash, Announcements, Feedback, Purchase orders, Menu 86, Tasks) keep their
+actions. Wave D opens the **first new write** that needed facade work:
+- **Inventory adjust** — new `POST /api/v1/admin/inventory` (manager+, scope-
+  gated, `{ ingredientId, locationSlug, delta, reason? }`) records an `adjust`
+  stock movement through the shared `createStockMovement` (same path the rest of
+  the app uses, so audit history + on-hand stay consistent). **Verified live**
+  against `npm run dev`: +12 → 12, −4 → 8, GET reflects it, unknown id → 404,
+  delta 0 → 422, missing token → 401.
+- **Native:** `StockDetailView` became a stateful sheet — a ±stepper with a live
+  "→ N on hand" preview and an Apply button that POSTs, updates on-hand in place
+  and reloads the list. `OperatorListView.detail:` now passes a `reload` closure
+  (same contract as `toolbar:`), so any detail sheet can write-then-refresh.
+
+Remaining Wave D surfaces (events, compliance, handover-close, schedule edit,
+service slots) follow the same recipe — a v1 mutation endpoint + a detail/toolbar
+action — as each lands.
+
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 
 Extends the Wave A drill-in and Wave B ⓘ patterns across CORE + more of Admin:

@@ -52,9 +52,10 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
     private let searchKey: ((T) -> String)?
     /// Optional row → detail-sheet projection. When supplied, every row becomes
     /// tappable (with a chevron affordance) and presents this sheet — the native
-    /// twin of the web admin's inspect dialog. Nil (default) = inert rows, so
-    /// existing call sites are unchanged.
-    private let detail: ((T) -> AnyView)?
+    /// twin of the web admin's inspect dialog. The sheet receives a `reload`
+    /// closure so a write action inside it can refresh the list (same contract as
+    /// `toolbar:`). Nil (default) = inert rows, so existing call sites are unchanged.
+    private let detail: ((T, @escaping () async -> Void) -> AnyView)?
     private let row: (T) -> Row
     @State private var query = ""
     @State private var selected: T?
@@ -66,7 +67,7 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         header: (([T]) -> AnyView)? = nil,
         toolbar: ((@escaping () async -> Void) -> AnyView)? = nil,
         search: ((T) -> String)? = nil,
-        detail: ((T) -> AnyView)? = nil,
+        detail: ((T, @escaping () async -> Void) -> AnyView)? = nil,
         @ViewBuilder row: @escaping (T) -> Row
     ) {
         self.title = title
@@ -133,7 +134,7 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
                 }
                 .modifier(OptionalSearchable(active: searchKey != nil, text: $query, prompt: "Search \(title.lowercased())"))
                 .sheet(item: $selected) { item in
-                    if let detail { detail(item) }
+                    if let detail { detail(item) { await loader.load() } }
                 }
             }
         }

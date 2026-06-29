@@ -48,7 +48,7 @@ public struct OperatorGuestView: View {
                 AnyView(OperatorStatChip("Members", "\(items.count)", tint: theme.color.accent))
             },
             search: { "\($0.name) \($0.lastName ?? "") \($0.phone) \($0.email ?? "")" },
-            detail: { m in AnyView(GuestDetailView(m: m)) },
+            detail: { m, _ in AnyView(GuestDetailView(m: m)) },
             row: { m in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: [m.name, m.lastName ?? ""].joined(separator: " "))
