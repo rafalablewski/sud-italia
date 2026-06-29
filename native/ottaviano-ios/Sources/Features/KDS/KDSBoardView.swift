@@ -26,6 +26,14 @@ public struct KDSBoardView: View {
     private let api: APIClient
     /// 86 (eighty-six) item-availability sheet.
     @State private var eightySixOpen = false
+    /// New-ticket chime toggle (web KDS sound control). On by default for the line.
+    @State private var soundOn = true
+    /// Kiosk mode — hides all chrome + keeps the screen awake for a wall-mounted
+    /// line iPad. The web KDS has a fullscreen kiosk; this is its native twin.
+    @State private var kiosk = false
+    /// New-lane ticket ids last seen, so we chime only on genuinely fresh tickets
+    /// (not on the initial board load, nor on bumps that leave the New lane).
+    @State private var chimeArmed = false
 
     private enum Mode: String, CaseIterable { case floor = "Floor", chef = "Chef", fleet = "Fleet" }
 
@@ -115,10 +123,36 @@ public struct KDSBoardView: View {
                 .tint(store.paused ? theme.color.warning : theme.color.textSecondary)
             }
             ToolbarItem(placement: .topBarTrailing) {
+                Button { soundOn.toggle() } label: {
+                    Label(soundOn ? "Sound on" : "Muted",
+                          systemImage: soundOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                }
+                .tint(soundOn ? theme.color.success : theme.color.textSecondary)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { setKiosk(true) } label: { Label("Kiosk", systemImage: "rectangle.inset.filled") }
+                    .accessibilityLabel("Enter kiosk mode")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Circle().fill(store.connected ? theme.color.success : theme.color.danger)
                     .frame(width: 10, height: 10)
                     .accessibilityLabel(store.connected ? "Live" : (store.paused ? "Paused" : "Reconnecting"))
             }
+        }
+        // Kiosk chrome: hide the bar + status bar + home indicator, full-bleed board.
+        .toolbar(kiosk ? .hidden : .automatic, for: .navigationBar)
+        .statusBarHidden(kiosk)
+        .persistentSystemOverlays(kiosk ? .hidden : .automatic)
+        .navigationBarBackButtonHidden(kiosk)
+        .overlay(alignment: .topTrailing) { if kiosk { kioskExit } }
+        // Ring the chime when a genuinely new ticket lands (web KDS sound parity),
+        // unless the operator muted it or the board is paused. `chimeArmed` skips
+        // the initial board population so opening the screen isn't a burst of dings.
+        .onChange(of: incomingTicketIDs) { old, new in
+            if chimeArmed, soundOn, !store.paused, !new.subtracting(old).isEmpty {
+                KDSChime.newTicket()
+            }
+            chimeArmed = true
         }
         .task { store.start() }
         // Floor-ops KPIs (Done/hr + On-shift) — manager+ only; refresh every 15s
@@ -134,8 +168,33 @@ public struct KDSBoardView: View {
         .onChange(of: mode, initial: true) { _, m in
             if m == .fleet { fleet.start() } else { fleet.stop() }
         }
-        .onDisappear { store.stop(); fleet.stop() }
+        .onDisappear { store.stop(); fleet.stop(); KioskMode.keepAwake(false) }
         .sheet(isPresented: $eightySixOpen) { EightySixSheet(api: api) }
+    }
+
+    /// Enter/leave kiosk mode, toggling the keep-awake side effect with it.
+    private func setKiosk(_ on: Bool) {
+        kiosk = on
+        KioskMode.keepAwake(on)
+    }
+
+    /// Floating exit affordance shown only in kiosk mode (the chrome is hidden).
+    private var kioskExit: some View {
+        Button { setKiosk(false) } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 30))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(theme.color.onAccent, theme.color.accent)
+                .padding(theme.space.lg)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Exit kiosk mode")
+    }
+
+    /// Ids of every ticket currently in the New lane (pending/confirmed), ignoring
+    /// the station filter — the chime should ring for any new ticket on the board.
+    private var incomingTicketIDs: Set<String> {
+        Set(store.orders.filter { $0.status == .pending || $0.status == .confirmed }.map(\.id))
     }
 
     // MARK: Fleet (owner Atlas)

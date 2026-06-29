@@ -51,9 +51,16 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
     action): since availability is per-location and the board streams chain-wide,
     the sheet carries its own **location picker**, then reads `GET /api/v1/admin/
     menu?location=` and writes `PATCH /api/v1/admin/menu` to 86 / restore items.
-- **Honest gaps (hardware-gated, not faked — Rule #1):**
-  - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
-    runtime concerns; the iPad app is already chromeless).
+- **Shipped — sound chimes + kiosk (this pass):** `KDSChime` rings a short system
+  sound (`AudioServicesPlaySystemSound`, mute-switch-aware, no bundled asset) +
+  a success haptic when a genuinely new ticket lands — gated on a toolbar
+  **sound toggle** and the pause state, with a `chimeArmed` guard so opening the
+  board isn't a burst of dings. A toolbar **Kiosk** action hides the nav bar +
+  status bar + home indicator (`.toolbar(.hidden)` · `.statusBarHidden` ·
+  `.persistentSystemOverlays(.hidden)`), keeps the screen awake
+  (`UIApplication.isIdleTimerDisabled`, UIKit-gated), and shows a floating exit
+  button. **Needs on-device confirmation** (audio + idle-timer can't be exercised
+  from the Linux container) — the one verification step that wants a Mac/iPad.
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -175,8 +182,9 @@ spans **Customers, Staff, Guest, Suppliers, Stock (adjust), Service slots
 (capacity/status), Events (status), Compliance (renew), Schedule (status)**, and
 the create-form surfaces (**HACCP, Waste, Cash, Announcements, Handover**) plus
 the per-row write surfaces (**Feedback, Purchase orders, Tasks, Menu 86**). The
-only operator gaps left are hardware-bound: **KDS sound chimes / kiosk
-fullscreen**.
+last hardware-bound items — **KDS sound chimes + kiosk fullscreen** — are now
+implemented too (system-sound chime + kiosk chrome-hide/keep-awake); only their
+**on-device confirmation** remains, the single step that needs a Mac/iPad.
 
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 
@@ -192,8 +200,8 @@ Detail drill-in now covers **Customers, Staff, Guest, Suppliers, Stock**; the
 pattern keeps extending.
 
 **Honest gaps in Wave C (not faked):**
-- **KDS sound chimes / kiosk fullscreen** — on-device only (audio + fullscreen
-  are iOS runtime concerns); unchanged from the KDS audit above.
+- **KDS sound chimes / kiosk fullscreen** — now implemented (see the KDS section
+  above); only on-device confirmation remains.
 - **Service slot editing** — a write surface; needs a `/api/v1/admin/slots`
   mutation endpoint (read-only today). Tracked with Wave D.
 
@@ -331,7 +339,8 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **KDS Done/hr + On-shift KPIs** — `/api/v1/admin/kds/floor-ops` (manager+).
 - ✅ **KDS 86 dialog** — native `EightySixSheet` (manager+) with a location picker
   over the existing `/api/v1/admin/menu` GET/PATCH.
-- ⏳ **KDS sound chimes / kiosk fullscreen** — on-device only (hardware-gated).
+- ✅ **KDS sound chimes / kiosk fullscreen** — implemented (`KDSChime` system
+  sound + haptic; kiosk chrome-hide + keep-awake). On-device confirmation pending.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.
