@@ -230,7 +230,7 @@ struct StockDetailView: View {
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminStockRow>.message(e)
-        } catch { error = "Couldn't adjust stock" }
+        } catch { self.error = "Couldn't adjust stock" }
         busy = false
     }
 
@@ -618,7 +618,7 @@ struct SlotDetailView: View {
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminSlot>.message(e)
-        } catch { error = "Couldn't save the slot" }
+        } catch { self.error = "Couldn't save the slot" }
         busy = false
     }
 }

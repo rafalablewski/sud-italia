@@ -245,7 +245,7 @@ struct ScheduleDetailView: View {
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminShift>.message(e)
-        } catch { error = "Couldn't update the shift" }
+        } catch { self.error = "Couldn't update the shift" }
         busy = false
     }
 }

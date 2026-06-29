@@ -50,7 +50,7 @@ public struct OperatorAuditView: View {
             title: "Audit log",
             emptyText: "No audit entries.",
             loader: OperatorListLoader { try await api.send(.adminAuditLog()) },
-            search: { "\($0.action) \($0.actor ?? "") \($0.entityType ?? "") \($0.entityId ?? "")" },
+            search: { "\($0.action) \($0.actor) \($0.entityType ?? "") \($0.entityId ?? "")" },
             row: { e in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
@@ -327,7 +327,7 @@ struct EventDetailView: View {
             await reload()
         } catch let err as APIError {
             error = OperatorListLoader<AdminEvent>.message(err)
-        } catch { error = "Couldn't update the event" }
+        } catch { self.error = "Couldn't update the event" }
         busy = false
     }
 }
@@ -444,7 +444,7 @@ struct ComplianceDetailView: View {
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminComplianceItem>.message(e)
-        } catch { error = "Couldn't renew" }
+        } catch { self.error = "Couldn't renew" }
         busy = false
     }
 }
