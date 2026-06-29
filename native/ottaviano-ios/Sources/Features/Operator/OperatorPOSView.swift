@@ -40,6 +40,9 @@ public final class OperatorPOSStore {
         if q <= 1 { ticket[id] = nil } else { ticket[id] = q - 1 }
     }
     public func clear() { ticket.removeAll(); suggestions = []; currentTab = nil }
+    /// Switch to counter-sale mode (no open check) without discarding the working
+    /// ticket — the "Quick sale" path in the tab strip.
+    public func deselectTab() { currentTab = nil }
 
     /// A stable signature of the ticket contents — drives the suggestions refresh.
     public var ticketSignature: String {
@@ -81,6 +84,16 @@ public final class OperatorPOSStore {
     public func openTab(name: String?) async {
         guard let tab = try? await api.send(.posTabOpen(location: location, name: name)) else { return }
         load(tab: tab)
+        await refreshTabs()
+    }
+    /// Promote the current counter-sale ticket into a saved check — opens a tab and
+    /// carries the in-progress items onto it (so a quick sale can become a tab).
+    public func startCheckFromTicket(name: String?) async {
+        let pending = ticket
+        guard let tab = try? await api.send(.posTabOpen(location: location, name: name)) else { return }
+        currentTab = tab
+        ticket = pending
+        await saveCurrentTab()
         await refreshTabs()
     }
     public func voidTab(_ id: String) async {
@@ -237,158 +250,253 @@ public final class OperatorPOSStore {
 
 public struct OperatorPOSView: View {
     @Environment(\.theme) private var theme
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var store: OperatorPOSStore
     @State private var showCharge = false
     @State private var showTabs = false
-    @State private var showCheck = false
+    @State private var showCheckSheet = false
+    @State private var showNewCheck = false
+    @State private var newCheckName = ""
+    @State private var category: String?
+    @State private var search = ""
     @State private var tabMessage: String?
 
     public init(api: APIClient, location: String = "krakow") {
         _store = State(initialValue: OperatorPOSStore(api: api, location: location))
     }
 
+    private let gridCols = [GridItem(.adaptive(minimum: 144), spacing: 12)]
+
     public var body: some View {
         Group {
             switch store.state {
             case .loading:
-                List { ForEach(0..<8, id: \.self) { _ in OperatorRowSkeleton() } }
+                ProgressView("Loading the till…").frame(maxWidth: .infinity, maxHeight: .infinity)
             case .failed(let m):
                 ContentUnavailableView("Couldn't load the till", systemImage: "wifi.slash", description: Text(m))
             case .loaded(let items):
-                VStack(spacing: 0) {
-                    List {
-                        ForEach(categories(items), id: \.self) { cat in
-                            Section(cat.capitalized) {
-                                ForEach(items.filter { $0.category == cat && $0.available }) { item in
-                                    Button { store.add(item) } label: { padRow(item) }
-                                        .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                    if !store.isEmpty { ticketBar }
-                }
+                loaded(items)
             }
         }
+        .background(theme.color.surface)
         .navigationTitle("POS — \(store.location.capitalized)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showTabs = true } label: {
-                    Label("Tabs (\(store.tabs.count))", systemImage: "rectangle.stack.fill")
-                }
+                Button { showTabs = true } label: { Label("Manage checks", systemImage: "rectangle.stack.fill") }
             }
         }
         .task { if case .loading = store.state { await store.load() } }
-        .task { await store.refreshTabs() }
+        .task { await store.refreshTabs(); await store.loadTables() }
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
         .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
-        .sheet(isPresented: $showCheck) { CheckSheet(store: store) }
+        .sheet(isPresented: $showCheckSheet) {
+            NavigationStack {
+                POSCheckPanel(store: store, message: $tabMessage, onWalkInCharge: { showCheckSheet = false; showCharge = true })
+                    .navigationTitle(store.currentTabName ?? "Check")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showCheckSheet = false } } }
+            }
+            .presentationDetents([.large])
+        }
+        .alert("New check", isPresented: $showNewCheck) {
+            TextField("Name (optional)", text: $newCheckName)
+            Button("Open") {
+                let n = newCheckName.trimmingCharacters(in: .whitespaces)
+                Task { await store.openTab(name: n.isEmpty ? nil : n) }
+                newCheckName = ""
+            }
+            Button("Cancel", role: .cancel) { newCheckName = "" }
+        } message: { Text("Open a new check on the till.") }
         .dsToast($tabMessage)
     }
 
+    // MARK: layout
+
+    @ViewBuilder
+    private func loaded(_ items: [AdminMenuItem]) -> some View {
+        VStack(spacing: 0) {
+            tabStrip
+            Divider().overlay(theme.color.line)
+            if hSize == .regular {
+                HStack(spacing: 0) {
+                    menuPane(items).frame(maxWidth: .infinity)
+                    Divider().overlay(theme.color.line)
+                    POSCheckPanel(store: store, message: $tabMessage, onWalkInCharge: { showCharge = true })
+                        .frame(width: 380)
+                        .background(theme.color.surface2)
+                }
+            } else {
+                menuPane(items)
+                if !store.isEmpty || store.currentTabID != nil { compactCartBar }
+            }
+        }
+    }
+
+    // MARK: open-checks strip
+
+    private var tabStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: theme.space.sm) {
+                Button { showNewCheck = true } label: {
+                    Label("New", systemImage: "plus").textRole(.caption).fontWeight(.semibold)
+                        .padding(.horizontal, theme.space.md).frame(height: 34)
+                        .foregroundStyle(theme.color.onAccent)
+                        .background(theme.color.accent, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                chip(title: "Quick sale", icon: "bag", active: store.currentTabID == nil) { store.deselectTab() }
+                ForEach(store.tabs) { tab in
+                    chip(title: tab.name, icon: "rectangle.stack", active: tab.id == store.currentTabID,
+                         badge: tab.lineCount) { store.load(tab: tab) }
+                        .contextMenu {
+                            Button(role: .destructive) { Task { await store.voidTab(tab.id) } } label: { Label("Void", systemImage: "trash") }
+                        }
+                }
+            }
+            .padding(.horizontal, theme.space.lg).padding(.vertical, theme.space.sm)
+        }
+        .background(theme.color.surface)
+    }
+
+    private func chip(title: String, icon: String, active: Bool, badge: Int? = nil, _ tap: @escaping () -> Void) -> some View {
+        Button(action: tap) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.caption2)
+                Text(title).textRole(.caption).fontWeight(.semibold).lineLimit(1)
+                if let badge, badge > 0 {
+                    Text("\(badge)").font(.caption2.weight(.bold)).monospacedDigit()
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background((active ? theme.color.onAccent : theme.color.accent).opacity(0.2), in: Capsule())
+                }
+            }
+            .padding(.horizontal, theme.space.md).frame(height: 34)
+            .foregroundStyle(active ? theme.color.onAccent : theme.color.textPrimary)
+            .background(active ? theme.color.accent : theme.color.surface2, in: Capsule())
+            .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: active ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: menu pane
+
+    @ViewBuilder
+    private func menuPane(_ items: [AdminMenuItem]) -> some View {
+        VStack(spacing: theme.space.sm) {
+            HStack(spacing: theme.space.sm) {
+                Image(systemName: "magnifyingglass").foregroundStyle(theme.color.textSecondary)
+                TextField("Search the menu", text: $search)
+                    .textFieldStyle(.plain).foregroundStyle(theme.color.textPrimary)
+                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(theme.color.textSecondary) }.buttonStyle(.plain) }
+            }
+            .padding(.horizontal, theme.space.md).frame(height: 40)
+            .background(theme.color.surface2, in: Capsule())
+            .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: theme.space.xs) {
+                    catChip("All", active: category == nil) { category = nil }
+                    ForEach(categories(items), id: \.self) { c in
+                        catChip(c.capitalized, active: category == c) { category = c }
+                    }
+                }
+            }
+
+            ScrollView {
+                LazyVGrid(columns: gridCols, spacing: theme.space.md) {
+                    ForEach(filtered(items)) { itemCard($0) }
+                }
+                .padding(.bottom, theme.space.xl)
+            }
+        }
+        .padding(.horizontal, theme.space.lg).padding(.top, theme.space.sm)
+    }
+
+    private func catChip(_ label: String, active: Bool, _ tap: @escaping () -> Void) -> some View {
+        Button(action: tap) {
+            Text(label).textRole(.caption).fontWeight(.semibold)
+                .padding(.horizontal, theme.space.md).frame(height: 30)
+                .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
+                .background(active ? theme.color.accent : theme.color.surface2, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func itemCard(_ item: AdminMenuItem) -> some View {
+        let qty = store.ticketQty(item.id) ?? 0
+        return Button { store.add(item) } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top) {
+                    Text(item.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                        .lineLimit(2).multilineTextAlignment(.leading)
+                    Spacer(minLength: 2)
+                    if qty > 0 {
+                        Text("\(qty)").font(.caption.weight(.bold)).monospacedDigit()
+                            .foregroundStyle(theme.color.onAccent)
+                            .frame(minWidth: 20, minHeight: 20)
+                            .background(theme.color.accent, in: Circle())
+                    }
+                }
+                Spacer(minLength: 6)
+                HStack {
+                    MoneyText(item.price).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                    Spacer()
+                    if !item.available {
+                        Text("86").font(.caption2.weight(.bold)).foregroundStyle(theme.color.danger)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(theme.color.danger.opacity(0.18), in: Capsule())
+                    } else {
+                        Image(systemName: "plus.circle.fill").foregroundStyle(theme.color.accent)
+                    }
+                }
+            }
+            .padding(theme.space.md)
+            .frame(height: 96, alignment: .topLeading)
+            .frame(maxWidth: .infinity)
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg)
+                .strokeBorder(qty > 0 ? theme.color.accent : theme.color.line, lineWidth: qty > 0 ? 1.5 : 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!item.available)
+        .opacity(item.available ? 1 : 0.55)
+        .sensoryFeedback(.impact(weight: .light), trigger: qty)
+    }
+
+    // MARK: compact cart bar (iPhone)
+
+    private var compactCartBar: some View {
+        Button { showCheckSheet = true } label: {
+            HStack {
+                Image(systemName: "cart.fill")
+                Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s")").fontWeight(.semibold)
+                if let n = store.currentTabName { Text("· \(n)").foregroundStyle(theme.color.onAccent.opacity(0.85)) }
+                Spacer()
+                MoneyText(store.totalAfterDiscount).fontWeight(.bold)
+                Image(systemName: "chevron.up")
+            }
+            .foregroundStyle(theme.color.onAccent)
+            .padding(theme.space.lg)
+            .background(theme.color.accent)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: helpers
+
     private func categories(_ items: [AdminMenuItem]) -> [String] {
         var seen = Set<String>(), out: [String] = []
-        for i in items where i.available && !seen.contains(i.category) { seen.insert(i.category); out.append(i.category) }
+        for i in items where !seen.contains(i.category) { seen.insert(i.category); out.append(i.category) }
         return out
     }
 
-    private func padRow(_ item: AdminMenuItem) -> some View {
-        HStack {
-            Text(item.name).font(.subheadline).foregroundStyle(theme.color.textPrimary)
-            if let q = store.ticketQty(item.id), q > 0 {
-                Text("×\(q)").font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.accent)
-            }
-            Spacer()
-            MoneyText(item.price).font(.subheadline).foregroundStyle(theme.color.textSecondary)
-            Image(systemName: "plus.circle.fill").foregroundStyle(theme.color.accent)
+    private func filtered(_ items: [AdminMenuItem]) -> [AdminMenuItem] {
+        let q = search.trimmingCharacters(in: .whitespaces).lowercased()
+        return items.filter { item in
+            (category == nil || item.category == category)
+            && (q.isEmpty || item.name.lowercased().contains(q))
         }
-    }
-
-    private var ticketBar: some View {
-        VStack(spacing: theme.space.sm) {
-            if let name = store.currentTabName {
-                HStack {
-                    Label(name, systemImage: "rectangle.stack.fill")
-                        .font(.caption.weight(.semibold)).foregroundStyle(theme.color.accent)
-                    if let ch = store.channel {
-                        Text(ch == "dine-in" ? "Dine-in · \(store.covers)p" : ch == "delivery" ? "Delivery" : "Takeaway")
-                            .font(.caption).foregroundStyle(theme.color.textSecondary)
-                    } else {
-                        Text("Pick channel").font(.caption.weight(.semibold)).foregroundStyle(theme.color.warning)
-                    }
-                    Spacer()
-                    Button { showCheck = true } label: { Label("Check", systemImage: "slider.horizontal.3") }
-                        .buttonStyle(.bordered).controlSize(.small)
-                    Toggle("Coursed", isOn: Binding(
-                        get: { store.isCoursed },
-                        set: { v in Task { await store.setCoursed(v) } }
-                    ))
-                    .toggleStyle(.button).controlSize(.small)
-                    Button("Save") { Task { await store.saveCurrentTab() } }
-                        .buttonStyle(.bordered).controlSize(.small)
-                }
-            }
-            if !store.suggestions.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: theme.space.sm) {
-                        ForEach(store.suggestions) { s in
-                            Button { store.add(byId: s.id) } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "plus.circle.fill")
-                                    Text(s.name)
-                                    MoneyText(s.price)
-                                }
-                                .textRole(.caption)
-                                .padding(.horizontal, theme.space.sm).padding(.vertical, 6)
-                                .foregroundStyle(theme.color.accent)
-                                .background(theme.color.accent.opacity(0.14), in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Add \(s.name), \(s.reason)")
-                        }
-                    }
-                }
-            }
-            HStack {
-                Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s")").font(.subheadline).foregroundStyle(theme.color.textSecondary)
-                Spacer()
-                if store.discountAmount > 0 {
-                    MoneyText(store.total).font(.subheadline).strikethrough().foregroundStyle(theme.color.textSecondary)
-                    MoneyText(store.totalAfterDiscount).font(.headline).foregroundStyle(theme.color.textPrimary)
-                } else {
-                    MoneyText(store.total).font(.headline).foregroundStyle(theme.color.textPrimary)
-                }
-            }
-            HStack(spacing: theme.space.md) {
-                Button("Clear", role: .destructive) { store.clear() }
-                    .buttonStyle(.bordered)
-                if store.currentTabID != nil {
-                    if store.isCoursed {
-                        Menu {
-                            ForEach(["starter", "main", "dessert", "drink"], id: \.self) { c in
-                                Button(store.firedCourses.contains(c) ? "✓ \(c.capitalized)" : c.capitalized) {
-                                    Task { tabMessage = await store.fireCurrentTab(courses: [c]) ?? "Fired \(c)" }
-                                }
-                            }
-                            Divider()
-                            Button("Fire all") { Task { tabMessage = await store.fireCurrentTab() ?? "Sent to kitchen" } }
-                        } label: {
-                            Label("Fire", systemImage: "flame.fill").frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.bordered)
-                    } else {
-                        DSButton("Send") { Task { tabMessage = await store.fireCurrentTab() ?? "Sent to kitchen" } }
-                    }
-                    DSButton("Charge tab") { Task { tabMessage = await store.chargeCurrentTab() ?? "Charged" } }
-                } else {
-                    DSButton("Charge") { showCharge = true }
-                }
-            }
-        }
-        .padding(theme.space.lg)
-        .background(.bar)
     }
 }
 
@@ -485,14 +593,18 @@ private struct ChargeSheet: View {
     }
 }
 
-/// The check editor for an open tab — web `/core/pos` parity: pick a **channel**
-/// (required before a tab can fire/charge), dine-in covers / delivery address,
-/// edit line quantities (+/−), and apply a manual **discount**. Attributes persist
-/// through the v1 tab PUT; the server re-prices (combos + discount) at fire/charge.
-private struct CheckSheet: View {
+/// The persistent check panel — the always-visible right pane on iPad (and the
+/// sheet body on iPhone). Web `/core/pos` parity: channel (required before
+/// fire/charge) + dine-in covers/table or delivery address, line steppers,
+/// cross-sell, manual discount, coursing, and the fire/charge actions. Attributes
+/// persist through the v1 tab PUT; the server re-prices (combos + discount) at
+/// fire/charge. For a quick counter-sale (no open check) it shows the working
+/// ticket + a walk-in charge and a "Start a check" promote.
+private struct POSCheckPanel: View {
     @Environment(\.theme) private var theme
-    @Environment(\.dismiss) private var dismiss
     let store: OperatorPOSStore
+    @Binding var message: String?
+    let onWalkInCharge: () -> Void
 
     @State private var channel = ""
     @State private var covers = 2
@@ -500,130 +612,275 @@ private struct CheckSheet: View {
     @State private var tableId = ""
     @State private var discKind: DiscKind = .none
     @State private var discValue = ""
-    @State private var message: String?
+    @State private var showDiscount = false
     private enum DiscKind: Hashable { case none, percent, amount }
 
+    private var hasTab: Bool { store.currentTabID != nil }
+    private var channelReady: Bool { !hasTab || (store.channel?.isEmpty == false) }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Channel") {
-                    Picker("Channel", selection: $channel) {
-                        Text("Pick…").tag("")
-                        Text("Dine-in").tag("dine-in")
-                        Text("Takeaway").tag("takeout")
-                        Text("Delivery").tag("delivery")
-                    }
-                    .pickerStyle(.segmented)
-                    if channel == "dine-in" {
-                        Stepper("Covers: \(covers)", value: $covers, in: 1...50)
-                        Picker("Table", selection: $tableId) {
-                            Text("No table").tag("")
-                            ForEach(store.tables) { t in
-                                Text(tableLabel(t)).tag(t.id)
-                            }
-                        }
-                    }
-                    if channel == "delivery" {
-                        TextField("Delivery address", text: $address, axis: .vertical)
-                            .onSubmit { Task { await store.setAddress(address) } }
+        VStack(spacing: 0) {
+            header
+            Divider().overlay(theme.color.line)
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.space.lg) {
+                    if !hasTab && store.isEmpty {
+                        emptyState
+                    } else {
+                        if hasTab { channelSection }
+                        linesSection
+                        if !store.suggestions.isEmpty { suggestionsRow }
+                        discountSection
                     }
                 }
-
-                Section("Items") {
-                    if store.ticketLines.isEmpty {
-                        Text("No items").foregroundStyle(theme.color.textSecondary)
-                    }
-                    ForEach(store.ticketLines, id: \.item.id) { line in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(line.item.name).foregroundStyle(theme.color.textPrimary)
-                                MoneyText(line.item.price * line.qty).font(.caption).foregroundStyle(theme.color.textSecondary)
-                            }
-                            Spacer()
-                            Stepper("\(line.qty)",
-                                    onIncrement: { store.add(line.item) },
-                                    onDecrement: { store.remove(line.item.id) })
-                        }
-                    }
-                }
-
-                Section("Discount") {
-                    Picker("Type", selection: $discKind) {
-                        Text("None").tag(DiscKind.none)
-                        Text("Percent").tag(DiscKind.percent)
-                        Text("Amount").tag(DiscKind.amount)
-                    }
-                    .pickerStyle(.segmented)
-                    if discKind != .none {
-                        TextField(discKind == .percent ? "Percent (0–100)" : "Amount in zł", text: $discValue)
-                            .keyboardType(.decimalPad)
-                        DSButton("Apply discount") { Task { await applyDiscount() } }
-                    }
-                    if let d = store.discount {
-                        HStack {
-                            Text(discountLabel(d)).foregroundStyle(theme.color.textPrimary)
-                            Spacer()
-                            Button("Remove", role: .destructive) { Task { await store.setDiscount(nil) } }
-                        }
-                    }
-                }
-
-                Section {
-                    Toggle("Hold (park) this check", isOn: Binding(
-                        get: { store.isParked },
-                        set: { on in Task { if on != store.isParked { await store.togglePark() } } }
-                    ))
-                }
-
-                Section("Totals") {
-                    totalRow("Subtotal", store.total)
-                    if store.discountAmount > 0 { totalRow("Discount", -store.discountAmount) }
-                    totalRow("Total", store.totalAfterDiscount, bold: true)
-                    Text("Server re-prices at charge (combos + discount).")
-                        .font(.footnote).foregroundStyle(theme.color.textSecondary)
-                }
+                .padding(theme.space.lg)
             }
-            .navigationTitle(store.currentTabName ?? "Check")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        Task {
-                            // Flush a typed delivery address (setAddress saves the tab);
-                            // otherwise persist any line edits.
-                            if channel == "delivery" { await store.setAddress(address) }
-                            else { await store.saveCurrentTab() }
-                            dismiss()
-                        }
-                    }
-                }
+            footer
+        }
+        .background(theme.color.surface2)
+        .task(id: store.currentTabID) { syncFromStore(); await store.loadTables() }
+    }
+
+    // MARK: header
+
+    private var header: some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: hasTab ? "rectangle.stack.fill" : "bag.fill").foregroundStyle(theme.color.accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(store.currentTabName ?? "Quick sale").font(.headline).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                Text(hasTab ? (store.isParked ? "Parked" : "Open check") : "Counter sale")
+                    .textRole(.caption).foregroundStyle(store.isParked ? theme.color.warning : theme.color.textSecondary)
             }
-            .onAppear {
-                channel = store.channel ?? ""
-                covers = store.covers
-                address = store.address
-                tableId = store.tableId ?? ""
-                if let d = store.discount {
-                    discKind = d.type == "percent" ? .percent : .amount
-                    discValue = d.type == "percent" ? String(d.value) : String(format: "%.2f", Double(d.value) / 100)
-                }
-                Task { await store.loadTables() }
+            Spacer()
+            if hasTab {
+                Button { Task { await store.togglePark() } } label: {
+                    Image(systemName: store.isParked ? "play.circle" : "pause.circle").foregroundStyle(theme.color.textSecondary)
+                }.buttonStyle(.plain).accessibilityLabel(store.isParked ? "Resume check" : "Hold check")
             }
+        }
+        .padding(theme.space.lg)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: theme.space.sm) {
+            Image(systemName: "cart").font(.system(size: 34)).foregroundStyle(theme.color.textSecondary)
+            Text("Tap items to start a sale").textRole(.callout).foregroundStyle(theme.color.textSecondary)
+            Text("or open a check from the strip above").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, theme.space.xxl)
+    }
+
+    // MARK: channel
+
+    private var channelSection: some View {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+            Text("CHANNEL").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+            Picker("Channel", selection: $channel) {
+                Text("Pick…").tag("")
+                Text("Dine-in").tag("dine-in")
+                Text("Takeaway").tag("takeout")
+                Text("Delivery").tag("delivery")
+            }
+            .pickerStyle(.segmented)
             .onChange(of: channel) { _, c in if !c.isEmpty { Task { await store.setChannel(c) } } }
-            .onChange(of: covers) { _, n in Task { await store.setCovers(n) } }
-            .onChange(of: tableId) { _, id in Task { await store.setTable(id) } }
-            .dsToast($message)
+            if channel == "dine-in" {
+                Stepper("Covers: \(covers)", value: $covers, in: 1...50)
+                    .onChange(of: covers) { _, n in Task { await store.setCovers(n) } }
+                Picker("Table", selection: $tableId) {
+                    Text("No table").tag("")
+                    ForEach(store.tables) { t in Text(tableLabel(t)).tag(t.id) }
+                }
+                .onChange(of: tableId) { _, id in Task { await store.setTable(id) } }
+            }
+            if channel == "delivery" {
+                TextField("Delivery address", text: $address, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { Task { await store.setAddress(address) } }
+            }
+            if !channelReady {
+                Label("Pick a channel before firing or charging", systemImage: "exclamationmark.triangle.fill")
+                    .textRole(.caption).foregroundStyle(theme.color.warning)
+            }
         }
     }
 
-    private func totalRow(_ label: String, _ amount: Grosze, bold: Bool = false) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            MoneyText(amount)
+    // MARK: lines
+
+    private var linesSection: some View {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+            HStack {
+                Text("ITEMS").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                Spacer()
+                if hasTab {
+                    Toggle("Coursed", isOn: Binding(get: { store.isCoursed }, set: { v in Task { await store.setCoursed(v) } }))
+                        .toggleStyle(.button).controlSize(.small).tint(theme.color.accent)
+                }
+            }
+            if store.ticketLines.isEmpty {
+                Text("No items yet").textRole(.callout).foregroundStyle(theme.color.textSecondary)
+            }
+            ForEach(store.ticketLines, id: \.item.id) { line in
+                HStack(spacing: theme.space.sm) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(line.item.name).font(.subheadline.weight(.medium)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                        MoneyText(line.item.price * line.qty).font(.caption).foregroundStyle(theme.color.textSecondary)
+                    }
+                    Spacer()
+                    HStack(spacing: theme.space.sm) {
+                        stepBtn("minus") { store.remove(line.item.id) }
+                        Text("\(line.qty)").font(.subheadline.weight(.bold)).monospacedDigit().frame(minWidth: 18).foregroundStyle(theme.color.textPrimary)
+                        stepBtn("plus") { store.add(line.item) }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         }
-        .font(bold ? .headline : .body)
-        .foregroundStyle(theme.color.textPrimary)
+    }
+
+    private func stepBtn(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.footnote.weight(.bold)).frame(width: 30, height: 30)
+                .foregroundStyle(theme.color.accent)
+                .background(theme.color.surface, in: Circle())
+                .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
+        }.buttonStyle(.plain)
+    }
+
+    // MARK: cross-sell
+
+    private var suggestionsRow: some View {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
+            Text("COMPLETE THE MEAL").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: theme.space.sm) {
+                    ForEach(store.suggestions) { s in
+                        Button { store.add(byId: s.id) } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle.fill")
+                                Text(s.name).lineLimit(1)
+                                MoneyText(s.price)
+                            }
+                            .textRole(.caption)
+                            .padding(.horizontal, theme.space.sm).padding(.vertical, 6)
+                            .foregroundStyle(theme.color.accent)
+                            .background(theme.color.accent.opacity(0.14), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Add \(s.name), \(s.reason)")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: discount
+
+    @ViewBuilder
+    private var discountSection: some View {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+            HStack {
+                Text("DISCOUNT").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                Spacer()
+                if hasTab {
+                    Button(showDiscount ? "Close" : "Add") { withAnimation { showDiscount.toggle() } }
+                        .font(.caption.weight(.semibold)).foregroundStyle(theme.color.accent)
+                }
+            }
+            if let d = store.discount {
+                HStack {
+                    Text(discountLabel(d)).textRole(.callout).foregroundStyle(theme.color.success)
+                    Spacer()
+                    Button("Remove", role: .destructive) { Task { await store.setDiscount(nil) } }.font(.caption)
+                }
+            }
+            if showDiscount && hasTab {
+                Picker("Type", selection: $discKind) {
+                    Text("None").tag(DiscKind.none); Text("Percent").tag(DiscKind.percent); Text("Amount").tag(DiscKind.amount)
+                }.pickerStyle(.segmented)
+                if discKind != .none {
+                    HStack {
+                        TextField(discKind == .percent ? "0–100" : "zł", text: $discValue).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
+                        Button("Apply") { Task { await applyDiscount() } }.buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: footer
+
+    private var footer: some View {
+        VStack(spacing: theme.space.sm) {
+            Divider().overlay(theme.color.line)
+            VStack(spacing: 4) {
+                totalRow("Subtotal", store.total, bold: false)
+                if store.discountAmount > 0 { totalRow("Discount", -store.discountAmount, bold: false) }
+                totalRow("Total", store.totalAfterDiscount, bold: true)
+            }
+            actions
+        }
+        .padding(theme.space.lg)
+        .background(theme.color.surface)
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+        if hasTab {
+            HStack(spacing: theme.space.sm) {
+                if store.isCoursed {
+                    Menu {
+                        ForEach(["starter", "main", "dessert", "drink"], id: \.self) { c in
+                            Button(store.firedCourses.contains(c) ? "✓ \(c.capitalized)" : c.capitalized) {
+                                Task { message = await store.fireCurrentTab(courses: [c]) ?? "Fired \(c)" }
+                            }
+                        }
+                        Divider()
+                        Button("Fire all") { Task { message = await store.fireCurrentTab() ?? "Sent to kitchen" } }
+                    } label: {
+                        Label("Fire", systemImage: "flame.fill").frame(maxWidth: .infinity, minHeight: 48)
+                    }
+                    .buttonStyle(.bordered).disabled(!channelReady)
+                } else {
+                    Button { Task { message = await store.fireCurrentTab() ?? "Sent to kitchen" } } label: {
+                        Label("Send", systemImage: "flame.fill").frame(maxWidth: .infinity, minHeight: 48)
+                    }
+                    .buttonStyle(.bordered).disabled(!channelReady || store.isEmpty)
+                }
+                DSButton("Charge") { Task { message = await store.chargeCurrentTab() ?? "Charged" } }
+                    .disabled(!channelReady || store.isEmpty)
+                    .opacity(channelReady && !store.isEmpty ? 1 : 0.5)
+            }
+        } else if !store.isEmpty {
+            HStack(spacing: theme.space.sm) {
+                Button { Task { await store.startCheckFromTicket(name: nil) } } label: {
+                    Label("Start check", systemImage: "plus.rectangle.on.rectangle").frame(maxWidth: .infinity, minHeight: 48)
+                }.buttonStyle(.bordered)
+                DSButton("Charge") { onWalkInCharge() }
+            }
+            Button("Clear", role: .destructive) { store.clear() }.font(.caption)
+        }
+    }
+
+    // MARK: helpers
+
+    private func syncFromStore() {
+        channel = store.channel ?? ""
+        covers = store.covers
+        address = store.address
+        tableId = store.tableId ?? ""
+        if let d = store.discount {
+            discKind = d.type == "percent" ? .percent : .amount
+            discValue = d.type == "percent" ? String(d.value) : String(format: "%.2f", Double(d.value) / 100)
+        } else { discKind = .none; discValue = "" }
+    }
+
+    private func totalRow(_ label: String, _ amount: Grosze, bold: Bool) -> some View {
+        HStack {
+            Text(label).foregroundStyle(bold ? theme.color.textPrimary : theme.color.textSecondary)
+            Spacer()
+            MoneyText(amount).foregroundStyle(theme.color.textPrimary)
+        }
+        .font(bold ? .headline : .subheadline)
     }
 
     private func tableLabel(_ t: FloorTable) -> String {
@@ -643,6 +900,7 @@ private struct CheckSheet: View {
             ? PosTabDiscount(type: "percent", value: max(0, min(100, Int(num.rounded()))))
             : PosTabDiscount(type: "amount", value: Int((num * 100).rounded()))
         message = await store.setDiscount(d) != nil ? "Discount applied" : "Couldn’t apply discount"
+        showDiscount = false
     }
 }
 

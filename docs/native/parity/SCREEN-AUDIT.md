@@ -172,6 +172,36 @@ institutional treatment into the next tier of surfaces:
   (throughput / covers / revenue) on the owner Atlas board, off the real
   `/admin/kds/fleet` station-capacity feed. Fleet-pace ⓘ.
 
+### Core UX overhaul (this pass) ✅
+The Core front-of-house surfaces were functionally wired but visually thin /
+cramped. This pass rebuilds their layouts to a polished, iPad-first standard.
+- **POS (`/core/pos`)** — rebuilt from a single scrolling list + crammed bottom
+  bar + three sheets into a proper **split-pane till**: a top **open-checks strip**
+  (chips with line-count badges, Quick-sale, + New, context-void), a **menu grid**
+  (category rail + live search + tappable item cards with qty badges and 86-state)
+  on the left, and an **always-visible Check panel** on the right (channel +
+  covers/table or delivery address, line steppers, cross-sell, inline discount,
+  coursing, totals, Fire/course/Charge). Adaptive: on iPhone the panel becomes a
+  cart-bar → sheet. A counter-sale ticket can be promoted to a saved check. Same
+  `OperatorPOSStore` actuator (server-priced, combos/discount/coursing resolve
+  server-side). The walk-in cash keypad (`ChargeSheet`) is retained.
+- **Service (`/core/service/slots`)** — rebuilt from a flat list into a capacity
+  board: a KPI strip (slots · booked · capacity · **fill-rate gauge**), slots
+  **grouped by day** with per-day load, and per-slot rows with a green→amber→red
+  **capacity fill bar**, channel chips, a min-spend badge and active/draft status.
+  Tapping opens the existing capacity/status editor. Two five-section ⓘ.
+- **Guest (`/core/guest`)** — rebuilt the loyalty roster with a KPI strip
+  (members · new-30d · **birthdays this month** · contactable), search + sort
+  (recent / A–Z) and richer member cards. Two five-section ⓘ.
+
+**Honest scope note.** Several web `/core` features are deliberately deferred —
+they need `/api/v1` endpoints the facade doesn't yet expose or data the current
+DTOs don't carry: the **Floor plan** (predictive seating, zones, table CRUD —
+needs floor-twin), **Slots Demand-Exchange** (forecast + tier levers), the
+**WhatsApp Guest Inbox**, **Concierge/MCP**, **Booking console**, and the
+CRM/Loyalty deep tools (customer-intelligence, GDPR export/erase, points-adjust,
+notes, win-back). These remain honest gaps rather than mocked surfaces (Rule #1).
+
 ---
 
 ## Wave D — first write surface beyond the existing ones (done this pass)
