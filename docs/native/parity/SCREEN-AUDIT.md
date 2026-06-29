@@ -21,20 +21,41 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ### KDS — Kitchen Display (`/core/kds` · `KDSBoardView.swift`) ✅🟡
 - **Web (resolved):** three columns — **New** (confirmed) → **Firing** (preparing)
-  → **Ready·Expo** (ready); station filters (all/pizza/pasta/…); forward bump
-  (`nextStatus`); a **recall** of the *last completed* ticket within 10 min
-  (`POST /api/admin/orders/[id]/recall`); predictive at-risk tone tiers.
-- **Native now:** **three lanes** (New / Firing / Ready) — brought to 1:1 with the
-  web columns this pass (`KDSStore.incoming/cooking/ready`) — each a
-  `DSSectionHeader` + count `DSBadge`, tickets via **`KDSTicket`** (age timer
-  fresh→cooking→late), forward bump over SSE/PATCH, per-lane `DSEmptyState`.
-- **Shipped:** **recall** — `POST /api/v1/orders/:id/recall` (completed→ready,
-  audited) + a native "Recall" toolbar action that un-bumps the last completed
-  ticket (the mis-tap undo).
-- **Shipped:** **station filter** — `category` added to the order-line DTO; a
-  native station Menu filters the lanes (web STATION_FILTERS semantics).
+  → **Ready·Expo** (ready); station filters; forward bump (`nextStatus`); a
+  **recall** tray (last completions, 10-min window); **predictive at-risk tone
+  tiers** + SLA meter + due countdown; a KPI strip; a Chef station make-queue; a
+  Fleet (owner) atlas; an 86 dialog; sound chimes; pause; kiosk fullscreen.
+- **Shipped — ticket detail parity (this pass):** the v1 order DTO was enriched
+  (`schemas.ts`/`order-dto.ts`) so the native **`KDSTicket`** now renders 1:1 with
+  the web `TicketCard`: short id + channel chip (party size), **predictive due
+  countdown + SLA meter + at-risk pill** (server `prediction` block, computed per
+  location via `analyzeTruck` in the board-level `toOrderDTOs`), **coursing-held**
+  callout, **station-grouped** lines with **KDS-flagged modifiers** + notes, an
+  allergen line, the guest note. Pure tone/timing/grouping in
+  `CoreModels/KDSLogic.swift` (shared, mirroring the web `kds-board`/`kds-prediction`).
+- **Shipped — board chrome (this pass):** a live **KPI strip** (Open / New /
+  Firing / Ready / At risk / Late / Oldest / Avg age, board-derived, on a 2s
+  aggregate clock), a **station filter strip**, a **status lane segment** (focus
+  collapses to one column), a **Chef** make-queue mode (station queue, oldest-first
+  + depth header), a **multi-entry recall tray** (`KDSStore.liveRecents`, 10-min,
+  via `POST /api/v1/orders/:id/recall`), and a **pause/resume** SSE control.
+- **Shipped — Fleet + floor-ops (this pass):** the two facade feeds landed.
+  - **Fleet (owner atlas)** — `GET /api/v1/admin/kds/fleet` (owner; pure mappers in
+    `fleet-dto.ts`, unit-tested) + a native **`KDSFleetView`** (owner-gated view
+    segment, polled by `KDSFleetStore`): cross-truck totals, the promise-accuracy
+    benchmark, per-truck tiles (health · counts · pace · urgent-first ticket
+    preview). Tile previews reuse the enriched Order, so they match the KDS board.
+  - **Done/hr + On-shift KPIs** — `GET /api/v1/admin/kds/floor-ops` (manager+,
+    scope-aware, aggregates chain-wide) → two extra KPI cells for manager+ tokens.
+  - **86 (eighty-six) dialog** — a native **`EightySixSheet`** (manager+ toolbar
+    action): since availability is per-location and the board streams chain-wide,
+    the sheet carries its own **location picker**, then reads `GET /api/v1/admin/
+    menu?location=` and writes `PATCH /api/v1/admin/menu` to 86 / restore items.
+- **Honest gaps (hardware-gated, not faked — Rule #1):**
+  - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
+    runtime concerns; the iPad app is already chromeless).
 
-### POS — Till (`/core/pos` · `OperatorPOSView.swift`) 🟡
+### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
   combo discount + cross-sell, Send-to-KDS / Fire-course / Charge. **No split-bill**
   (the nav blurb overstates; the web does coursing, not bill-splitting).
@@ -49,24 +70,46 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped:** **coursing** — a shared `@/lib/pos/fireTab` actuator (web + v1 fire
   through one implementation) + `/api/v1/admin/pos/tabs/:id/{fire,charge}`; native
   Coursed toggle + Fire-course menu + Charge-tab (courses auto-assign by category).
-  Manual per-line recourse is the only follow-up. (Still *not* split-bill.)
+- **Shipped — check editor + broken-flow fix (this pass):** `fireTab`/`chargeTab`
+  hard-require a channel ("Pick a channel first"), but the app opened tabs with no
+  way to set one — so native tabs **couldn't fire or charge**. New **`CheckSheet`**
+  (off the ticket bar): **channel** picker (dine-in / takeaway / delivery, required),
+  dine-in **covers** stepper, delivery **address**, **per-line +/- editing** (was
+  add-only — no decrement except Clear), a manual **discount** (percent / amount,
+  discounted-total footer preview; server re-prices), and a **park** (hold) toggle.
+- **Shipped — facade:** the v1 tab PUT now forwards **`discount`** (was dropped);
+  `PosTab` DTO + `PosTabSaveBody` carry `discount`/`address`, with explicit-clear
+  encoding (omit = preserve, null = clear). Also fixed a KDS-pass bug where
+  `/api/v1/customer/orders` fed `map`'s index as the new `prediction` arg.
+- **Shipped — table assignment (this pass):** `GET /api/v1/admin/floor/tables`
+  (staff+, read-only twin of web `/api/admin/floor/tables`) + a native table
+  picker in `CheckSheet` (dine-in) that seats the check (`tableId`).
+- **Honest gaps (not faked — Rule #1):** **Tender method** (Cash/Card) on a *tab*
+  charge — the counter sale captures it (`POSKeypad`), the tab charge settles
+  without recording the method. (Still *not* split-bill — the web does coursing,
+  not bill-splitting.)
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
   (id/guest/phone/table), KPI strip, a **detail dialog** (inspect the full ticket)
   with **Mark paid** (settle) + **Print receipt**. **No "refund"** (the earlier
   audit note was wrong — it's settle + print).
-- **Native now:** KPI trio via **`MetricTile`**, a **search field + Current/All
-  scope** toggle (`shown` filter), `DSSectionHeader` sections, and **tappable rows
-  → read-only order detail sheet** (the inspect path) — added this pass.
 - **Shipped:** **Mark paid** — `POST /api/v1/orders/:id/settle` (idempotent,
   audited) wired into the detail sheet; the DTO already carried `channel`/`paidAt`
   so the native model now decodes them (paid/channel badges + an "unpaid" row
   marker).
 - **Shipped:** **Print receipt** — `POST /api/v1/orders/:id/receipt`; native shows
   the printer confirmation or a shareable plain-text preview (no-hardware fallback).
-- **Shipped:** **channel dropdown** filter in the Orders filter bar (scope +
-  channel, over the decoded field).
+- **Shipped:** **channel dropdown** filter.
+- **Shipped — board parity (this pass):** the KPI strip now mirrors the web's
+  **business** metrics (Orders **today** / **Current** / **To pay** / **Paid
+  today** revenue) instead of raw status counts (the sections still show those);
+  the scope toggle is the full **Current / Paid / All** (was Current/All); dine-in
+  rows + the detail sheet resolve **table numbers** (via the new
+  `GET /api/v1/admin/floor/tables`, loaded per board location since the board is
+  chain-wide) and **search now matches on table**; the detail sheet shows the
+  **seating line** (table · party size). No facade change — the order DTO already
+  carries `tableId`/`partySize`/`channel`/`paidAt`.
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
 - **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
@@ -84,12 +127,41 @@ Calculator metric values + the Rewards loyalty-points hero → `.textRole(…)`.
 only remaining `.system(size:)` calls are **SF Symbol images** (icons), which are
 legitimately fixed-size. Verified by grep in CI-adjacent review.
 
-## Remaining live surfaces (48)
+## Remaining live surfaces (~48) — interaction depth
 
 Render real `/api/v1/admin/*` data through the shared loaders
 (`OperatorListLoader`, `OperatorScreens*.swift`) + dedicated views. Now DS-clean
-on typography. Remaining work is **interaction depth** (filters/detail/write
-actions) per surface, which is facade-gated — tracked as the waves land.
+on typography. Remaining work is **interaction depth** (filters / detail / write
+actions) per surface, most of it facade-gated.
+
+**Write-action template (shipped).** `OperatorListView` now takes an optional
+`toolbar:` slot that receives a `reload` closure, so any list surface gains a
+write action that refreshes on success — no bespoke store per screen. First two
+operator-log surfaces on it:
+- **HACCP** — `POST /api/v1/admin/haccp` (staff+, server computes the ok/flagged
+  verdict) + a native **`LogTempButton` → Log-temperature sheet** (location
+  picker, sensor, °C → tenths).
+- **Waste** — `POST /api/v1/admin/waste` (staff+) + a native **`LogWasteButton` →
+  Log-waste sheet** (location, item, qty + unit, reason, optional cost).
+- **Announcements** — `POST /api/v1/admin/announcements` (**owner**, web parity) +
+  a native **`NewAnnouncementButton` → New-announcement sheet** (title, message,
+  pin). The view takes `role` and shows the action only to owners (managers see
+  the list) — `toolbar:` is simply `nil` otherwise.
+- **Cash** — `POST /api/v1/admin/cash` (manager, opens a till session; 409 if one
+  is already open) + a native **`OpenCashButton` → Open-till sheet** (location,
+  opening float, notes).
+- **Feedback** — `PATCH /api/v1/admin/feedback` (manager) + a **per-row status
+  menu** (new → reviewed → responded). Shows the other variant: `OperatorFeedbackView`
+  became a dedicated mutable view (store + per-row write + reload), the template
+  for any per-item action that the toolbar slot can't express.
+- **Purchase orders** — `PATCH /api/v1/admin/purchase-orders` (manager) + a per-row
+  status menu (draft → sent → received → cancelled); marking **received** posts the
+  receive stock movements server-side (`updatePurchaseOrderStatus` →
+  `receivePurchaseOrder`). `OperatorPurchaseOrdersView` is now a mutable view.
+
+The same template extends to the other write surfaces as they land (handover
+close, inventory adjust, events, compliance, …) — each is a v1 mutation endpoint
++ a toolbar or per-row action. Tracked as the waves continue.
 
 ## Scaffolds (2) 🏗 — intentional
 `/admin/soc2` and `/admin/capabilities` render `OperatorSurfaceView` (purpose +
@@ -110,9 +182,18 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
   CRUD + native load/save/void/charge).
 - ✅ **Orders channel dropdown** filter.
 - ✅ **POS coursing** — shared `fireTab` actuator + v1 fire/charge + native course UI.
-- ⏳ **On-device verification only** — every source-resolvable parity item is now
-  shipped; what remains is walking both apps side-by-side on a simulator (needs a
-  Mac) and manual per-line recourse polish.
+- ✅ **KDS ticket detail parity** — enriched v1 order DTO (modifier labels+flag,
+  allergens, coursing, simulated, per-location `prediction`); native `KDSTicket`
+  renders due countdown + SLA meter + at-risk pill + coursing + station groups +
+  modifiers + allergens + guest note.
+- ✅ **KDS board chrome** — KPI strip, station strip, lane segment, Chef mode,
+  multi-entry recall tray, pause/resume.
+- ✅ **KDS Fleet (owner atlas)** — `/api/v1/admin/kds/fleet` + native `KDSFleetView`
+  (totals, benchmark, per-truck tiles with pace + ticket preview).
+- ✅ **KDS Done/hr + On-shift KPIs** — `/api/v1/admin/kds/floor-ops` (manager+).
+- ✅ **KDS 86 dialog** — native `EightySixSheet` (manager+) with a location picker
+  over the existing `/api/v1/admin/menu` GET/PATCH.
+- ⏳ **KDS sound chimes / kiosk fullscreen** — on-device only (hardware-gated).
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.

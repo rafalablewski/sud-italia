@@ -500,18 +500,24 @@
             "items": {
               "type": "object",
               "properties": {
-                "groupId": {
+                "label": {
                   "type": "string"
                 },
-                "optionId": {
-                  "type": "string"
+                "flag": {
+                  "type": "boolean"
                 }
               },
               "required": [
-                "groupId",
-                "optionId"
+                "label",
+                "flag"
               ],
               "additionalProperties": false
+            }
+          },
+          "allergens": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
@@ -522,7 +528,8 @@
           "quantity",
           "unitPrice",
           "notes",
-          "modifiers"
+          "modifiers",
+          "allergens"
         ],
         "additionalProperties": false
       },
@@ -530,6 +537,9 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string"
+          },
+          "shortId": {
             "type": "string"
           },
           "locationSlug": {
@@ -678,10 +688,83 @@
                 "type": "null"
               }
             ]
+          },
+          "coursing": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fired": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "held": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "fired",
+                  "held"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "promisedReadyAtMs": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "predictedReadyAtMs": {
+                    "type": "number"
+                  },
+                  "predSeconds": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "atRisk": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "promisedReadyAtMs",
+                  "predictedReadyAtMs",
+                  "predSeconds",
+                  "atRisk"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "id",
+          "shortId",
           "locationSlug",
           "status",
           "fulfillmentType",
@@ -700,7 +783,367 @@
           "createdAt",
           "paidAt",
           "estimatedReadyAt",
-          "queuePosition"
+          "queuePosition",
+          "coursing",
+          "simulated",
+          "prediction"
+        ],
+        "additionalProperties": false
+      },
+      "FloorOps": {
+        "type": "object",
+        "properties": {
+          "locationSlug": {
+            "type": "string"
+          },
+          "throughputLastHour": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Orders completed in the last 60 min"
+          },
+          "onShift": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Staff currently clocked in"
+          }
+        },
+        "required": [
+          "locationSlug",
+          "throughputLastHour",
+          "onShift"
+        ],
+        "additionalProperties": false
+      },
+      "FleetStation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "currentLoad": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "forecast": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "demand": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "capacity": {
+            "type": "number"
+          },
+          "pct": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "util %, 999 when capacity is 0"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "calm",
+              "warn",
+              "risk"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "currentLoad",
+          "forecast",
+          "demand",
+          "capacity",
+          "pct",
+          "tier"
+        ],
+        "additionalProperties": false
+      },
+      "FleetTile": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "ready": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "late": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "risk": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "active",
+              "ready",
+              "late",
+              "risk"
+            ],
+            "additionalProperties": false
+          },
+          "health": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "0–100 health score"
+          },
+          "healthState": {
+            "type": "string"
+          },
+          "healthClass": {
+            "type": "string",
+            "enum": [
+              "good",
+              "warn",
+              "risk",
+              "alert"
+            ]
+          },
+          "onShift": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "throughputHr": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "coversHr": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "revenueHr": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minor units (grosze), last 60 min"
+          },
+          "promiseAccuracy": {
+            "type": "number"
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FleetStation"
+            }
+          },
+          "tickets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "counts",
+          "health",
+          "healthState",
+          "healthClass",
+          "onShift",
+          "throughputHr",
+          "coversHr",
+          "revenueHr",
+          "promiseAccuracy",
+          "stations",
+          "tickets"
+        ],
+        "additionalProperties": false
+      },
+      "FleetBoard": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string"
+          },
+          "paceWindowMin": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "promiseTarget": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "late": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "risk": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "ready": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "throughputHr": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "coversHr": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "revenueHr": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "active",
+              "late",
+              "risk",
+              "ready",
+              "throughputHr",
+              "coversHr",
+              "revenueHr"
+            ],
+            "additionalProperties": false
+          },
+          "benchmark": {
+            "type": "object",
+            "properties": {
+              "fleetAccuracy": {
+                "type": "number"
+              },
+              "leader": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gap": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "fleetAccuracy",
+              "leader",
+              "gap"
+            ],
+            "additionalProperties": false
+          },
+          "tiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FleetTile"
+            }
+          }
+        },
+        "required": [
+          "generatedAt",
+          "paceWindowMin",
+          "promiseTarget",
+          "totals",
+          "benchmark",
+          "tiles"
+        ],
+        "additionalProperties": false
+      },
+      "FloorTable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "seats": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "seated",
+              "reserved",
+              "out-of-service"
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "seats",
+          "zone",
+          "status",
+          "notes"
         ],
         "additionalProperties": false
       }
@@ -2049,6 +2492,202 @@
             }
           },
           "503": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/kds/fleet": {
+      "get": {
+        "summary": "Owner fleet board (Atlas) — cross-truck KDS health",
+        "description": "Live KDS health for every active truck: counts, predicted-ready/at-risk, capacity-vs-demand pace, rate metrics, promise accuracy + on-shift, and a fleet benchmark. Owner-level; respects token scope. Inherently cross-location.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "includeSimulated",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fleet board",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FleetBoard"
+                    },
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/floor/tables": {
+      "get": {
+        "summary": "Floor tables for the POS dine-in table picker",
+        "description": "Read-only list of a location's floor tables (id, number, seats, zone, status). Staff+; location-scoped + required. Twin of web /api/admin/floor/tables.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Floor tables",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FloorTable"
+                      }
+                    },
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/kds/floor-ops": {
+      "get": {
+        "summary": "Manager KDS floor-ops header (throughput + on-shift)",
+        "description": "Throughput (orders completed in the last 60 min) + staff on the clock for the KDS KPI strip. Manager+; honors scope. With ?location= it reflects that truck; without one it aggregates across the operator's scoped locations.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Floor-ops signals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FloorOps"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Error envelope",
             "content": {
               "application/json": {

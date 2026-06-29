@@ -368,6 +368,76 @@ public extension Endpoint {
     static func adminAgentHQ() -> Endpoint<AgentHQ> {
         Endpoint<AgentHQ>(.get, "admin/agent-hq", requiresAuth: true)
     }
+
+    // KDS owner fleet (Atlas) + manager floor-ops header.
+    static func adminKdsFleet(includeSimulated: Bool = false) -> Endpoint<FleetBoard> {
+        Endpoint<FleetBoard>(.get, "admin/kds/fleet",
+            query: includeSimulated ? ["includeSimulated": "1"] : [:], requiresAuth: true)
+    }
+    static func adminKdsFloorOps(location: String? = nil) -> Endpoint<FloorOps> {
+        Endpoint<FloorOps>(.get, "admin/kds/floor-ops",
+            query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
+    /// Floor tables for the POS dine-in table picker (read-only). Location required.
+    static func adminFloorTables(location: String) -> Endpoint<[FloorTable]> {
+        Endpoint<[FloorTable]>(.get, "admin/floor/tables", query: ["location": location], requiresAuth: true)
+    }
+
+    // Operator write actions (staff+) — log a HACCP reading / a waste entry. The
+    // server computes the HACCP verdict; both return the created record.
+    static func adminLogTemp(locationSlug: String, sensor: String, tempCelsius: Int,
+                             recordedBy: String? = nil) -> Endpoint<AdminTempLog> {
+        let body = try? JSONEncoder().encode(LogTempBody(
+            locationSlug: locationSlug, sensor: sensor, tempCelsius: tempCelsius, recordedBy: recordedBy))
+        return Endpoint<AdminTempLog>(.post, "admin/haccp", body: body, requiresAuth: true)
+    }
+    static func adminLogWaste(locationSlug: String, item: String, quantity: Double, unit: String,
+                              reason: String, estimatedCostGrosze: Int? = nil,
+                              notes: String? = nil) -> Endpoint<AdminWasteEntry> {
+        let body = try? JSONEncoder().encode(LogWasteBody(
+            locationSlug: locationSlug, item: item, quantity: quantity, unit: unit, reason: reason,
+            estimatedCostGrosze: estimatedCostGrosze, notes: notes))
+        return Endpoint<AdminWasteEntry>(.post, "admin/waste", body: body, requiresAuth: true)
+    }
+}
+
+public extension Endpoint {
+    /// Post a team announcement (owner). Returns the created row.
+    static func adminPostAnnouncement(title: String, body: String, pinned: Bool = false) -> Endpoint<AdminAnnouncement> {
+        let payload = try? JSONEncoder().encode(PostAnnouncementBody(title: title, body: body, pinned: pinned))
+        return Endpoint<AdminAnnouncement>(.post, "admin/announcements", body: payload, requiresAuth: true)
+    }
+    /// Open a till session (manager). 409 if one is already open at the location.
+    static func adminOpenCashSession(locationSlug: String, openingFloat: Grosze, notes: String? = nil) -> Endpoint<AdminCashSession> {
+        let payload = try? JSONEncoder().encode(OpenCashBody(locationSlug: locationSlug, openingFloat: openingFloat, notes: notes))
+        return Endpoint<AdminCashSession>(.post, "admin/cash", body: payload, requiresAuth: true)
+    }
+    /// Advance a review's triage status (manager): new | reviewed | responded.
+    static func adminSetFeedbackStatus(id: String, status: String) -> Endpoint<AdminFeedback> {
+        let payload = try? JSONEncoder().encode(["id": id, "status": status])
+        return Endpoint<AdminFeedback>(.patch, "admin/feedback", body: payload, requiresAuth: true)
+    }
+    /// Advance a PO's status (manager): draft | sent | received | cancelled.
+    /// `received` posts the receive stock movements server-side.
+    static func adminSetPurchaseOrderStatus(id: String, status: String) -> Endpoint<AdminPurchaseOrder> {
+        let payload = try? JSONEncoder().encode(["id": id, "status": status])
+        return Endpoint<AdminPurchaseOrder>(.patch, "admin/purchase-orders", body: payload, requiresAuth: true)
+    }
+}
+
+private struct PostAnnouncementBody: Encodable {
+    let title: String; let body: String; let pinned: Bool
+}
+private struct OpenCashBody: Encodable {
+    let locationSlug: String; let openingFloat: Grosze; let notes: String?
+}
+
+private struct LogTempBody: Encodable {
+    let locationSlug: String; let sensor: String; let tempCelsius: Int; let recordedBy: String?
+}
+private struct LogWasteBody: Encodable {
+    let locationSlug: String; let item: String; let quantity: Double; let unit: String
+    let reason: String; let estimatedCostGrosze: Int?; let notes: String?
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
@@ -431,16 +501,50 @@ public struct PosTabSaveBody: Encodable, Sendable {
     public let items: [Line]
     public let tableId: String?
     public let covers: Int?
+    public let address: String?
     public let customerName: String?
     public let customerPhone: String?
     public let coursed: Bool?
+    /// Manual discount value when `discountProvided` is true.
+    public let discount: PosTabDiscount?
+    /// When true the discount key is serialized (null clears, object sets);
+    /// when false it's omitted so the server preserves its current value.
+    public let discountProvided: Bool
+
     public init(id: String, locationSlug: String, items: [Line], name: String? = nil,
                 channel: String? = nil, status: String? = nil, tableId: String? = nil,
-                covers: Int? = nil, customerName: String? = nil, customerPhone: String? = nil,
-                coursed: Bool? = nil) {
+                covers: Int? = nil, address: String? = nil, customerName: String? = nil,
+                customerPhone: String? = nil, coursed: Bool? = nil,
+                discount: PosTabDiscount? = nil, discountProvided: Bool = false) {
         self.id = id; self.locationSlug = locationSlug; self.items = items; self.name = name
         self.channel = channel; self.status = status; self.tableId = tableId; self.covers = covers
-        self.customerName = customerName; self.customerPhone = customerPhone; self.coursed = coursed
+        self.address = address; self.customerName = customerName; self.customerPhone = customerPhone
+        self.coursed = coursed; self.discount = discount; self.discountProvided = discountProvided
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, locationSlug, name, channel, status, items, tableId, covers, address
+        case customerName, customerPhone, coursed, discount
+    }
+
+    // Optionals omit when nil (the server preserves those fields) — EXCEPT a
+    // provided discount, which is always written so a full-tab PUT can clear it
+    // (null) or set it (object), mirroring the web tab PUT.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(locationSlug, forKey: .locationSlug)
+        try c.encodeIfPresent(name, forKey: .name)
+        try c.encodeIfPresent(channel, forKey: .channel)
+        try c.encodeIfPresent(status, forKey: .status)
+        try c.encode(items, forKey: .items)
+        try c.encodeIfPresent(tableId, forKey: .tableId)
+        try c.encodeIfPresent(covers, forKey: .covers)
+        try c.encodeIfPresent(address, forKey: .address)
+        try c.encodeIfPresent(customerName, forKey: .customerName)
+        try c.encodeIfPresent(customerPhone, forKey: .customerPhone)
+        try c.encodeIfPresent(coursed, forKey: .coursed)
+        if discountProvided { try c.encode(discount, forKey: .discount) }
     }
 }
 

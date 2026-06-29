@@ -101,12 +101,15 @@ public struct OperatorAlertsView: View {
 public struct OperatorAnnouncementsView: View {
     @Environment(\.theme) private var theme
     private let api: APIClient
-    public init(api: APIClient) { self.api = api }
+    private let role: OperatorRole
+    public init(api: APIClient, role: OperatorRole = .kitchen) { self.api = api; self.role = role }
     public var body: some View {
         OperatorListView(
             title: "Announcements",
             emptyText: "No announcements posted.",
             loader: OperatorListLoader { try await api.send(.adminAnnouncements()) },
+            // Posting is owner-only (web parity); managers see the list, not the action.
+            toolbar: role == .owner ? { reload in AnyView(NewAnnouncementButton(api: api, reload: reload)) } : nil,
             row: { a in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {

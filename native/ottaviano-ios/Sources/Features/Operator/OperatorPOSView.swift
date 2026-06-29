@@ -101,15 +101,29 @@ public final class OperatorPOSStore {
         }
     }
 
-    /// Persist the working ticket onto the current tab. `coursed` overrides the
-    /// tab's coursing flag when provided (the dine-in toggle).
+    /// Persist the working ticket onto the current tab. Any non-nil attribute is
+    /// written; the rest are omitted so the server preserves them. `discount`
+    /// only writes when `discountProvided` (null clears, object sets) — matching
+    /// the v1 tab PUT semantics.
     @discardableResult
-    public func saveCurrentTab(coursed: Bool? = nil) async -> PosTab? {
+    public func saveCurrentTab(
+        coursed: Bool? = nil,
+        channel: String? = nil,
+        status: String? = nil,
+        covers: Int? = nil,
+        address: String? = nil,
+        tableId: String? = nil,
+        discount: PosTabDiscount? = nil,
+        discountProvided: Bool = false
+    ) async -> PosTab? {
         guard let id = currentTabID else { return nil }
         let effectiveCoursed = coursed ?? isCoursed
-        let body = PosTabSaveBody(id: id, locationSlug: location,
-                                  items: ticketLinesForSave(coursed: effectiveCoursed),
-                                  coursed: effectiveCoursed)
+        let body = PosTabSaveBody(
+            id: id, locationSlug: location,
+            items: ticketLinesForSave(coursed: effectiveCoursed),
+            channel: channel, status: status, tableId: tableId, covers: covers, address: address,
+            coursed: effectiveCoursed, discount: discount, discountProvided: discountProvided
+        )
         guard let saved = try? await api.send(.posTabSave(body)) else { return nil }
         currentTab = saved
         if let i = tabs.firstIndex(where: { $0.id == id }) { tabs[i] = saved } else { tabs.insert(saved, at: 0) }
@@ -117,6 +131,48 @@ public final class OperatorPOSStore {
     }
 
     public func setCoursed(_ on: Bool) async { await saveCurrentTab(coursed: on) }
+
+    // ── Tab attributes (web parity: a check needs a channel before it can fire /
+    //    charge; dine-in carries covers + table, delivery an address). ──────────
+    public var channel: String? { currentTab?.channel }
+    public var covers: Int { currentTab?.covers ?? 2 }
+    public var address: String { currentTab?.address ?? "" }
+    public var tableId: String? { currentTab?.tableId }
+    public var discount: PosTabDiscount? { currentTab?.discount }
+    public var isParked: Bool { currentTab?.status == "parked" }
+
+    /// Floor tables for the dine-in table picker (read-only over v1).
+    public private(set) var tables: [FloorTable] = []
+    public func loadTables() async {
+        tables = (try? await api.send(.adminFloorTables(location: location))) ?? []
+    }
+
+    public func setChannel(_ c: String) async { await saveCurrentTab(channel: c) }
+    public func setCovers(_ n: Int) async { await saveCurrentTab(covers: max(1, min(50, n))) }
+    public func setAddress(_ a: String) async { await saveCurrentTab(address: a) }
+    /// Seat the check at a table (empty string clears — mergePosTab drops it).
+    public func setTable(_ id: String) async { await saveCurrentTab(tableId: id) }
+    public func togglePark() async { await saveCurrentTab(status: isParked ? "open" : "parked") }
+    /// Returns the saved tab, or nil if the write failed — so the caller can show
+    /// honest feedback instead of assuming success.
+    @discardableResult
+    public func setDiscount(_ d: PosTabDiscount?) async -> PosTab? {
+        await saveCurrentTab(discount: d, discountProvided: true)
+    }
+
+    /// Grosze value of a manual discount against a base — port of the shared web
+    /// `manualDiscountGrosze`, so the footer preview matches the charged total
+    /// (the server is still authoritative; combos resolve there).
+    public func manualDiscount(_ base: Grosze, _ d: PosTabDiscount?) -> Grosze {
+        guard let d, base > 0 else { return 0 }
+        if d.type == "percent" {
+            let pct = max(0, min(100, d.value))
+            return min(base, Int((Double(base) * Double(pct) / 100).rounded()))
+        }
+        return min(base, max(0, d.value)) // amount (grosze)
+    }
+    public var discountAmount: Grosze { manualDiscount(total, discount) }
+    public var totalAfterDiscount: Grosze { max(0, total - discountAmount) }
 
     /// Fire the current tab to the kitchen — whole, or named courses. Saves the
     /// latest ticket first so the server fires off current truth.
@@ -184,6 +240,7 @@ public struct OperatorPOSView: View {
     @State private var store: OperatorPOSStore
     @State private var showCharge = false
     @State private var showTabs = false
+    @State private var showCheck = false
     @State private var tabMessage: String?
 
     public init(api: APIClient, location: String = "krakow") {
@@ -227,6 +284,7 @@ public struct OperatorPOSView: View {
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
         .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
+        .sheet(isPresented: $showCheck) { CheckSheet(store: store) }
         .dsToast($tabMessage)
     }
 
@@ -254,7 +312,15 @@ public struct OperatorPOSView: View {
                 HStack {
                     Label(name, systemImage: "rectangle.stack.fill")
                         .font(.caption.weight(.semibold)).foregroundStyle(theme.color.accent)
+                    if let ch = store.channel {
+                        Text(ch == "dine-in" ? "Dine-in · \(store.covers)p" : ch == "delivery" ? "Delivery" : "Takeaway")
+                            .font(.caption).foregroundStyle(theme.color.textSecondary)
+                    } else {
+                        Text("Pick channel").font(.caption.weight(.semibold)).foregroundStyle(theme.color.warning)
+                    }
                     Spacer()
+                    Button { showCheck = true } label: { Label("Check", systemImage: "slider.horizontal.3") }
+                        .buttonStyle(.bordered).controlSize(.small)
                     Toggle("Coursed", isOn: Binding(
                         get: { store.isCoursed },
                         set: { v in Task { await store.setCoursed(v) } }
@@ -288,7 +354,12 @@ public struct OperatorPOSView: View {
             HStack {
                 Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s")").font(.subheadline).foregroundStyle(theme.color.textSecondary)
                 Spacer()
-                MoneyText(store.total).font(.headline).foregroundStyle(theme.color.textPrimary)
+                if store.discountAmount > 0 {
+                    MoneyText(store.total).font(.subheadline).strikethrough().foregroundStyle(theme.color.textSecondary)
+                    MoneyText(store.totalAfterDiscount).font(.headline).foregroundStyle(theme.color.textPrimary)
+                } else {
+                    MoneyText(store.total).font(.headline).foregroundStyle(theme.color.textPrimary)
+                }
             }
             HStack(spacing: theme.space.md) {
                 Button("Clear", role: .destructive) { store.clear() }
@@ -414,9 +485,171 @@ private struct ChargeSheet: View {
     }
 }
 
+/// The check editor for an open tab — web `/core/pos` parity: pick a **channel**
+/// (required before a tab can fire/charge), dine-in covers / delivery address,
+/// edit line quantities (+/−), and apply a manual **discount**. Attributes persist
+/// through the v1 tab PUT; the server re-prices (combos + discount) at fire/charge.
+private struct CheckSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let store: OperatorPOSStore
+
+    @State private var channel = ""
+    @State private var covers = 2
+    @State private var address = ""
+    @State private var tableId = ""
+    @State private var discKind: DiscKind = .none
+    @State private var discValue = ""
+    @State private var message: String?
+    private enum DiscKind: Hashable { case none, percent, amount }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Channel") {
+                    Picker("Channel", selection: $channel) {
+                        Text("Pick…").tag("")
+                        Text("Dine-in").tag("dine-in")
+                        Text("Takeaway").tag("takeout")
+                        Text("Delivery").tag("delivery")
+                    }
+                    .pickerStyle(.segmented)
+                    if channel == "dine-in" {
+                        Stepper("Covers: \(covers)", value: $covers, in: 1...50)
+                        Picker("Table", selection: $tableId) {
+                            Text("No table").tag("")
+                            ForEach(store.tables) { t in
+                                Text(tableLabel(t)).tag(t.id)
+                            }
+                        }
+                    }
+                    if channel == "delivery" {
+                        TextField("Delivery address", text: $address, axis: .vertical)
+                            .onSubmit { Task { await store.setAddress(address) } }
+                    }
+                }
+
+                Section("Items") {
+                    if store.ticketLines.isEmpty {
+                        Text("No items").foregroundStyle(theme.color.textSecondary)
+                    }
+                    ForEach(store.ticketLines, id: \.item.id) { line in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(line.item.name).foregroundStyle(theme.color.textPrimary)
+                                MoneyText(line.item.price * line.qty).font(.caption).foregroundStyle(theme.color.textSecondary)
+                            }
+                            Spacer()
+                            Stepper("\(line.qty)",
+                                    onIncrement: { store.add(line.item) },
+                                    onDecrement: { store.remove(line.item.id) })
+                        }
+                    }
+                }
+
+                Section("Discount") {
+                    Picker("Type", selection: $discKind) {
+                        Text("None").tag(DiscKind.none)
+                        Text("Percent").tag(DiscKind.percent)
+                        Text("Amount").tag(DiscKind.amount)
+                    }
+                    .pickerStyle(.segmented)
+                    if discKind != .none {
+                        TextField(discKind == .percent ? "Percent (0–100)" : "Amount in zł", text: $discValue)
+                            .keyboardType(.decimalPad)
+                        DSButton("Apply discount") { Task { await applyDiscount() } }
+                    }
+                    if let d = store.discount {
+                        HStack {
+                            Text(discountLabel(d)).foregroundStyle(theme.color.textPrimary)
+                            Spacer()
+                            Button("Remove", role: .destructive) { Task { await store.setDiscount(nil) } }
+                        }
+                    }
+                }
+
+                Section {
+                    Toggle("Hold (park) this check", isOn: Binding(
+                        get: { store.isParked },
+                        set: { on in Task { if on != store.isParked { await store.togglePark() } } }
+                    ))
+                }
+
+                Section("Totals") {
+                    totalRow("Subtotal", store.total)
+                    if store.discountAmount > 0 { totalRow("Discount", -store.discountAmount) }
+                    totalRow("Total", store.totalAfterDiscount, bold: true)
+                    Text("Server re-prices at charge (combos + discount).")
+                        .font(.footnote).foregroundStyle(theme.color.textSecondary)
+                }
+            }
+            .navigationTitle(store.currentTabName ?? "Check")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        Task {
+                            // Flush a typed delivery address (setAddress saves the tab);
+                            // otherwise persist any line edits.
+                            if channel == "delivery" { await store.setAddress(address) }
+                            else { await store.saveCurrentTab() }
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                channel = store.channel ?? ""
+                covers = store.covers
+                address = store.address
+                tableId = store.tableId ?? ""
+                if let d = store.discount {
+                    discKind = d.type == "percent" ? .percent : .amount
+                    discValue = d.type == "percent" ? String(d.value) : String(format: "%.2f", Double(d.value) / 100)
+                }
+                Task { await store.loadTables() }
+            }
+            .onChange(of: channel) { _, c in if !c.isEmpty { Task { await store.setChannel(c) } } }
+            .onChange(of: covers) { _, n in Task { await store.setCovers(n) } }
+            .onChange(of: tableId) { _, id in Task { await store.setTable(id) } }
+            .dsToast($message)
+        }
+    }
+
+    private func totalRow(_ label: String, _ amount: Grosze, bold: Bool = false) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            MoneyText(amount)
+        }
+        .font(bold ? .headline : .body)
+        .foregroundStyle(theme.color.textPrimary)
+    }
+
+    private func tableLabel(_ t: FloorTable) -> String {
+        let zone = t.zone.map { "\($0) · " } ?? ""
+        return "\(zone)Table \(t.number) · \(t.seats) seats"
+    }
+
+    private func discountLabel(_ d: PosTabDiscount) -> String {
+        let base = d.type == "percent" ? "\(d.value)% off" : "\(String(format: "%.2f", Double(d.value) / 100)) zł off"
+        return d.reason.map { "\(base) · \($0)" } ?? base
+    }
+
+    private func applyDiscount() async {
+        let raw = discValue.replacingOccurrences(of: ",", with: ".")
+        guard let num = Double(raw), num > 0 else { message = "Enter a discount value"; return }
+        let d: PosTabDiscount = discKind == .percent
+            ? PosTabDiscount(type: "percent", value: max(0, min(100, Int(num.rounded()))))
+            : PosTabDiscount(type: "amount", value: Int((num * 100).rounded()))
+        message = await store.setDiscount(d) != nil ? "Discount applied" : "Couldn’t apply discount"
+    }
+}
+
 /// Open checks (Tabs) — list, open a new check, load one into the working ticket,
-/// or void it. Editing happens in the main till (add/remove + "Save to tab");
-/// charging reuses the counter-sale path. Coursing is the next wave (POS-TABS-PLAN).
+/// or void it. Editing happens in the main till (add/remove) + the Check sheet
+/// (channel, covers, address, line +/−, discount); charging fires through the
+/// shared server actuator.
 private struct TabsSheet: View {
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss

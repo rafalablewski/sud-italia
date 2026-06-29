@@ -169,11 +169,40 @@ export const OrderLineSchema = z.object({
   quantity: z.number().int(),
   unitPrice: z.number().int().describe("Minor units (grosze)"),
   notes: z.string().nullable(),
-  modifiers: z.array(z.object({ groupId: z.string(), optionId: z.string() })),
+  // Resolved for the line cook: option label + the menu's `flagOnKds` callout
+  // (e.g. BUFALO MOZZ), so the app needn't carry the modifier catalogue. Mirrors
+  // the web KDS ticket (`buildKdsTicket`).
+  modifiers: z.array(z.object({ label: z.string(), flag: z.boolean() })),
+  // Allergens for the line's dish — the KDS allergen callout. Web parity.
+  allergens: z.array(z.string()),
+});
+
+/** POS coursing state (dine-in) — which courses are away vs still in the
+ *  kitchen. Drives the KDS "Coursed · … held" callout. */
+export const OrderCoursingSchema = z.object({
+  fired: z.array(z.string()),
+  held: z.array(z.string()),
+});
+
+/** Predicted-ready model output for one ticket (server-computed via
+ *  `analyzeTruck`, per location). Powers the KDS SLA meter, due countdown and
+ *  the at-risk tone tier — the signature predictive parity with the web board.
+ *  Null on non-active tickets (completed / cancelled) the model doesn't score. */
+export const OrderPredictionSchema = z.object({
+  /** Promised-ready instant (ms epoch) from the order SLA, or null. */
+  promisedReadyAtMs: z.number().nullable(),
+  /** Model's predicted-ready instant (ms epoch). */
+  predictedReadyAtMs: z.number(),
+  /** Seconds until predicted plate-up, from the frame's compute time. */
+  predSeconds: z.number().int(),
+  /** Model predicts the promise will be missed, before it is actually late. */
+  atRisk: z.boolean(),
 });
 
 export const OrderSchema = z.object({
   id: z.string(),
+  /** Short, glanceable ticket id (last 6, uppercased) — the KDS card header. */
+  shortId: z.string(),
   locationSlug: z.string(),
   status: z.enum(ORDER_STATUSES),
   fulfillmentType: z.enum(["takeout", "delivery", "dine-in"]),
@@ -193,6 +222,90 @@ export const OrderSchema = z.object({
   paidAt: z.string().nullable(),
   estimatedReadyAt: z.string().nullable(),
   queuePosition: z.number().int().nullable(),
+  // KDS ticket enrichment (web `KdsTicket` parity) — coursing callout, the
+  // simulation marker, and the predictive block (SLA meter / at-risk tier).
+  coursing: OrderCoursingSchema.nullable(),
+  simulated: z.boolean(),
+  prediction: OrderPredictionSchema.nullable(),
+});
+
+// ── KDS fleet (owner atlas) + floor-ops (manager header) feeds ─────────────
+
+/** Manager floor-control header signals not already in the order stream:
+ *  throughput (orders completed in the last 60 min) + staff on the clock.
+ *  Open/late/oldest are derived client-side from the streamed board. */
+export const FloorOpsSchema = z.object({
+  /** The location this reflects, or "" when aggregated chain-wide. */
+  locationSlug: z.string(),
+  throughputLastHour: z.number().int().describe("Orders completed in the last 60 min"),
+  onShift: z.number().int().describe("Staff currently clocked in"),
+});
+
+/** One station's capacity-vs-demand pace row on a fleet tile. */
+export const FleetStationSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  currentLoad: z.number().int(),
+  forecast: z.number().int(),
+  demand: z.number().int(),
+  capacity: z.number(),
+  pct: z.number().int().describe("util %, 999 when capacity is 0"),
+  tier: z.enum(["calm", "warn", "risk"]),
+});
+
+/** One truck's live KDS health + pace + active-ticket preview. */
+export const FleetTileSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  counts: z.object({
+    active: z.number().int(),
+    ready: z.number().int(),
+    late: z.number().int(),
+    risk: z.number().int(),
+  }),
+  health: z.number().int().describe("0–100 health score"),
+  healthState: z.string(),
+  healthClass: z.enum(["good", "warn", "risk", "alert"]),
+  onShift: z.number().int(),
+  throughputHr: z.number().int(),
+  coversHr: z.number().int(),
+  revenueHr: z.number().int().describe("Minor units (grosze), last 60 min"),
+  promiseAccuracy: z.number(),
+  stations: z.array(FleetStationSchema),
+  tickets: z.array(OrderSchema),
+});
+
+/** The owner Atlas board — every active truck's KDS health, the cross-truck
+ *  promise-accuracy benchmark, and fleet totals. */
+export const FleetBoardSchema = z.object({
+  generatedAt: z.string(),
+  paceWindowMin: z.number().int(),
+  promiseTarget: z.number().int(),
+  totals: z.object({
+    active: z.number().int(),
+    late: z.number().int(),
+    risk: z.number().int(),
+    ready: z.number().int(),
+    throughputHr: z.number().int(),
+    coversHr: z.number().int(),
+    revenueHr: z.number().int(),
+  }),
+  benchmark: z.object({
+    fleetAccuracy: z.number(),
+    leader: z.string().nullable(),
+    gap: z.number(),
+  }),
+  tiles: z.array(FleetTileSchema),
+});
+
+/** A floor table for the POS dine-in table picker (read-only over v1). */
+export const FloorTableSchema = z.object({
+  id: z.string(),
+  number: z.string(),
+  seats: z.number().int(),
+  zone: z.string().nullable(),
+  status: z.enum(["available", "seated", "reserved", "out-of-service"]),
+  notes: z.string().nullable(),
 });
 
 // ── Inferred TS types (consumed by the DTO mappers + routes) ───────────────
@@ -207,6 +320,11 @@ export type LocationDTO = z.infer<typeof LocationSchema>;
 export type MenuItemDTO = z.infer<typeof MenuItemSchema>;
 export type OrderLineDTO = z.infer<typeof OrderLineSchema>;
 export type OrderDTO = z.infer<typeof OrderSchema>;
+export type FloorOpsDTO = z.infer<typeof FloorOpsSchema>;
+export type FleetStationDTO = z.infer<typeof FleetStationSchema>;
+export type FleetTileDTO = z.infer<typeof FleetTileSchema>;
+export type FleetBoardDTO = z.infer<typeof FleetBoardSchema>;
+export type FloorTableDTO = z.infer<typeof FloorTableSchema>;
 
 // ── Registry → drives OpenAPI components.schemas with shared $refs ─────────
 
@@ -220,3 +338,8 @@ apiRegistry.add(LocationSchema, { id: "Location" });
 apiRegistry.add(MenuItemSchema, { id: "MenuItem" });
 apiRegistry.add(OrderLineSchema, { id: "OrderLine" });
 apiRegistry.add(OrderSchema, { id: "Order" });
+apiRegistry.add(FloorOpsSchema, { id: "FloorOps" });
+apiRegistry.add(FleetStationSchema, { id: "FleetStation" });
+apiRegistry.add(FleetTileSchema, { id: "FleetTile" });
+apiRegistry.add(FleetBoardSchema, { id: "FleetBoard" });
+apiRegistry.add(FloorTableSchema, { id: "FloorTable" });

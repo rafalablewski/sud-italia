@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { apiOk, apiError, type ApiErrorCode } from "@/lib/api/v1/envelope";
 import { requireOperator, scopeAllows, scopedLocations } from "@/lib/api/v1/guard";
 import { authenticateBearer } from "@/lib/api/v1/auth";
-import { toOrderDTO } from "@/lib/api/v1/order-dto";
+import { toOrderDTO, toOrderDTOs } from "@/lib/api/v1/order-dto";
 import { OrderCreateSchema } from "@/lib/api/v1/schemas";
 import {
   getOrders,
@@ -75,7 +75,9 @@ export async function GET(req: NextRequest) {
 
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const capped = orders.slice(0, ORDERS_BOARD_LIMIT);
-    return apiOk(capped.map(toOrderDTO), { count: capped.length, limit: ORDERS_BOARD_LIMIT });
+    // Board-level mapper so each ticket carries its predictive block (SLA / at-risk),
+    // computed per location via analyzeTruck — web KDS parity.
+    return apiOk(toOrderDTOs(capped), { count: capped.length, limit: ORDERS_BOARD_LIMIT });
   } catch (err) {
     logger.error("v1 orders list failed", { layer: "api.v1.orders" }, err as Error);
     return apiError("internal", "Could not load orders");

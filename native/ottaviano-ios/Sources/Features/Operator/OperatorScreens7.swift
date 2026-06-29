@@ -21,6 +21,7 @@ public struct OperatorHaccpView: View {
                     OperatorStatChip("Flagged", "\(items.filter { $0.status == "flagged" }.count)", tint: theme.color.danger)
                 })
             },
+            toolbar: { reload in AnyView(LogTempButton(api: api, reload: reload)) },
             row: { t in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

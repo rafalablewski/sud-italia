@@ -172,8 +172,12 @@ are the contracts + representative sketches; full set lives in the package.
 >   tokens), **`motion`** (snappy/smooth/immediate springs), and the **`TextRole`**
 >   Dynamic-Type ramp via `Text(…).textRole(.title)`. Status helpers
 >   (`successSoft`/`warningSoft`/`dangerSoft`/`info`/`infoSoft`, derived to match
->   the web `*-wash` ~16%-alpha construction) and the **KDS ticket lifecycle**
->   (`ticketState(elapsedMinutes:)` → fresh/cooking/late + `ticketColor`).
+>   the web `*-wash` ~16%-alpha construction), the **at-risk tone** (`risk`/
+>   `riskSoft` — the web KDS violet predictive tier, between warn and late), and
+>   the **KDS ticket lifecycle** (`ticketState(elapsedMinutes:)` → fresh/cooking/
+>   late + `ticketColor`, the no-prediction fallback). The live KDS tone is the
+>   predictive model (`Order.kdsTone(nowMs:)` in `CoreModels/KDSLogic.swift`):
+>   ready → late → at-risk → warn → firing/queued, 1:1 with the web `ticketTone`.
 > - **Components:** `DSButton`, `BrandWordmark`, `TagChip`, `MoneyText` (existing)
 >   plus **`DSCard`**, **`DSBadge`** (icon-carrying status pill), **`DSSectionHeader`**,
 >   **`DSEmptyState`** (over `ContentUnavailableView`), **`DSStepper`**, **`MetricTile`**,
@@ -227,11 +231,17 @@ public struct DSButton: View {
 - **`QtyStepper` / `MoneyStepper`** — large-target −/＋, hold-to-repeat, haptics.
 - **`POSKeypad`** — the till numeric/amount pad: huge keys, decimal logic, quick
   cash buttons, fully keyboard-navigable on iPad with hardware keyboard.
-- **`KDSTicket`** — a kitchen ticket card: order #, items + mods, age timer that
-  shifts `stateNew → stateCooking → stateLate` by elapsed time, bump/recall
-  actions, drag handle for lane moves. The single most performance-sensitive
-  component (hundreds on screen) — it's a value-driven, equatable view that
-  redraws only on its own data change.
+- **`KDSTicket`** — a kitchen ticket card at 1:1 with the web `/core/kds`
+  `TicketCard`: short id + channel chip (party size), a **predictive due
+  countdown + SLA meter + at-risk pill** (driven by the order's `prediction`
+  block, not just elapsed age), a **coursing-held** callout, **station-grouped**
+  lines with **KDS-flagged modifiers** (e.g. BUFALO MOZZ) + notes, an allergen
+  line, the guest note, and a bump action. The pure tone/timing/grouping logic
+  lives in `CoreModels/KDSLogic.swift` (shared with the board KPIs, mirroring the
+  web's shared `kds-board`/`kds-prediction`). The single most
+  performance-sensitive component (hundreds on screen) — a value-driven,
+  `Equatable` view that redraws only on its own data change; the per-second
+  countdown ticks on an internal `TimelineView` so only the timer/meter recompute.
 - **`MenuItemRow` / `MenuItemCard`**, **`OrderSummaryRow`**, **`TableChip`**,
   **`LoyaltyCard`** (the wallet-style pass), **`MetricTile`** (analytics).
 

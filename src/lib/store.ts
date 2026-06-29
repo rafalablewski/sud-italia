@@ -14230,7 +14230,7 @@ function sanitizePosTabDiscount(input: unknown): PosTabDiscount | undefined {
 }
 
 export function mergePosTab(
-  input: Partial<PosTab> & { locationSlug: string; discount?: PosTabDiscount | null },
+  input: Omit<Partial<PosTab>, "discount"> & { locationSlug: string; discount?: PosTabDiscount | null },
   existing: PosTab | undefined,
 ): PosTab {
   const id = input.id || newPosTabId();
@@ -14431,15 +14431,15 @@ async function dbRemovePosTab(loc: string, id: string): Promise<boolean> {
  * carried, and the client tombstone only masked it until it expired (~12s).
  */
 export async function savePosTab(
-  input: Partial<PosTab> & { locationSlug: string },
+  input: Omit<Partial<PosTab>, "discount"> & { locationSlug: string; discount?: PosTabDiscount | null },
   opts: { mustExist: true },
 ): Promise<PosTab | null>;
 export async function savePosTab(
-  input: Partial<PosTab> & { locationSlug: string },
+  input: Omit<Partial<PosTab>, "discount"> & { locationSlug: string; discount?: PosTabDiscount | null },
   opts?: { mustExist?: false },
 ): Promise<PosTab>;
 export async function savePosTab(
-  input: Partial<PosTab> & { locationSlug: string },
+  input: Omit<Partial<PosTab>, "discount"> & { locationSlug: string; discount?: PosTabDiscount | null },
   opts?: { mustExist?: boolean },
 ): Promise<PosTab | null> {
   const loc = input.locationSlug;

@@ -256,6 +256,10 @@ public extension Theme {
     /// Informational accent — the web Core `--info` blue (shared; not brand).
     var info: Color { Color(hex: 0x5B8BD0) }
     var infoSoft: Color { info.opacity(0.16) }
+    /// Predictive at-risk tier — the web KDS violet "At risk" tone, between warn
+    /// (ochre) and late (red). Shared across skins like `info`, not brand.
+    var risk: Color { Color(hex: 0x8B5BD0) }
+    var riskSoft: Color { risk.opacity(0.16) }
 
     /// A KDS ticket ages through three states by elapsed minutes (DESIGN-SYSTEM
     /// §4.2 KDSTicket): fresh → cooking → late. Thresholds are operator-tunable.

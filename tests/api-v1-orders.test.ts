@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toOrderDTO } from "@/lib/api/v1/order-dto";
+import { toOrderDTO, toOrderDTOs } from "@/lib/api/v1/order-dto";
 import { scopeAllows, scopedLocations } from "@/lib/api/v1/guard";
 import type { Order, MenuItem, CartItem } from "@/data/types";
 
@@ -78,11 +78,63 @@ test("maps line notes + modifiers, nulls absent optionals", () => {
   const l = dto.items[0];
   assert.equal(l.quantity, 2);
   assert.equal(l.notes, "no basil");
-  assert.deepEqual(l.modifiers, [{ groupId: "size", optionId: "large" }]);
+  // Modifiers resolve to cook-readable label + KDS flag; an unknown option (no
+  // modifierGroups on the fixture) falls back to the option id, flag false.
+  assert.deepEqual(l.modifiers, [{ label: "large", flag: false }]);
   // Order-level optionals absent → null, not undefined (stable JSON shape).
   assert.equal(dto.tipAmount, null);
   assert.equal(dto.tableId, null);
   assert.equal(dto.estimatedReadyAt, null);
+});
+
+test("resolves modifier labels + flagOnKds from the menu's modifier groups", () => {
+  const withMods = menuItem({
+    modifierGroups: [
+      {
+        id: "cheese",
+        label: "Cheese",
+        options: [{ id: "bufala", label: "Bufala mozzarella", priceDelta: 600, flagOnKds: true }],
+      },
+    ],
+  } as Partial<MenuItem>);
+  const dto = toOrderDTO(
+    order({ items: [line({ menuItem: withMods, selectedModifiers: [{ groupId: "cheese", optionId: "bufala" }] })] }),
+  );
+  assert.deepEqual(dto.items[0].modifiers, [{ label: "Bufala mozzarella", flag: true }]);
+});
+
+test("exposes shortId, allergens, simulated + coursing for the KDS card", () => {
+  const dto = toOrderDTO(
+    order({
+      id: "ord_abc123",
+      items: [line({ menuItem: menuItem({ allergens: ["gluten", "milk"] } as Partial<MenuItem>) })],
+      coursing: { fired: ["starter"], held: ["main"] },
+    }),
+  );
+  assert.equal(dto.shortId, "ABC123"); // last 6, uppercased
+  assert.deepEqual(dto.items[0].allergens, ["gluten", "milk"]);
+  assert.equal(dto.simulated, false);
+  assert.deepEqual(dto.coursing, { fired: ["starter"], held: ["main"] });
+  // No board context → no prediction on the single-order mapper.
+  assert.equal(dto.prediction, null);
+});
+
+test("toOrderDTOs computes a per-location prediction block (SLA / at-risk)", () => {
+  const now = Date.parse("2026-06-26T16:05:00.000Z");
+  // Promised 16:04 but still preparing at 16:05 — past due, so a prediction exists.
+  const dtos = toOrderDTOs(
+    [
+      order({ id: "k1", locationSlug: "krakow", status: "preparing", createdAt: "2026-06-26T16:00:00.000Z", estimatedReadyAt: "2026-06-26T16:10:00.000Z" }),
+      order({ id: "w1", locationSlug: "warszawa", status: "confirmed", createdAt: "2026-06-26T16:04:00.000Z", estimatedReadyAt: "2026-06-26T16:20:00.000Z" }),
+    ],
+    now,
+  );
+  const k = dtos.find((d) => d.id === "k1")!;
+  assert.ok(k.prediction, "active ticket carries a prediction");
+  assert.equal(k.prediction!.promisedReadyAtMs, Date.parse("2026-06-26T16:10:00.000Z"));
+  assert.equal(typeof k.prediction!.predSeconds, "number");
+  // Each location is analyzed independently — both active tickets are scored.
+  assert.ok(dtos.find((d) => d.id === "w1")!.prediction);
 });
 
 test("does not leak operator-internal fields (cost, stripe)", () => {

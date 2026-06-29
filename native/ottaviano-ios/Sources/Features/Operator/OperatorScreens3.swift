@@ -82,6 +82,7 @@ public struct OperatorCashView: View {
                     OperatorStatChip("Open", "\(items.filter(\.open).count)", tint: theme.color.success)
                 })
             },
+            toolbar: { reload in AnyView(OpenCashButton(api: api, reload: reload)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -215,6 +216,7 @@ public struct OperatorWasteView: View {
             title: "Waste log",
             emptyText: "No wastage recorded.",
             loader: OperatorListLoader { try await api.send(.adminWaste()) },
+            toolbar: { reload in AnyView(LogWasteButton(api: api, reload: reload)) },
             row: { w in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
