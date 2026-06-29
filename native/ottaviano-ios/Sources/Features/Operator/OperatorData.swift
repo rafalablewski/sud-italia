@@ -158,7 +158,10 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
             case .failed(let message):
                 ContentUnavailableView("Couldn't load \(title.lowercased())", systemImage: "wifi.slash", description: Text(message))
             case .loaded(let items) where items.isEmpty:
-                ContentUnavailableView(title, systemImage: "tray", description: Text(emptyText))
+                VStack(spacing: 0) {
+                    if let refreshError = loader.refreshError { staleBanner(refreshError) }
+                    ContentUnavailableView(title, systemImage: "tray", description: Text(emptyText))
+                }
             case .loaded(let items):
                 let shown = visible(items)
                 VStack(spacing: 0) {

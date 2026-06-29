@@ -14,6 +14,7 @@ final class OperatorFloorStore {
     var locations: [Location] = []
     var loaded = false
     var error: String?
+    var message: String?
     var busyTableId: String?
     private let api: APIClient
     init(api: APIClient, location: String) { self.api = api; self.location = location }
@@ -30,8 +31,11 @@ final class OperatorFloorStore {
     func setLocation(_ slug: String) async { location = slug; room = nil; loaded = false; await load() }
     func seat(_ table: FloorTwinTable, seat: Bool) async {
         busyTableId = table.id
-        _ = try? await api.send(.adminFloorSeat(location: location, tableId: table.id, seat: seat))
-        await load()
+        do {
+            _ = try await api.send(.adminFloorSeat(location: location, tableId: table.id, seat: seat))
+            await load()
+        } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
+        catch { message = "Couldn't update the table" }
         busyTableId = nil
     }
 }
@@ -62,6 +66,7 @@ public struct OperatorFloorView: View {
         .sheet(item: $selected) { t in
             if let store { FloorTableSheet(table: t, store: store) }
         }
+        .dsToast(Binding(get: { store?.message }, set: { store?.message = $0 }))
     }
 
     @ViewBuilder
@@ -133,7 +138,7 @@ public struct OperatorFloorView: View {
     }
 
     private func tableTile(_ t: FloorTwinTable, store: OperatorFloorStore) -> some View {
-        let tint = statusTint(t.status, occupied: t.occupied)
+        let tint = statusTint(t.status)
         return Button { selected = t } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -163,11 +168,12 @@ public struct OperatorFloorView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if t.status == "out-of-service" {
-            } else if t.occupied {
-                Button { Task { await store.seat(t, seat: false) } } label: { Label("Clear table", systemImage: "arrow.uturn.backward") }
-            } else {
-                Button { Task { await store.seat(t, seat: true) } } label: { Label("Seat table", systemImage: "person.fill.checkmark") }
+            if t.status != "out-of-service" {
+                if t.occupied {
+                    Button { Task { await store.seat(t, seat: false) } } label: { Label("Clear table", systemImage: "arrow.uturn.backward") }
+                } else {
+                    Button { Task { await store.seat(t, seat: true) } } label: { Label("Seat table", systemImage: "person.fill.checkmark") }
+                }
             }
         }
         .accessibilityLabel("Table \(t.number), \(statusLabel(t)), seats \(t.seats)")
@@ -191,7 +197,7 @@ public struct OperatorFloorView: View {
         default: return "Free"
         }
     }
-    private func statusTint(_ status: String, occupied: Bool) -> Color {
+    private func statusTint(_ status: String) -> Color {
         switch status {
         case "seated": return theme.color.accent
         case "reserved": return theme.color.warning
@@ -338,15 +344,23 @@ final class OperatorDemandStore {
     func setLocation(_ slug: String) async { location = slug; board = nil; loaded = false; await load() }
     func applySlot(_ r: DemandSlotRow) async {
         busy = true
-        _ = try? await api.send(.adminApplyDemandSlot(location: location, slotId: r.slotId,
-                                                      maxOrders: r.recommendedMaxOrders,
-                                                      minSpendGrosze: r.recommendedMinSpendGrosze > 0 ? r.recommendedMinSpendGrosze : nil))
-        await load(); message = "Capacity applied"; busy = false
+        do {
+            _ = try await api.send(.adminApplyDemandSlot(location: location, slotId: r.slotId,
+                                                         maxOrders: r.recommendedMaxOrders,
+                                                         minSpendGrosze: r.recommendedMinSpendGrosze > 0 ? r.recommendedMinSpendGrosze : nil))
+            await load(); message = "Capacity applied"
+        } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
+        catch { message = "Couldn't apply the capacity" }
+        busy = false
     }
     func applyAll() async {
         busy = true
-        let res = try? await api.send(.adminApplyAllDemand(location: location))
-        await load(); message = "Applied to \(res?.applied ?? 0) slots"; busy = false
+        do {
+            let res = try await api.send(.adminApplyAllDemand(location: location))
+            await load(); message = "Applied to \(res.applied ?? 0) slot\((res.applied ?? 0) == 1 ? "" : "s")"
+        } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
+        catch { message = "Couldn't apply recommendations" }
+        busy = false
     }
 }
 

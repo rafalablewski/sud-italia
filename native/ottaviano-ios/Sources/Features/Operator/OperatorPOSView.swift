@@ -162,6 +162,11 @@ public final class OperatorPOSStore {
     public func loadTables() async {
         tables = (try? await api.send(.adminFloorTables(location: location))) ?? []
     }
+    /// Resolve a table id (e.g. "krk-t-12") to its human number for display.
+    public func tableNumber(forId id: String?) -> String? {
+        guard let id, !id.isEmpty else { return nil }
+        return tables.first { $0.id == id }?.number ?? id
+    }
 
     // ── Loyalty member on the check (web parity: a member accrues points on
     //    payment). Persisted via the SAME tab PUT — PosTab already carries
@@ -1067,7 +1072,7 @@ private struct QROrdersSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("#\(o.ticketShortId) · \(o.customerName)")
                                         .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                                    Text("\(o.tableId.map { "Table \($0) · " } ?? "")\(o.items.count) item\(o.items.count == 1 ? "" : "s") · \(o.createdAt.prefix(16).replacingOccurrences(of: "T", with: " "))")
+                                    Text("\(store.tableNumber(forId: o.tableId).map { "Table \($0) · " } ?? "")\(o.items.count) item\(o.items.count == 1 ? "" : "s") · \(o.createdAt.prefix(16).replacingOccurrences(of: "T", with: " "))")
                                         .font(.caption).foregroundStyle(theme.color.textSecondary)
                                 }
                                 Spacer()

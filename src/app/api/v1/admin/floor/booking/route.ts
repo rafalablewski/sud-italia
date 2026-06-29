@@ -57,8 +57,15 @@ export async function POST(req: NextRequest) {
       override: body.override === true,
     });
     if (!result.ok) {
-      // A booking gate (slot full, table too small, conflict) → 409 with the reason.
-      return apiError("conflict", bookingMessage(result.reason), { reason: result.reason, conflicts: result.conflicts ?? [] });
+      // Map the failure to the right status class (mirrors the web route): a real
+      // booking clash is 409, a missing slot/table is 404, and a bad combination
+      // (inactive slot, wrong fulfilment, table too small) is a 422 validation
+      // error — NOT a retryable conflict.
+      const r = result.reason;
+      const detail = { reason: r, conflicts: result.conflicts ?? [] };
+      if (r === "table_conflict" || r === "slot_full") return apiError("conflict", bookingMessage(r), detail);
+      if (r === "slot_not_found" || r === "table_not_found") return apiError("not_found", bookingMessage(r), detail);
+      return apiError("validation_failed", bookingMessage(r), detail);
     }
     return apiOk(result.reservation, { location: loc }, 201);
   } catch (err) {

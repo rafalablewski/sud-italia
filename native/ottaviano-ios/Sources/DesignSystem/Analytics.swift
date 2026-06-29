@@ -560,7 +560,9 @@ public struct OperatorWaterfall: View {
         var bands: [(bottom: Double, top: Double)] = []
         for s in steps {
             if s.isTotal {
-                bands.append((0, s.amount)); running = s.amount
+                // Order the band so a NEGATIVE total (a loss) still renders as a
+                // proper bar below the baseline instead of a clamped 3px sliver.
+                bands.append((min(0, s.amount), max(0, s.amount))); running = s.amount
             } else {
                 let bottom = min(running, running + s.amount)
                 let top = max(running, running + s.amount)

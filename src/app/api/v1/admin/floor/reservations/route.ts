@@ -20,10 +20,11 @@ function resolveLocation(req: NextRequest, scope: string): string | { error: Ret
 /**
  * `GET /api/v1/admin/floor/reservations?location=&date=` — table reservations for
  * a day (or all upcoming). Mirrors web `/core/guest/book`'s reservation list.
- * Staff+, location-scoped.
+ * Manager+, location-scoped — reservations carry guest PII (name + phone), so the
+ * gate matches the web route's manager rank (don't expose it to kitchen/staff).
  */
 export async function GET(req: NextRequest) {
-  const guard = requireRole(req, "staff");
+  const guard = requireRole(req, "manager");
   if ("error" in guard) return guard.error;
   const loc = resolveLocation(req, guard.claims.scope);
   if (typeof loc !== "string") return loc.error;
