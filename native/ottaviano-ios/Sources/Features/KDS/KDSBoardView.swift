@@ -22,6 +22,10 @@ public struct KDSBoardView: View {
     /// Operator role — gates the Fleet tab (owner) + the floor-ops KPIs (manager+),
     /// the same role gate the web KDS applies via /api/admin/me.
     private let role: OperatorRole
+    /// API client — for the manager 86 sheet (per-location availability).
+    private let api: APIClient
+    /// 86 (eighty-six) item-availability sheet.
+    @State private var eightySixOpen = false
 
     private enum Mode: String, CaseIterable { case floor = "Floor", chef = "Chef", fleet = "Fleet" }
 
@@ -35,6 +39,7 @@ public struct KDSBoardView: View {
         _store = State(initialValue: store)
         _fleet = State(initialValue: KDSFleetStore(api: api))
         self.role = role
+        self.api = api
         // Owners land on the cross-truck Atlas by default (web parity); the line
         // roles stay on the floor.
         _mode = State(initialValue: role == .owner ? .fleet : .floor)
@@ -95,6 +100,13 @@ public struct KDSBoardView: View {
                     .tint(theme.color.warning)
                 }
             }
+            if mode != .fleet && role.rank >= OperatorRole.manager.rank {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { eightySixOpen = true } label: {
+                        Label("86 an item", systemImage: "nosign")
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { store.togglePause() } label: {
                     Label(store.paused ? "Resume" : "Pause",
@@ -123,6 +135,7 @@ public struct KDSBoardView: View {
             if m == .fleet { fleet.start() } else { fleet.stop() }
         }
         .onDisappear { store.stop(); fleet.stop() }
+        .sheet(isPresented: $eightySixOpen) { EightySixSheet(api: api) }
     }
 
     // MARK: Fleet (owner Atlas)

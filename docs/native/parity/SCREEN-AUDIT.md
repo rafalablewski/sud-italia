@@ -47,10 +47,11 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
     preview). Tile previews reuse the enriched Order, so they match the KDS board.
   - **Done/hr + On-shift KPIs** — `GET /api/v1/admin/kds/floor-ops` (manager+,
     scope-aware, aggregates chain-wide) → two extra KPI cells for manager+ tokens.
-- **Honest gaps (wiring/hardware-gated, not faked — Rule #1):**
-  - **86 (eighty-six) dialog** — `adminSet86`/`adminMenu` exist, but the dialog
-    needs a single-location scope; the native KDS is wired chain-wide
-    (`location: nil`), so it's deferred until the board carries a location focus.
+  - **86 (eighty-six) dialog** — a native **`EightySixSheet`** (manager+ toolbar
+    action): since availability is per-location and the board streams chain-wide,
+    the sheet carries its own **location picker**, then reads `GET /api/v1/admin/
+    menu?location=` and writes `PATCH /api/v1/admin/menu` to 86 / restore items.
+- **Honest gaps (hardware-gated, not faked — Rule #1):**
   - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
     runtime concerns; the iPad app is already chromeless).
 
@@ -139,8 +140,9 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **KDS Fleet (owner atlas)** — `/api/v1/admin/kds/fleet` + native `KDSFleetView`
   (totals, benchmark, per-truck tiles with pace + ticket preview).
 - ✅ **KDS Done/hr + On-shift KPIs** — `/api/v1/admin/kds/floor-ops` (manager+).
-- ⏳ **KDS 86 + sound** — wiring/hardware-gated (KDS deep-dive "honest gaps"): the
-  86 dialog needs a per-location board scope; sound/kiosk are on-device.
+- ✅ **KDS 86 dialog** — native `EightySixSheet` (manager+) with a location picker
+  over the existing `/api/v1/admin/menu` GET/PATCH.
+- ⏳ **KDS sound chimes / kiosk fullscreen** — on-device only (hardware-gated).
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.
