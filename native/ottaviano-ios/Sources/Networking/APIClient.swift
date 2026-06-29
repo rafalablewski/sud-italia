@@ -382,6 +382,31 @@ public extension Endpoint {
     static func adminFloorTables(location: String) -> Endpoint<[FloorTable]> {
         Endpoint<[FloorTable]>(.get, "admin/floor/tables", query: ["location": location], requiresAuth: true)
     }
+
+    // Operator write actions (staff+) — log a HACCP reading / a waste entry. The
+    // server computes the HACCP verdict; both return the created record.
+    static func adminLogTemp(locationSlug: String, sensor: String, tempCelsius: Int,
+                             recordedBy: String? = nil) -> Endpoint<AdminTempLog> {
+        let body = try? JSONEncoder().encode(LogTempBody(
+            locationSlug: locationSlug, sensor: sensor, tempCelsius: tempCelsius, recordedBy: recordedBy))
+        return Endpoint<AdminTempLog>(.post, "admin/haccp", body: body, requiresAuth: true)
+    }
+    static func adminLogWaste(locationSlug: String, item: String, quantity: Double, unit: String,
+                              reason: String, estimatedCostGrosze: Int? = nil,
+                              notes: String? = nil) -> Endpoint<AdminWasteEntry> {
+        let body = try? JSONEncoder().encode(LogWasteBody(
+            locationSlug: locationSlug, item: item, quantity: quantity, unit: unit, reason: reason,
+            estimatedCostGrosze: estimatedCostGrosze, notes: notes))
+        return Endpoint<AdminWasteEntry>(.post, "admin/waste", body: body, requiresAuth: true)
+    }
+}
+
+private struct LogTempBody: Encodable {
+    let locationSlug: String; let sensor: String; let tempCelsius: Int; let recordedBy: String?
+}
+private struct LogWasteBody: Encodable {
+    let locationSlug: String; let item: String; let quantity: Double; let unit: String
+    let reason: String; let estimatedCostGrosze: Int?; let notes: String?
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }

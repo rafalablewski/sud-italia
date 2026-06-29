@@ -41,6 +41,10 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
     /// Optional KPI strip rendered above the rows. Type-erased so the generic
     /// surface stays two-parameter (robust inference) — it's one header, not hot.
     private let header: (([T]) -> AnyView)?
+    /// Optional trailing toolbar action (a write surface — e.g. "Log reading").
+    /// Receives a `reload` closure so the action can refresh the list after a
+    /// successful mutation. Type-erased to keep the generic two-parameter.
+    private let toolbar: ((@escaping () async -> Void) -> AnyView)?
     private let row: (T) -> Row
 
     public init(
@@ -48,12 +52,14 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         emptyText: String = "Nothing here yet.",
         loader: OperatorListLoader<T>,
         header: (([T]) -> AnyView)? = nil,
+        toolbar: ((@escaping () async -> Void) -> AnyView)? = nil,
         @ViewBuilder row: @escaping (T) -> Row
     ) {
         self.title = title
         self.emptyText = emptyText
         _loader = State(initialValue: loader)
         self.header = header
+        self.toolbar = toolbar
         self.row = row
     }
 
@@ -79,6 +85,11 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let toolbar {
+                ToolbarItem(placement: .topBarTrailing) { toolbar({ await loader.load() }) }
+            }
+        }
         .task { await loader.load() }
         .refreshable { await loader.load() }
     }

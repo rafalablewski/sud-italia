@@ -127,12 +127,26 @@ Calculator metric values + the Rewards loyalty-points hero → `.textRole(…)`.
 only remaining `.system(size:)` calls are **SF Symbol images** (icons), which are
 legitimately fixed-size. Verified by grep in CI-adjacent review.
 
-## Remaining live surfaces (48)
+## Remaining live surfaces (~48) — interaction depth
 
 Render real `/api/v1/admin/*` data through the shared loaders
 (`OperatorListLoader`, `OperatorScreens*.swift`) + dedicated views. Now DS-clean
-on typography. Remaining work is **interaction depth** (filters/detail/write
-actions) per surface, which is facade-gated — tracked as the waves land.
+on typography. Remaining work is **interaction depth** (filters / detail / write
+actions) per surface, most of it facade-gated.
+
+**Write-action template (shipped).** `OperatorListView` now takes an optional
+`toolbar:` slot that receives a `reload` closure, so any list surface gains a
+write action that refreshes on success — no bespoke store per screen. First two
+operator-log surfaces on it:
+- **HACCP** — `POST /api/v1/admin/haccp` (staff+, server computes the ok/flagged
+  verdict) + a native **`LogTempButton` → Log-temperature sheet** (location
+  picker, sensor, °C → tenths).
+- **Waste** — `POST /api/v1/admin/waste` (staff+) + a native **`LogWasteButton` →
+  Log-waste sheet** (location, item, qty + unit, reason, optional cost).
+
+The same template extends to the other write surfaces as they land (handover
+close, inventory adjust, cash count, PO receive, …) — each is a v1 mutation
+endpoint + a toolbar sheet. Tracked as the waves continue.
 
 ## Scaffolds (2) 🏗 — intentional
 `/admin/soc2` and `/admin/capabilities` render `OperatorSurfaceView` (purpose +
