@@ -118,6 +118,23 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ---
 
+## Wave B — analytics + five-section ⓘ explainers (done this pass)
+
+Brings the web's charted analytics and its Rule #12 metric explainers to native.
+- **`MetricExplainer` + `InfoButton`** (`DesignSystem/Explainers.swift`) — native
+  twin of `src/admin-v3/ui/Explainer.tsx`: every ⓘ opens a sheet with the five
+  required sections in the fixed order/labels (description → INSTITUTIONAL
+  ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY); all five props required so a
+  stub won't compile.
+- **Chart primitives** (`DesignSystem/Charts.swift`) — `OperatorBarChart`,
+  `OperatorDonut`, `OperatorBarRow`, hand-rolled (no Swift Charts API surface).
+- **Reports rebuilt** — six KPIs each with a full ⓘ explainer; the "by day" text
+  list became a 14-day **revenue bar chart**; fulfilment mix became a **ring +
+  legend**; top sellers gained **magnitude bars**. All off `summary` (Rule #1).
+The same `InfoButton` now seeds the remaining KPI surfaces (Dashboard, Cash,
+Calculator, Insights, Menu engineering) as they're polished. Preview:
+`tests/sketches/ottaviano-kds-wave-b-analytics-explainers.html`.
+
 ## Wave A — rich rows + detail drill-in (done this pass)
 
 Admin list surfaces were flat single-line rows with no inspect path; the web
