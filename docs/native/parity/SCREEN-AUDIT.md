@@ -118,6 +118,29 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ---
 
+## Wave A — rich rows + detail drill-in (done this pass)
+
+Admin list surfaces were flat single-line rows with no inspect path; the web
+admin opens a detail dialog on click. Native now mirrors that:
+- **`OperatorListView` gained an opt-in `detail:` projection** — supply it and
+  every row becomes tappable (chevron affordance) and presents a sheet via
+  `.sheet(item:)`. Purely additive; inert without it.
+- **Shared sheet primitives** (`OperatorDetail.swift`): `OperatorDetailSheet`
+  (gradient initials/icon avatar + title + status badge + contact meta lines,
+  Done-dismiss, drag indicator), `OperatorStatTile` / `OperatorStatBand` (the
+  header stat band), `OperatorMetaRow`, and a list-row `Avatar`.
+- **Customer profile** — VIP chip + recency + points on the row; sheet shows
+  lifetime / orders / points / avg-ticket tiles, contact + member-since, notes,
+  opt-out badges. **Rule #1:** every field comes from the `AdminCustomer` DTO —
+  recent-order history is *not* faked; it needs a customer-scoped orders endpoint
+  (tracked facade gap).
+- **Staff card** — sheet shows rate + role tiles, contact, hire date, status,
+  notes. Upcoming shifts stay on the Schedule surface (not duplicated/faked).
+
+The same `detail:` pattern extends to the remaining surfaces as their DTOs (or
+new facade endpoints) justify a drill-in. Preview: `tests/sketches/
+ottaviano-kds-wave-a-detail-sheets.html`.
+
 ## Shell + navigation polish — done this pass
 
 The operator rail is the one surface seen across all 54 screens, so it got the

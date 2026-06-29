@@ -50,8 +50,14 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
     /// header KPIs stay computed over the *full* set (search narrows rows only).
     /// Nil (default) = no search bar, so every existing call site is unchanged.
     private let searchKey: ((T) -> String)?
+    /// Optional row → detail-sheet projection. When supplied, every row becomes
+    /// tappable (with a chevron affordance) and presents this sheet — the native
+    /// twin of the web admin's inspect dialog. Nil (default) = inert rows, so
+    /// existing call sites are unchanged.
+    private let detail: ((T) -> AnyView)?
     private let row: (T) -> Row
     @State private var query = ""
+    @State private var selected: T?
 
     public init(
         title: String,
@@ -60,6 +66,7 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         header: (([T]) -> AnyView)? = nil,
         toolbar: ((@escaping () async -> Void) -> AnyView)? = nil,
         search: ((T) -> String)? = nil,
+        detail: ((T) -> AnyView)? = nil,
         @ViewBuilder row: @escaping (T) -> Row
     ) {
         self.title = title
@@ -68,7 +75,27 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         self.header = header
         self.toolbar = toolbar
         self.searchKey = search
+        self.detail = detail
         self.row = row
+    }
+
+    /// A row, made tappable when a `detail:` sheet is provided. The chevron is the
+    /// only added chrome so rows that already carry trailing content still read cleanly.
+    @ViewBuilder private func rowView(_ item: T) -> some View {
+        if detail != nil {
+            Button { selected = item } label: {
+                HStack(spacing: theme.space.sm) {
+                    row(item)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(theme.color.textSecondary.opacity(0.5))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            row(item)
+        }
     }
 
     /// Rows after the search query is applied. KPIs in `header` deliberately keep
@@ -101,10 +128,13 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
                         ContentUnavailableView.search(text: query)
                             .listRowBackground(Color.clear)
                     } else {
-                        ForEach(shown) { row($0) }
+                        ForEach(shown) { rowView($0) }
                     }
                 }
                 .modifier(OptionalSearchable(active: searchKey != nil, text: $query, prompt: "Search \(title.lowercased())"))
+                .sheet(item: $selected) { item in
+                    if let detail { detail(item) }
+                }
             }
         }
         .navigationTitle(title)

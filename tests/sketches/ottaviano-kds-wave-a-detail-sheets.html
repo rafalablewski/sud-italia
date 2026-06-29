@@ -1,0 +1,145 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OttavianoKDS — Wave A: rich rows + detail sheets</title>
+<!-- Static JS-free. Generated Core dark tokens (Tokens.generated.swift ← themes/core/tokens.css). -->
+<style>
+:root{--accent:#D23A55;--on-accent:#fff;--surface:#100F12;--surface2:#1A191E;--line:#39383A;--text:#F4F1EC;--text2:#B8B0A6;
+--success:#3AA978;--warning:#D99A3C;--danger:#E2574F;--info:#5B8BD0;--r-sm:7px;--r-md:10px;--r-lg:14px;--hair:rgba(255,255,255,.05)}
+*{box-sizing:border-box}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;display:inline-block;vertical-align:middle}
+body{margin:0;background:#0a090b;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:24px;margin:0 0 4px}.lead{color:var(--text2);font-size:14px;margin:0 0 8px;max-width:780px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:40px 0 14px;font-weight:700}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;color:var(--text2)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.cap{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.cap.b{color:var(--text2)}.cap.a{color:var(--accent)}
+.tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid}
+.tag.b{color:var(--text2);border-color:var(--line)}.tag.a{color:var(--accent);border-color:rgba(210,58,85,.4);background:rgba(210,58,85,.1)}
+.list{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--hair)}.li:last-child{border-bottom:none}
+.av{width:38px;height:38px;border-radius:var(--r-sm);display:grid;place-items:center;background:rgba(210,58,85,.12);color:var(--accent);flex:none;font-weight:700}
+.av .ic{width:18px;height:18px}.av-i{font-size:15px}
+.main{flex:1;min-width:0}.t{font-weight:600;display:flex;align-items:center;gap:7px}.s{font-size:13px;color:var(--text2);margin-top:2px}
+.r{text-align:right}.money{font-weight:600;font-variant-numeric:tabular-nums}
+.vip{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--warning);background:rgba(217,154,60,.16);border:1px solid rgba(217,154,60,.3);padding:1px 6px;border-radius:999px}
+.vipic{width:11px;height:11px}
+.ptpill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--accent);margin-top:3px;justify-content:flex-end}.ptic{width:13px;height:13px}
+.chev{color:var(--text2);opacity:.7;margin-left:4px}
+.li.flat .s{margin-top:1px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid;white-space:nowrap}
+.b-success{color:var(--success);background:rgba(58,169,120,.16);border-color:rgba(58,169,120,.3)}
+.b-warning{color:var(--warning);background:rgba(217,154,60,.16);border-color:rgba(217,154,60,.3)}
+.b-neutral{color:var(--text2);background:rgba(255,255,255,.04);border-color:var(--line)}
+/* sheet */
+.sheets{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.sheet{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.sheet-grab{width:38px;height:5px;border-radius:999px;background:var(--line);margin:0 auto 14px}
+.sheet-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.bigav{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#a32742);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700;flex:none}
+.bigav.sq{background:rgba(210,58,85,.14);color:var(--accent)}.bigic{width:28px;height:28px}
+.sh-name{font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sh-meta{color:var(--text2);font-size:13px;margin-top:4px;display:flex;align-items:center;gap:7px}.mi{width:14px;height:14px;opacity:.8}
+.iconbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text2);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.dtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.dtile{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:var(--r-md);padding:11px}
+.dl{font-size:11px;color:var(--text2)}.dv{font-size:18px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}.ds{font-size:11px;color:var(--success);margin-top:2px}
+.lbl-sec{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 2px 8px}
+.sheet-actions{display:flex;gap:10px;margin-top:16px}
+.btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:var(--r-md);font:inherit;font-weight:600;cursor:pointer;border:1px solid}
+.bi{width:16px;height:16px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--text)}
+.potot{font-size:18px;font-weight:700;margin-bottom:4px}
+.poline .s{font-variant-numeric:tabular-nums}
+.hint{color:var(--text2);font-size:12px;margin-top:12px}
+.note{color:var(--text2);font-size:12px;margin-top:10px}
+</style></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a14 14 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.6 5.6L21 9.3l-4.5 4.3 1.1 6.4L12 17l-5.6 3 1.1-6.4L3 9.3l6.4-.7Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></symbol><symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9"/><path d="M12 8V21"/><path d="M12 8S10 3 7.5 4.5 9 8 12 8Zm0 0s2-5 4.5-3.5S15 8 12 8Z"/></symbol><symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 5h13v11H1z"/><path d="M14 8h4l3 3v5h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></symbol><symbol id="i-chevR" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4 3 7 7 9 4-2 7-5 7-9V6Z"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-11"/></symbol></defs></svg>
+<div class="wrap">
+ <h1>Wave A — rich rows + detail drill-in sheets</h1>
+ <p class="lead">Upgrades the ~30 Admin list surfaces from flat single-line rows to designed rows (avatar · hierarchy · status · trailing metrics · a chevron affordance) that <b>tap to open a detail sheet</b> — the native twin of the web's inspect dialogs. Customer, Purchase order and Staff shown; the same <code>OperatorDetailSheet</code> pattern extends to every surface.</p>
+
+ <h2>1 · The row — before vs. after (Customers)</h2>
+ <div class="cols">
+  <div><p class="cap b"><span class="tag b">BEFORE</span> one line, no drill-in</p><div class="list"><div class="li flat"><span class="av av-i">G</span><div class="main"><div class="t">Giulia Romano</div><div class="s">61 orders · 3100 pts</div></div><div class="r"><div class="money">4980,00 zł</div></div></div><div class="li flat"><span class="av av-i">A</span><div class="main"><div class="t">Anna Kowalska</div><div class="s">42 orders · 1280 pts</div></div><div class="r"><div class="money">2150,00 zł</div></div></div><div class="li flat"><span class="av av-i">S</span><div class="main"><div class="t">Sofia Bianchi</div><div class="s">27 orders · 720 pts</div></div><div class="r"><div class="money">1340,00 zł</div></div></div><div class="li flat"><span class="av av-i">T</span><div class="main"><div class="t">Tomasz Lewandowski</div><div class="s">15 orders · 380 pts</div></div><div class="r"><div class="money">890,00 zł</div></div></div><div class="li flat"><span class="av av-i">M</span><div class="main"><div class="t">Marek Nowak</div><div class="s">8 orders · 210 pts</div></div><div class="r"><div class="money">540,00 zł</div></div></div></div></div>
+  <div><p class="cap a"><span class="tag a">AFTER</span> VIP · recency · points · tap → sheet</p><div class="list"><div class="li">
+  <span class="av">G</span>
+  <div class="main"><div class="t">Giulia Romano <span class="vip"><svg class="ic vipic"><use href="#i-star"/></svg> VIP</span></div>
+    <div class="s">61 orders · last 2d ago · Warszawa</div></div>
+  <div class="r"><div class="money">4980,00 zł</div><div class="ptpill"><svg class="ic ptic"><use href="#i-gift"/></svg> 3100</div></div>
+  <span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div><div class="li">
+  <span class="av">A</span>
+  <div class="main"><div class="t">Anna Kowalska <span class="vip"><svg class="ic vipic"><use href="#i-star"/></svg> VIP</span></div>
+    <div class="s">42 orders · last 5h ago · Kraków</div></div>
+  <div class="r"><div class="money">2150,00 zł</div><div class="ptpill"><svg class="ic ptic"><use href="#i-gift"/></svg> 1280</div></div>
+  <span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div><div class="li">
+  <span class="av">S</span>
+  <div class="main"><div class="t">Sofia Bianchi <span class="vip"><svg class="ic vipic"><use href="#i-star"/></svg> VIP</span></div>
+    <div class="s">27 orders · last 1w ago · Warszawa</div></div>
+  <div class="r"><div class="money">1340,00 zł</div><div class="ptpill"><svg class="ic ptic"><use href="#i-gift"/></svg> 720</div></div>
+  <span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div><div class="li">
+  <span class="av">T</span>
+  <div class="main"><div class="t">Tomasz Lewandowski</div>
+    <div class="s">15 orders · last 3d ago · Kraków</div></div>
+  <div class="r"><div class="money">890,00 zł</div><div class="ptpill"><svg class="ic ptic"><use href="#i-gift"/></svg> 380</div></div>
+  <span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div><div class="li">
+  <span class="av">M</span>
+  <div class="main"><div class="t">Marek Nowak</div>
+    <div class="s">8 orders · last 12d ago · Kraków</div></div>
+  <div class="r"><div class="money">540,00 zł</div><div class="ptpill"><svg class="ic ptic"><use href="#i-gift"/></svg> 210</div></div>
+  <span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div></div></div>
+ </div>
+
+ <h2>2 · Detail sheets (tap a row)</h2>
+ <div class="sheets">
+  <div><div class="sheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <span class="bigav">G</span>
+    <div style="flex:1"><div class="sh-name">Giulia Romano <span class="vip"><svg class="ic vipic"><use href="#i-star"/></svg> VIP</span></div>
+      <div class="sh-meta"><svg class="ic mi"><use href="#i-phone"/></svg> +48 533 444 555</div>
+      <div class="sh-meta"><svg class="ic mi"><use href="#i-mail"/></svg> giulia@example.com</div>
+      <div class="sh-meta"><svg class="ic mi"><use href="#i-pin"/></svg> Warszawa · member 14 mo</div></div>
+    <button class="iconbtn"><svg class="ic"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dtiles">
+    <div class="dtile"><div class="dl">Lifetime</div><div class="dv">4980,00 zł</div><div class="ds">+18% vs cohort</div></div>
+    <div class="dtile"><div class="dl">Orders</div><div class="dv">61</div><div class="ds">≈ 4.3 / mo</div></div>
+    <div class="dtile"><div class="dl">Points</div><div class="dv">3100</div><div class="ds">redeemable</div></div>
+    <div class="dtile"><div class="dl">Avg ticket</div><div class="dv">81,64 zł</div></div>
+  </div>
+  <div class="lbl-sec">Recent orders</div>
+  <div class="list"><div class="li"><span class="av"><svg class="ic"><use href="#i-receipt"/></svg></span><div class="main"><div class="t">#A41C</div><div class="s">Dine-in · T6 · today</div></div><div class="r"><div class="money">186,00 zł</div><span class="badge b-neutral">Paid</span></div></div><div class="li"><span class="av"><svg class="ic"><use href="#i-receipt"/></svg></span><div class="main"><div class="t">#A3F0</div><div class="s">Delivery · 2d ago</div></div><div class="r"><div class="money">124,00 zł</div><span class="badge b-neutral">Paid</span></div></div><div class="li"><span class="av"><svg class="ic"><use href="#i-receipt"/></svg></span><div class="main"><div class="t">#A3D9</div><div class="s">Takeaway · 6d ago</div></div><div class="r"><div class="money">63,00 zł</div><span class="badge b-neutral">Paid</span></div></div></div>
+  <div class="sheet-actions"><button class="btn ghost"><svg class="ic bi"><use href="#i-gift"/></svg> Adjust points</button><button class="btn primary"><svg class="ic bi"><use href="#i-phone"/></svg> Call</button></div>
+ </div><div class="note">Customer profile — contact, lifetime stats, recent orders, points adjust (Wave D action).</div></div>
+  <div><div class="sheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head"><span class="bigav sq"><svg class="ic bigic"><use href="#i-truck"/></svg></span>
+   <div style="flex:1"><div class="sh-name">Latteria Sorrentina</div>
+    <div class="sh-meta">PO-2041 · Warszawa · raised 26 Jun</div></div>
+   <div style="text-align:right"><div class="potot">973,50 zł</div><span class="badge b-warning">Sent</span></div>
+  </div>
+  <div class="lbl-sec">Lines</div>
+  <div class="list"><div class="li poline"><div class="main"><div class="t">Mozzarella di Bufala</div><div class="s">8 kg × 42,00 zł</div></div><div class="r"><div class="money">336,00 zł</div></div></div><div class="li poline"><div class="main"><div class="t">Tipo 00 Flour</div><div class="s">25 kg × 3,90 zł</div></div><div class="r"><div class="money">97,50 zł</div></div></div><div class="li poline"><div class="main"><div class="t">San Marzano DOP</div><div class="s">12 tin × 18,00 zł</div></div><div class="r"><div class="money">216,00 zł</div></div></div><div class="li poline"><div class="main"><div class="t">Olive Oil EV</div><div class="s">6 L × 54,00 zł</div></div><div class="r"><div class="money">324,00 zł</div></div></div></div>
+  <div class="sheet-actions"><button class="btn ghost">Cancel PO</button><button class="btn primary"><svg class="ic bi"><use href="#i-check"/></svg> Mark received</button></div>
+  <div class="hint">Marking received posts the stock movements server-side (updatePurchaseOrderStatus → receivePurchaseOrder).</div>
+ </div></div>
+ </div>
+ <div style="max-width:560px;margin-top:24px"><div class="sheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head"><span class="bigav">M</span>
+   <div style="flex:1"><div class="sh-name">Marco Bianchi <span class="badge b-success">Active</span></div>
+    <div class="sh-meta"><svg class="ic mi"><use href="#i-shield"/></svg> Chef · Kraków</div>
+    <div class="sh-meta"><svg class="ic mi"><use href="#i-phone"/></svg> +48 555 010 020</div></div>
+   <button class="iconbtn"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="dtiles">
+   <div class="dtile"><div class="dl">Rate</div><div class="dv">38,00 zł</div><div class="ds">/ hour</div></div>
+   <div class="dtile"><div class="dl">This wk</div><div class="dv">32 h</div><div class="ds">4 shifts</div></div>
+   <div class="dtile"><div class="dl">Tenure</div><div class="dv">2.4 yr</div></div>
+  </div>
+  <div class="lbl-sec">Upcoming shifts</div>
+  <div class="list">
+   <div class="li"><div class="main"><div class="t">Mon 30 Jun</div><div class="s">Kitchen · Kraków</div></div><div class="r"><div class="money">10:00–18:00</div><span class="badge b-success">Confirmed</span></div></div>
+   <div class="li"><div class="main"><div class="t">Wed 02 Jul</div><div class="s">Kitchen · Kraków</div></div><div class="r"><div class="money">12:00–20:00</div><span class="badge b-neutral">Draft</span></div></div>
+  </div></div><div class="note">Staff card — rate, hours, tenure, upcoming shifts.</div></div>
+</div></body></html>

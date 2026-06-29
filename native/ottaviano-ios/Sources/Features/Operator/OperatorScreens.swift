@@ -23,18 +23,99 @@ public struct OperatorCustomersView: View {
                 })
             },
             search: { "\($0.name ?? "") \($0.phone)" },
+            detail: { c in AnyView(CustomerDetailView(c: c)) },
             row: { c in
-                HStack {
+                HStack(spacing: theme.space.sm) {
+                    Avatar(name: c.name ?? c.phone)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(c.name ?? c.phone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(c.orderCount) orders · \(c.loyaltyPointsBalance + c.manualPointsAdjust) pts")
-                            .font(.caption).foregroundStyle(theme.color.textSecondary)
+                        HStack(spacing: 6) {
+                            Text(c.name ?? c.phone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            if c.totalSpentGrosze >= 50000 { vipChip }
+                        }
+                        Text(subtitle(c)).font(.caption).foregroundStyle(theme.color.textSecondary)
                     }
-                    Spacer()
-                    MoneyText(c.totalSpentGrosze).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                    Spacer(minLength: theme.space.sm)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        MoneyText(c.totalSpentGrosze).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                        Label("\(c.loyaltyPointsBalance + c.manualPointsAdjust)", systemImage: "gift.fill")
+                            .font(.caption2.weight(.semibold)).foregroundStyle(theme.color.accent)
+                    }
                 }
             }
         )
+    }
+    private var vipChip: some View {
+        Label("VIP", systemImage: "star.fill").font(.caption2.weight(.bold))
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .foregroundStyle(theme.color.warning)
+            .background(theme.color.warning.opacity(0.16), in: Capsule())
+    }
+    private func subtitle(_ c: AdminCustomer) -> String {
+        var bits = ["\(c.orderCount) orders"]
+        if let last = c.lastOrderAt { bits.append("last \(last.prefix(10))") }
+        return bits.joined(separator: " · ")
+    }
+}
+
+/// Customer profile sheet — every field the AdminCustomer DTO carries, nothing
+/// invented (Rule #1). Recent-order history would need a customer-scoped orders
+/// endpoint on the facade; until then the profile shows lifetime + cadence.
+struct CustomerDetailView: View {
+    @Environment(\.theme) private var theme
+    let c: AdminCustomer
+    private var points: Int { c.loyaltyPointsBalance + c.manualPointsAdjust }
+    private var avg: Grosze { c.orderCount > 0 ? c.totalSpentGrosze / c.orderCount : 0 }
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .initials(c.name ?? c.phone),
+            title: c.name ?? c.phone,
+            badge: c.totalSpentGrosze >= 50000 ? ("VIP", .warning) : nil,
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Lifetime", MoneyText.format(c.totalSpentGrosze)),
+                OperatorStatTile("Orders", "\(c.orderCount)"),
+                OperatorStatTile("Points", "\(points)", sub: "redeemable", subTone: theme.color.accent),
+                OperatorStatTile("Avg ticket", MoneyText.format(avg)),
+            ])
+            if let notes = c.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+            if c.smsOptout || c.emailOptout {
+                HStack(spacing: theme.space.sm) {
+                    if c.smsOptout { DSBadge("SMS opt-out", tone: .neutral, systemImage: "bell.slash") }
+                    if c.emailOptout { DSBadge("Email opt-out", tone: .neutral, systemImage: "envelope.badge") }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("phone.fill", c.phone)]
+        if let e = c.email { m.append(OperatorMetaRow("envelope.fill", e)) }
+        if let first = c.firstOrderAt { m.append(OperatorMetaRow("calendar", "Member since \(first.prefix(10))")) }
+        return m
+    }
+}
+
+/// A compact initials avatar used in operator list rows.
+struct Avatar: View {
+    @Environment(\.theme) private var theme
+    let name: String
+    var body: some View {
+        Text(initials)
+            .font(.caption.weight(.bold)).foregroundStyle(theme.color.accent)
+            .frame(width: 36, height: 36)
+            .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.sm))
+    }
+    private var initials: String {
+        let parts = name.split(separator: " ").prefix(2)
+        let i = parts.compactMap { $0.first }.map(String.init).joined()
+        return i.isEmpty ? "·" : i.uppercased()
     }
 }
 
@@ -56,13 +137,15 @@ public struct OperatorStaffView: View {
                 })
             },
             search: { "\($0.name) \($0.role) \($0.locationSlug)" },
+            detail: { s in AnyView(StaffDetailView(s: s)) },
             row: { s in
-                HStack {
+                HStack(spacing: theme.space.sm) {
+                    Avatar(name: s.name)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         Text("\(s.role.capitalized) · \(s.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
                     }
-                    Spacer()
+                    Spacer(minLength: theme.space.sm)
                     VStack(alignment: .trailing, spacing: 2) {
                         MoneyText(s.hourlyRateGrosze).font(.caption.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         statusTag(s.status, ok: s.status == "active")
@@ -76,6 +159,41 @@ public struct OperatorStaffView: View {
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background((ok ? theme.color.success : theme.color.textSecondary).opacity(0.18), in: Capsule())
             .foregroundStyle(ok ? theme.color.success : theme.color.textSecondary)
+    }
+}
+
+/// Staff card sheet — the AdminStaff DTO's fields (Rule #1). Upcoming shifts live
+/// on the Schedule endpoint, so they're shown there, not duplicated here.
+struct StaffDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminStaff
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .initials(s.name),
+            title: s.name,
+            badge: (s.status.capitalized, s.status == "active" ? .success : .neutral),
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Rate", MoneyText.format(s.hourlyRateGrosze), sub: "/ hour"),
+                OperatorStatTile("Role", s.role.capitalized),
+            ])
+            if let notes = s.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("briefcase.fill", "\(s.role.capitalized) · \(s.locationSlug.capitalized)")]
+        if let p = s.phone { m.append(OperatorMetaRow("phone.fill", p)) }
+        if let e = s.email { m.append(OperatorMetaRow("envelope.fill", e)) }
+        if let h = s.hireDate { m.append(OperatorMetaRow("calendar", "Hired \(h.prefix(10))")) }
+        return m
     }
 }
 
