@@ -401,6 +401,18 @@ public extension Endpoint {
     }
 }
 
+public extension Endpoint {
+    /// Post a team announcement (owner). Returns the created row.
+    static func adminPostAnnouncement(title: String, body: String, pinned: Bool = false) -> Endpoint<AdminAnnouncement> {
+        let payload = try? JSONEncoder().encode(PostAnnouncementBody(title: title, body: body, pinned: pinned))
+        return Endpoint<AdminAnnouncement>(.post, "admin/announcements", body: payload, requiresAuth: true)
+    }
+}
+
+private struct PostAnnouncementBody: Encodable {
+    let title: String; let body: String; let pinned: Bool
+}
+
 private struct LogTempBody: Encodable {
     let locationSlug: String; let sensor: String; let tempCelsius: Int; let recordedBy: String?
 }

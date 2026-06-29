@@ -84,6 +84,71 @@ private struct LogTempSheet: View {
     }
 }
 
+// MARK: - Announcements — post a team broadcast (owner)
+
+struct NewAnnouncementButton: View {
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var show = false
+    var body: some View {
+        Button { show = true } label: { Label("New", systemImage: "megaphone.fill") }
+            .sheet(isPresented: $show) { NewAnnouncementSheet(api: api) { await reload() } }
+    }
+}
+
+private struct NewAnnouncementSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let api: APIClient
+    let onPosted: () async -> Void
+
+    @State private var title = ""
+    @State private var text = ""
+    @State private var pinned = false
+    @State private var busy = false
+    @State private var error: String?
+
+    private var valid: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty && !text.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Announcement") {
+                    TextField("Title", text: $title)
+                    TextField("Message", text: $text, axis: .vertical).lineLimit(3...8)
+                    Toggle("Pin to top", isOn: $pinned)
+                }
+                if let error {
+                    Text(error).font(.footnote).foregroundStyle(theme.color.danger)
+                }
+                Section {
+                    DSButton(busy ? "Posting…" : "Post announcement") { Task { await submit() } }
+                        .disabled(busy || !valid)
+                }
+            }
+            .navigationTitle("New announcement")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+        }
+    }
+
+    private func submit() async {
+        busy = true; defer { busy = false }
+        do {
+            _ = try await api.send(.adminPostAnnouncement(
+                title: title.trimmingCharacters(in: .whitespaces),
+                body: text.trimmingCharacters(in: .whitespaces),
+                pinned: pinned))
+            await onPosted()
+            dismiss()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminAnnouncement>.message(e)
+        } catch { error = "Something went wrong" }
+    }
+}
+
 // MARK: - Waste — log a discarded item
 
 struct LogWasteButton: View {

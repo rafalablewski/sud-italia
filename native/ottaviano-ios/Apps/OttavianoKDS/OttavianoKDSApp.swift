@@ -134,7 +134,7 @@ struct OperatorRootView: View {
         case "/admin/comms/tasks":
             OperatorTasksView(api: deps.api)
         case "/admin/comms/announcements":
-            OperatorAnnouncementsView(api: deps.api)
+            OperatorAnnouncementsView(api: deps.api, role: role)
         case "/admin/schedule":
             OperatorScheduleView(api: deps.api)
         case "/admin/users":

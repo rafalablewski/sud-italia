@@ -143,10 +143,14 @@ operator-log surfaces on it:
   picker, sensor, °C → tenths).
 - **Waste** — `POST /api/v1/admin/waste` (staff+) + a native **`LogWasteButton` →
   Log-waste sheet** (location, item, qty + unit, reason, optional cost).
+- **Announcements** — `POST /api/v1/admin/announcements` (**owner**, web parity) +
+  a native **`NewAnnouncementButton` → New-announcement sheet** (title, message,
+  pin). The view takes `role` and shows the action only to owners (managers see
+  the list) — `toolbar:` is simply `nil` otherwise.
 
 The same template extends to the other write surfaces as they land (handover
-close, inventory adjust, cash count, PO receive, …) — each is a v1 mutation
-endpoint + a toolbar sheet. Tracked as the waves continue.
+close, inventory adjust, cash count, PO receive, feedback respond, …) — each is a
+v1 mutation endpoint + a toolbar (or per-row) action. Tracked as the waves continue.
 
 ## Scaffolds (2) 🏗 — intentional
 `/admin/soc2` and `/admin/capabilities` render `OperatorSurfaceView` (purpose +
