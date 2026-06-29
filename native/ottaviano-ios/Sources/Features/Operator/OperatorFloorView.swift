@@ -90,7 +90,7 @@ public struct OperatorFloorView: View {
     private func locationPicker(_ store: OperatorFloorStore) -> some View {
         DSSegmented(Binding(
             get: { store.location },
-            set: { slug in Task { await store.setLocation(slug) } }
+            set: { slug in Task<Void, Never> { await store.setLocation(slug) } }
         ), options: store.locations.map { (value: $0.slug, label: $0.city) })
     }
 
@@ -392,7 +392,7 @@ public struct OperatorDemandView: View {
     private func content(_ store: OperatorDemandStore) -> some View {
         VStack(alignment: .leading, spacing: theme.space.lg) {
             if store.locations.count > 1 {
-                DSSegmented(Binding(get: { store.location }, set: { s in Task { await store.setLocation(s) } }),
+                DSSegmented(Binding(get: { store.location }, set: { s in Task<Void, Never> { await store.setLocation(s) } }),
                             options: store.locations.map { (value: $0.slug, label: $0.city) })
             }
             if let error = store.error, store.board == nil {

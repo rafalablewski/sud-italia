@@ -317,7 +317,7 @@ struct GuestBookTab: View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.space.lg) {
                 if store.locations.count > 1 {
-                    DSSegmented(Binding(get: { store.location }, set: { s in Task { await store.setLocation(s) } }),
+                    DSSegmented(Binding(get: { store.location }, set: { s in Task<Void, Never> { await store.setLocation(s) } }),
                                 options: store.locations.map { (value: $0.slug, label: $0.city) })
                 }
                 bookingForm
