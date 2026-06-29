@@ -156,6 +156,7 @@ public struct OperatorComplianceView: View {
                     OperatorStatChip("Expired", "\(items.filter(\.expired).count)", tint: theme.color.danger)
                 })
             },
+            detail: { c, reload in AnyView(ComplianceDetailView(c: c, api: api, reload: reload)) },
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -366,5 +367,86 @@ struct FlowStatusRow: View {
         case .accent: theme.color.accent
         case .neutral: theme.color.textSecondary
         }
+    }
+}
+
+/// Compliance detail — renew a licence/inspection. Picking a renewal term PATCHes
+/// `/api/v1/admin/compliance` (manager+) with the new expiry; the server stamps
+/// lastRenewedAt. Rule #1 — only the DTO's fields are shown.
+struct ComplianceDetailView: View {
+    @Environment(\.theme) private var theme
+    let c: AdminComplianceItem
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var expiresAt: String
+    @State private var lastRenewedAt: String?
+    @State private var busy = false
+    @State private var error: String?
+
+    init(c: AdminComplianceItem, api: APIClient, reload: @escaping () async -> Void) {
+        self.c = c; self.api = api; self.reload = reload
+        _expiresAt = State(initialValue: c.expiresAt)
+        _lastRenewedAt = State(initialValue: c.lastRenewedAt)
+    }
+
+    private var expired: Bool { (isoDay(expiresAt) ?? .distantPast) < Calendar.current.startOfDay(for: Date()) }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("checkmark.shield.fill"),
+            title: c.title,
+            badge: expired ? ("Expired", .danger) : ("Valid", .success),
+            meta: [OperatorMetaRow("mappin.and.ellipse", "\(c.kind.replacingOccurrences(of: "_", with: " ").capitalized) · \(c.locationSlug.capitalized)")]
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Expires", String(expiresAt.prefix(10)), subTone: expired ? theme.color.danger : nil),
+                OperatorStatTile("Last renewed", lastRenewedAt.map { String($0.prefix(10)) } ?? "Never"),
+            ])
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("RENEW UNTIL").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    HStack(spacing: theme.space.sm) {
+                        term("+6 months", 6)
+                        term("+1 year", 12)
+                        term("+2 years", 24)
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                }
+            }
+        }
+    }
+
+    private func term(_ label: String, _ months: Int) -> some View {
+        Button { Task { await renew(months) } } label: {
+            Text(label).textRole(.caption).fontWeight(.semibold)
+                .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+                .frame(maxWidth: .infinity)
+                .background(theme.color.accent.opacity(0.16), in: Capsule())
+                .overlay(Capsule().strokeBorder(theme.color.accent.opacity(0.5), lineWidth: 1))
+                .foregroundStyle(theme.color.accent)
+        }
+        .buttonStyle(.plain).disabled(busy)
+    }
+
+    private func renew(_ months: Int) async {
+        guard !busy else { return }
+        busy = true; error = nil
+        let target = Calendar.current.date(byAdding: .month, value: months, to: Date()) ?? Date()
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+        do {
+            let updated = try await api.send(.adminRenewCompliance(id: c.id, expiresAt: f.string(from: target)))
+            expiresAt = updated.expiresAt
+            lastRenewedAt = updated.lastRenewedAt
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminComplianceItem>.message(e)
+        } catch { error = "Couldn't renew" }
+        busy = false
+    }
+
+    private func isoDay(_ s: String) -> Date? {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+        return f.date(from: String(s.prefix(10)))
     }
 }

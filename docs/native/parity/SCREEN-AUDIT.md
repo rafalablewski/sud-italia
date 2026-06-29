@@ -147,8 +147,15 @@ token → 401.
 chip row (`FlowStatusRow`) → PATCH + reload. **Verified live:** scheduled→live→
 done with fields preserved, invalid → 422, unknown → 404.
 
-Remaining Wave D surfaces (compliance renew, handover-close, schedule edit)
-follow the same recipe — a v1 mutation endpoint + a detail action — as each lands.
+**Compliance — renew (this pass).** New `PATCH /api/v1/admin/compliance`
+(manager+, scope-gated, `{ id, expiresAt }`) sets the new expiry and stamps
+`lastRenewedAt`. Native `ComplianceDetailView` — +6mo / +1yr / +2yr renewal-term
+chips (the app computes the date) → PATCH + reload. **Verified live:** expired →
+renew to 2027 → expired=false + lastRenewedAt set; invalid date → 422, unknown →
+404, no token → 401.
+
+Remaining Wave D surfaces (handover-close, schedule edit) follow the same recipe
+— a v1 mutation endpoint + a detail action — as each lands.
 
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 

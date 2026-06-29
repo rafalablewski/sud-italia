@@ -82,6 +82,7 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/admin/inventory` | Bearer (manager+) | adjust on-hand by a signed `delta` (`{ ingredientId, locationSlug, delta, reason? }`); records an `adjust` stock movement via the shared `createStockMovement`, returns the updated row |
 | PATCH | `/api/v1/admin/slots` | Bearer (manager+) | tune a fulfilment slot's capacity / status (`{ id, maxOrders?, status? }`); `maxOrders` can't drop below the booked count, `status` ∈ {draft, active} |
 | PATCH | `/api/v1/admin/events` | Bearer (manager+) | advance an event's lifecycle (`{ id, status }`, status ∈ {scheduled, live, done, cancelled}); re-saves via `saveEvent` so other fields persist |
+| PATCH | `/api/v1/admin/compliance` | Bearer (manager+) | renew a licence/inspection (`{ id, expiresAt }`); sets the new expiry and stamps `lastRenewedAt` server-side via `saveComplianceItem` |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create

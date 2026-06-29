@@ -417,6 +417,12 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(SetEventStatusBody(id: id, status: status))
         return Endpoint<AdminEvent>(.patch, "admin/events", body: body, requiresAuth: true)
     }
+    /// Renew a compliance item to a new expiry (manager); stamps lastRenewedAt
+    /// server-side. `expiresAt` is an ISO date (`yyyy-MM-dd`). Returns the row.
+    static func adminRenewCompliance(id: String, expiresAt: String) -> Endpoint<AdminComplianceItem> {
+        let body = try? JSONEncoder().encode(RenewComplianceBody(id: id, expiresAt: expiresAt))
+        return Endpoint<AdminComplianceItem>(.patch, "admin/compliance", body: body, requiresAuth: true)
+    }
 }
 
 public extension Endpoint {
@@ -462,6 +468,7 @@ private struct AdjustStockBody: Encodable {
 }
 private struct UpdateSlotBody: Encodable { let id: String; let maxOrders: Int?; let status: String? }
 private struct SetEventStatusBody: Encodable { let id: String; let status: String }
+private struct RenewComplianceBody: Encodable { let id: String; let expiresAt: String }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
 
