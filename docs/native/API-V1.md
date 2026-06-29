@@ -83,6 +83,7 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | PATCH | `/api/v1/admin/slots` | Bearer (manager+) | tune a fulfilment slot's capacity / status (`{ id, maxOrders?, status? }`); `maxOrders` can't drop below the booked count, `status` ∈ {draft, active} |
 | PATCH | `/api/v1/admin/events` | Bearer (manager+) | advance an event's lifecycle (`{ id, status }`, status ∈ {scheduled, live, done, cancelled}); re-saves via `saveEvent` so other fields persist |
 | PATCH | `/api/v1/admin/compliance` | Bearer (manager+) | renew a licence/inspection (`{ id, expiresAt }`); sets the new expiry and stamps `lastRenewedAt` server-side via `saveComplianceItem` |
+| PATCH | `/api/v1/admin/schedule` | Bearer (manager+) | advance a shift's status (`{ id, status }`, status ∈ {scheduled, in-progress, done, missed}); re-saves via `saveShift` so times/staff/role persist |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create

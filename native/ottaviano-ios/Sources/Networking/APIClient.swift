@@ -423,6 +423,11 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(RenewComplianceBody(id: id, expiresAt: expiresAt))
         return Endpoint<AdminComplianceItem>(.patch, "admin/compliance", body: body, requiresAuth: true)
     }
+    /// Advance a scheduled shift's status (manager). Returns the updated row.
+    static func adminSetShiftStatus(id: String, status: String) -> Endpoint<AdminShift> {
+        let body = try? JSONEncoder().encode(SetEventStatusBody(id: id, status: status))
+        return Endpoint<AdminShift>(.patch, "admin/schedule", body: body, requiresAuth: true)
+    }
 }
 
 public extension Endpoint {

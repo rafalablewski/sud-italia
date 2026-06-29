@@ -168,6 +168,7 @@ public struct OperatorScheduleView: View {
             emptyText: "No shifts scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSchedule()) },
             search: { "\($0.staffName) \($0.role) \($0.locationSlug)" },
+            detail: { s, reload in AnyView(ScheduleDetailView(s: s, api: api, reload: reload)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -177,7 +178,7 @@ public struct OperatorScheduleView: View {
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(s.startAt.prefix(10)).font(.caption2.monospaced()).foregroundStyle(theme.color.textSecondary)
-                        Text("\(hhmm(s.startAt))–\(hhmm(s.endAt))").font(.caption.monospaced()).foregroundStyle(theme.color.textPrimary)
+                        Text("\(Self.hhmm(s.startAt))–\(Self.hhmm(s.endAt))").font(.caption.monospaced()).foregroundStyle(theme.color.textPrimary)
                         Text(s.status).font(.caption2).foregroundStyle(theme.color.textSecondary)
                     }
                 }
@@ -185,7 +186,66 @@ public struct OperatorScheduleView: View {
         )
     }
     /// "HH:MM" from an ISO timestamp like 2026-06-26T18:00:00Z.
-    private func hhmm(_ iso: String) -> String {
+    static func hhmm(_ iso: String) -> String {
         String(iso.split(separator: "T").last?.prefix(5) ?? "")
+    }
+}
+
+/// Shift detail — advance a shift through its lifecycle. The status chip row
+/// PATCHes `/api/v1/admin/schedule` (manager+) and reloads. Times / staff / role
+/// are read-only here. Rule #1.
+struct ScheduleDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminShift
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var status: String
+    @State private var busy = false
+    @State private var error: String?
+
+    init(s: AdminShift, api: APIClient, reload: @escaping () async -> Void) {
+        self.s = s; self.api = api; self.reload = reload
+        _status = State(initialValue: s.status)
+    }
+
+    private let statuses = ["scheduled", "in-progress", "done", "missed"]
+    private func tone(_ st: String) -> DSBadge.Tone {
+        switch st { case "done": .success; case "in-progress": .warning; case "missed": .danger; default: .info }
+    }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("person.badge.clock.fill"),
+            title: s.staffName,
+            badge: (status.replacingOccurrences(of: "-", with: " ").capitalized, tone(status)),
+            meta: [
+                OperatorMetaRow("briefcase.fill", "\(s.role.capitalized) · \(s.locationSlug.capitalized)"),
+                OperatorMetaRow("clock.fill", "\(s.startAt.prefix(10)) · \(OperatorScheduleView.hhmm(s.startAt))–\(OperatorScheduleView.hhmm(s.endAt))"),
+            ]
+        ) {
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("STATUS").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    FlowStatusRow(statuses: statuses, current: status, tone: tone) { picked in
+                        Task { await save(picked) }
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                }
+            }
+        }
+    }
+
+    private func save(_ next: String) async {
+        guard next != status, !busy else { return }
+        busy = true; error = nil
+        do {
+            let updated = try await api.send(.adminSetShiftStatus(id: s.id, status: next))
+            status = updated.status
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminShift>.message(e)
+        } catch { error = "Couldn't update the shift" }
+        busy = false
     }
 }

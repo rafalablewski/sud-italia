@@ -154,8 +154,18 @@ chips (the app computes the date) → PATCH + reload. **Verified live:** expired
 renew to 2027 → expired=false + lastRenewedAt set; invalid date → 422, unknown →
 404, no token → 401.
 
-Remaining Wave D surfaces (handover-close, schedule edit) follow the same recipe
-— a v1 mutation endpoint + a detail action — as each lands.
+**Schedule — shift status (this pass).** New `PATCH /api/v1/admin/schedule`
+(manager+, scope-gated, `{ id, status }` ∈ {scheduled, in-progress, done,
+missed}); re-saves via `saveShift` so times/staff/role persist. Native
+`ScheduleDetailView` — a `FlowStatusRow` status row → PATCH + reload. **Verified
+live:** scheduled→in-progress→done with fields preserved, invalid → 422,
+unknown → 404, no token → 401.
+
+Detail drill-in + write now spans **Customers, Staff, Guest, Suppliers, Stock
+(adjust), Service slots (capacity/status), Events (status), Compliance (renew),
+Schedule (status)**. The one remaining named Wave-D surface — **Shift handover**
+— is a *create* form (no status to toggle: a handover is a new log record), so it
+follows the toolbar-create pattern (`LogWaste`/`OpenCash`), tracked next.
 
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 
