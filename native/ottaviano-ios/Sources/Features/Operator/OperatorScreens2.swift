@@ -15,7 +15,7 @@ public struct OperatorRecipesView: View {
         OperatorListView(
             title: "Recipes",
             emptyText: "No recipes defined yet.",
-            loader: OperatorListLoader { try await api.send(.adminRecipes()) },
+            loader: OperatorListLoader<AdminRecipe> { try await api.send(.adminRecipes()) },
             search: { ([$0.dishName] + $0.ingredients.map(\.name)).joined(separator: " ") },
             sorts: [
                 OperatorSortOption("Name") { $0.dishName.localizedCaseInsensitiveCompare($1.dishName) == .orderedAscending },

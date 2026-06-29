@@ -82,7 +82,7 @@ public struct OperatorCampaignsView: View {
         OperatorListView(
             title: "Campaigns",
             emptyText: "No campaigns sent yet.",
-            loader: OperatorListLoader { try await api.send(.adminCampaigns()) },
+            loader: OperatorListLoader<AdminCampaign> { try await api.send(.adminCampaigns()) },
             search: { [$0.template, $0.audienceLabel, $0.status].joined(separator: " ") },
             filters: [
                 OperatorFilter("Sent", systemImage: "checkmark.circle.fill") { $0.status == "done" },

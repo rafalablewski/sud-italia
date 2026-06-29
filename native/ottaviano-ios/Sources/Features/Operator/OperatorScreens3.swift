@@ -237,7 +237,7 @@ public struct OperatorBusinessCostsView: View {
         OperatorListView(
             title: "Business costs",
             emptyText: "No costs recorded.",
-            loader: OperatorListLoader { try await api.send(.adminBusinessCosts()) },
+            loader: OperatorListLoader<AdminBusinessCost> { try await api.send(.adminBusinessCosts()) },
             search: { [$0.name, $0.category, $0.vendor ?? ""].joined(separator: " ") },
             sorts: [
                 OperatorSortOption("Top cost") { $0.amountGrosze > $1.amountGrosze },
@@ -320,7 +320,7 @@ public struct OperatorEventsView: View {
         OperatorListView(
             title: "Events",
             emptyText: "No events booked.",
-            loader: OperatorListLoader { try await api.send(.adminEvents()) },
+            loader: OperatorListLoader<AdminEvent> { try await api.send(.adminEvents()) },
             search: { [$0.name, $0.locationSlug, $0.status].joined(separator: " ") },
             detail: { e, reload in AnyView(EventDetailView(e: e, api: api, reload: reload)) },
             filters: [
