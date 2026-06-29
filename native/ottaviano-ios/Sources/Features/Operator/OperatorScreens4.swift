@@ -411,7 +411,7 @@ public struct OperatorExpansionView: View {
             title: "Expansion",
             emptyText: "No expansion sites tracked.",
             loader: OperatorListLoader { try await api.send(.adminExpansion()) },
-            search: { "\($0.city ?? "") \($0.locationSlug)" },
+            search: { [$0.city ?? "", $0.locationSlug].joined(separator: " ") },
             filters: [
                 OperatorFilter("In progress", systemImage: "hammer.fill") { $0.pct < 100 },
                 OperatorFilter("Ready", systemImage: "checkmark.seal.fill") { $0.pct >= 100 },
@@ -445,7 +445,7 @@ public struct OperatorScheduledBundlesView: View {
             title: "Scheduled bundles",
             emptyText: "No scheduled bundles yet.",
             loader: OperatorListLoader { try await api.send(.adminScheduledBundles()) },
-            search: { "\($0.bundleName) \($0.customerPhone) \($0.locationSlug) \($0.weekday)" },
+            search: { [$0.bundleName, $0.customerPhone, $0.locationSlug, $0.weekday].joined(separator: " ") },
             filters: [
                 OperatorFilter("Active", systemImage: "repeat") { $0.status == "active" },
                 OperatorFilter("Paused", systemImage: "pause.circle") { $0.status != "active" },

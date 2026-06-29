@@ -326,7 +326,7 @@ public struct OperatorRegulatoryView: View {
             title: "Regulatory",
             emptyText: "No locations to disclose.",
             loader: OperatorListLoader { try await api.send(.adminRegulatory()) },
-            search: { "\($0.city) \($0.zone)" },
+            search: { [$0.city, $0.zone].joined(separator: " ") },
             filters: [
                 OperatorFilter("Calorie labels", systemImage: "list.bullet.rectangle") { $0.calorieDisclosureRequired },
                 OperatorFilter("Halal", systemImage: "checkmark.seal.fill") { $0.halalCertId != nil },

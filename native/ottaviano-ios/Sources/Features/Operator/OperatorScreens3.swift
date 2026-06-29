@@ -15,7 +15,7 @@ public struct OperatorUsersView: View {
             title: "Users",
             emptyText: "No staff accounts yet.",
             loader: OperatorListLoader { try await api.send(.adminUsers()) },
-            search: { "\($0.name) \($0.email ?? "") \($0.role)" },
+            search: { [$0.name, $0.email ?? "", $0.role].joined(separator: " ") },
             filters: [
                 OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.status == "active" },
                 OperatorFilter("MFA on", systemImage: "lock.shield.fill") { $0.mfaEnabled },
@@ -59,7 +59,7 @@ public struct OperatorAuditView: View {
             title: "Audit log",
             emptyText: "No audit entries.",
             loader: OperatorListLoader { try await api.send(.adminAuditLog()) },
-            search: { "\($0.action) \($0.actor) \($0.entityType ?? "") \($0.entityId ?? "")" },
+            search: { [$0.action, $0.actor, $0.entityType ?? "", $0.entityId ?? ""].joined(separator: " ") },
             row: { e in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
@@ -238,7 +238,7 @@ public struct OperatorBusinessCostsView: View {
             title: "Business costs",
             emptyText: "No costs recorded.",
             loader: OperatorListLoader { try await api.send(.adminBusinessCosts()) },
-            search: { "\($0.name) \($0.category) \($0.vendor ?? "")" },
+            search: { [$0.name, $0.category, $0.vendor ?? ""].joined(separator: " ") },
             sorts: [
                 OperatorSortOption("Top cost") { $0.amountGrosze > $1.amountGrosze },
                 OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
@@ -279,8 +279,8 @@ public struct OperatorComplianceView: View {
                     OperatorStatChip("Expired", "\(items.filter(\.expired).count)", tint: theme.color.danger)
                 })
             },
+            search: { [$0.title, $0.kind, $0.locationSlug].joined(separator: " ") },
             detail: { c, reload in AnyView(ComplianceDetailView(c: c, api: api, reload: reload)) },
-            search: { "\($0.title) \($0.kind) \($0.locationSlug)" },
             filters: [
                 OperatorFilter("Expired", systemImage: "xmark.octagon.fill") { $0.expired },
                 OperatorFilter("Expiring 30d", systemImage: "clock.badge.exclamationmark") {
@@ -321,8 +321,8 @@ public struct OperatorEventsView: View {
             title: "Events",
             emptyText: "No events booked.",
             loader: OperatorListLoader { try await api.send(.adminEvents()) },
+            search: { [$0.name, $0.locationSlug, $0.status].joined(separator: " ") },
             detail: { e, reload in AnyView(EventDetailView(e: e, api: api, reload: reload)) },
-            search: { "\($0.name) \($0.locationSlug) \($0.status)" },
             filters: [
                 OperatorFilter("Upcoming", systemImage: "calendar") { $0.status == "scheduled" || $0.status == "confirmed" },
                 OperatorFilter("Live", systemImage: "dot.radiowaves.left.and.right") { $0.status == "live" },
@@ -365,7 +365,7 @@ public struct OperatorWasteView: View {
             emptyText: "No wastage recorded.",
             loader: OperatorListLoader { try await api.send(.adminWaste()) },
             toolbar: { reload in AnyView(LogWasteButton(api: api, reload: reload)) },
-            search: { "\($0.item) \($0.reason) \($0.locationSlug)" },
+            search: { [$0.item, $0.reason, $0.locationSlug].joined(separator: " ") },
             sorts: [
                 OperatorSortOption("Recent") { $0.recordedAt > $1.recordedAt },
                 OperatorSortOption("Top cost") { ($0.estimatedCostGrosze ?? 0) > ($1.estimatedCostGrosze ?? 0) },
@@ -400,7 +400,7 @@ public struct OperatorSurveysView: View {
             title: "Pulse surveys",
             emptyText: "No surveys configured.",
             loader: OperatorListLoader { try await api.send(.adminSurveys()) },
-            search: { "\($0.question) \($0.trigger)" },
+            search: { [$0.question, $0.trigger].joined(separator: " ") },
             filters: [
                 OperatorFilter("Active", systemImage: "dot.radiowaves.left.and.right") { $0.active },
                 OperatorFilter("Off", systemImage: "pause.circle") { !$0.active },

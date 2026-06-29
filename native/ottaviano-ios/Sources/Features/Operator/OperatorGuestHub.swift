@@ -52,7 +52,7 @@ struct GuestCRMTab: View {
                     OperatorStatChip("VIPs", "\(items.filter { $0.totalSpentGrosze >= 50000 }.count)", tint: theme.color.warning)
                 })
             },
-            search: { "\($0.name ?? "") \($0.phone)" },
+            search: { [$0.name ?? "", $0.phone].joined(separator: " ") },
             detail: { c, reload in AnyView(CrmDetailSheet(phone: c.phone, fallbackName: c.name ?? c.phone, api: api, onChange: reload)) },
             filters: [
                 OperatorFilter("VIP", systemImage: "star.fill") { $0.totalSpentGrosze >= 50000 },

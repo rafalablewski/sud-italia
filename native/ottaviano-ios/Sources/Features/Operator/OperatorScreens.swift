@@ -22,7 +22,7 @@ public struct OperatorCustomersView: View {
                     OperatorStatChip("VIPs", "\(items.filter { $0.totalSpentGrosze >= 50000 }.count)", tint: theme.color.success)
                 })
             },
-            search: { "\($0.name ?? "") \($0.phone)" },
+            search: { [$0.name ?? "", $0.phone].joined(separator: " ") },
             detail: { c, _ in AnyView(CustomerDetailView(c: c)) },
             filters: [
                 OperatorFilter("VIP", systemImage: "star.fill") { $0.totalSpentGrosze >= 50000 },
@@ -268,7 +268,7 @@ public struct OperatorStaffView: View {
                     OperatorStatChip("Active", "\(items.filter { $0.status == "active" }.count)", tint: theme.color.success)
                 })
             },
-            search: { "\($0.name) \($0.role) \($0.locationSlug)" },
+            search: { [$0.name, $0.role, $0.locationSlug].joined(separator: " ") },
             detail: { s, _ in AnyView(StaffDetailView(s: s)) },
             filters: [
                 OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.status == "active" },
@@ -349,7 +349,7 @@ public struct OperatorSuppliersView: View {
             title: "Suppliers",
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
-            search: { "\($0.name) \($0.contactName ?? "")" },
+            search: { [$0.name, $0.contactName ?? ""].joined(separator: " ") },
             detail: { s, _ in AnyView(SupplierDetailView(s: s)) },
             sorts: [
                 OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
@@ -501,7 +501,7 @@ public struct OperatorInventoryView: View {
                     OperatorStatChip("Low", "\(items.filter(\.low).count)", tint: theme.color.danger)
                 })
             },
-            search: { "\($0.name) \($0.locationSlug)" },
+            search: { [$0.name, $0.locationSlug].joined(separator: " ") },
             detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
             filters: [
                 OperatorFilter("Low stock", systemImage: "exclamationmark.triangle.fill") { $0.low },

@@ -16,7 +16,7 @@ public struct OperatorRecipesView: View {
             title: "Recipes",
             emptyText: "No recipes defined yet.",
             loader: OperatorListLoader { try await api.send(.adminRecipes()) },
-            search: { "\($0.dishName) \($0.ingredients.map(\.name).joined(separator: " "))" },
+            search: { ([$0.dishName] + $0.ingredients.map(\.name)).joined(separator: " ") },
             sorts: [
                 OperatorSortOption("Name") { $0.dishName.localizedCaseInsensitiveCompare($1.dishName) == .orderedAscending },
                 OperatorSortOption("Most ingredients") { $0.ingredients.count > $1.ingredients.count },
@@ -236,7 +236,7 @@ public struct OperatorAlertsView: View {
             title: "Alerts",
             emptyText: "All clear — no alerts.",
             loader: OperatorListLoader { try await api.send(.adminAlerts()) },
-            search: { "\($0.title) \($0.message) \($0.type)" },
+            search: { [$0.title, $0.message, $0.type].joined(separator: " ") },
             filters: [
                 OperatorFilter("Unread", systemImage: "circle.fill") { !$0.read },
             ],
@@ -281,7 +281,7 @@ public struct OperatorAnnouncementsView: View {
             loader: OperatorListLoader { try await api.send(.adminAnnouncements()) },
             // Posting is owner-only (web parity); managers see the list, not the action.
             toolbar: role == .owner ? { reload in AnyView(NewAnnouncementButton(api: api, reload: reload)) } : nil,
-            search: { "\($0.title) \($0.body) \($0.createdByName)" },
+            search: { [$0.title, $0.body, $0.createdByName].joined(separator: " ") },
             filters: [
                 OperatorFilter("Pinned", systemImage: "pin.fill") { $0.pinned },
             ],
@@ -314,7 +314,7 @@ public struct OperatorScheduleView: View {
             title: "Schedule",
             emptyText: "No shifts scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSchedule()) },
-            search: { "\($0.staffName) \($0.role) \($0.locationSlug)" },
+            search: { [$0.staffName, $0.role, $0.locationSlug].joined(separator: " ") },
             detail: { s, reload in AnyView(ScheduleDetailView(s: s, api: api, reload: reload)) },
             filters: [
                 OperatorFilter("Scheduled", systemImage: "calendar") { $0.status == "scheduled" },
