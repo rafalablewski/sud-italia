@@ -102,7 +102,7 @@ struct OperatorRootView: View {
         case "/core/pos":
             OperatorPOSView(api: deps.api)
         case "/core/kds":
-            KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse))
+            KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse), api: deps.api, role: role)
         case "/core/orders", "/admin/orders":
             OperatorBoardView()
         case "/admin":

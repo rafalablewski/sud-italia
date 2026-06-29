@@ -23,6 +23,9 @@ public final class KDSStore {
     public private(set) var recents: [KDSRecall] = []
     /// Stream paused (the web pause/resume control) — stops following the board.
     public private(set) var paused = false
+    /// Manager floor-ops header signals (throughput + on-shift) — nil until
+    /// loaded, or when the operator's role can't read the manager endpoint.
+    public private(set) var floorOps: FloorOps?
 
     private let api: APIClient
     private let sse: SSEClient
@@ -98,6 +101,13 @@ public final class KDSStore {
 
     private func reload() async {
         if let board = try? await api.send(.operatorBoard(location: location)) { orders = board }
+    }
+
+    /// Load the manager floor-ops header (Done/hr + On-shift). Best-effort: a
+    /// kitchen/staff token gets 403, so failures silently leave `floorOps` nil
+    /// and the KPI strip just omits those two cells (no faked numbers, Rule #1).
+    public func loadFloorOps() async {
+        floorOps = try? await api.send(.adminKdsFloorOps(location: location))
     }
 
     // Three lanes, 1:1 with the web KDS board (New · Firing · Ready·Expo —

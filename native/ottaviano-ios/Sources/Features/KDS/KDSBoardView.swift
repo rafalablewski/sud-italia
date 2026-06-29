@@ -14,11 +14,16 @@ public struct KDSBoardView: View {
     @State private var station: String?
     /// Focused status lane (Floor mode): "all" or a column id. Web `lane` segment.
     @State private var lane: String = "all"
-    /// Floor (lanes) vs Chef (single station make-queue). Web `view` tabs (Fleet
-    /// is owner-only + needs the fleet facade — tracked as a follow-up).
-    @State private var mode: Mode = .floor
+    /// Floor (lanes) · Chef (station make-queue) · Fleet (owner Atlas). Web `view`
+    /// tabs — Fleet is owner-only, off `GET /api/v1/admin/kds/fleet`.
+    @State private var mode: Mode
+    /// Owner fleet store — polls the Atlas feed while the Fleet tab is on screen.
+    @State private var fleet: KDSFleetStore
+    /// Operator role — gates the Fleet tab (owner) + the floor-ops KPIs (manager+),
+    /// the same role gate the web KDS applies via /api/admin/me.
+    private let role: OperatorRole
 
-    private enum Mode: String, CaseIterable { case floor = "Floor", chef = "Chef" }
+    private enum Mode: String, CaseIterable { case floor = "Floor", chef = "Chef", fleet = "Fleet" }
 
     // The three KDS columns, 1:1 with the web KDS_COLUMNS (kds-board.ts):
     // confirmed → preparing → ready.
@@ -26,25 +31,33 @@ public struct KDSBoardView: View {
         ("confirmed", "New"), ("preparing", "Firing"), ("ready", "Ready"),
     ]
 
-    public init(store: KDSStore) {
+    public init(store: KDSStore, api: APIClient, role: OperatorRole = .kitchen) {
         _store = State(initialValue: store)
+        _fleet = State(initialValue: KDSFleetStore(api: api))
+        self.role = role
+        // Owners land on the cross-truck Atlas by default (web parity); the line
+        // roles stay on the floor.
+        _mode = State(initialValue: role == .owner ? .fleet : .floor)
     }
+
+    /// View modes available to this role — Fleet is owner-only.
+    private var modes: [Mode] { role == .owner ? Mode.allCases : [.floor, .chef] }
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.space.lg) {
-                // Only the time-derived aggregates (oldest / avg / late) need the
-                // coarse tick; the per-ticket countdowns live in each KDSTicket,
-                // and the controls re-render off @Observable order changes.
-                TimelineView(.periodic(from: .now, by: 2)) { ctx in
-                    kpiStrip(now: ctx.date.timeIntervalSince1970 * 1000)
-                }
-                stationStrip
-                if mode == .floor { laneSegment }
-                if mode == .chef {
-                    chefBody
+                if mode == .fleet {
+                    fleetBody
                 } else {
-                    floorBody
+                    // Only the time-derived aggregates (oldest / avg / late) need
+                    // the coarse tick; the per-ticket countdowns live in each
+                    // KDSTicket, and the controls re-render off @Observable changes.
+                    TimelineView(.periodic(from: .now, by: 2)) { ctx in
+                        kpiStrip(now: ctx.date.timeIntervalSince1970 * 1000)
+                    }
+                    stationStrip
+                    if mode == .floor { laneSegment }
+                    if mode == .chef { chefBody } else { floorBody }
                 }
             }
             .padding(theme.space.lg)
@@ -54,16 +67,18 @@ public struct KDSBoardView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Picker("View", selection: $mode) {
-                    ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(modes, id: \.self) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
             }
-            ToolbarItem(placement: .topBarLeading) {
-                Menu {
-                    Button("All stations") { station = nil }
-                    ForEach(stations, id: \.self) { s in Button(s.capitalized) { station = s } }
-                } label: {
-                    Label(station?.capitalized ?? "All stations", systemImage: "line.3.horizontal.decrease.circle")
+            if mode != .fleet {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button("All stations") { station = nil }
+                        ForEach(stations, id: \.self) { s in Button(s.capitalized) { station = s } }
+                    } label: {
+                        Label(station?.capitalized ?? "All stations", systemImage: "line.3.horizontal.decrease.circle")
+                    }
                 }
             }
             if !store.liveRecents.isEmpty {
@@ -94,7 +109,34 @@ public struct KDSBoardView: View {
             }
         }
         .task { store.start() }
-        .onDisappear { store.stop() }
+        // Floor-ops KPIs (Done/hr + On-shift) — manager+ only; refresh every 15s
+        // like the web header. A kitchen/staff token 403s and the cells stay off.
+        .task(id: role) {
+            guard role.rank >= OperatorRole.manager.rank else { return }
+            while !Task.isCancelled {
+                await store.loadFloorOps()
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+        // Poll the Atlas feed only while the Fleet tab is on screen.
+        .onChange(of: mode, initial: true) { _, m in
+            if m == .fleet { fleet.start() } else { fleet.stop() }
+        }
+        .onDisappear { store.stop(); fleet.stop() }
+    }
+
+    // MARK: Fleet (owner Atlas)
+
+    @ViewBuilder
+    private var fleetBody: some View {
+        if let board = fleet.board {
+            KDSFleetView(board: board)
+        } else if let error = fleet.error {
+            DSEmptyState("Fleet unavailable", systemImage: "exclamationmark.triangle", message: error)
+                .frame(maxWidth: .infinity)
+        } else {
+            ProgressView().frame(maxWidth: .infinity).padding(theme.space.xl)
+        }
     }
 
     // MARK: KPI strip (web `core-kpi` — board-derived metrics)
@@ -118,6 +160,11 @@ public struct KDSBoardView: View {
                 kpi("Oldest", oldest > 0 ? KDSClock.clock(oldest) : "—",
                     oldest >= 600 ? theme.color.danger : theme.color.textPrimary)
                 kpi("Avg age", avg > 0 ? KDSClock.clock(avg) : "—", theme.color.textPrimary)
+                // Manager-only floor-ops signals (nil for kitchen/staff tokens).
+                if let fo = store.floorOps {
+                    kpi("Done/hr", "\(fo.throughputLastHour)", theme.color.success)
+                    kpi("On shift", "\(fo.onShift)", theme.color.textPrimary)
+                }
             }
         }
     }

@@ -368,6 +368,16 @@ public extension Endpoint {
     static func adminAgentHQ() -> Endpoint<AgentHQ> {
         Endpoint<AgentHQ>(.get, "admin/agent-hq", requiresAuth: true)
     }
+
+    // KDS owner fleet (Atlas) + manager floor-ops header.
+    static func adminKdsFleet(includeSimulated: Bool = false) -> Endpoint<FleetBoard> {
+        Endpoint<FleetBoard>(.get, "admin/kds/fleet",
+            query: includeSimulated ? ["includeSimulated": "1"] : [:], requiresAuth: true)
+    }
+    static func adminKdsFloorOps(location: String? = nil) -> Endpoint<FloorOps> {
+        Endpoint<FloorOps>(.get, "admin/kds/floor-ops",
+            query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
+    }
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
