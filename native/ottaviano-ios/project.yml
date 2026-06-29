@@ -28,7 +28,7 @@ settings:
     # existing integer builds (e.g. 0.3.0 (31), 0.2.0 (44)) and TestFlight treats
     # it as older. Integers above the current max (44) avoid that. Source of truth
     # here (the testflight script no longer overrides it); bump +1 each release.
-    CURRENT_PROJECT_VERSION: "45"
+    CURRENT_PROJECT_VERSION: "46"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 targets:
