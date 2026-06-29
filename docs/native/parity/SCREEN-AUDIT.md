@@ -21,18 +21,34 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ### KDS — Kitchen Display (`/core/kds` · `KDSBoardView.swift`) ✅🟡
 - **Web (resolved):** three columns — **New** (confirmed) → **Firing** (preparing)
-  → **Ready·Expo** (ready); station filters (all/pizza/pasta/…); forward bump
-  (`nextStatus`); a **recall** of the *last completed* ticket within 10 min
-  (`POST /api/admin/orders/[id]/recall`); predictive at-risk tone tiers.
-- **Native now:** **three lanes** (New / Firing / Ready) — brought to 1:1 with the
-  web columns this pass (`KDSStore.incoming/cooking/ready`) — each a
-  `DSSectionHeader` + count `DSBadge`, tickets via **`KDSTicket`** (age timer
-  fresh→cooking→late), forward bump over SSE/PATCH, per-lane `DSEmptyState`.
-- **Shipped:** **recall** — `POST /api/v1/orders/:id/recall` (completed→ready,
-  audited) + a native "Recall" toolbar action that un-bumps the last completed
-  ticket (the mis-tap undo).
-- **Shipped:** **station filter** — `category` added to the order-line DTO; a
-  native station Menu filters the lanes (web STATION_FILTERS semantics).
+  → **Ready·Expo** (ready); station filters; forward bump (`nextStatus`); a
+  **recall** tray (last completions, 10-min window); **predictive at-risk tone
+  tiers** + SLA meter + due countdown; a KPI strip; a Chef station make-queue; a
+  Fleet (owner) atlas; an 86 dialog; sound chimes; pause; kiosk fullscreen.
+- **Shipped — ticket detail parity (this pass):** the v1 order DTO was enriched
+  (`schemas.ts`/`order-dto.ts`) so the native **`KDSTicket`** now renders 1:1 with
+  the web `TicketCard`: short id + channel chip (party size), **predictive due
+  countdown + SLA meter + at-risk pill** (server `prediction` block, computed per
+  location via `analyzeTruck` in the board-level `toOrderDTOs`), **coursing-held**
+  callout, **station-grouped** lines with **KDS-flagged modifiers** + notes, an
+  allergen line, the guest note. Pure tone/timing/grouping in
+  `CoreModels/KDSLogic.swift` (shared, mirroring the web `kds-board`/`kds-prediction`).
+- **Shipped — board chrome (this pass):** a live **KPI strip** (Open / New /
+  Firing / Ready / At risk / Late / Oldest / Avg age, board-derived, on a 2s
+  aggregate clock), a **station filter strip**, a **status lane segment** (focus
+  collapses to one column), a **Chef** make-queue mode (station queue, oldest-first
+  + depth header), a **multi-entry recall tray** (`KDSStore.liveRecents`, 10-min,
+  via `POST /api/v1/orders/:id/recall`), and a **pause/resume** SSE control.
+- **Honest gaps (facade/hardware-gated, not faked — Rule #1):**
+  - **Fleet (owner atlas)** — the web `/api/admin/kds/fleet` cross-truck board has
+    no `/api/v1` equivalent; the native Fleet view awaits that facade endpoint.
+  - **Done/hr + On-shift KPIs** — need a `/api/v1/admin/kds/floor-ops` endpoint
+    (web reads `/api/admin/kds/floor-ops`); the eight board-derived KPIs ship now.
+  - **86 (eighty-six) dialog** — `adminSet86`/`adminMenu` exist, but the dialog
+    needs a single-location scope; the native KDS is wired chain-wide
+    (`location: nil`), so it's deferred until the board carries a location focus.
+  - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
+    runtime concerns; the iPad app is already chromeless).
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) 🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -110,9 +126,16 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
   CRUD + native load/save/void/charge).
 - ✅ **Orders channel dropdown** filter.
 - ✅ **POS coursing** — shared `fireTab` actuator + v1 fire/charge + native course UI.
-- ⏳ **On-device verification only** — every source-resolvable parity item is now
-  shipped; what remains is walking both apps side-by-side on a simulator (needs a
-  Mac) and manual per-line recourse polish.
+- ✅ **KDS ticket detail parity** — enriched v1 order DTO (modifier labels+flag,
+  allergens, coursing, simulated, per-location `prediction`); native `KDSTicket`
+  renders due countdown + SLA meter + at-risk pill + coursing + station groups +
+  modifiers + allergens + guest note.
+- ✅ **KDS board chrome** — KPI strip, station strip, lane segment, Chef mode,
+  multi-entry recall tray, pause/resume.
+- ⏳ **KDS Fleet + floor-ops + 86 + sound** — facade/wiring/hardware-gated (see the
+  KDS deep-dive "honest gaps"): Fleet needs a v1 fleet endpoint; Done/hr + On-shift
+  need a v1 floor-ops endpoint; the 86 dialog needs a per-location board scope;
+  sound/kiosk are on-device.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.
