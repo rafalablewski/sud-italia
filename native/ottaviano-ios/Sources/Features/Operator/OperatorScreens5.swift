@@ -15,6 +15,11 @@ public struct OperatorCorporateView: View {
             title: "Corporate",
             emptyText: "No corporate accounts yet.",
             loader: OperatorListLoader { try await api.send(.adminCorporate()) },
+            search: { [$0.name, $0.slug, $0.billingEmail ?? ""].joined(separator: " ") },
+            sorts: [
+                OperatorSortOption("Most members") { $0.memberCount > $1.memberCount },
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            ],
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -40,6 +45,16 @@ public struct OperatorManageLocationsView: View {
             title: "Manage locations",
             emptyText: "No locations configured.",
             loader: OperatorListLoader { try await api.send(.adminManageLocations()) },
+            search: { [$0.name, $0.city, $0.address].joined(separator: " ") },
+            filters: [
+                OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.isActive },
+                OperatorFilter("Off", systemImage: "pause.circle") { !$0.isActive },
+                OperatorFilter("Alcohol", systemImage: "wineglass.fill") { $0.servesAlcohol },
+            ],
+            sorts: [
+                OperatorSortOption("Display order") { $0.displayOrder < $1.displayOrder },
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            ],
             row: { l in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -67,7 +82,17 @@ public struct OperatorCampaignsView: View {
         OperatorListView(
             title: "Campaigns",
             emptyText: "No campaigns sent yet.",
-            loader: OperatorListLoader { try await api.send(.adminCampaigns()) },
+            loader: OperatorListLoader<AdminCampaign> { try await api.send(.adminCampaigns()) },
+            search: { [$0.template, $0.audienceLabel, $0.status].joined(separator: " ") },
+            filters: [
+                OperatorFilter("Sent", systemImage: "checkmark.circle.fill") { $0.status == "done" },
+                OperatorFilter("Sending", systemImage: "paperplane.fill") { $0.status != "done" && $0.status != "cancelled" },
+                OperatorFilter("Has failures", systemImage: "exclamationmark.triangle.fill") { $0.failedCount > 0 },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.createdAt > $1.createdAt },
+                OperatorSortOption("Most sent") { $0.sentCount > $1.sentCount },
+            ],
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -100,6 +125,15 @@ public struct OperatorHandoverView: View {
             emptyText: "No handovers recorded.",
             loader: OperatorListLoader { try await api.send(.adminHandover()) },
             toolbar: { reload in AnyView(NewHandoverButton(api: api, reload: reload)) },
+            search: { [$0.shift, $0.locationSlug, $0.outgoingManager, $0.incomingManager ?? ""].joined(separator: " ") },
+            filters: [
+                OperatorFilter("Issues", systemImage: "exclamationmark.triangle.fill") {
+                    !$0.tempChecksOk || !$0.equipmentOk || ($0.cashVarianceGrosze ?? 0) != 0
+                },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.recordedAt > $1.recordedAt },
+            ],
             row: { h in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {

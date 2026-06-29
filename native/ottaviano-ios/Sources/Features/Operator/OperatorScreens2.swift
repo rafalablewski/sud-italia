@@ -15,8 +15,13 @@ public struct OperatorRecipesView: View {
         OperatorListView(
             title: "Recipes",
             emptyText: "No recipes defined yet.",
-            loader: OperatorListLoader { try await api.send(.adminRecipes()) },
-            search: { "\($0.dishName) \($0.ingredients.map(\.name).joined(separator: " "))" },
+            loader: OperatorListLoader<AdminRecipe> { try await api.send(.adminRecipes()) },
+            search: { ([$0.dishName] + $0.ingredients.map(\.name)).joined(separator: " ") },
+            sorts: [
+                OperatorSortOption("Name") { $0.dishName.localizedCaseInsensitiveCompare($1.dishName) == .orderedAscending },
+                OperatorSortOption("Most ingredients") { $0.ingredients.count > $1.ingredients.count },
+                OperatorSortOption("Top yield") { $0.yieldPortions > $1.yieldPortions },
+            ],
             row: { r in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -35,33 +40,160 @@ public struct OperatorRecipesView: View {
 
 // MARK: - Guest engagement / loyalty (/core/guest)
 
-public struct OperatorGuestView: View {
-    @Environment(\.theme) private var theme
+/// Guest — the native twin of web `/core/guest` (loyalty members). A KPI strip
+/// (members · new this month · birthdays this month · contactable), search + sort,
+/// and member cards. Spend + points live on the Customers DTO (a different record
+/// keyed by phone), so they're shown there — never invented here (Rule #1).
+@MainActor
+@Observable
+final class OperatorGuestStore {
+    var members: [AdminLoyaltyMember] = []
+    var loaded = false
+    var error: String?
     private let api: APIClient
-    public init(api: APIClient) { self.api = api }
-    public var body: some View {
-        OperatorListView(
-            title: "Guest",
-            emptyText: "No loyalty members yet.",
-            loader: OperatorListLoader { try await api.send(.adminLoyalty()) },
-            header: { (items: [AdminLoyaltyMember]) in
-                AnyView(OperatorStatChip("Members", "\(items.count)", tint: theme.color.accent))
-            },
-            search: { "\($0.name) \($0.lastName ?? "") \($0.phone) \($0.email ?? "")" },
-            detail: { m, _ in AnyView(GuestDetailView(m: m)) },
-            row: { m in
-                HStack(spacing: theme.space.sm) {
-                    Avatar(name: [m.name, m.lastName ?? ""].joined(separator: " "))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text([m.name, m.lastName].compactMap { $0 }.joined(separator: " "))
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text(m.phone).font(.caption.monospaced()).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer(minLength: theme.space.sm)
-                    if let email = m.email { Text(email).font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1) }
+    init(api: APIClient) { self.api = api }
+    func load() async {
+        do { members = try await api.send(.adminLoyalty()); error = nil }
+        catch let e as APIError { error = OperatorListLoader<AdminLoyaltyMember>.message(e) }
+        catch { self.error = "Something went wrong" }
+        loaded = true
+    }
+}
+
+/// Loyalty members tab of the Guest hub (see OperatorGuestHub.swift).
+struct GuestLoyaltyTab: View {
+    @Environment(\.theme) private var theme
+    @State private var store: OperatorGuestStore?
+    @State private var selected: AdminLoyaltyMember?
+    @State private var search = ""
+    @State private var sort: GuestSort = .recent
+    private let api: APIClient
+    init(api: APIClient) { self.api = api }
+
+    enum GuestSort: Hashable { case recent, name }
+    private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+
+    var body: some View {
+        ScrollView {
+            if let store { content(store) }
+            else { ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl) }
+        }
+        .background(theme.color.surface)
+        .task {
+            if store == nil { store = OperatorGuestStore(api: api) }
+            if store?.loaded == false { await store?.load() }
+        }
+        .refreshable { await store?.load() }
+        .sheet(item: $selected) { m in GuestDetailView(m: m) }
+    }
+
+    @ViewBuilder
+    private func content(_ store: OperatorGuestStore) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.lg) {
+            if let error = store.error, store.members.isEmpty {
+                ContentUnavailableView("Couldn't load guests", systemImage: "person.2", description: Text(error))
+                    .padding(.top, theme.space.xxl)
+            } else if store.members.isEmpty && store.loaded {
+                DSEmptyState("Guest", systemImage: "person.2", message: "No loyalty members yet.")
+            } else {
+                kpis(store.members)
+                controls
+                let rows = filtered(store.members)
+                if rows.isEmpty {
+                    Text("No members match.").textRole(.callout).foregroundStyle(theme.color.textSecondary)
+                } else {
+                    VStack(spacing: theme.space.sm) { ForEach(rows) { memberCard($0) } }
                 }
             }
-        )
+        }
+        .padding(theme.space.lg)
+    }
+
+    private func kpis(_ members: [AdminLoyaltyMember]) -> some View {
+        let cutoff = AnalyticsDates.window(for: .month).from
+        let new30 = members.filter { String($0.signedUpAt.prefix(10)) >= cutoff }.count
+        let month = String(AnalyticsDates.iso(Date()).dropFirst(5).prefix(2))
+        let bdays = members.filter { ($0.dob.map { String($0.dropFirst(5).prefix(2)) } ?? "") == month }.count
+        let contactable = members.filter { $0.email?.isEmpty == false }.count
+        return LazyVGrid(columns: cols, spacing: theme.space.md) {
+            OperatorKPICard(label: "Members", value: "\(members.count)", icon: "person.2.fill", tint: theme.color.accent, info: Self.membersInfo)
+            OperatorKPICard(label: "New (30d)", value: "\(new30)", icon: "person.badge.plus", tint: theme.color.success)
+            OperatorKPICard(label: "Birthdays", value: "\(bdays)", icon: "gift.fill", tint: theme.color.warning, caption: "this month", info: Self.birthdayInfo)
+            OperatorKPICard(label: "Contactable", value: "\(contactable)", icon: "envelope.fill", tint: theme.color.textSecondary, caption: "have email")
+        }
+    }
+
+    private var controls: some View {
+        HStack(spacing: theme.space.sm) {
+            HStack(spacing: theme.space.sm) {
+                Image(systemName: "magnifyingglass").foregroundStyle(theme.color.textSecondary)
+                TextField("Search members", text: $search).textFieldStyle(.plain).foregroundStyle(theme.color.textPrimary)
+            }
+            .padding(.horizontal, theme.space.md).frame(height: 38)
+            .background(theme.color.surface2, in: Capsule())
+            .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
+            DSSegmented($sort, options: [(value: .recent, label: "Recent"), (value: .name, label: "A–Z")])
+                .frame(width: 150)
+        }
+    }
+
+    private func memberCard(_ m: AdminLoyaltyMember) -> some View {
+        let fullName = [m.name, m.lastName].compactMap { $0 }.joined(separator: " ")
+        return Button { selected = m } label: {
+            HStack(spacing: theme.space.sm) {
+                Avatar(name: fullName.isEmpty ? m.phone : fullName)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(fullName.isEmpty ? m.phone : fullName)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                        if let n = m.nickname, !n.isEmpty {
+                            Text("“\(n)”").font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+                        }
+                    }
+                    Text("\(m.phone) · member since \(String(m.signedUpAt.prefix(10)))")
+                        .font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: theme.space.sm)
+                if let email = m.email, !email.isEmpty {
+                    Image(systemName: "envelope.fill").font(.caption).foregroundStyle(theme.color.textSecondary)
+                }
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(theme.color.textSecondary)
+            }
+            .padding(theme.space.md)
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func filtered(_ members: [AdminLoyaltyMember]) -> [AdminLoyaltyMember] {
+        let q = search.trimmingCharacters(in: .whitespaces).lowercased()
+        let matched = members.filter { m in
+            q.isEmpty || "\(m.name) \(m.lastName ?? "") \(m.phone) \(m.email ?? "") \(m.nickname ?? "")".lowercased().contains(q)
+        }
+        switch sort {
+        case .recent: return matched.sorted { $0.signedUpAt > $1.signedUpAt }
+        case .name: return matched.sorted { ($0.name + ($0.lastName ?? "")).lowercased() < ($1.name + ($1.lastName ?? "")).lowercased() }
+        }
+    }
+}
+
+private extension GuestLoyaltyTab {
+    static var membersInfo: InfoButton {
+        InfoButton(title: "Loyalty members",
+            description: "Guests enrolled in the loyalty programme (phone-based auto-enrolment, zero-friction).",
+            institutional: "The loyalty roster is the chain's owned audience — the one marketing channel that doesn't rent attention from a platform. Members visit more often and spend more; growing this base is the cheapest durable lever on lifetime value, and lenders read a large engaged list as de-risked future revenue.",
+            plain: "Every enrolled phone is a guest you can bring back without paying an ad platform. 400 members who each visit once more a month is real, repeatable revenue.",
+            tips: "Auto-enrol at the POS on phone capture, collect email for a second channel, and trigger birthday + win-back offers off this list.",
+            methodology: "Enrolled members. Source: /admin/loyalty.")
+    }
+    static var birthdayInfo: InfoButton {
+        InfoButton(title: "Birthdays this month",
+            description: "Members whose birthday falls in the current month.",
+            institutional: "Birthday outreach is among the highest-converting lifecycle messages in hospitality — a personal, time-bound reason to visit. Operationalising it turns a known date into predictable incremental covers at near-zero cost.",
+            plain: "If 30 members have a birthday this month, a simple 'free dolce on us' message is 30 warm reasons to book a table — far cheaper than winning a new guest.",
+            tips: "Automate a birthday offer to this list, make it dine-in to drive a full party, and time it a few days before the date.",
+            methodology: "Members whose dob month == current month. Source: /admin/loyalty.dob.")
     }
 }
 
@@ -104,6 +236,13 @@ public struct OperatorAlertsView: View {
             title: "Alerts",
             emptyText: "All clear — no alerts.",
             loader: OperatorListLoader { try await api.send(.adminAlerts()) },
+            search: { [$0.title, $0.message, $0.type].joined(separator: " ") },
+            filters: [
+                OperatorFilter("Unread", systemImage: "circle.fill") { !$0.read },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.createdAt > $1.createdAt },
+            ],
             row: { a in
                 HStack(alignment: .top, spacing: theme.space.sm) {
                     Image(systemName: icon(a.type)).foregroundStyle(a.read ? theme.color.textSecondary : theme.color.warning)
@@ -142,6 +281,14 @@ public struct OperatorAnnouncementsView: View {
             loader: OperatorListLoader { try await api.send(.adminAnnouncements()) },
             // Posting is owner-only (web parity); managers see the list, not the action.
             toolbar: role == .owner ? { reload in AnyView(NewAnnouncementButton(api: api, reload: reload)) } : nil,
+            search: { [$0.title, $0.body, $0.createdByName].joined(separator: " ") },
+            filters: [
+                OperatorFilter("Pinned", systemImage: "pin.fill") { $0.pinned },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.createdAt > $1.createdAt },
+                OperatorSortOption("Most read") { $0.readCount > $1.readCount },
+            ],
             row: { a in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
@@ -167,8 +314,17 @@ public struct OperatorScheduleView: View {
             title: "Schedule",
             emptyText: "No shifts scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSchedule()) },
-            search: { "\($0.staffName) \($0.role) \($0.locationSlug)" },
+            search: { [$0.staffName, $0.role, $0.locationSlug].joined(separator: " ") },
             detail: { s, reload in AnyView(ScheduleDetailView(s: s, api: api, reload: reload)) },
+            filters: [
+                OperatorFilter("Scheduled", systemImage: "calendar") { $0.status == "scheduled" },
+                OperatorFilter("In progress", systemImage: "play.circle") { $0.status == "in-progress" || $0.status == "in_progress" },
+                OperatorFilter("Done", systemImage: "checkmark.circle") { $0.status == "done" || $0.status == "completed" },
+            ],
+            sorts: [
+                OperatorSortOption("Start time") { $0.startAt < $1.startAt },
+                OperatorSortOption("Staff") { $0.staffName.localizedCaseInsensitiveCompare($1.staffName) == .orderedAscending },
+            ],
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

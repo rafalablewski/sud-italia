@@ -13,13 +13,13 @@ import Foundation
 public let OPERATOR_NAV: [OperatorNavSection] = [
     OperatorNavSection("core", "Core", [
         OperatorNavItem("/core/pos", "POS", "creditcard.and.123", .staff, .live,
-                        "Take counter & table orders, split bills, settle payment."),
+                        "Counter & table orders, open checks, QR pay and settle."),
         OperatorNavItem("/core/kds", "Kitchen Display", "flame.fill", .kitchen, .live,
                         "Live ticket lanes — bump dishes from cooking to ready."),
         OperatorNavItem("/core/orders", "Orders", "list.bullet.rectangle.portrait", .staff, .live,
                         "Every live order across fulfilment types, in one board."),
         OperatorNavItem("/core/guest", "Guest Engagement", "person.2.fill", .staff, .live,
-                        "Bookings, concierge, guest profiles, loyalty and inbox."),
+                        "Loyalty, guest profiles (CRM) and table bookings."),
         OperatorNavItem("/core/service", "Service", "fork.knife.circle.fill", .staff, .live,
                         "Floor plan, table turns and reservation slots."),
     ]),

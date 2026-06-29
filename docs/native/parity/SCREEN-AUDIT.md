@@ -119,9 +119,133 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   carries `tableId`/`partySize`/`channel`/`paidAt`.
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
-- **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
-  orders" under a `DSSectionHeader`, live off `GET /api/v1/orders`. Migrated off
-  the hand-rolled fixed-size tiles this pass.
+- **Native now (institutional uplift):** a live-ops strip (board counts + board
+  total) over a **range-scoped executive KPI rail** — Revenue / Orders / Avg
+  ticket / Margin as **`OperatorKPICard`**s with inline sparklines and **true
+  period-over-period deltas** (current window vs the equal prior window), a
+  7d/30d/90d **`DSSegmented`** control, an **`OperatorAreaChart`** revenue trend,
+  **`OperatorHourBars`** daypart demand, the fulfilment ring, and a top-seller
+  **`OperatorLeaderRow`** board. Driven by `GET /api/v1/orders` (live) +
+  `/admin/summary?from=&to=` (current + prior) + `/admin/insights` (daypart).
+  Every KPI keeps a five-section ⓘ (Rule #12).
+
+### Institutional analytics uplift (this pass) ✅
+The four flagship analytics surfaces moved from flat tile/row grids to the web's
+institutional vocabulary, on a new shared kit (`DesignSystem/Analytics.swift`,
+see DESIGN-SYSTEM §4.2) + range scaffolding (`OperatorAnalyticsSupport.swift`):
+- **Reports** — 7d/30d/90d range chips that re-scope `/admin/summary?from=&to=`,
+  a six-card KPI rail with sparklines + prior-window deltas, an area revenue
+  chart, a **P&L waterfall**, and a **net-margin gauge** (fills toward the 25%
+  top-decile). All six KPIs + the waterfall carry five-section ⓘ.
+- **Insights** — a cancellation-rate **gauge**, daypart **hour bars**, top/worst
+  seller **leaderboards** (magnitude bars), and a cross-location revenue/profit
+  **comparison** + per-site KPI cards. KPIs carry five-section ⓘ.
+- **Calculator** — now a **live what-if sandbox**: drag the five exposed levers
+  (orders/day, days open, avg ticket, food cost %, card %) and the year-1 KPIs
+  (with vs-saved deltas), a P&L **waterfall**, a sensitivity **tornado** (±10%
+  per lever) and an orders×ticket **profit-map heatmap** all recompute live. The
+  math is anchored to the server's saved `projectTwelveMonths` projection
+  (reproduces year-1 exactly at baseline; labour + fixed held at saved, clearly
+  labelled — Rule #1) and never writes the scenario. The saved 12-month curve is
+  drawn as an area chart. Eleven five-section ⓘ explainers.
+
+### Institutional analytics uplift — wave 2 (this pass) ✅
+Extended the kit (`OperatorScatter`, `OperatorBandChart`) and carried the
+institutional treatment into the next tier of surfaces:
+- **Menu engineering** — the Kasavana-Smith matrix as a real **scatter**
+  (units × GP/unit) with a median crosshair + tinted quadrants, a 30/60/90-day
+  window control, quadrant KPI rail, and a revenue-ranked dish list. Matrix ⓘ.
+- **HACCP** — per-sensor **temperature trend** charts over the observed
+  compliant band (out-of-band readings flagged red), a flagged-rate **gauge**,
+  and per-sensor latest/band/flagged stats. Keeps the live log action. Two ⓘ.
+- **Cash** — a **variance trend** across closed sessions, a KPI rail (sessions,
+  open, drops, abs variance with sparkline), and the session list + open-till
+  action. Variance ⓘ.
+- **Inventory** — each row gained an **on-hand-vs-par meter** with the reorder
+  point as a benchmark tick (no fabricated history — the facade has none).
+- **Agent HQ** — a 7-day success **gauge**, a **cost-by-agent donut**, an agent
+  **spend leaderboard**, fleet KPI cards and the activity timeline. Three ⓘ.
+- **Multi-location** — a **revenue-share donut**, a revenue-vs-profit
+  **comparison**, a **margin leaderboard** + per-site KPI cards, chain KPI rail.
+  Chain-margin ⓘ.
+- **KDS Fleet** — a **promise-accuracy gauge** + per-hour pace header
+  (throughput / covers / revenue) on the owner Atlas board, off the real
+  `/admin/kds/fleet` station-capacity feed. Fleet-pace ⓘ.
+
+### Core UX overhaul (this pass) ✅
+The Core front-of-house surfaces were functionally wired but visually thin /
+cramped. This pass rebuilds their layouts to a polished, iPad-first standard.
+- **POS (`/core/pos`)** — rebuilt from a single scrolling list + crammed bottom
+  bar + three sheets into a proper **split-pane till**: a top **open-checks strip**
+  (chips with line-count badges, Quick-sale, + New, context-void), a **menu grid**
+  (category rail + live search + tappable item cards with qty badges and 86-state)
+  on the left, and an **always-visible Check panel** on the right (channel +
+  covers/table or delivery address, line steppers, cross-sell, inline discount,
+  coursing, totals, Fire/course/Charge). Adaptive: on iPhone the panel becomes a
+  cart-bar → sheet. A counter-sale ticket can be promoted to a saved check. Same
+  `OperatorPOSStore` actuator (server-priced, combos/discount/coursing resolve
+  server-side). The walk-in cash keypad (`ChargeSheet`) is retained.
+- **Service (`/core/service/slots`)** — rebuilt from a flat list into a capacity
+  board: a KPI strip (slots · booked · capacity · **fill-rate gauge**), slots
+  **grouped by day** with per-day load, and per-slot rows with a green→amber→red
+  **capacity fill bar**, channel chips, a min-spend badge and active/draft status.
+  Tapping opens the existing capacity/status editor. Two five-section ⓘ.
+- **Guest (`/core/guest`)** — rebuilt the loyalty roster with a KPI strip
+  (members · new-30d · **birthdays this month** · contactable), search + sort
+  (recent / A–Z) and richer member cards. Two five-section ⓘ.
+
+### Operator ergonomics — substrate UX uplift (this pass) ✅
+"Keep the web's complexity, make it smoother on touch" — applied to **every**
+list-based admin/core page at once by upgrading the shared `OperatorListView`
+substrate (`OperatorData.swift`) rather than 25 screens individually:
+- **Quick-filter chips** — a tap-to-narrow chip bar (each chip shows its live
+  count) so an operator slices a dense board without scrolling. New optional
+  `filters:` param (`OperatorFilter<T>`).
+- **Sort menu** — a toolbar sort control with the active order checked. New
+  optional `sorts:` param (`OperatorSortOption<T>`).
+- **Pinned search + result count** — search stays reachable and a "N of M"
+  caption shows when the list is narrowed.
+- **Glanceable detail sheets** — `OperatorDetailSheet` now opens at a
+  medium/large **detent** (drag to expand) instead of a full-screen slab, so a
+  drill-in is a glance, not a context switch — across every surface that uses it.
+All additive + backward-compatible: every existing call site keeps working and
+gains the base ergonomics (pinned search, result count, refined chrome) for free.
+Bespoke filters/sorts now wired into **every** `OperatorListView` surface (22):
+Customers (VIP / has-points / lapsed), Staff (active/inactive), Suppliers,
+Inventory (low-stock), Users (active / MFA), Business costs, Compliance (expired /
+expiring-30d), Events (upcoming / live / done), Waste, Surveys (active/off),
+Schedule (scheduled / in-progress / done), Recipes, Alerts (unread),
+Announcements (pinned), Corporate, Manage-locations (active / off / alcohol),
+Campaigns (sent / sending / failures), Handover (issues), Expansion (in-progress /
+ready), Scheduled-bundles (active/paused), Regulatory (calorie / halal) — each with
+a matching sort set. The 2 non-list admin pages (Permissions matrix, settings
+renderer) keep their bespoke layouts.
+
+### Core completion — Floor plan, Guest hub (CRM + Booking) (this pass) ✅
+Closed the big CORE functional gaps with real `/api/v1` facade routes (each a thin
+proxy over existing store logic; backend typechecks clean) + native screens:
+- **Service → Floor plan** (`OperatorFloorView`, hub `OperatorServiceView`
+  segments Floor | Slots): live room off `/api/v1/admin/floor/twin` — occupancy
+  gauge, covers-seated / freeing-≤15m / spend-per-hour KPIs, kitchen-bottleneck
+  banner, zone-grouped status-toned table tiles with party / dwell / predicted-free
+  / open-check, tap-to-seat/clear, table detail (service note, turns). Location
+  picker off `/locations`. Two five-section ⓘ.
+- **Guest → hub** (`OperatorGuestView` now segments Loyalty | Guests | Book):
+  - **Guests (CRM)** — roster (filters/sorts) → rich profile off
+    `/api/v1/admin/customers/:phone`: lifetime/orders/avg/points stat band, recent
+    orders, **points adjust**, **SMS/email consent toggles**, and **notes**
+    (add/delete) — all real writes via the new `/notes`, `/consent`, `/points`
+    facade routes.
+  - **Book** — slot+table **booking console** off `/api/v1/admin/floor/booking`
+    (+ `/reservations`): pick a dine-in slot + best-fit table, party, guest,
+    override; list + cancel upcoming bookings. Reuses the shared `createBooking`.
+- POS **member-attach** + **QR queue** shipped in the prior pass (existing endpoints).
+
+**Honest scope note.** Still deliberately deferred (need endpoints/data not yet
+present, or genuinely new server logic): the **WhatsApp Guest Inbox**,
+**Concierge/MCP**, **Slots Demand-Exchange** (forecast + tier levers), and **POS
+split-bill** (splitting an order into N checks — no server function exists). These
+remain honest gaps rather than mocked surfaces (Rule #1).
 
 ---
 

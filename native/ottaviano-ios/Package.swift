@@ -35,5 +35,6 @@ let package = Package(
         ),
         .testTarget(name: "NetworkingTests", dependencies: ["Networking"]),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+        .testTarget(name: "AppFeaturesTests", dependencies: ["AppFeatures"]),
     ]
 )

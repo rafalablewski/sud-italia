@@ -11,10 +11,59 @@ struct KDSFleetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.lg) {
+            paceHeader
             totals
             benchmark
             ForEach(board.tiles) { truckCard($0) }
         }
+    }
+
+    // MARK: pace header — promise-accuracy gauge + per-hour throughput
+
+    private var paceHeader: some View {
+        let b = board.benchmark
+        let t = board.totals
+        let acc = max(0, min(1, b.fleetAccuracy / 100))
+        let tint: Color = b.fleetAccuracy >= Double(board.promiseTarget) ? theme.color.success
+            : (b.fleetAccuracy >= Double(board.promiseTarget) - 10 ? theme.color.warning : theme.color.danger)
+        return VStack(alignment: .leading, spacing: theme.space.md) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Fleet pace").font(.headline).foregroundStyle(theme.color.textPrimary)
+                Spacer()
+                Self.paceInfo(target: board.promiseTarget, window: board.paceWindowMin)
+            }
+            HStack(spacing: theme.space.xl) {
+                OperatorGauge(fraction: acc, centerValue: "\(Int(b.fleetAccuracy.rounded()))%",
+                              centerLabel: "on time", tint: tint, diameter: 120)
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    paceStat("Throughput", "\(t.throughputHr)/hr", "flame.fill", theme.color.success)
+                    paceStat("Covers", "\(t.coversHr)/hr", "person.2.fill", theme.color.textPrimary)
+                    paceStat("Revenue", "\(MoneyText.format(t.revenueHr))/hr", "banknote.fill", theme.color.success)
+                }
+                Spacer()
+            }
+        }
+        .padding(theme.space.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+
+    private func paceStat(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: icon).font(.footnote).foregroundStyle(tint).frame(width: 18)
+            Text(value).font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.textPrimary)
+            Text(label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+        }
+    }
+
+    private static func paceInfo(target: Int, window: Int) -> InfoButton {
+        InfoButton(title: "Fleet pace",
+            description: "Cross-truck promise accuracy (share of tickets plated by their promised time) plus live per-hour throughput, covers and revenue.",
+            institutional: "Promise accuracy is the KDS quality gate — it's the kitchen's on-time-delivery (OTD) number, the one a multi-site operator manages the line against. Below target it predicts refunds, bad reviews and churn before they show up in revenue; the cross-truck spread tells you whether a miss is systemic or one struggling site.",
+            plain: "If \(target)% is the goal and the fleet runs 88%, roughly 1 in 8 tickets is late — felt by guests right now. Throughput/hr tells you how hard the line is being pushed while that happens.",
+            tips: "When accuracy dips, add a hand to the hottest station (see each truck's pace bars), pre-fire prep ahead of the daypart peak, and course long tickets so plates land together.",
+            methodology: "On-time tickets ÷ total over the last \(window)m, fleet-wide; throughput/covers/revenue are last-60m counts. Source: /admin/kds/fleet.")
     }
 
     // MARK: fleet totals

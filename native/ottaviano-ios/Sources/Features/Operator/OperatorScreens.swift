@@ -22,8 +22,18 @@ public struct OperatorCustomersView: View {
                     OperatorStatChip("VIPs", "\(items.filter { $0.totalSpentGrosze >= 50000 }.count)", tint: theme.color.success)
                 })
             },
-            search: { "\($0.name ?? "") \($0.phone)" },
+            search: { [$0.name ?? "", $0.phone].joined(separator: " ") },
             detail: { c, _ in AnyView(CustomerDetailView(c: c)) },
+            filters: [
+                OperatorFilter("VIP", systemImage: "star.fill") { $0.totalSpentGrosze >= 50000 },
+                OperatorFilter("Has points", systemImage: "gift.fill") { ($0.loyaltyPointsBalance + $0.manualPointsAdjust) > 0 },
+                OperatorFilter("Lapsed", systemImage: "moon.zzz.fill") { ($0.lastOrderAt ?? "") < AnalyticsDates.window(for: .quarter).from },
+            ],
+            sorts: [
+                OperatorSortOption("Top spend") { $0.totalSpentGrosze > $1.totalSpentGrosze },
+                OperatorSortOption("Most orders") { $0.orderCount > $1.orderCount },
+                OperatorSortOption("Name") { ($0.name ?? $0.phone).localizedCaseInsensitiveCompare($1.name ?? $1.phone) == .orderedAscending },
+            ],
             row: { c in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: c.name ?? c.phone)
@@ -258,8 +268,17 @@ public struct OperatorStaffView: View {
                     OperatorStatChip("Active", "\(items.filter { $0.status == "active" }.count)", tint: theme.color.success)
                 })
             },
-            search: { "\($0.name) \($0.role) \($0.locationSlug)" },
+            search: { [$0.name, $0.role, $0.locationSlug].joined(separator: " ") },
             detail: { s, _ in AnyView(StaffDetailView(s: s)) },
+            filters: [
+                OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.status == "active" },
+                OperatorFilter("Inactive", systemImage: "pause.circle") { $0.status != "active" },
+            ],
+            sorts: [
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Top rate") { $0.hourlyRateGrosze > $1.hourlyRateGrosze },
+                OperatorSortOption("Role") { $0.role.localizedCaseInsensitiveCompare($1.role) == .orderedAscending },
+            ],
             row: { s in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: s.name)
@@ -330,8 +349,12 @@ public struct OperatorSuppliersView: View {
             title: "Suppliers",
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
-            search: { "\($0.name) \($0.contactName ?? "")" },
+            search: { [$0.name, $0.contactName ?? ""].joined(separator: " ") },
             detail: { s, _ in AnyView(SupplierDetailView(s: s)) },
+            sorts: [
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Fastest lead") { ($0.leadTimeDays ?? .max) < ($1.leadTimeDays ?? .max) },
+            ],
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -478,24 +501,39 @@ public struct OperatorInventoryView: View {
                     OperatorStatChip("Low", "\(items.filter(\.low).count)", tint: theme.color.danger)
                 })
             },
-            search: { "\($0.name) \($0.locationSlug)" },
+            search: { [$0.name, $0.locationSlug].joined(separator: " ") },
             detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
+            filters: [
+                OperatorFilter("Low stock", systemImage: "exclamationmark.triangle.fill") { $0.low },
+            ],
+            sorts: [
+                OperatorSortOption("Lowest first") { ($0.parLevel > 0 ? $0.onHand / $0.parLevel : 0) < ($1.parLevel > 0 ? $1.onHand / $1.parLevel : 0) },
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            ],
             row: { r in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(r.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(r.locationSlug.capitalized) · par \(num(r.parLevel)) \(r.unit)").font(.caption).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(num(r.onHand)) \(r.unit)").font(.subheadline.weight(.semibold)).monospacedDigit()
-                            .foregroundStyle(r.low ? theme.color.danger : theme.color.textPrimary)
-                        if r.low {
-                            Text("LOW").font(.caption2.weight(.bold))
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(theme.color.danger.opacity(0.18), in: Capsule()).foregroundStyle(theme.color.danger)
+                // On-hand vs par as a fill, with the reorder point as a benchmark
+                // tick — a glanceable "how full, how close to reordering" read.
+                let frac = r.parLevel > 0 ? r.onHand / r.parLevel : 0
+                let target = r.parLevel > 0 ? r.reorderPoint / r.parLevel : nil
+                let tint: Color = r.low ? theme.color.danger : (frac < 0.5 ? theme.color.warning : theme.color.success)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            Text("\(r.locationSlug.capitalized) · par \(num(r.parLevel)) \(r.unit)").font(.caption).foregroundStyle(theme.color.textSecondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(num(r.onHand)) \(r.unit)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                                .foregroundStyle(r.low ? theme.color.danger : theme.color.textPrimary)
+                            if r.low {
+                                Text("LOW").font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(theme.color.danger.opacity(0.18), in: Capsule()).foregroundStyle(theme.color.danger)
+                            }
                         }
                     }
+                    OperatorProgressMeter(fraction: frac, tint: tint, target: target, height: 8)
                 }
             }
         )
@@ -507,29 +545,196 @@ public struct OperatorInventoryView: View {
 
 // MARK: - Service / Slots (/core/service/slots)
 
+/// Service — the native twin of web `/core/service/slots`. A fulfilment-capacity
+/// board: a KPI strip (slots · booked · capacity · fill rate), slots grouped by
+/// day with per-day fill, and per-slot rows with a green→amber→red capacity fill
+/// bar, channel chips, a min-spend badge and the active/draft status. Tapping a
+/// slot opens the capacity/status editor (manager+). Real data only (Rule #1).
+@MainActor
+@Observable
+final class OperatorSlotsStore {
+    var slots: [AdminSlot] = []
+    var loaded = false
+    var error: String?
+    private let api: APIClient
+    init(api: APIClient) { self.api = api }
+    func load() async {
+        do { slots = try await api.send(.adminSlots()); error = nil }
+        catch let e as APIError { error = OperatorListLoader<AdminSlot>.message(e) }
+        catch { self.error = "Something went wrong" }
+        loaded = true
+    }
+}
+
 public struct OperatorSlotsView: View {
     @Environment(\.theme) private var theme
+    @State private var store: OperatorSlotsStore?
+    @State private var selected: AdminSlot?
     private let api: APIClient
     public init(api: APIClient) { self.api = api }
+
+    private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+
     public var body: some View {
-        OperatorListView(
-            title: "Service",
-            emptyText: "No fulfilment slots scheduled.",
-            loader: OperatorListLoader { try await api.send(.adminSlots()) },
-            detail: { s, reload in AnyView(SlotDetailView(s: s, api: api, reload: reload)) },
-            row: { s in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(s.date) · \(s.time)").font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(s.locationSlug.capitalized) · \(s.fulfillmentTypes.joined(separator: ", "))").font(.caption).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer()
-                    let full = s.currentOrders >= s.maxOrders
-                    Text("\(s.currentOrders)/\(s.maxOrders)").font(.subheadline.weight(.semibold)).monospacedDigit()
-                        .foregroundStyle(full ? theme.color.danger : theme.color.success)
+        ScrollView {
+            if let store { content(store) }
+            else { ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl) }
+        }
+        .background(theme.color.surface)
+        .navigationTitle("Service")
+        .task {
+            if store == nil { store = OperatorSlotsStore(api: api) }
+            if store?.loaded == false { await store?.load() }
+        }
+        .refreshable { await store?.load() }
+        .sheet(item: $selected) { s in
+            SlotDetailView(s: s, api: api, reload: { await store?.load() })
+        }
+    }
+
+    @ViewBuilder
+    private func content(_ store: OperatorSlotsStore) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.lg) {
+            if let error = store.error, store.slots.isEmpty {
+                ContentUnavailableView("Couldn't load service", systemImage: "calendar.badge.clock", description: Text(error))
+                    .padding(.top, theme.space.xxl)
+            } else if store.slots.isEmpty && store.loaded {
+                DSEmptyState("Service", systemImage: "calendar.badge.clock", message: "No fulfilment slots scheduled.")
+            } else {
+                kpis(store.slots)
+                ForEach(days(store.slots), id: \.date) { day in
+                    dayCard(day)
                 }
             }
-        )
+        }
+        .padding(theme.space.lg)
+    }
+
+    private func kpis(_ slots: [AdminSlot]) -> some View {
+        let booked = slots.reduce(0) { $0 + $1.currentOrders }
+        let capacity = slots.reduce(0) { $0 + $1.maxOrders }
+        let fill = capacity > 0 ? Double(booked) / Double(capacity) : 0
+        let active = slots.filter { $0.status == "active" }.count
+        return LazyVGrid(columns: cols, spacing: theme.space.md) {
+            OperatorKPICard(label: "Slots", value: "\(slots.count)", icon: "calendar", tint: theme.color.accent,
+                            caption: "\(active) active", info: Self.slotsInfo)
+            OperatorKPICard(label: "Booked", value: "\(booked)", icon: "person.fill.checkmark", tint: theme.color.success)
+            OperatorKPICard(label: "Capacity", value: "\(capacity)", icon: "gauge.with.dots.needle.50percent", tint: theme.color.textSecondary)
+            card("Fill rate", subtitle: "booked ÷ capacity", info: Self.fillInfo) {
+                HStack { Spacer()
+                    OperatorGauge(fraction: fill, centerValue: "\(Int(fill * 100))%", centerLabel: "filled",
+                                  tint: fillTint(fill), diameter: 110)
+                    Spacer() }
+            }
+        }
+    }
+
+    private struct DayGroup { let date: String; let slots: [AdminSlot] }
+    private func days(_ slots: [AdminSlot]) -> [DayGroup] {
+        let dates = Array(Set(slots.map(\.date))).sorted()
+        return dates.map { d in DayGroup(date: d, slots: slots.filter { $0.date == d }.sorted { $0.time < $1.time }) }
+    }
+
+    private func dayCard(_ day: DayGroup) -> some View {
+        let booked = day.slots.reduce(0) { $0 + $1.currentOrders }
+        let cap = day.slots.reduce(0) { $0 + $1.maxOrders }
+        return card(day.date, subtitle: "\(booked)/\(cap) booked · \(day.slots.count) slots", info: nil) {
+            VStack(spacing: theme.space.sm) {
+                ForEach(day.slots) { slotRow($0) }
+            }
+        }
+    }
+
+    private func slotRow(_ s: AdminSlot) -> some View {
+        let fill = s.maxOrders > 0 ? Double(s.currentOrders) / Double(s.maxOrders) : 0
+        return Button { selected = s } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(s.time).font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.textPrimary)
+                    statusPill(s.status)
+                    Spacer()
+                    Text("\(s.currentOrders)/\(s.maxOrders)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                        .foregroundStyle(fill >= 1 ? theme.color.danger : theme.color.textPrimary)
+                }
+                OperatorProgressMeter(fraction: fill, tint: fillTint(fill), height: 8)
+                HStack(spacing: 6) {
+                    ForEach(s.fulfillmentTypes, id: \.self) { t in
+                        Text(channelLabel(t)).font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(theme.color.surface, in: Capsule())
+                            .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
+                            .foregroundStyle(theme.color.textSecondary)
+                    }
+                    Spacer()
+                    if let ms = s.minSpendGrosze, ms > 0 {
+                        Label(MoneyText.format(ms), systemImage: "creditcard")
+                            .font(.caption2.weight(.semibold)).foregroundStyle(theme.color.warning)
+                    }
+                }
+            }
+            .padding(theme.space.md)
+            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.md))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func statusPill(_ s: String) -> some View {
+        let active = s == "active"
+        return Text(s.capitalized).font(.caption2.weight(.bold))
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background((active ? theme.color.success : theme.color.textSecondary).opacity(0.18), in: Capsule())
+            .foregroundStyle(active ? theme.color.success : theme.color.textSecondary)
+    }
+
+    private func fillTint(_ f: Double) -> Color {
+        f >= 0.85 ? theme.color.danger : (f >= 0.7 ? theme.color.warning : theme.color.success)
+    }
+    private func channelLabel(_ t: String) -> String {
+        switch t {
+        case "dine-in", "dine_in": "Dine-in"
+        case "takeout", "takeaway": "Takeaway"
+        case "delivery": "Delivery"
+        default: t.capitalized
+        }
+    }
+
+    private func card<Content: View>(_ title: String, subtitle: String?, info: InfoButton?,
+                                     @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
+                    if let subtitle { Text(subtitle).textRole(.caption).foregroundStyle(theme.color.textSecondary) }
+                }
+                Spacer()
+                if let info { info }
+            }
+            content()
+        }
+        .padding(theme.space.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+}
+
+private extension OperatorSlotsView {
+    static var slotsInfo: InfoButton {
+        InfoButton(title: "Service slots",
+            description: "Bookable fulfilment windows across the day, with their booked-vs-capacity load.",
+            institutional: "Slot capacity is the throttle that protects the kitchen from a demand spike it can't plate — the institutional balance is filling revenue-bearing slots without breaching the line's promise time. Empty active slots are lost revenue; over-full ones are late tickets and refunds.",
+            plain: "If the 19:00 slot is 18/20 it's nearly full — open another or raise its cap only if the kitchen can keep promise time. A 2/20 lunch slot is capacity you're paying staff for but not selling.",
+            tips: "Raise caps on slots that fill early IF the kitchen can hold pace; promote slow slots with a daypart offer; draft slots you can't staff so demand routes elsewhere.",
+            methodology: "Slots + booked + capacity from /admin/slots; active = status == active.")
+    }
+    static var fillInfo: InfoButton {
+        InfoButton(title: "Fill rate",
+            description: "Booked covers as a share of total slot capacity. The gauge turns amber past 70% and red past 85%.",
+            institutional: "Fill rate is the yield-management read on service capacity — the same lever airlines and hotels manage. Persistently low fill means over-provisioned capacity (wasted labour); persistently maxed fill means you're turning away demand or risking the kitchen's promise.",
+            plain: "120 booked against 200 capacity is 60% — healthy headroom. At 90% you're one rush from late tickets; that's the cue to add capacity only if the line can keep up.",
+            tips: "Push offers into low-fill dayparts, protect kitchen promise on high-fill ones, and use demand-based caps so price rises into the busiest windows.",
+            methodology: "Σ currentOrders ÷ Σ maxOrders across slots. Source: /admin/slots.")
     }
 }
 

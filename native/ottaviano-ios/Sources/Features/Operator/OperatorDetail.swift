@@ -96,6 +96,7 @@ public struct OperatorDetailSheet<Content: View>: View {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 

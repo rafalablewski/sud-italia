@@ -110,4 +110,6 @@
 
 ## /api/v1/admin coverage
 
-42 admin endpoints. Every endpoint is mapped to a surface.
+43 admin endpoints. Endpoints **not** yet mapped to a surface in this generator (review):
+
+- `/api/v1/admin/demand-exchange`
