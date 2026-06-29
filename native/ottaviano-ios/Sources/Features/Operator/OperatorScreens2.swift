@@ -60,25 +60,25 @@ final class OperatorGuestStore {
     }
 }
 
-public struct OperatorGuestView: View {
+/// Loyalty members tab of the Guest hub (see OperatorGuestHub.swift).
+struct GuestLoyaltyTab: View {
     @Environment(\.theme) private var theme
     @State private var store: OperatorGuestStore?
     @State private var selected: AdminLoyaltyMember?
     @State private var search = ""
     @State private var sort: GuestSort = .recent
     private let api: APIClient
-    public init(api: APIClient) { self.api = api }
+    init(api: APIClient) { self.api = api }
 
     enum GuestSort: Hashable { case recent, name }
     private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
 
-    public var body: some View {
+    var body: some View {
         ScrollView {
             if let store { content(store) }
             else { ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl) }
         }
         .background(theme.color.surface)
-        .navigationTitle("Guest")
         .task {
             if store == nil { store = OperatorGuestStore(api: api) }
             if store?.loaded == false { await store?.load() }
@@ -178,7 +178,7 @@ public struct OperatorGuestView: View {
     }
 }
 
-private extension OperatorGuestView {
+private extension GuestLoyaltyTab {
     static var membersInfo: InfoButton {
         InfoButton(title: "Loyalty members",
             description: "Guests enrolled in the loyalty programme (phone-based auto-enrolment, zero-friction).",

@@ -197,7 +197,7 @@ struct OperatorRootView: View {
         case "/admin/purchase-orders":
             OperatorPurchaseOrdersView(api: deps.api)
         case "/core/service":
-            OperatorSlotsView(api: deps.api)
+            OperatorServiceView(api: deps.api)
         case "/admin/menu":
             OperatorMenuView(api: deps.api)
         case "/admin/recipes":

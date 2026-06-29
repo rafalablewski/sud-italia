@@ -221,13 +221,31 @@ ready), Scheduled-bundles (active/paused), Regulatory (calorie / halal) — each
 a matching sort set. The 2 non-list admin pages (Permissions matrix, settings
 renderer) keep their bespoke layouts.
 
-**Honest scope note.** Several web `/core` features are deliberately deferred —
-they need `/api/v1` endpoints the facade doesn't yet expose or data the current
-DTOs don't carry: the **Floor plan** (predictive seating, zones, table CRUD —
-needs floor-twin), **Slots Demand-Exchange** (forecast + tier levers), the
-**WhatsApp Guest Inbox**, **Concierge/MCP**, **Booking console**, and the
-CRM/Loyalty deep tools (customer-intelligence, GDPR export/erase, points-adjust,
-notes, win-back). These remain honest gaps rather than mocked surfaces (Rule #1).
+### Core completion — Floor plan, Guest hub (CRM + Booking) (this pass) ✅
+Closed the big CORE functional gaps with real `/api/v1` facade routes (each a thin
+proxy over existing store logic; backend typechecks clean) + native screens:
+- **Service → Floor plan** (`OperatorFloorView`, hub `OperatorServiceView`
+  segments Floor | Slots): live room off `/api/v1/admin/floor/twin` — occupancy
+  gauge, covers-seated / freeing-≤15m / spend-per-hour KPIs, kitchen-bottleneck
+  banner, zone-grouped status-toned table tiles with party / dwell / predicted-free
+  / open-check, tap-to-seat/clear, table detail (service note, turns). Location
+  picker off `/locations`. Two five-section ⓘ.
+- **Guest → hub** (`OperatorGuestView` now segments Loyalty | Guests | Book):
+  - **Guests (CRM)** — roster (filters/sorts) → rich profile off
+    `/api/v1/admin/customers/:phone`: lifetime/orders/avg/points stat band, recent
+    orders, **points adjust**, **SMS/email consent toggles**, and **notes**
+    (add/delete) — all real writes via the new `/notes`, `/consent`, `/points`
+    facade routes.
+  - **Book** — slot+table **booking console** off `/api/v1/admin/floor/booking`
+    (+ `/reservations`): pick a dine-in slot + best-fit table, party, guest,
+    override; list + cancel upcoming bookings. Reuses the shared `createBooking`.
+- POS **member-attach** + **QR queue** shipped in the prior pass (existing endpoints).
+
+**Honest scope note.** Still deliberately deferred (need endpoints/data not yet
+present, or genuinely new server logic): the **WhatsApp Guest Inbox**,
+**Concierge/MCP**, **Slots Demand-Exchange** (forecast + tier levers), and **POS
+split-bill** (splitting an order into N checks — no server function exists). These
+remain honest gaps rather than mocked surfaces (Rule #1).
 
 ---
 

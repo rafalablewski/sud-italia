@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { requireRole, scopedLocations } from "@/lib/api/v1/guard";
 import {
-  getCustomerNotes, getLoyaltyMember, getOrders, getPointAdjustments, getWalletRedemptions,
+  getCustomerNotes, getCustomers, getLoyaltyMember, getOrders, getPointAdjustments, getWalletRedemptions,
 } from "@/lib/store";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -26,13 +26,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ phone: stri
   const allowed = scopedLocations(guard.claims.scope); // null = unrestricted
 
   try {
-    const [orders, member, adjustments, redemptions, notes] = await Promise.all([
+    const [orders, member, adjustments, redemptions, notes, customers] = await Promise.all([
       getOrders(),
       getLoyaltyMember(canonical),
       getPointAdjustments(),
       getWalletRedemptions(),
       getCustomerNotes(canonical),
+      getCustomers(),
     ]);
+    const rollup = customers.find((c) => phonesEqualPl(c.phone, canonical));
 
     const myOrders = orders
       .filter((o) =>
@@ -52,6 +54,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ phone: stri
       phone: canonical,
       name: member ? [member.name, member.lastName].filter(Boolean).join(" ") : (myOrders[0]?.customerName ?? null),
       member: member ?? null,
+      smsOptIn: rollup ? !rollup.smsOptout : true,
+      emailOptIn: rollup ? !rollup.emailOptout : true,
       orders: myOrders.slice(0, 20).map((o) => ({
         id: o.id, createdAt: o.createdAt, status: o.status, totalAmount: o.totalAmount,
         itemCount: o.items.reduce((acc, ci) => acc + ci.quantity, 0),

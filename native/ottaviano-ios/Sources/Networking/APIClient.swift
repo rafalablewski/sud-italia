@@ -507,6 +507,82 @@ public struct PosOrderBody: Encodable, Sendable {
     public let tableNumber: String?
 }
 
+// MARK: - Core: Floor plan + Booking + CRM detail (facade routes for native Core)
+
+/// Phones are E.164 (`+48…`); `+` is ambiguous in URLs, so path-encode as
+/// digits — the server's `normalizePlPhoneE164` re-canonicalizes (it strips
+/// non-digits and re-adds +48), so matching is unaffected.
+private func phonePathDigits(_ phone: String) -> String {
+    let d = phone.filter(\.isNumber)
+    return d.isEmpty ? phone : d
+}
+
+/// Body for `POST /api/v1/admin/floor/booking` — unified slot+table booking.
+public struct BookingBody: Encodable, Sendable {
+    public let locationSlug: String
+    public let slotId: String
+    public let tableId: String
+    public let customerName: String
+    public let customerPhone: String?
+    public let partySize: Int
+    public let notes: String?
+    public let forceOverride: Bool
+    public init(locationSlug: String, slotId: String, tableId: String, customerName: String,
+                customerPhone: String? = nil, partySize: Int, notes: String? = nil, forceOverride: Bool = false) {
+        self.locationSlug = locationSlug; self.slotId = slotId; self.tableId = tableId
+        self.customerName = customerName; self.customerPhone = customerPhone
+        self.partySize = partySize; self.notes = notes; self.forceOverride = forceOverride
+    }
+    enum CodingKeys: String, CodingKey {
+        case locationSlug, slotId, tableId, customerName, customerPhone, partySize, notes
+        case forceOverride = "override"
+    }
+}
+
+private struct AdjustPointsBody: Encodable { let delta: Int; let reason: String? }
+
+public extension Endpoint {
+    static func adminFloorRoom(location: String) -> Endpoint<FloorRoom> {
+        Endpoint<FloorRoom>(.get, "admin/floor/twin", query: ["location": location], requiresAuth: true)
+    }
+    static func adminFloorSeat(location: String, tableId: String, seat: Bool) -> Endpoint<FloorSeatResult> {
+        let body = try? JSONEncoder().encode(["action": seat ? "seat" : "clear", "tableId": tableId])
+        return Endpoint<FloorSeatResult>(.post, "admin/floor/twin", query: ["location": location], body: body, requiresAuth: true)
+    }
+    static func adminReservations(location: String, date: String? = nil) -> Endpoint<[Reservation]> {
+        var q = ["location": location]; if let date { q["date"] = date }
+        return Endpoint<[Reservation]>(.get, "admin/floor/reservations", query: q, requiresAuth: true)
+    }
+    static func adminCancelReservation(id: String, location: String) -> Endpoint<ReservationDeleteResult> {
+        Endpoint<ReservationDeleteResult>(.delete, "admin/floor/reservations", query: ["id": id, "location": location], requiresAuth: true)
+    }
+    static func adminCreateBooking(_ b: BookingBody) -> Endpoint<Reservation> {
+        let body = try? JSONEncoder().encode(b)
+        return Endpoint<Reservation>(.post, "admin/floor/booking", query: ["location": b.locationSlug], body: body, requiresAuth: true)
+    }
+    static func adminCustomerDetail(phone: String) -> Endpoint<CrmCustomerDetail> {
+        Endpoint<CrmCustomerDetail>(.get, "admin/customers/\(phonePathDigits(phone))", requiresAuth: true)
+    }
+    static func adminAddCustomerNote(phone: String, text: String) -> Endpoint<CrmNote> {
+        let body = try? JSONEncoder().encode(["body": text])
+        return Endpoint<CrmNote>(.post, "admin/customers/\(phonePathDigits(phone))/notes", body: body, requiresAuth: true)
+    }
+    static func adminDeleteCustomerNote(phone: String, id: String) -> Endpoint<ReservationDeleteResult> {
+        Endpoint<ReservationDeleteResult>(.delete, "admin/customers/\(phonePathDigits(phone))/notes", query: ["id": id], requiresAuth: true)
+    }
+    static func adminSetConsent(phone: String, smsOptIn: Bool? = nil, emailOptIn: Bool? = nil) -> Endpoint<CrmConsentResult> {
+        var payload: [String: Bool] = [:]
+        if let smsOptIn { payload["smsOptIn"] = smsOptIn }
+        if let emailOptIn { payload["emailOptIn"] = emailOptIn }
+        let body = try? JSONEncoder().encode(payload)
+        return Endpoint<CrmConsentResult>(.patch, "admin/customers/\(phonePathDigits(phone))/consent", body: body, requiresAuth: true)
+    }
+    static func adminAdjustPoints(phone: String, delta: Int, reason: String? = nil) -> Endpoint<CrmPointsResult> {
+        let body = try? JSONEncoder().encode(AdjustPointsBody(delta: delta, reason: reason))
+        return Endpoint<CrmPointsResult>(.post, "admin/customers/\(phonePathDigits(phone))/points", body: body, requiresAuth: true)
+    }
+}
+
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).
 public struct Item86Result: Codable, Sendable {
     public let itemId: String
