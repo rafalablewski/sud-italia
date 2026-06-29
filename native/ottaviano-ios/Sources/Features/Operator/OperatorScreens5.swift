@@ -99,6 +99,7 @@ public struct OperatorHandoverView: View {
             title: "Shift handover",
             emptyText: "No handovers recorded.",
             loader: OperatorListLoader { try await api.send(.adminHandover()) },
+            toolbar: { reload in AnyView(NewHandoverButton(api: api, reload: reload)) },
             row: { h in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {

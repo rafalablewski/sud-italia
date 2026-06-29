@@ -161,11 +161,22 @@ missed}); re-saves via `saveShift` so times/staff/role persist. Native
 live:** scheduled→in-progress→done with fields preserved, invalid → 422,
 unknown → 404, no token → 401.
 
-Detail drill-in + write now spans **Customers, Staff, Guest, Suppliers, Stock
-(adjust), Service slots (capacity/status), Events (status), Compliance (renew),
-Schedule (status)**. The one remaining named Wave-D surface — **Shift handover**
-— is a *create* form (no status to toggle: a handover is a new log record), so it
-follows the toolbar-create pattern (`LogWaste`/`OpenCash`), tracked next.
+**Shift handover — record (this pass).** New `POST /api/v1/admin/handover`
+(manager+, scope-gated; `{ locationSlug, shift, outgoingManager, tempChecksOk,
+equipmentOk, wasteNoted?, incomingManager?, managerComment? }`, shift ∈ {open,
+mid, close}). Native `NewHandoverButton` → `NewHandoverSheet` (location · shift
+segmented · outgoing/incoming manager · the two safety toggles + waste-noted ·
+comment) → POST → reload, on the toolbar-create pattern. **Verified live:**
+valid → 201 + GET shows it, bad shift → 422, missing booleans → 422, no token →
+401.
+
+**Wave D is now complete across every named surface.** Detail-drill-in + write
+spans **Customers, Staff, Guest, Suppliers, Stock (adjust), Service slots
+(capacity/status), Events (status), Compliance (renew), Schedule (status)**, and
+the create-form surfaces (**HACCP, Waste, Cash, Announcements, Handover**) plus
+the per-row write surfaces (**Feedback, Purchase orders, Tasks, Menu 86**). The
+only operator gaps left are hardware-bound: **KDS sound chimes / kiosk
+fullscreen**.
 
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 
