@@ -26,7 +26,7 @@
           "requiredRole": "staff",
           "kind": "live",
           "icon": "creditcard.and.123",
-          "blurb": "Take counter & table orders, split bills, settle payment.",
+          "blurb": "Counter & table orders, open checks, QR pay and settle.",
           "v1Endpoint": "floor"
         },
         {
@@ -53,7 +53,7 @@
           "requiredRole": "staff",
           "kind": "live",
           "icon": "person.2.fill",
-          "blurb": "Bookings, concierge, guest profiles, loyalty and inbox.",
+          "blurb": "Loyalty, guest profiles (CRM) and table bookings.",
           "v1Endpoint": "loyalty"
         },
         {
@@ -575,6 +575,7 @@
     "compliance",
     "corporate",
     "customers",
+    "demand-exchange",
     "events",
     "expansion",
     "feedback",
@@ -607,7 +608,9 @@
     "users",
     "waste"
   ],
-  "unmappedV1AdminEndpoints": [],
+  "unmappedV1AdminEndpoints": [
+    "demand-exchange"
+  ],
   "counts": {
     "sections": 10,
     "surfaces": 54,

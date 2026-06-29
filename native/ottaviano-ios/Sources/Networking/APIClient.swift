@@ -581,6 +581,25 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(AdjustPointsBody(delta: delta, reason: reason))
         return Endpoint<CrmPointsResult>(.post, "admin/customers/\(phonePathDigits(phone))/points", body: body, requiresAuth: true)
     }
+
+    // Demand Exchange (Service · Demand tab).
+    static func adminDemandBoard(location: String, date: String? = nil) -> Endpoint<DemandBoardWrapper> {
+        var q = ["location": location]; if let date { q["date"] = date }
+        return Endpoint<DemandBoardWrapper>(.get, "admin/demand-exchange", query: q, requiresAuth: true)
+    }
+    static func adminApplyDemandSlot(location: String, slotId: String, maxOrders: Int, minSpendGrosze: Int? = nil) -> Endpoint<DemandApplyResult> {
+        let body = try? JSONEncoder().encode(ApplyDemandBody(slotId: slotId, maxOrders: maxOrders, minSpendGrosze: minSpendGrosze))
+        return Endpoint<DemandApplyResult>(.post, "admin/demand-exchange", query: ["location": location], body: body, requiresAuth: true)
+    }
+    static func adminApplyAllDemand(location: String, date: String? = nil) -> Endpoint<DemandApplyResult> {
+        var q = ["location": location]; if let date { q["date"] = date }
+        let body = try? JSONEncoder().encode(["mode": "apply-all"])
+        return Endpoint<DemandApplyResult>(.post, "admin/demand-exchange", query: q, body: body, requiresAuth: true)
+    }
+}
+
+private struct ApplyDemandBody: Encodable {
+    let slotId: String; let maxOrders: Int; let minSpendGrosze: Int?
 }
 
 /// Result of the 86 toggle (`PATCH /api/v1/admin/menu`).

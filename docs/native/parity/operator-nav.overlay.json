@@ -1,10 +1,10 @@
 {
   "_note": "NATIVE PRESENTATION OVERLAY — the ONE hand-maintained input to scripts/gen-native-nav.ts. The web is the source of truth for the operator IA (which sections exist, their order/labels, which items, each item's href + label + requiredRole) — that is read live from src/admin-v3/nav.config.ts (NAV_SECTIONS_V3) and src/core/routes.ts (CORE_SURFACES). This file supplies ONLY the data that has no web equivalent: the SF Symbol per surface (the web uses lucide glyphs, which don't map 1:1), a one-line blurb, and the native render state (`live` = wired to /api/v1; `scaffold` = layout-parity pending facade coverage). The generator fails if a web surface is missing here (add it) or if an entry here points at an href the web nav no longer has (remove it). Edit this when the web adds/removes an operator surface, in the same change.",
   "core": {
-    "/core/pos": { "icon": "creditcard.and.123", "kind": "live", "blurb": "Take counter & table orders, split bills, settle payment." },
+    "/core/pos": { "icon": "creditcard.and.123", "kind": "live", "blurb": "Counter & table orders, open checks, QR pay and settle." },
     "/core/kds": { "icon": "flame.fill", "kind": "live", "blurb": "Live ticket lanes — bump dishes from cooking to ready." },
     "/core/orders": { "icon": "list.bullet.rectangle.portrait", "label": "Orders", "role": "staff", "kind": "live", "blurb": "Every live order across fulfilment types, in one board." },
-    "/core/guest": { "icon": "person.2.fill", "kind": "live", "blurb": "Bookings, concierge, guest profiles, loyalty and inbox." },
+    "/core/guest": { "icon": "person.2.fill", "kind": "live", "blurb": "Loyalty, guest profiles (CRM) and table bookings." },
     "/core/service": { "icon": "fork.knife.circle.fill", "kind": "live", "blurb": "Floor plan, table turns and reservation slots." }
   },
   "admin": {

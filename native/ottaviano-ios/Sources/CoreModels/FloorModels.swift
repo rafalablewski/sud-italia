@@ -155,3 +155,57 @@ public struct CrmPointsResult: Codable, Sendable {
     public let delta: Int
     public let manualPointsTotal: Int
 }
+
+// MARK: - Demand Exchange (/api/v1/admin/demand-exchange)
+
+public struct DemandSlotRow: Codable, Sendable, Identifiable {
+    public var id: String { slotId }
+    public let slotId: String
+    public let time: String
+    public let status: String
+    public let fulfillmentTypes: [String]
+    public let maxOrders: Int
+    public let currentOrders: Int
+    public let predictedDemand: Int
+    public let throughputCapacity: Int?
+    public let advertisedUtil: Double
+    public let kitchenUtil: Double?
+    public let tier: String          // under | healthy | tight | over | kitchen-capped
+    public let recommendedMaxOrders: Int
+    public let minSpendGrosze: Grosze
+    public let recommendedMinSpendGrosze: Grosze
+    public let action: String        // raise | trim | protect | hold
+    public let missedDemand: Int
+    public let note: String
+}
+
+public struct DemandSummary: Codable, Sendable {
+    public let predictedCovers: Int
+    public let advertisedCapacity: Int
+    public let throughputCapacity: Int?
+    public let fillForecastPct: Double
+    public let overCount: Int
+    public let underCount: Int
+    public let kitchenCappedCount: Int
+    public let missedDemand: Int
+}
+
+public struct DemandBoard: Codable, Sendable {
+    public let date: String
+    public let weekday: Int
+    public let generatedAt: String
+    public let intervalMin: Int
+    public let kitchenCoversPerHour: Double?
+    public let slots: [DemandSlotRow]
+    public let summary: DemandSummary
+}
+
+/// `GET /api/v1/admin/demand-exchange` envelope payload.
+public struct DemandBoardWrapper: Codable, Sendable {
+    public let board: DemandBoard
+}
+
+public struct DemandApplyResult: Codable, Sendable {
+    public let ok: Bool
+    public let applied: Int?
+}
