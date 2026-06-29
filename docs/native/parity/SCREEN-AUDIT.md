@@ -119,9 +119,35 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   carries `tableId`/`partySize`/`channel`/`paidAt`.
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
-- **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
-  orders" under a `DSSectionHeader`, live off `GET /api/v1/orders`. Migrated off
-  the hand-rolled fixed-size tiles this pass.
+- **Native now (institutional uplift):** a live-ops strip (board counts + board
+  total) over a **range-scoped executive KPI rail** — Revenue / Orders / Avg
+  ticket / Margin as **`OperatorKPICard`**s with inline sparklines and **true
+  period-over-period deltas** (current window vs the equal prior window), a
+  7d/30d/90d **`DSSegmented`** control, an **`OperatorAreaChart`** revenue trend,
+  **`OperatorHourBars`** daypart demand, the fulfilment ring, and a top-seller
+  **`OperatorLeaderRow`** board. Driven by `GET /api/v1/orders` (live) +
+  `/admin/summary?from=&to=` (current + prior) + `/admin/insights` (daypart).
+  Every KPI keeps a five-section ⓘ (Rule #12).
+
+### Institutional analytics uplift (this pass) ✅
+The four flagship analytics surfaces moved from flat tile/row grids to the web's
+institutional vocabulary, on a new shared kit (`DesignSystem/Analytics.swift`,
+see DESIGN-SYSTEM §4.2) + range scaffolding (`OperatorAnalyticsSupport.swift`):
+- **Reports** — 7d/30d/90d range chips that re-scope `/admin/summary?from=&to=`,
+  a six-card KPI rail with sparklines + prior-window deltas, an area revenue
+  chart, a **P&L waterfall**, and a **net-margin gauge** (fills toward the 25%
+  top-decile). All six KPIs + the waterfall carry five-section ⓘ.
+- **Insights** — a cancellation-rate **gauge**, daypart **hour bars**, top/worst
+  seller **leaderboards** (magnitude bars), and a cross-location revenue/profit
+  **comparison** + per-site KPI cards. KPIs carry five-section ⓘ.
+- **Calculator** — now a **live what-if sandbox**: drag the five exposed levers
+  (orders/day, days open, avg ticket, food cost %, card %) and the year-1 KPIs
+  (with vs-saved deltas), a P&L **waterfall**, a sensitivity **tornado** (±10%
+  per lever) and an orders×ticket **profit-map heatmap** all recompute live. The
+  math is anchored to the server's saved `projectTwelveMonths` projection
+  (reproduces year-1 exactly at baseline; labour + fixed held at saved, clearly
+  labelled — Rule #1) and never writes the scenario. The saved 12-month curve is
+  drawn as an area chart. Eleven five-section ⓘ explainers.
 
 ---
 

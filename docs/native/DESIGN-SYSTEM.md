@@ -254,8 +254,41 @@ public struct DSButton: View {
 - **`OperatorBarChart` / `OperatorDonut` / `OperatorBarRow`** (`Charts.swift`) —
   hand-rolled chart primitives (Path/Shape, not the Swift Charts framework, so
   they render identically across OS versions and add no framework surface). Used
-  by Reports (14-day revenue bars, fulfilment ring, ranked top-sellers) and the
-  other analytics surfaces. All colour from the active `Theme`.
+  by the fulfilment ring and ranked rows. All colour from the active `Theme`.
+- **Institutional analytics kit** (`Analytics.swift`) — the visual vocabulary that
+  makes the operator boards read "institutional", the native twins of the web
+  `Kpi`/`Sparkline`/`Chart` primitives (`src/admin-v3/ui/`). Same Path/Shape, no
+  framework surface, all `Theme` colour, Dynamic-Type + VoiceOver aware:
+  - **`TrendBadge`** — a period-over-period Δ% pill (`↑ +12%`) with good/bad tone;
+    `goodWhenUp:` inverts the colour for lower-is-better metrics (cancellation,
+    food cost). nil ⇒ a muted "—" (never a fabricated delta).
+  - **`OperatorSparkline`** — inline line + gradient-area trend with an end dot
+    (its static `points`/`line`/`area` also back the bigger chart).
+  - **`OperatorKPICard`** — the executive-rail unit: icon + label + ⓘ, big value,
+    `TrendBadge`, inline sparkline, caption.
+  - **`OperatorAreaChart`** — full trend chart: gradient fill, reference
+    gridlines, max y-axis label, leading/trailing x captions.
+  - **`OperatorGauge`** — 270° radial progress with a centre readout (margin,
+    share-of-target, SLA), threshold-tinted.
+  - **`OperatorProgressMeter`** — linear progress-to-goal with a benchmark tick.
+  - **`OperatorComparisonColumns`** — grouped two-series bars (this vs prior) + legend.
+  - **`OperatorHourBars`** — hourly demand bars, peak highlighted, sparse axis labels.
+  - **`OperatorHeatGrid`** — 2-D sensitivity heatmap (the Calculator's
+    orders×ticket / profit-map grids), diverging profit/loss scale, baseline cell ringed.
+  - **`OperatorWaterfall`** — revenue → −cost → profit cascade (running-total bars).
+  - **`OperatorTornado`** — ± sensitivity bars (assumption impact on year-1 profit).
+  - **`DSSegmented`** — themed segmented control (the 7d/30d/90d period chips).
+  - **`OperatorLeaderRow`** — ranked row (medal · name · magnitude bar · value · Δ).
+  Live consumers: **Dashboard** (executive KPI rail + revenue area + daypart bars
+  + fulfilment ring + top-seller leaderboard, range-scoped vs the prior window),
+  **Reports** (range chips, KPI rail with deltas, area chart, P&L waterfall, net-
+  margin gauge), **Insights** (cancellation gauge, daypart bars, seller
+  leaderboards, cross-location comparison), and the **Calculator** (live what-if
+  levers driving a waterfall, sensitivity tornado and orders×ticket heatmap).
+  The range scaffolding (`PeriodRange` + `AnalyticsDates` window math + the
+  `periodDelta` helper) lives in `Features/Operator/OperatorAnalyticsSupport.swift`
+  and resolves real ISO windows the `/admin/summary?from=&to=` facade scopes on,
+  plus the equal prior window so every delta is true period-over-period (Rule #1).
 
 ### 4.3 Overlays
 Native `.sheet`, `.popover`, `.alert`, `.confirmationDialog`, `.inspector` (iPad).
