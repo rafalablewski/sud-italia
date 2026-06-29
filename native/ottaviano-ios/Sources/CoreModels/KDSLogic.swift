@@ -22,10 +22,12 @@ public enum KDSClock {
         return String(format: "%02d:%02d", total / 60, total % 60)
     }
 
-    // Cached ISO parsers — `parseMs` runs on every periodic tick for every
-    // ticket; ISO8601DateFormatter init is costly. `nonisolated(unsafe)` because
-    // the type isn't Sendable but access is confined to the main actor (KDS
-    // rendering), mirroring KDSTicket's formatter caching.
+    // Cached ISO parsers — `parseMs` runs on every periodic tick for every ticket
+    // and ISO8601DateFormatter init is costly, so the formatters are reused.
+    // `parseMs` is `public static` over `Sendable` types, so it can't assume a
+    // single actor: a lock serializes the (uncontended, main-actor in practice)
+    // access, since ISO8601DateFormatter mutation isn't guaranteed thread-safe.
+    private static let parseLock = NSLock()
     nonisolated(unsafe) private static let isoFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -39,6 +41,8 @@ public enum KDSClock {
 
     /// ISO-8601 → ms epoch, tolerant of fractional seconds.
     public static func parseMs(_ iso: String) -> Double? {
+        parseLock.lock()
+        defer { parseLock.unlock() }
         if let d = isoFractional.date(from: iso) { return d.timeIntervalSince1970 * 1000 }
         if let d = isoPlain.date(from: iso) { return d.timeIntervalSince1970 * 1000 }
         return nil

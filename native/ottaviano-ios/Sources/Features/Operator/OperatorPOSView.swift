@@ -153,7 +153,10 @@ public final class OperatorPOSStore {
     /// Seat the check at a table (empty string clears — mergePosTab drops it).
     public func setTable(_ id: String) async { await saveCurrentTab(tableId: id) }
     public func togglePark() async { await saveCurrentTab(status: isParked ? "open" : "parked") }
-    public func setDiscount(_ d: PosTabDiscount?) async {
+    /// Returns the saved tab, or nil if the write failed — so the caller can show
+    /// honest feedback instead of assuming success.
+    @discardableResult
+    public func setDiscount(_ d: PosTabDiscount?) async -> PosTab? {
         await saveCurrentTab(discount: d, discountProvided: true)
     }
 
@@ -639,8 +642,7 @@ private struct CheckSheet: View {
         let d: PosTabDiscount = discKind == .percent
             ? PosTabDiscount(type: "percent", value: max(0, min(100, Int(num.rounded()))))
             : PosTabDiscount(type: "amount", value: Int((num * 100).rounded()))
-        await store.setDiscount(d)
-        message = "Discount applied"
+        message = await store.setDiscount(d) != nil ? "Discount applied" : "Couldn’t apply discount"
     }
 }
 

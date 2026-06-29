@@ -109,7 +109,9 @@ struct EightySixSheet: View {
     }
 
     private func loadMenu(_ slug: String) async {
-        guard !slug.isEmpty else { return }
+        // No location to load (e.g. the operator has none in scope) — clear the
+        // spinner instead of hanging on it.
+        guard !slug.isEmpty else { loading = false; return }
         loading = true
         defer { loading = false }
         do {
