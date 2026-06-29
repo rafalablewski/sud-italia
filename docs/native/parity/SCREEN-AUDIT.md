@@ -149,6 +149,29 @@ see DESIGN-SYSTEM §4.2) + range scaffolding (`OperatorAnalyticsSupport.swift`):
   labelled — Rule #1) and never writes the scenario. The saved 12-month curve is
   drawn as an area chart. Eleven five-section ⓘ explainers.
 
+### Institutional analytics uplift — wave 2 (this pass) ✅
+Extended the kit (`OperatorScatter`, `OperatorBandChart`) and carried the
+institutional treatment into the next tier of surfaces:
+- **Menu engineering** — the Kasavana-Smith matrix as a real **scatter**
+  (units × GP/unit) with a median crosshair + tinted quadrants, a 30/60/90-day
+  window control, quadrant KPI rail, and a revenue-ranked dish list. Matrix ⓘ.
+- **HACCP** — per-sensor **temperature trend** charts over the observed
+  compliant band (out-of-band readings flagged red), a flagged-rate **gauge**,
+  and per-sensor latest/band/flagged stats. Keeps the live log action. Two ⓘ.
+- **Cash** — a **variance trend** across closed sessions, a KPI rail (sessions,
+  open, drops, abs variance with sparkline), and the session list + open-till
+  action. Variance ⓘ.
+- **Inventory** — each row gained an **on-hand-vs-par meter** with the reorder
+  point as a benchmark tick (no fabricated history — the facade has none).
+- **Agent HQ** — a 7-day success **gauge**, a **cost-by-agent donut**, an agent
+  **spend leaderboard**, fleet KPI cards and the activity timeline. Three ⓘ.
+- **Multi-location** — a **revenue-share donut**, a revenue-vs-profit
+  **comparison**, a **margin leaderboard** + per-site KPI cards, chain KPI rail.
+  Chain-margin ⓘ.
+- **KDS Fleet** — a **promise-accuracy gauge** + per-hour pace header
+  (throughput / covers / revenue) on the owner Atlas board, off the real
+  `/admin/kds/fleet` station-capacity feed. Fleet-pace ⓘ.
+
 ---
 
 ## Wave D — first write surface beyond the existing ones (done this pass)

@@ -481,21 +481,29 @@ public struct OperatorInventoryView: View {
             search: { "\($0.name) \($0.locationSlug)" },
             detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
             row: { r in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(r.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(r.locationSlug.capitalized) · par \(num(r.parLevel)) \(r.unit)").font(.caption).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(num(r.onHand)) \(r.unit)").font(.subheadline.weight(.semibold)).monospacedDigit()
-                            .foregroundStyle(r.low ? theme.color.danger : theme.color.textPrimary)
-                        if r.low {
-                            Text("LOW").font(.caption2.weight(.bold))
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(theme.color.danger.opacity(0.18), in: Capsule()).foregroundStyle(theme.color.danger)
+                // On-hand vs par as a fill, with the reorder point as a benchmark
+                // tick — a glanceable "how full, how close to reordering" read.
+                let frac = r.parLevel > 0 ? r.onHand / r.parLevel : 0
+                let target = r.parLevel > 0 ? r.reorderPoint / r.parLevel : nil
+                let tint: Color = r.low ? theme.color.danger : (frac < 0.5 ? theme.color.warning : theme.color.success)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            Text("\(r.locationSlug.capitalized) · par \(num(r.parLevel)) \(r.unit)").font(.caption).foregroundStyle(theme.color.textSecondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(num(r.onHand)) \(r.unit)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                                .foregroundStyle(r.low ? theme.color.danger : theme.color.textPrimary)
+                            if r.low {
+                                Text("LOW").font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(theme.color.danger.opacity(0.18), in: Capsule()).foregroundStyle(theme.color.danger)
+                            }
                         }
                     }
+                    OperatorProgressMeter(fraction: frac, tint: tint, target: target, height: 8)
                 }
             }
         )

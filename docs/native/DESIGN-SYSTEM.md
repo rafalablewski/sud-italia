@@ -277,14 +277,24 @@ public struct DSButton: View {
     orders×ticket / profit-map grids), diverging profit/loss scale, baseline cell ringed.
   - **`OperatorWaterfall`** — revenue → −cost → profit cascade (running-total bars).
   - **`OperatorTornado`** — ± sensitivity bars (assumption impact on year-1 profit).
+  - **`OperatorScatter`** — two-variable scatter with a median crosshair + tinted
+    quadrants (the Kasavana-Smith menu-engineering matrix).
+  - **`OperatorBandChart`** — a line trend over a shaded safe band, out-of-band
+    points flagged red (the HACCP per-sensor temperature log).
   - **`DSSegmented`** — themed segmented control (the 7d/30d/90d period chips).
   - **`OperatorLeaderRow`** — ranked row (medal · name · magnitude bar · value · Δ).
   Live consumers: **Dashboard** (executive KPI rail + revenue area + daypart bars
   + fulfilment ring + top-seller leaderboard, range-scoped vs the prior window),
   **Reports** (range chips, KPI rail with deltas, area chart, P&L waterfall, net-
   margin gauge), **Insights** (cancellation gauge, daypart bars, seller
-  leaderboards, cross-location comparison), and the **Calculator** (live what-if
-  levers driving a waterfall, sensitivity tornado and orders×ticket heatmap).
+  leaderboards, cross-location comparison), the **Calculator** (live what-if
+  levers driving a waterfall, sensitivity tornado and orders×ticket heatmap),
+  **Menu engineering** (the Kasavana-Smith scatter matrix), **HACCP** (per-sensor
+  band charts + flagged-rate gauge), **Cash** (variance trend + KPI rail),
+  **Inventory** (on-hand-vs-par meters with a reorder tick), **Agent HQ**
+  (success gauge + cost-by-agent donut + spend leaderboard), **Multi-location**
+  (revenue-share donut + comparison + margin leaderboard), and the **KDS Fleet**
+  (promise-accuracy gauge + per-hour pace).
   The range scaffolding (`PeriodRange` + `AnalyticsDates` window math + the
   `periodDelta` helper) lives in `Features/Operator/OperatorAnalyticsSupport.swift`
   and resolves real ISO windows the `/admin/summary?from=&to=` facade scopes on,

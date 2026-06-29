@@ -702,6 +702,131 @@ public struct OperatorLeaderRow: View {
     }
 }
 
+// MARK: - OperatorScatter
+
+/// A two-variable scatter with a median crosshair and tinted quadrants — the
+/// Kasavana-Smith menu-engineering matrix (popularity × profitability). Points
+/// are normalised over the data's own range; the crosshair sits at the supplied
+/// medians (or the data medians). Each point carries its own quadrant colour.
+public struct OperatorScatter: View {
+    public struct Point: Sendable, Identifiable {
+        public let id: String
+        public let x: Double
+        public let y: Double
+        public let color: Color
+        public let label: String?
+        public init(id: String, x: Double, y: Double, color: Color, label: String? = nil) {
+            self.id = id; self.x = x; self.y = y; self.color = color; self.label = label
+        }
+    }
+    @Environment(\.theme) private var theme
+    private let points: [Point]
+    private let xLabel: String
+    private let yLabel: String
+    private let quadrantTints: (tl: Color, tr: Color, bl: Color, br: Color)?
+    private let height: CGFloat
+
+    public init(points: [Point], xLabel: String, yLabel: String,
+                quadrantTints: (tl: Color, tr: Color, bl: Color, br: Color)? = nil, height: CGFloat = 240) {
+        self.points = points; self.xLabel = xLabel; self.yLabel = yLabel
+        self.quadrantTints = quadrantTints; self.height = height
+    }
+
+    public var body: some View {
+        let xs = points.map(\.x), ys = points.map(\.y)
+        let xMin = xs.min() ?? 0, xMax = xs.max() ?? 1
+        let yMin = ys.min() ?? 0, yMax = ys.max() ?? 1
+        let xMed = median(xs), yMed = median(ys)
+        VStack(spacing: 4) {
+            GeometryReader { geo in
+                let w = geo.size.width, h = geo.size.height
+                let px: (Double) -> CGFloat = { CGFloat(($0 - xMin) / max(xMax - xMin, 0.0001)) * w }
+                let py: (Double) -> CGFloat = { h - CGFloat(($0 - yMin) / max(yMax - yMin, 0.0001)) * h }
+                let cx = px(xMed), cy = py(yMed)
+                ZStack {
+                    if let q = quadrantTints {
+                        q.tl.frame(width: cx, height: cy).position(x: cx / 2, y: cy / 2)
+                        q.tr.frame(width: w - cx, height: cy).position(x: cx + (w - cx) / 2, y: cy / 2)
+                        q.bl.frame(width: cx, height: h - cy).position(x: cx / 2, y: cy + (h - cy) / 2)
+                        q.br.frame(width: w - cx, height: h - cy).position(x: cx + (w - cx) / 2, y: cy + (h - cy) / 2)
+                    }
+                    Path { p in
+                        p.move(to: CGPoint(x: cx, y: 0)); p.addLine(to: CGPoint(x: cx, y: h))
+                        p.move(to: CGPoint(x: 0, y: cy)); p.addLine(to: CGPoint(x: w, y: cy))
+                    }.stroke(theme.color.textSecondary.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    ForEach(points) { pt in
+                        Circle().fill(pt.color)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().strokeBorder(theme.color.surface, lineWidth: 1))
+                            .position(x: px(pt.x), y: py(pt.y))
+                    }
+                }
+            }
+            .frame(height: height)
+            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.sm))
+            HStack {
+                Text("← \(xLabel) →").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                Spacer()
+                Text("↑ \(yLabel)").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+            }
+        }
+        .accessibilityLabel("Scatter matrix, \(points.count) items")
+    }
+
+    private func median(_ xs: [Double]) -> Double {
+        guard !xs.isEmpty else { return 0 }
+        let s = xs.sorted(); let n = s.count
+        return n % 2 == 1 ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) / 2
+    }
+}
+
+// MARK: - OperatorBandChart
+
+/// A line trend drawn over a shaded "safe band" [low, high] — the HACCP
+/// temperature log per sensor. Out-of-band readings render as danger dots.
+public struct OperatorBandChart: View {
+    @Environment(\.theme) private var theme
+    private let values: [Double]
+    private let safeLow: Double
+    private let safeHigh: Double
+    private let tint: Color?
+    private let height: CGFloat
+
+    public init(values: [Double], safeLow: Double, safeHigh: Double, tint: Color? = nil, height: CGFloat = 120) {
+        self.values = values; self.safeLow = safeLow; self.safeHigh = safeHigh; self.tint = tint; self.height = height
+    }
+
+    public var body: some View {
+        let color = tint ?? theme.color.accent
+        let lo = min(values.min() ?? safeLow, safeLow)
+        let hi = max(values.max() ?? safeHigh, safeHigh)
+        let range = max(hi - lo, 0.0001)
+        GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
+            let py: (Double) -> CGFloat = { h - CGFloat(($0 - lo) / range) * h }
+            let pts: [CGPoint] = values.count > 1
+                ? values.enumerated().map { CGPoint(x: CGFloat($0.offset) / CGFloat(values.count - 1) * w, y: py($0.element)) }
+                : values.map { _ in CGPoint(x: w / 2, y: py(values.first ?? 0)) }
+            ZStack {
+                Rectangle().fill(theme.color.success.opacity(0.14))
+                    .frame(height: max(2, py(safeLow) - py(safeHigh)))
+                    .position(x: w / 2, y: (py(safeLow) + py(safeHigh)) / 2)
+                if pts.count > 1 {
+                    OperatorSparkline.line(pts).stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                }
+                ForEach(Array(values.enumerated()), id: \.offset) { i, v in
+                    let bad = v < safeLow || v > safeHigh
+                    Circle().fill(bad ? theme.color.danger : color)
+                        .frame(width: bad ? 7 : 5, height: bad ? 7 : 5)
+                        .position(pts[i])
+                }
+            }
+        }
+        .frame(height: height)
+        .accessibilityLabel("Temperature trend, safe band \(Int(safeLow)) to \(Int(safeHigh))°C")
+    }
+}
+
 // MARK: - Gallery (living Storybook — DESIGN-SYSTEM §6)
 
 #if DEBUG

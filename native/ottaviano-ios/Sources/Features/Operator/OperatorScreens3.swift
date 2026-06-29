@@ -69,44 +69,152 @@ public struct OperatorAuditView: View {
 
 // MARK: - Cash (/admin/cash)
 
+/// Cash — the native twin of web `/admin/cash`. A till-reconciliation board: KPI
+/// rail, a cash-variance trend across closed sessions (the signal a till is
+/// drifting), and the session list with the open-till action. Real data only
+/// (Rule #1); variance carries the five-section ⓘ (Rule #12).
+@MainActor
+@Observable
+final class OperatorCashStore {
+    var items: [AdminCashSession] = []
+    var loaded = false
+    var error: String?
+    private let api: APIClient
+    init(api: APIClient) { self.api = api }
+    func load() async {
+        do { items = try await api.send(.adminCash()); error = nil }
+        catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
+        catch { error = "Something went wrong" }
+        loaded = true
+    }
+}
+
 public struct OperatorCashView: View {
     @Environment(\.theme) private var theme
+    @State private var store: OperatorCashStore?
     private let api: APIClient
     public init(api: APIClient) { self.api = api }
+
+    private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+
     public var body: some View {
-        OperatorListView(
-            title: "Cash",
-            emptyText: "No till sessions yet.",
-            loader: OperatorListLoader { try await api.send(.adminCash()) },
-            header: { (items: [AdminCashSession]) in
-                AnyView(HStack(spacing: theme.space.sm) {
-                    OperatorStatChip("Sessions", "\(items.count)", tint: theme.color.accent)
-                    OperatorStatChip("Open", "\(items.filter(\.open).count)", tint: theme.color.success)
-                })
-            },
-            toolbar: { reload in AnyView(OpenCashButton(api: api, reload: reload)) },
-            row: { s in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(s.locationSlug.capitalized) · \(s.openedBy)").font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(s.openedAt.prefix(16).replacingOccurrences(of: "T", with: " ")) · \(s.dropCount) drops")
-                            .font(.caption).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        MoneyText(s.dropsTotal).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        if s.open {
-                            Text("OPEN").font(.caption2.weight(.bold)).foregroundStyle(theme.color.success)
-                        } else if let v = s.varianceGrosze {
-                            HStack(spacing: 2) {
-                                Text("var").font(.caption2).foregroundStyle(theme.color.textSecondary)
-                                MoneyText(v).font(.caption2.weight(.bold)).foregroundStyle(v == 0 ? theme.color.success : theme.color.danger)
+        ScrollView {
+            if let store { content(store) }
+            else { ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl) }
+        }
+        .background(theme.color.surface)
+        .navigationTitle("Cash")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) {
+            if let store { OpenCashButton(api: api, reload: { await store.load() }) }
+        } }
+        .task {
+            if store == nil { store = OperatorCashStore(api: api) }
+            if store?.loaded == false { await store?.load() }
+        }
+        .refreshable { await store?.load() }
+    }
+
+    @ViewBuilder
+    private func content(_ store: OperatorCashStore) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.lg) {
+            if let error = store.error, store.items.isEmpty {
+                ContentUnavailableView("Couldn't load cash", systemImage: "banknote", description: Text(error))
+                    .padding(.top, theme.space.xxl)
+            } else if store.items.isEmpty && store.loaded {
+                DSEmptyState("Cash", systemImage: "banknote", message: "No till sessions yet.")
+            } else {
+                kpis(store.items)
+                varianceTrend(store.items)
+                sessions(store.items)
+            }
+        }
+        .padding(theme.space.lg)
+    }
+
+    private func kpis(_ items: [AdminCashSession]) -> some View {
+        let closed = items.filter { !$0.open }
+        let variances = closed.compactMap { $0.varianceGrosze }
+        let absVar = variances.reduce(0) { $0 + abs($1) }
+        let dropsTotal = items.reduce(0) { $0 + $1.dropsTotal }
+        return LazyVGrid(columns: cols, spacing: theme.space.md) {
+            OperatorKPICard(label: "Sessions", value: "\(items.count)", icon: "tray.full.fill", tint: theme.color.accent)
+            OperatorKPICard(label: "Open now", value: "\(items.filter(\.open).count)", icon: "lock.open.fill", tint: theme.color.success)
+            OperatorKPICard(label: "Drops", value: MoneyText.format(dropsTotal), icon: "arrow.down.to.line", tint: theme.color.textSecondary)
+            OperatorKPICard(label: "Abs variance", value: MoneyText.format(absVar), icon: "plusminus", tint: absVar == 0 ? theme.color.success : theme.color.warning,
+                            spark: variances.isEmpty ? nil : variances.map { Double(abs($0)) }, info: Self.varianceInfo)
+        }
+    }
+
+    private func varianceTrend(_ items: [AdminCashSession]) -> some View {
+        let closed = items.filter { !$0.open }.sorted { $0.openedAt < $1.openedAt }
+        let vals = closed.compactMap { $0.varianceGrosze }.map { Double($0) }
+        return card("Variance trend", subtitle: "closed sessions · zł over/short", info: Self.varianceInfo) {
+            if vals.count > 1 {
+                OperatorSparkline(vals, tint: theme.color.warning, height: 90)
+            } else {
+                Text("Not enough closed sessions yet.").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+            }
+        }
+    }
+
+    private func sessions(_ items: [AdminCashSession]) -> some View {
+        card("Sessions", subtitle: nil, info: nil) {
+            VStack(spacing: theme.space.sm) {
+                ForEach(items) { s in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(s.locationSlug.capitalized) · \(s.openedBy)").font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            Text("\(s.openedAt.prefix(16).replacingOccurrences(of: "T", with: " ")) · \(s.dropCount) drops")
+                                .font(.caption).foregroundStyle(theme.color.textSecondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            MoneyText(s.dropsTotal).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            if s.open {
+                                Text("OPEN").font(.caption2.weight(.bold)).foregroundStyle(theme.color.success)
+                            } else if let v = s.varianceGrosze {
+                                HStack(spacing: 2) {
+                                    Text("var").font(.caption2).foregroundStyle(theme.color.textSecondary)
+                                    MoneyText(v).font(.caption2.weight(.bold)).foregroundStyle(v == 0 ? theme.color.success : theme.color.danger)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical, 2)
                 }
             }
-        )
+        }
+    }
+
+    private func card<Content: View>(_ title: String, subtitle: String?, info: InfoButton?,
+                                     @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
+                    if let subtitle { Text(subtitle).textRole(.caption).foregroundStyle(theme.color.textSecondary) }
+                }
+                Spacer()
+                if let info { info }
+            }
+            content()
+        }
+        .padding(theme.space.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+}
+
+private extension OperatorCashView {
+    static var varianceInfo: InfoButton {
+        InfoButton(title: "Cash variance",
+            description: "The złoty difference between the counted till and what the system expected at close — over or short.",
+            institutional: "Till variance is the front-line shrinkage control. Persistent shorts signal till errors, mis-keyed discounts, or theft; persistent overs signal under-ringing. Institutions hold variance inside a tight band (often ±0.5% of cash sales) and investigate every breach — it's an internal-controls gate auditors test directly.",
+            plain: "If the drawer should hold 1 200 zł but counts 1 188 zł, that's −12 zł short. One bad night is noise; the same till short every shift is a problem to trace to a person or a process.",
+            tips: "Reconcile every session, blind-count the drawer (count before seeing the expected), retrain on discount keys, and rotate till responsibility so variance maps to a cause.",
+            methodology: "counted close − expected close, per session. Trend = closed sessions over time. Source: /admin/cash.varianceGrosze.")
     }
 }
 

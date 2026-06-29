@@ -266,17 +266,137 @@ struct LocationKPIRow: View {
 
 // MARK: - Multi-location (/admin/locations)
 
+/// Multi-location — the native twin of web `/admin/locations` (MultiLocationV3).
+/// A chain-comparison board: chain KPI rail, a revenue-share donut, a
+/// revenue-vs-profit comparison, a margin leaderboard, and per-site KPI cards.
+/// Real data only (Rule #1); chain margin carries the five-section ⓘ (Rule #12).
 public struct OperatorMultiLocationView: View {
     @Environment(\.theme) private var theme
     private let api: APIClient
+    @State private var rows: [AdminLocationKPI] = []
+    @State private var error: String?
+    @State private var loaded = false
     public init(api: APIClient) { self.api = api }
+
+    private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+    private var palette: [Color] { [theme.color.success, theme.color.accent, theme.color.warning, theme.info, theme.risk, theme.color.danger] }
+
     public var body: some View {
-        OperatorListView(
-            title: "Multi-location",
-            emptyText: "No locations to compare yet.",
-            loader: OperatorListLoader { try await api.send(.adminLocations()) },
-            row: { LocationKPIRow(kpi: $0) }
-        )
+        ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.lg) {
+                if let error, rows.isEmpty {
+                    ContentUnavailableView("Couldn't load locations", systemImage: "building.2", description: Text(error))
+                        .padding(.top, theme.space.xxl)
+                } else if rows.isEmpty && loaded {
+                    DSEmptyState("Multi-location", systemImage: "building.2", message: "No locations to compare yet.")
+                } else if !rows.isEmpty {
+                    kpis
+                    share
+                    comparison
+                    leaderboard
+                } else {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl)
+                }
+            }
+            .padding(theme.space.lg)
+        }
+        .background(theme.color.surface)
+        .navigationTitle("Multi-location")
+        .task { if !loaded { await load() } }
+        .refreshable { await load() }
+    }
+
+    private var chainRevenue: Grosze { rows.reduce(0) { $0 + $1.revenue } }
+    private var chainProfit: Grosze { rows.reduce(0) { $0 + $1.profit } }
+    private var chainOrders: Int { rows.reduce(0) { $0 + $1.orderCount } }
+    private var chainMargin: Double { chainRevenue > 0 ? Double(chainProfit) / Double(chainRevenue) * 100 : 0 }
+
+    private var kpis: some View {
+        LazyVGrid(columns: cols, spacing: theme.space.md) {
+            OperatorKPICard(label: "Chain revenue", value: MoneyText.format(chainRevenue), icon: "banknote.fill", tint: theme.color.success)
+            OperatorKPICard(label: "Chain orders", value: "\(chainOrders)", icon: "cart.fill", tint: theme.color.accent)
+            OperatorKPICard(label: "Avg margin", value: "\(Int(chainMargin.rounded()))%", icon: "percent", tint: theme.color.success, info: Self.marginInfo)
+        }
+    }
+
+    private var share: some View {
+        card("Revenue share", subtitle: "by site", info: nil) {
+            HStack(spacing: theme.space.xl) {
+                OperatorDonut(segments: rows.enumerated().map { i, r in
+                    .init(label: r.city, value: Double(r.revenue), color: palette[i % palette.count])
+                }, centerValue: MoneyText.format(chainRevenue), centerLabel: "chain")
+                VStack(alignment: .leading, spacing: theme.space.sm) {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { i, r in
+                        HStack(spacing: theme.space.sm) {
+                            RoundedRectangle(cornerRadius: 3).fill(palette[i % palette.count]).frame(width: 11, height: 11)
+                            Text(r.city).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                            Spacer()
+                            Text("\(chainRevenue > 0 ? Int(Double(r.revenue) / Double(chainRevenue) * 100) : 0)%")
+                                .textRole(.caption).monospacedDigit().foregroundStyle(theme.color.textSecondary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var comparison: some View {
+        card("Revenue vs profit", subtitle: "by site", info: nil) {
+            OperatorComparisonColumns(
+                groups: rows.map { .init(label: $0.city, current: Double($0.revenue), prior: Double($0.profit)) },
+                currentLabel: "Revenue", priorLabel: "Profit")
+        }
+    }
+
+    private var leaderboard: some View {
+        let ranked = rows.sorted { $0.profitMargin > $1.profitMargin }
+        let maxMargin = max(ranked.map(\.profitMargin).max() ?? 1, 1)
+        return card("Margin leaderboard", subtitle: "best-run sites first", info: nil) {
+            VStack(spacing: theme.space.md) {
+                ForEach(Array(ranked.enumerated()), id: \.element.id) { i, r in
+                    OperatorLeaderRow(rank: i + 1, name: r.city, value: "\(Int(r.profitMargin.rounded()))% margin",
+                                      fraction: r.profitMargin / maxMargin)
+                }
+                ForEach(rows) { LocationKPIRow(kpi: $0) }
+            }
+        }
+    }
+
+    private func card<Content: View>(_ title: String, subtitle: String?, info: InfoButton?,
+                                     @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).foregroundStyle(theme.color.textPrimary)
+                    if let subtitle { Text(subtitle).textRole(.caption).foregroundStyle(theme.color.textSecondary) }
+                }
+                Spacer()
+                if let info { info }
+            }
+            content()
+        }
+        .padding(theme.space.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+
+    private func load() async {
+        do { rows = try await api.send(.adminLocations()); error = nil }
+        catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
+        catch { self.error = "Something went wrong" }
+        loaded = true
+    }
+}
+
+private extension OperatorMultiLocationView {
+    static var marginInfo: InfoButton {
+        InfoButton(title: "Chain margin",
+            description: "Net profit as a share of revenue across every site, blended.",
+            institutional: "Chain margin is the headline an investor reads — but the spread BETWEEN sites is the operating story. A tight spread means a repeatable playbook (scalable, bankable); a wide spread means the chain depends on a few strong managers, a risk diligence flags.",
+            plain: "If the chain runs 14% but one site does 18% and another 9%, closing that gap toward the leader is worth more than any new promotion — and you already know it's achievable.",
+            tips: "Rank sites on margin (the leaderboard below), study the leader's labour + food cost, and roll its playbook to the laggard before opening anything new.",
+            methodology: "Σ profit ÷ Σ revenue across sites. Source: /admin/locations (per-site revenue/profit/margin).")
     }
 }
 
