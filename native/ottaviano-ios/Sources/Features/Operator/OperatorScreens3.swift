@@ -15,6 +15,7 @@ public struct OperatorUsersView: View {
             title: "Users",
             emptyText: "No staff accounts yet.",
             loader: OperatorListLoader { try await api.send(.adminUsers()) },
+            search: { "\($0.name) \($0.email ?? "") \($0.role)" },
             row: { u in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -49,6 +50,7 @@ public struct OperatorAuditView: View {
             title: "Audit log",
             emptyText: "No audit entries.",
             loader: OperatorListLoader { try await api.send(.adminAuditLog()) },
+            search: { "\($0.action) \($0.actor) \($0.entityType ?? "") \($0.entityId ?? "")" },
             row: { e in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
@@ -154,6 +156,7 @@ public struct OperatorComplianceView: View {
                     OperatorStatChip("Expired", "\(items.filter(\.expired).count)", tint: theme.color.danger)
                 })
             },
+            detail: { c, reload in AnyView(ComplianceDetailView(c: c, api: api, reload: reload)) },
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -184,6 +187,7 @@ public struct OperatorEventsView: View {
             title: "Events",
             emptyText: "No events booked.",
             loader: OperatorListLoader { try await api.send(.adminEvents()) },
+            detail: { e, reload in AnyView(EventDetailView(e: e, api: api, reload: reload)) },
             row: { e in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -263,5 +267,184 @@ public struct OperatorSurveysView: View {
                 }
             }
         )
+    }
+}
+
+/// Event detail — advance the booking through its lifecycle. Tapping a status
+/// chip PATCHes `/api/v1/admin/events` (manager+) and reloads. Other fields are
+/// read-only here (revenue/attendance come from the run-sheet). Rule #1.
+struct EventDetailView: View {
+    @Environment(\.theme) private var theme
+    let e: AdminEvent
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var status: String
+    @State private var busy = false
+    @State private var error: String?
+
+    init(e: AdminEvent, api: APIClient, reload: @escaping () async -> Void) {
+        self.e = e; self.api = api; self.reload = reload
+        _status = State(initialValue: e.status)
+    }
+
+    private let statuses = ["scheduled", "live", "done", "cancelled"]
+    private func tone(_ s: String) -> DSBadge.Tone {
+        switch s { case "done": .success; case "live": .warning; case "cancelled": .danger; default: .info }
+    }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("ticket.fill"),
+            title: e.name,
+            badge: (status.capitalized, tone(status)),
+            meta: [OperatorMetaRow("calendar", "\(e.date.prefix(10)) · \(e.locationSlug.capitalized)")]
+        ) {
+            if e.expectedAttendance != nil || e.actualRevenueGrosze != nil {
+                OperatorStatBand([
+                    OperatorStatTile("Expected", e.expectedAttendance.map { "\($0) pax" } ?? "—"),
+                    OperatorStatTile("Revenue", e.actualRevenueGrosze.map { MoneyText.format($0) } ?? "—"),
+                ])
+            }
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("STATUS").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    FlowStatusRow(statuses: statuses, current: status, tone: tone) { picked in
+                        Task { await save(picked) }
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                }
+            }
+        }
+    }
+
+    private func save(_ next: String) async {
+        guard next != status, !busy else { return }
+        busy = true; error = nil
+        do {
+            let updated = try await api.send(.adminSetEventStatus(id: e.id, status: next))
+            status = updated.status
+            await reload()
+        } catch let err as APIError {
+            error = OperatorListLoader<AdminEvent>.message(err)
+        } catch { self.error = "Couldn't update the event" }
+        busy = false
+    }
+}
+
+/// A wrapping row of selectable status chips (the current one filled).
+struct FlowStatusRow: View {
+    @Environment(\.theme) private var theme
+    let statuses: [String]
+    let current: String
+    let tone: (String) -> DSBadge.Tone
+    let onPick: (String) -> Void
+    var body: some View {
+        HStack(spacing: theme.space.sm) {
+            ForEach(statuses, id: \.self) { s in
+                Button { onPick(s) } label: {
+                    Text(s.capitalized)
+                        .textRole(.caption).fontWeight(.semibold)
+                        .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            s == current ? toneColor(tone(s)).opacity(0.22) : theme.color.surface,
+                            in: Capsule()
+                        )
+                        .overlay(Capsule().strokeBorder(s == current ? toneColor(tone(s)) : theme.color.line, lineWidth: 1))
+                        .foregroundStyle(s == current ? toneColor(tone(s)) : theme.color.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    private func toneColor(_ t: DSBadge.Tone) -> Color {
+        switch t {
+        case .success: theme.color.success
+        case .warning: theme.color.warning
+        case .danger: theme.color.danger
+        case .info: theme.info
+        case .accent: theme.color.accent
+        case .neutral: theme.color.textSecondary
+        }
+    }
+}
+
+/// Compliance detail — renew a licence/inspection. Picking a renewal term PATCHes
+/// `/api/v1/admin/compliance` (manager+) with the new expiry; the server stamps
+/// lastRenewedAt. Rule #1 — only the DTO's fields are shown.
+struct ComplianceDetailView: View {
+    @Environment(\.theme) private var theme
+    let c: AdminComplianceItem
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var expiresAt: String
+    @State private var lastRenewedAt: String?
+    // The server's authoritative `expired` (exact-instant UTC), so the badge
+    // can't disagree with the list row; refreshed from the renew response.
+    @State private var expired: Bool
+    @State private var busy = false
+    @State private var error: String?
+
+    init(c: AdminComplianceItem, api: APIClient, reload: @escaping () async -> Void) {
+        self.c = c; self.api = api; self.reload = reload
+        _expiresAt = State(initialValue: c.expiresAt)
+        _lastRenewedAt = State(initialValue: c.lastRenewedAt)
+        _expired = State(initialValue: c.expired)
+    }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("checkmark.shield.fill"),
+            title: c.title,
+            badge: expired ? ("Expired", .danger) : ("Valid", .success),
+            meta: [OperatorMetaRow("mappin.and.ellipse", "\(c.kind.replacingOccurrences(of: "_", with: " ").capitalized) · \(c.locationSlug.capitalized)")]
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Expires", String(expiresAt.prefix(10)), subTone: expired ? theme.color.danger : nil),
+                OperatorStatTile("Last renewed", lastRenewedAt.map { String($0.prefix(10)) } ?? "Never"),
+            ])
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("RENEW UNTIL").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    HStack(spacing: theme.space.sm) {
+                        term("+6 months", 6)
+                        term("+1 year", 12)
+                        term("+2 years", 24)
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                }
+            }
+        }
+    }
+
+    private func term(_ label: String, _ months: Int) -> some View {
+        Button { Task { await renew(months) } } label: {
+            Text(label).textRole(.caption).fontWeight(.semibold)
+                .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+                .frame(maxWidth: .infinity)
+                .background(theme.color.accent.opacity(0.16), in: Capsule())
+                .overlay(Capsule().strokeBorder(theme.color.accent.opacity(0.5), lineWidth: 1))
+                .foregroundStyle(theme.color.accent)
+        }
+        .buttonStyle(.plain).disabled(busy)
+    }
+
+    private func renew(_ months: Int) async {
+        guard !busy else { return }
+        busy = true; error = nil
+        let target = Calendar.current.date(byAdding: .month, value: months, to: Date()) ?? Date()
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+        do {
+            let updated = try await api.send(.adminRenewCompliance(id: c.id, expiresAt: f.string(from: target)))
+            expiresAt = updated.expiresAt
+            lastRenewedAt = updated.lastRenewedAt
+            expired = updated.expired
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminComplianceItem>.message(e)
+        } catch { self.error = "Couldn't renew" }
+        busy = false
     }
 }

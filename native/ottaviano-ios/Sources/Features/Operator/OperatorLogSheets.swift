@@ -324,3 +324,105 @@ private struct LogWasteSheet: View {
         } catch { self.error = "Something went wrong" }
     }
 }
+
+// MARK: - Shift handover (create) — POST /api/v1/admin/handover
+
+/// Toolbar action for the Handover surface: record a shift handover. A handover
+/// is a *new* log record (not a status toggle), so it follows the create-form
+/// pattern (location · shift · outgoing/incoming manager · the two safety checks
+/// · comment) → POST → reload. Manager+.
+struct NewHandoverButton: View {
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var show = false
+    var body: some View {
+        Button { show = true } label: { Label("New handover", systemImage: "arrow.left.arrow.right.circle.fill") }
+            .sheet(isPresented: $show) { NewHandoverSheet(api: api) { await reload() } }
+    }
+}
+
+private struct NewHandoverSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let api: APIClient
+    let onSaved: () async -> Void
+
+    @State private var locations: [Location] = []
+    @State private var locationSlug = ""
+    @State private var shift = "close"
+    @State private var outgoing = ""
+    @State private var incoming = ""
+    @State private var tempChecksOk = true
+    @State private var equipmentOk = true
+    @State private var wasteNoted = false
+    @State private var comment = ""
+    @State private var busy = false
+    @State private var error: String?
+
+    private var valid: Bool { !locationSlug.isEmpty && !outgoing.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if locations.count > 1 {
+                    Picker("Location", selection: $locationSlug) {
+                        ForEach(locations) { Text($0.name).tag($0.slug) }
+                    }
+                }
+                Section("Shift") {
+                    Picker("Shift", selection: $shift) {
+                        Text("Open").tag("open"); Text("Mid").tag("mid"); Text("Close").tag("close")
+                    }
+                    .pickerStyle(.segmented)
+                    TextField("Outgoing manager", text: $outgoing)
+                    TextField("Incoming manager (optional)", text: $incoming)
+                }
+                Section("Checks") {
+                    Toggle("Temperature checks OK", isOn: $tempChecksOk)
+                    Toggle("Equipment OK", isOn: $equipmentOk)
+                    Toggle("Waste noted", isOn: $wasteNoted)
+                }
+                Section("Notes") {
+                    TextField("Manager comment (optional)", text: $comment, axis: .vertical).lineLimit(1...4)
+                }
+                if let error {
+                    Text(error).font(.footnote).foregroundStyle(theme.color.danger)
+                }
+                Section {
+                    DSButton(busy ? "Saving…" : "Record handover") { Task { await submit() } }
+                        .disabled(busy || !valid)
+                }
+            }
+            .navigationTitle("Shift handover")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .task {
+                if let locs = try? await api.send(.locations()) {
+                    locations = locs
+                    if locationSlug.isEmpty { locationSlug = locs.first?.slug ?? "" }
+                }
+            }
+        }
+    }
+
+    private func submit() async {
+        busy = true; defer { busy = false }
+        let inc = incoming.trimmingCharacters(in: .whitespaces)
+        let note = comment.trimmingCharacters(in: .whitespaces)
+        do {
+            _ = try await api.send(.adminCreateHandover(
+                locationSlug: locationSlug,
+                shift: shift,
+                outgoingManager: outgoing.trimmingCharacters(in: .whitespaces),
+                incomingManager: inc.isEmpty ? nil : inc,
+                tempChecksOk: tempChecksOk,
+                equipmentOk: equipmentOk,
+                wasteNoted: wasteNoted,
+                managerComment: note.isEmpty ? nil : note))
+            await onSaved()
+            dismiss()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminHandover>.message(e)
+        } catch { self.error = "Something went wrong" }
+    }
+}

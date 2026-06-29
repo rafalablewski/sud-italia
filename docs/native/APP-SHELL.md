@@ -259,6 +259,32 @@ using the same rank table as `src/lib/admin-roles.ts` (owner 100 · franchisee 7
 `OPERATOR_NAV` in the same change — it is the contract that holds the two apps at
 parity.
 
+**Rail chrome (the most-seen surface).** The sidebar is the only screen visible
+across all 54 surfaces, so it carries the app's polish (`OttavianoKDSApp.swift`):
+
+- **Identity header** — a tappable card (brand mark · signed-in operator · role
+  badge · on-shift dot) that opens the account sheet. The rail states *who's on
+  shift and what they can reach* the moment it opens, instead of a bare wordmark.
+- **`.searchable` jump bar** — an operator app with 54 role-gated surfaces is
+  unusable without one. Filters `OPERATOR_NAV` live on label **+** purpose blurb;
+  empty sections fall away; no-match shows `ContentUnavailableView.search`. The
+  prompt counts the role's reachable surfaces ("Search 41 surfaces").
+- **`OperatorNavRow`** — an icon-chip + label row (mirrors the web rail's
+  glyph-led items); `.scaffold` surfaces carry a subtle wrench so live vs.
+  layout-parity reads at a glance.
+
+All chrome resolves through the generated web tokens (`theme.color.*`,
+`theme.radius.*` ← `Tokens.generated.swift` ← `themes/core/tokens.css`) — the web
+theme is applied; only the navigation container itself is native SwiftUI.
+
+**List surfaces gain search the same way.** `OperatorListView` takes an optional
+`search:` projection `(T) -> String`; supply it and the surface gets a
+`.searchable` row-finder (KPIs in the header keep computing over the *full* set —
+search narrows rows, not metrics). Wired into the long lists today: **Customers,
+Staff, Suppliers, Inventory, Guest, Recipes, Schedule, Users, Audit log**.
+Omitting `search:` (the default) leaves a surface bar-free, so it's purely
+additive per screen.
+
 ## 6. Launch sequence (deterministic, offline-tolerant)
 
 ```

@@ -244,6 +244,18 @@ public struct DSButton: View {
   countdown ticks on an internal `TimelineView` so only the timer/meter recompute.
 - **`MenuItemRow` / `MenuItemCard`**, **`OrderSummaryRow`**, **`TableChip`**,
   **`LoyaltyCard`** (the wallet-style pass), **`MetricTile`** (analytics).
+- **`MetricExplainer` / `InfoButton`** (`Explainers.swift`) — the operator app's
+  Rule #12 enforcement, the native twin of `src/admin-v3/ui/Explainer.tsx`. Any ⓘ
+  on a KPI / metric / what-if lever opens a sheet that renders **all five
+  sections, in this exact order and label**: description → **INSTITUTIONAL
+  ANALYSIS** → **IN PLAIN TERMS** → **TIPS — HOW TO PUSH THIS LEVER** →
+  **METHODOLOGY — HOW THIS IS DETERMINED**, each on its accent rail. All five
+  inputs are **required** (no defaults), so a description-only stub won't compile.
+- **`OperatorBarChart` / `OperatorDonut` / `OperatorBarRow`** (`Charts.swift`) —
+  hand-rolled chart primitives (Path/Shape, not the Swift Charts framework, so
+  they render identically across OS versions and add no framework surface). Used
+  by Reports (14-day revenue bars, fulfilment ring, ranked top-sellers) and the
+  other analytics surfaces. All colour from the active `Theme`.
 
 ### 4.3 Overlays
 Native `.sheet`, `.popover`, `.alert`, `.confirmationDialog`, `.inspector` (iPad).

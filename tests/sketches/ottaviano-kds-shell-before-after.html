@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OttavianoKDS — sidebar before/after (static)</title>
+<!-- Static, JS-free. Same generated Core dark tokens (Tokens.generated.swift ← themes/core/tokens.css). -->
+<style>
+:root{--accent:#D23A55;--on-accent:#fff;--surface:#100F12;--surface2:#1A191E;--line:#39383A;--text:#F4F1EC;--text2:#B8B0A6;
+--success:#3AA978;--warning:#D99A3C;--danger:#E2574F;--info:#5B8BD0;--r-sm:7px;--r-md:10px;--r-lg:14px;--sel:rgba(210,58,85,.14);--hair:rgba(255,255,255,.05)}
+*{box-sizing:border-box}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;display:inline-block;vertical-align:middle}
+body{margin:0;background:#0a090b;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1100px;margin:0 auto;padding:34px 24px 80px}
+h1{font-size:24px;margin:0 0 4px}.lead{color:var(--text2);font-size:14px;margin:0 0 8px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:38px 0 14px;font-weight:700}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;color:var(--text2)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.cap{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.cap.b{color:var(--text2)}.cap.a{color:var(--accent)}
+.tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid}
+.tag.b{color:var(--text2);border-color:var(--line)}.tag.a{color:var(--accent);border-color:rgba(210,58,85,.4);background:rgba(210,58,85,.1)}
+.side{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px;min-height:520px}
+.sec-hd{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);padding:12px 8px 5px}
+.b-title{font-weight:700;font-size:17px;padding:6px 8px 14px}
+.b-row{display:flex;align-items:center;gap:12px;padding:9px 8px}
+.ident{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px;margin-bottom:10px}
+.mark{width:42px;height:42px;border-radius:var(--r-md);background:var(--accent);display:grid;place-items:center;color:var(--on-accent);flex:none}
+.mark-ic{width:21px;height:21px}.name{font-weight:600}.role{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:13px;margin-top:2px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--success)}.chev{margin-left:auto;color:var(--text2)}
+.search{position:relative;margin-bottom:6px}.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text2);display:flex}.si .ic{width:16px;height:16px}
+.search input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);border-radius:var(--r-md);padding:9px 10px 9px 32px;font:inherit;font-size:14px;outline:none}
+.navrow{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:var(--r-md);border:1px solid transparent;margin:1px 0}
+.navrow.active{background:var(--sel);border-color:rgba(210,58,85,.35)}
+.chip{width:28px;height:28px;border-radius:var(--r-sm);display:grid;place-items:center;background:rgba(210,58,85,.12);color:var(--accent);flex:none}
+.chip-ic{width:15px;height:15px}.lbl{flex:1;font-size:14.5px}.wrench{color:var(--text2);opacity:.55;display:flex}.wr-ic{width:13px;height:13px}
+.panel{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid}.bic{width:13px;height:13px}
+.b-danger{color:var(--danger);background:rgba(226,87,79,.16);border-color:rgba(226,87,79,.3)}
+.b-success{color:var(--success);background:rgba(58,169,120,.16);border-color:rgba(58,169,120,.3)}
+.b-warning{color:var(--warning);background:rgba(217,154,60,.16);border-color:rgba(217,154,60,.3)}
+.b-info{color:var(--info);background:rgba(91,139,208,.16);border-color:rgba(91,139,208,.3)}
+.b-neutral{color:var(--text2);background:rgba(255,255,255,.04);border-color:var(--line)}
+.b-accent{color:var(--accent);background:rgba(210,58,85,.16);border-color:rgba(210,58,85,.35)}
+.tile{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;width:200px}
+.tile .top{display:flex;justify-content:space-between;color:var(--text2);font-size:12px}.tile .top .ic{width:16px;height:16px;color:var(--accent)}
+.tile .val{font-size:24px;font-weight:700;margin-top:6px}.tile .delta{font-size:12px;margin-top:4px;color:var(--success);display:flex;gap:3px;align-items:center}.tile .delta .ic{width:13px;height:13px}
+.statchip{width:150px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;text-align:center}
+.statchip .v{font-size:22px;font-weight:700}.statchip .cl{font-size:12px;color:var(--text2);margin-top:2px}
+.empty{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:40px;text-align:center;color:var(--text2)}.empty .ic{width:38px;height:38px;opacity:.5;margin-bottom:8px}
+</style></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2c1 4 4 5 4 9a4 4 0 0 1-8 0c0-1 .5-2 1-3-2 1-4 3-4 6a7 7 0 0 0 14 0c0-6-5-8-7-12Z"/></symbol><symbol id="i-pos" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="9" y2="11"/><line x1="12" y1="11" x2="13" y2="11"/><line x1="8" y1="15" x2="9" y2="15"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></symbol><symbol id="i-calClock" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="12" cy="15" r="3"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></symbol><symbol id="i-chevR" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol><symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14 7a4 4 0 0 0-5 5l-6 6 2 2 6-6a4 4 0 0 0 5-5l-2 2-2-1-1-2Z"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></symbol><symbol id="i-xoct" viewBox="0 0 24 24"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8Z"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></symbol></defs></svg>
+<div class="wrap">
+ <h1>OttavianoKDS — shell polish wave</h1>
+ <p class="lead">The operator rail is the one surface seen across all 54 screens. This wave gave it a branded identity header, a <code>.searchable</code> jump bar, and <code>OperatorNavRow</code> (icon chip + scaffold cue). All colour/radius from the generated web Core tokens.</p>
+ <h2>1 · The rail — before vs. after</h2>
+ <div class="cols">
+  <div><p class="cap b"><span class="tag b">BEFORE</span> bare <code>List { Label }</code></p><div class="side"><div class="b-title">OttavianoKDS <span style="float:right;color:var(--text2)"><svg class="ic"><use href="#i-users"/></svg></span></div><div class="sec-hd">Core</div><div class="b-row"><svg class="ic"><use href="#i-pos"/></svg><span>POS</span></div><div class="b-row"><svg class="ic"><use href="#i-flame"/></svg><span>Kitchen Display</span></div><div class="b-row"><svg class="ic"><use href="#i-receipt"/></svg><span>Orders</span></div><div class="b-row"><svg class="ic"><use href="#i-users"/></svg><span>Guest Engagement</span></div><div class="b-row"><svg class="ic"><use href="#i-calClock"/></svg><span>Service</span></div></div></div>
+  <div><p class="cap a"><span class="tag a">AFTER</span> identity · search · icon-chip rows</p><div class="side"><div class="ident"><span class="mark"><svg class="ic mark-ic"><use href="#i-flame"/></svg></span><div><div class="name">Rafał Ablewski</div><div class="role"><span class="dot"></span>Owner</div></div><span class="chev"><svg class="ic"><use href="#i-chevR"/></svg></span></div><div class="search"><span class="si"><svg class="ic"><use href="#i-search"/></svg></span><input value="" placeholder="Search 54 surfaces" readonly></div><div class="sec-hd">Core</div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-pos"/></svg></span><span class="lbl">POS</span></div><div class="navrow active"><span class="chip"><svg class="ic chip-ic"><use href="#i-flame"/></svg></span><span class="lbl">Kitchen Display</span></div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-receipt"/></svg></span><span class="lbl">Orders</span></div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-users"/></svg></span><span class="lbl">Guest Engagement</span></div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-calClock"/></svg></span><span class="lbl">Service</span></div><div class="sec-hd">System</div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-lock"/></svg></span><span class="lbl">SOC 2 controls</span><span class="wrench"><svg class="ic wr-ic"><use href="#i-wrench"/></svg></span></div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-layers"/></svg></span><span class="lbl">Capabilities</span><span class="wrench"><svg class="ic wr-ic"><use href="#i-wrench"/></svg></span></div></div></div>
+ </div>
+ <h2>2 · Nav row states</h2>
+ <div class="panel" style="max-width:400px"><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-receipt"/></svg></span><span class="lbl">Orders</span></div><div class="navrow active"><span class="chip"><svg class="ic chip-ic"><use href="#i-flame"/></svg></span><span class="lbl">Kitchen Display — selected</span></div><div class="navrow"><span class="chip"><svg class="ic chip-ic"><use href="#i-lock"/></svg></span><span class="lbl">SOC 2 controls</span><span class="wrench"><svg class="ic wr-ic"><use href="#i-wrench"/></svg></span></div></div>
+ <h2>3 · Status badges (DSBadge) — colour is never the only signal</h2>
+ <div class="panel"><div class="row"><span class="badge b-info"><svg class="ic bic"><use href="#i-dot"/></svg>New</span><span class="badge b-warning"><svg class="ic bic"><use href="#i-clock"/></svg>Firing</span><span class="badge b-success"><svg class="ic bic"><use href="#i-dot"/></svg>Ready</span><span class="badge b-danger"><svg class="ic bic"><use href="#i-clock"/></svg>Late</span><span class="badge b-danger"><svg class="ic bic"><use href="#i-xoct"/></svg>86’d</span><span class="badge b-neutral"><svg class="ic bic"><use href="#i-banknote"/></svg>Paid</span><span class="badge b-accent"><svg class="ic bic"><use href="#i-users"/></svg>Owner</span></div></div>
+ <h2>4 · KPI tile &amp; stat chip</h2>
+ <div class="panel"><div class="row">
+  <div class="tile"><div class="top"><span>Revenue today</span><svg class="ic"><use href="#i-banknote"/></svg></div><div class="val">9 840 zł</div><div class="delta"><svg class="ic"><use href="#i-trend"/></svg>+8%</div></div>
+  <div class="statchip"><div class="v" style="color:var(--accent)">128</div><div class="cl">Members</div></div>
+  <div class="statchip"><div class="v" style="color:var(--danger)">3</div><div class="cl">Low stock</div></div>
+ </div></div>
+ <h2>5 · Search empty state</h2>
+ <div class="empty"><svg class="ic"><use href="#i-search"/></svg><div>No results for &ldquo;mozarela&rdquo;</div><div style="font-size:13px;margin-top:4px;opacity:.8"><code>ContentUnavailableView.search</code> — shown when a list/rail query matches nothing.</div></div>
+</div></body></html>

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
-import { requireRole, resolveLocationFilter } from "@/lib/api/v1/guard";
-import { getShifts, getStaff } from "@/lib/store";
+import { requireRole, resolveLocationFilter, scopeAllows } from "@/lib/api/v1/guard";
+import { getShifts, getStaff, saveShift } from "@/lib/store";
 import { logger } from "@/lib/logger";
+
+const SHIFT_STATUSES = new Set(["scheduled", "in-progress", "done", "missed"]);
 
 export const dynamic = "force-dynamic";
 
@@ -37,5 +39,52 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     logger.error("v1 admin schedule failed", { layer: "api.v1.admin.schedule" }, err as Error);
     return apiError("internal", "Could not load the schedule");
+  }
+}
+
+/**
+ * `PATCH /api/v1/admin/schedule` — advance a shift's status, mirroring the web
+ * schedule control. Body `{ id, status }` where status ∈ {scheduled, in-progress,
+ * done, missed}. Manager+; the shift's location must be in scope. Re-saves via
+ * `saveShift` (upsert) so the times / staff / role / notes are preserved.
+ */
+export async function PATCH(req: NextRequest) {
+  const guard = requireRole(req, "manager");
+  if ("error" in guard) return guard.error;
+
+  let body: { id?: string; status?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return apiError("bad_request", "Body must be valid JSON");
+  }
+  const id = String(body.id ?? "").trim();
+  const status = String(body.status ?? "");
+  if (!id || !SHIFT_STATUSES.has(status)) {
+    return apiError("validation_failed", "id and a valid status are required");
+  }
+
+  try {
+    const shift = (await getShifts()).find((s) => s.id === id);
+    if (!shift) return apiError("not_found", "Unknown shift");
+    if (!scopeAllows(guard.claims.scope, shift.locationSlug)) {
+      return apiError("forbidden", `Not authorized for location "${shift.locationSlug}"`);
+    }
+    const saved = await saveShift({ ...shift, status: status as typeof shift.status });
+    const staff = await getStaff();
+    const name = staff.find((s) => s.id === saved.staffId)?.name ?? saved.staffId;
+    return apiOk({
+      id: saved.id,
+      staffId: saved.staffId,
+      staffName: name,
+      locationSlug: saved.locationSlug,
+      startAt: saved.startAt,
+      endAt: saved.endAt,
+      role: saved.role,
+      status: saved.status,
+    });
+  } catch (err) {
+    logger.error("v1 admin schedule patch failed", { layer: "api.v1.admin.schedule" }, err as Error);
+    return apiError("internal", "Could not update the shift");
   }
 }

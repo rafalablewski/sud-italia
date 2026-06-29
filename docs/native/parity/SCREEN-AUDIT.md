@@ -51,9 +51,16 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
     action): since availability is per-location and the board streams chain-wide,
     the sheet carries its own **location picker**, then reads `GET /api/v1/admin/
     menu?location=` and writes `PATCH /api/v1/admin/menu` to 86 / restore items.
-- **Honest gaps (hardware-gated, not faked — Rule #1):**
-  - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
-    runtime concerns; the iPad app is already chromeless).
+- **Shipped — sound chimes + kiosk (this pass):** `KDSChime` rings a short system
+  sound (`AudioServicesPlaySystemSound`, mute-switch-aware, no bundled asset) +
+  a success haptic when a genuinely new ticket lands — gated on a toolbar
+  **sound toggle** and the pause state, with a `chimeArmed` guard so opening the
+  board isn't a burst of dings. A toolbar **Kiosk** action hides the nav bar +
+  status bar + home indicator (`.toolbar(.hidden)` · `.statusBarHidden` ·
+  `.persistentSystemOverlays(.hidden)`), keeps the screen awake
+  (`UIApplication.isIdleTimerDisabled`, UIKit-gated), and shows a floating exit
+  button. **Needs on-device confirmation** (audio + idle-timer can't be exercised
+  from the Linux container) — the one verification step that wants a Mac/iPad.
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -117,6 +124,145 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   the hand-rolled fixed-size tiles this pass.
 
 ---
+
+## Wave D — first write surface beyond the existing ones (done this pass)
+
+The Admin write surfaces that already had `/api/v1` endpoints (HACCP, Waste,
+Cash, Announcements, Feedback, Purchase orders, Menu 86, Tasks) keep their
+actions. Wave D opens the **first new write** that needed facade work:
+- **Inventory adjust** — new `POST /api/v1/admin/inventory` (manager+, scope-
+  gated, `{ ingredientId, locationSlug, delta, reason? }`) records an `adjust`
+  stock movement through the shared `createStockMovement` (same path the rest of
+  the app uses, so audit history + on-hand stay consistent). **Verified live**
+  against `npm run dev`: +12 → 12, −4 → 8, GET reflects it, unknown id → 404,
+  delta 0 → 422, missing token → 401.
+- **Native:** `StockDetailView` became a stateful sheet — a ±stepper with a live
+  "→ N on hand" preview and an Apply button that POSTs, updates on-hand in place
+  and reloads the list. `OperatorListView.detail:` now passes a `reload` closure
+  (same contract as `toolbar:`), so any detail sheet can write-then-refresh.
+
+**Service slots — capacity + status (this pass).** New `PATCH /api/v1/admin/slots`
+(manager+, scope-gated, `{ id, maxOrders?, status? }`); `maxOrders` can't drop
+below the booked count. Native `SlotDetailView` — a capacity ±stepper (floored at
+the booked count) + an Active toggle (draft⇄active) → PATCH + reload. **Verified
+live:** capacity 40→45, below-booked → 422, status flip ok, unknown → 404, no
+token → 401.
+
+**Events — lifecycle status (this pass).** New `PATCH /api/v1/admin/events`
+(manager+, `{ id, status }` ∈ {scheduled, live, done, cancelled}); re-saves via
+`saveEvent` so revenue/attendance persist. Native `EventDetailView` — a status
+chip row (`FlowStatusRow`) → PATCH + reload. **Verified live:** scheduled→live→
+done with fields preserved, invalid → 422, unknown → 404.
+
+**Compliance — renew (this pass).** New `PATCH /api/v1/admin/compliance`
+(manager+, scope-gated, `{ id, expiresAt }`) sets the new expiry and stamps
+`lastRenewedAt`. Native `ComplianceDetailView` — +6mo / +1yr / +2yr renewal-term
+chips (the app computes the date) → PATCH + reload. **Verified live:** expired →
+renew to 2027 → expired=false + lastRenewedAt set; invalid date → 422, unknown →
+404, no token → 401.
+
+**Schedule — shift status (this pass).** New `PATCH /api/v1/admin/schedule`
+(manager+, scope-gated, `{ id, status }` ∈ {scheduled, in-progress, done,
+missed}); re-saves via `saveShift` so times/staff/role persist. Native
+`ScheduleDetailView` — a `FlowStatusRow` status row → PATCH + reload. **Verified
+live:** scheduled→in-progress→done with fields preserved, invalid → 422,
+unknown → 404, no token → 401.
+
+**Shift handover — record (this pass).** New `POST /api/v1/admin/handover`
+(manager+, scope-gated; `{ locationSlug, shift, outgoingManager, tempChecksOk,
+equipmentOk, wasteNoted?, incomingManager?, managerComment? }`, shift ∈ {open,
+mid, close}). Native `NewHandoverButton` → `NewHandoverSheet` (location · shift
+segmented · outgoing/incoming manager · the two safety toggles + waste-noted ·
+comment) → POST → reload, on the toolbar-create pattern. **Verified live:**
+valid → 201 + GET shows it, bad shift → 422, missing booleans → 422, no token →
+401.
+
+**Wave D is now complete across every named surface.** Detail-drill-in + write
+spans **Customers, Staff, Guest, Suppliers, Stock (adjust), Service slots
+(capacity/status), Events (status), Compliance (renew), Schedule (status)**, and
+the create-form surfaces (**HACCP, Waste, Cash, Announcements, Handover**) plus
+the per-row write surfaces (**Feedback, Purchase orders, Tasks, Menu 86**). The
+last hardware-bound items — **KDS sound chimes + kiosk fullscreen** — are now
+implemented too (system-sound chime + kiosk chrome-hide/keep-awake); only their
+**on-device confirmation** remains, the single step that needs a Mac/iPad.
+
+## Wave C — CORE depth + detail-sheet breadth (partial this pass)
+
+Extends the Wave A drill-in and Wave B ⓘ patterns across CORE + more of Admin:
+- **Guest (loyalty) profile sheet** (`/core/guest`) — member identity + contact +
+  signed-up / birthday tiles. Spend/points stay on the Customers record (keyed by
+  phone), not duplicated/invented (Rule #1).
+- **Supplier** and **Stock-item** detail sheets — contact + lead time + notes;
+  on-hand vs par vs reorder with the server's low-stock verdict.
+- **Dashboard money KPIs** (board revenue, avg ticket) gained five-section ⓘ
+  explainers.
+Detail drill-in now covers **Customers, Staff, Guest, Suppliers, Stock**; the
+pattern keeps extending.
+
+**Honest gaps in Wave C (not faked):**
+- **KDS sound chimes / kiosk fullscreen** — now implemented (see the KDS section
+  above); only on-device confirmation remains.
+- **Service slot editing** — a write surface; needs a `/api/v1/admin/slots`
+  mutation endpoint (read-only today). Tracked with Wave D.
+
+## Wave B — analytics + five-section ⓘ explainers (done this pass)
+
+Brings the web's charted analytics and its Rule #12 metric explainers to native.
+- **`MetricExplainer` + `InfoButton`** (`DesignSystem/Explainers.swift`) — native
+  twin of `src/admin-v3/ui/Explainer.tsx`: every ⓘ opens a sheet with the five
+  required sections in the fixed order/labels (description → INSTITUTIONAL
+  ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY); all five props required so a
+  stub won't compile.
+- **Chart primitives** (`DesignSystem/Charts.swift`) — `OperatorBarChart`,
+  `OperatorDonut`, `OperatorBarRow`, hand-rolled (no Swift Charts API surface).
+- **Reports rebuilt** — six KPIs each with a full ⓘ explainer; the "by day" text
+  list became a 14-day **revenue bar chart**; fulfilment mix became a **ring +
+  legend**; top sellers gained **magnitude bars**. All off `summary` (Rule #1).
+The same `InfoButton` now seeds the remaining KPI surfaces (Dashboard, Cash,
+Calculator, Insights, Menu engineering) as they're polished. Preview:
+`tests/sketches/ottaviano-kds-wave-b-analytics-explainers.html`.
+
+## Wave A — rich rows + detail drill-in (done this pass)
+
+Admin list surfaces were flat single-line rows with no inspect path; the web
+admin opens a detail dialog on click. Native now mirrors that:
+- **`OperatorListView` gained an opt-in `detail:` projection** — supply it and
+  every row becomes tappable (chevron affordance) and presents a sheet via
+  `.sheet(item:)`. Purely additive; inert without it.
+- **Shared sheet primitives** (`OperatorDetail.swift`): `OperatorDetailSheet`
+  (gradient initials/icon avatar + title + status badge + contact meta lines,
+  Done-dismiss, drag indicator), `OperatorStatTile` / `OperatorStatBand` (the
+  header stat band), `OperatorMetaRow`, and a list-row `Avatar`.
+- **Customer profile** — VIP chip + recency + points on the row; sheet shows
+  lifetime / orders / points / avg-ticket tiles, contact + member-since, notes,
+  opt-out badges. **Rule #1:** every field comes from the `AdminCustomer` DTO —
+  recent-order history is *not* faked; it needs a customer-scoped orders endpoint
+  (tracked facade gap).
+- **Staff card** — sheet shows rate + role tiles, contact, hire date, status,
+  notes. Upcoming shifts stay on the Schedule surface (not duplicated/faked).
+
+The same `detail:` pattern extends to the remaining surfaces as their DTOs (or
+new facade endpoints) justify a drill-in. Preview: `tests/sketches/
+ottaviano-kds-wave-a-detail-sheets.html`.
+
+## Shell + navigation polish — done this pass
+
+The operator rail is the one surface seen across all 54 screens, so it got the
+visual + usability pass first (`OttavianoKDSApp.swift`):
+- **Branded identity header** — a tappable card (mark · operator · role badge ·
+  on-shift dot) replacing the bare wordmark; opens the account sheet.
+- **`.searchable` over the whole IA** — filters `OPERATOR_NAV` live on label +
+  blurb, empty sections drop, no-match → `ContentUnavailableView.search`; prompt
+  counts the role's reachable surfaces.
+- **`OperatorNavRow`** — icon-chip + label rows (web-rail parity); scaffolds
+  carry a subtle wrench glyph (live vs. layout-parity at a glance).
+- **Universal list search** — `OperatorListView` gained an optional `search:`
+  projection; wired into Customers, Staff, Suppliers, Inventory, Guest, Recipes,
+  Schedule, Users, Audit log. Header KPIs stay over the full set (search is a
+  row-finder, not a metric filter). Purely additive — bar-free without `search:`.
+
+All chrome resolves through the generated web tokens (`themes/core/tokens.css` →
+`Tokens.generated.swift`); native SwiftUI is reserved for the nav container.
 
 ## Design-system adoption — done this pass
 
@@ -193,7 +339,8 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ✅ **KDS Done/hr + On-shift KPIs** — `/api/v1/admin/kds/floor-ops` (manager+).
 - ✅ **KDS 86 dialog** — native `EightySixSheet` (manager+) with a location picker
   over the existing `/api/v1/admin/menu` GET/PATCH.
-- ⏳ **KDS sound chimes / kiosk fullscreen** — on-device only (hardware-gated).
+- ✅ **KDS sound chimes / kiosk fullscreen** — implemented (`KDSChime` system
+  sound + haptic; kiosk chrome-hide + keep-awake). On-device confirmation pending.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.

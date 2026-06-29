@@ -22,18 +22,222 @@ public struct OperatorCustomersView: View {
                     OperatorStatChip("VIPs", "\(items.filter { $0.totalSpentGrosze >= 50000 }.count)", tint: theme.color.success)
                 })
             },
+            search: { "\($0.name ?? "") \($0.phone)" },
+            detail: { c, _ in AnyView(CustomerDetailView(c: c)) },
             row: { c in
-                HStack {
+                HStack(spacing: theme.space.sm) {
+                    Avatar(name: c.name ?? c.phone)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(c.name ?? c.phone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(c.orderCount) orders · \(c.loyaltyPointsBalance + c.manualPointsAdjust) pts")
-                            .font(.caption).foregroundStyle(theme.color.textSecondary)
+                        HStack(spacing: 6) {
+                            Text(c.name ?? c.phone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                            if c.totalSpentGrosze >= 50000 { vipChip }
+                        }
+                        Text(subtitle(c)).font(.caption).foregroundStyle(theme.color.textSecondary)
                     }
-                    Spacer()
-                    MoneyText(c.totalSpentGrosze).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                    Spacer(minLength: theme.space.sm)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        MoneyText(c.totalSpentGrosze).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                        Label("\(c.loyaltyPointsBalance + c.manualPointsAdjust)", systemImage: "gift.fill")
+                            .font(.caption2.weight(.semibold)).foregroundStyle(theme.color.accent)
+                    }
                 }
             }
         )
+    }
+    private var vipChip: some View {
+        Label("VIP", systemImage: "star.fill").font(.caption2.weight(.bold))
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .foregroundStyle(theme.color.warning)
+            .background(theme.color.warning.opacity(0.16), in: Capsule())
+    }
+    private func subtitle(_ c: AdminCustomer) -> String {
+        var bits = ["\(c.orderCount) orders"]
+        if let last = c.lastOrderAt { bits.append("last \(last.prefix(10))") }
+        return bits.joined(separator: " · ")
+    }
+}
+
+/// Customer profile sheet — every field the AdminCustomer DTO carries, nothing
+/// invented (Rule #1). Recent-order history would need a customer-scoped orders
+/// endpoint on the facade; until then the profile shows lifetime + cadence.
+struct CustomerDetailView: View {
+    @Environment(\.theme) private var theme
+    let c: AdminCustomer
+    private var points: Int { c.loyaltyPointsBalance + c.manualPointsAdjust }
+    private var avg: Grosze { c.orderCount > 0 ? c.totalSpentGrosze / c.orderCount : 0 }
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .initials(c.name ?? c.phone),
+            title: c.name ?? c.phone,
+            badge: c.totalSpentGrosze >= 50000 ? ("VIP", .warning) : nil,
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Lifetime", MoneyText.format(c.totalSpentGrosze)),
+                OperatorStatTile("Orders", "\(c.orderCount)"),
+                OperatorStatTile("Points", "\(points)", sub: "redeemable", subTone: theme.color.accent),
+                OperatorStatTile("Avg ticket", MoneyText.format(avg)),
+            ])
+            if let notes = c.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+            if c.smsOptout || c.emailOptout {
+                HStack(spacing: theme.space.sm) {
+                    if c.smsOptout { DSBadge("SMS opt-out", tone: .neutral, systemImage: "bell.slash") }
+                    if c.emailOptout { DSBadge("Email opt-out", tone: .neutral, systemImage: "envelope.badge") }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("phone.fill", c.phone)]
+        if let e = c.email { m.append(OperatorMetaRow("envelope.fill", e)) }
+        if let first = c.firstOrderAt { m.append(OperatorMetaRow("calendar", "Member since \(first.prefix(10))")) }
+        return m
+    }
+}
+
+/// A compact initials avatar used in operator list rows.
+struct Avatar: View {
+    @Environment(\.theme) private var theme
+    let name: String
+    var body: some View {
+        Text(initials)
+            .font(.caption.weight(.bold)).foregroundStyle(theme.color.accent)
+            .frame(width: 36, height: 36)
+            .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.sm))
+    }
+    private var initials: String {
+        let parts = name.split(separator: " ").prefix(2)
+        let i = parts.compactMap { $0.first }.map(String.init).joined()
+        return i.isEmpty ? "·" : i.uppercased()
+    }
+}
+
+/// Supplier detail — the AdminSupplier DTO's fields (Rule #1).
+struct SupplierDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminSupplier
+    var body: some View {
+        OperatorDetailSheet(leading: .icon("shippingbox.and.arrow.backward.fill"), title: s.name, meta: meta) {
+            if let lead = s.leadTimeDays {
+                OperatorStatBand([OperatorStatTile("Lead time", "\(lead)", sub: "days")])
+            }
+            if let notes = s.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var r: [OperatorMetaRow] = []
+        if let c = s.contactName { r.append(OperatorMetaRow("person.fill", c)) }
+        if let p = s.phone { r.append(OperatorMetaRow("phone.fill", p)) }
+        if let e = s.email { r.append(OperatorMetaRow("envelope.fill", e)) }
+        return r
+    }
+}
+
+/// Stock-item detail — the AdminStockRow DTO's fields (Rule #1) **plus** a live
+/// adjust action: nudge the delta, Apply, and it POSTs an `adjust` movement
+/// (`POST /api/v1/admin/inventory`), updates the on-hand in place and reloads the
+/// list. Manager+ on the server; a non-manager token just gets a 403 surfaced.
+struct StockDetailView: View {
+    @Environment(\.theme) private var theme
+    let r: AdminStockRow
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var onHand: Double
+    @State private var delta: Double = 0
+    @State private var busy = false
+    @State private var error: String?
+
+    init(r: AdminStockRow, api: APIClient, reload: @escaping () async -> Void) {
+        self.r = r; self.api = api; self.reload = reload
+        _onHand = State(initialValue: r.onHand)
+    }
+
+    private func fmt(_ d: Double) -> String { d == d.rounded() ? String(Int(d)) : String(format: "%.1f", d) }
+    private var low: Bool { onHand <= r.reorderPoint }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("shippingbox.fill"),
+            title: r.name,
+            badge: low ? ("Low stock", .danger) : ("In stock", .success),
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("On hand", "\(fmt(onHand)) \(r.unit)"),
+                OperatorStatTile("Par level", "\(fmt(r.parLevel)) \(r.unit)"),
+                OperatorStatTile("Reorder at", "\(fmt(r.reorderPoint)) \(r.unit)"),
+            ])
+            adjustCard
+        }
+    }
+
+    private var adjustCard: some View {
+        DSCard {
+            VStack(alignment: .leading, spacing: theme.space.md) {
+                Text("ADJUST STOCK").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                HStack(spacing: theme.space.lg) {
+                    stepButton("minus") { if onHand + delta > 0 { delta -= 1 } }
+                    VStack(spacing: 2) {
+                        Text("\(delta >= 0 ? "+" : "")\(fmt(delta)) \(r.unit)")
+                            .textRole(.title).monospacedDigit()
+                            .foregroundStyle(delta == 0 ? theme.color.textSecondary : theme.color.accent)
+                        Text("→ \(fmt(onHand + delta)) \(r.unit) on hand").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    stepButton("plus") { delta += 1 }
+                }
+                if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                DSButton(busy ? "Applying…" : "Apply adjustment") { Task { await apply() } }
+                    .disabled(delta == 0 || busy)
+                    .opacity(delta == 0 || busy ? 0.5 : 1)
+            }
+        }
+    }
+
+    private func stepButton(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.headline).frame(width: 48, height: 48)
+                .foregroundStyle(theme.color.accent)
+                .background(theme.color.surface, in: Circle())
+                .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: delta)
+    }
+
+    private func apply() async {
+        guard delta != 0 else { return }
+        busy = true; error = nil
+        do {
+            let updated = try await api.send(.adminAdjustStock(
+                ingredientId: r.ingredientId, locationSlug: r.locationSlug, delta: delta))
+            onHand = updated.onHand
+            delta = 0
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminStockRow>.message(e)
+        } catch { self.error = "Couldn't adjust stock" }
+        busy = false
+    }
+
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("tag.fill", "\(r.category.capitalized) · \(r.locationSlug.capitalized)")]
+        if let c = r.lastCountedAt { m.append(OperatorMetaRow("calendar", "Last counted \(c.prefix(10))")) }
+        return m
     }
 }
 
@@ -54,13 +258,16 @@ public struct OperatorStaffView: View {
                     OperatorStatChip("Active", "\(items.filter { $0.status == "active" }.count)", tint: theme.color.success)
                 })
             },
+            search: { "\($0.name) \($0.role) \($0.locationSlug)" },
+            detail: { s, _ in AnyView(StaffDetailView(s: s)) },
             row: { s in
-                HStack {
+                HStack(spacing: theme.space.sm) {
+                    Avatar(name: s.name)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         Text("\(s.role.capitalized) · \(s.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
                     }
-                    Spacer()
+                    Spacer(minLength: theme.space.sm)
                     VStack(alignment: .trailing, spacing: 2) {
                         MoneyText(s.hourlyRateGrosze).font(.caption.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         statusTag(s.status, ok: s.status == "active")
@@ -77,6 +284,41 @@ public struct OperatorStaffView: View {
     }
 }
 
+/// Staff card sheet — the AdminStaff DTO's fields (Rule #1). Upcoming shifts live
+/// on the Schedule endpoint, so they're shown there, not duplicated here.
+struct StaffDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminStaff
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .initials(s.name),
+            title: s.name,
+            badge: (s.status.capitalized, s.status == "active" ? .success : .neutral),
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Rate", MoneyText.format(s.hourlyRateGrosze), sub: "/ hour"),
+                OperatorStatTile("Role", s.role.capitalized),
+            ])
+            if let notes = s.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("briefcase.fill", "\(s.role.capitalized) · \(s.locationSlug.capitalized)")]
+        if let p = s.phone { m.append(OperatorMetaRow("phone.fill", p)) }
+        if let e = s.email { m.append(OperatorMetaRow("envelope.fill", e)) }
+        if let h = s.hireDate { m.append(OperatorMetaRow("calendar", "Hired \(h.prefix(10))")) }
+        return m
+    }
+}
+
 // MARK: - Suppliers (/admin/suppliers)
 
 public struct OperatorSuppliersView: View {
@@ -88,6 +330,8 @@ public struct OperatorSuppliersView: View {
             title: "Suppliers",
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
+            search: { "\($0.name) \($0.contactName ?? "")" },
+            detail: { s, _ in AnyView(SupplierDetailView(s: s)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -234,6 +478,8 @@ public struct OperatorInventoryView: View {
                     OperatorStatChip("Low", "\(items.filter(\.low).count)", tint: theme.color.danger)
                 })
             },
+            search: { "\($0.name) \($0.locationSlug)" },
+            detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
             row: { r in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -270,6 +516,7 @@ public struct OperatorSlotsView: View {
             title: "Service",
             emptyText: "No fulfilment slots scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSlots()) },
+            detail: { s, reload in AnyView(SlotDetailView(s: s, api: api, reload: reload)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -283,6 +530,96 @@ public struct OperatorSlotsView: View {
                 }
             }
         )
+    }
+}
+
+/// Service-slot detail — capacity + status, with live edits. The capacity stepper
+/// can't go below the slot's already-booked count; the status toggle flips
+/// draft⇄active. Both PATCH `/api/v1/admin/slots` (manager+) and reload. Rule #1.
+struct SlotDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminSlot
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var maxOrders: Int
+    @State private var status: String
+    // Last-saved baseline (not the immutable prop) so `dirty` settles back to
+    // false after a successful save — the prop `s` never updates.
+    @State private var baseMax: Int
+    @State private var baseStatus: String
+    @State private var busy = false
+    @State private var error: String?
+
+    init(s: AdminSlot, api: APIClient, reload: @escaping () async -> Void) {
+        self.s = s; self.api = api; self.reload = reload
+        _maxOrders = State(initialValue: s.maxOrders)
+        _status = State(initialValue: s.status)
+        _baseMax = State(initialValue: s.maxOrders)
+        _baseStatus = State(initialValue: s.status)
+    }
+
+    private var dirty: Bool { maxOrders != baseMax || status != baseStatus }
+    private var free: Int { max(0, maxOrders - s.currentOrders) }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("calendar.badge.clock"),
+            title: "\(s.date) · \(s.time)",
+            badge: (status.capitalized, status == "active" ? .success : .neutral),
+            meta: [OperatorMetaRow("mappin.and.ellipse", "\(s.locationSlug.capitalized) · \(s.fulfillmentTypes.joined(separator: ", "))")]
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Capacity", "\(maxOrders)"),
+                OperatorStatTile("Booked", "\(s.currentOrders)"),
+                OperatorStatTile("Free", "\(free)", subTone: free == 0 ? theme.color.danger : nil),
+            ])
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("CAPACITY").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    HStack(spacing: theme.space.lg) {
+                        cap("minus") { if maxOrders > s.currentOrders { maxOrders -= 1 } }
+                        Text("\(maxOrders)").textRole(.titleL).monospacedDigit().foregroundStyle(theme.color.textPrimary).frame(maxWidth: .infinity)
+                        cap("plus") { if maxOrders < 1000 { maxOrders += 1 } }
+                    }
+                    Text("Can't drop below the \(s.currentOrders) already booked.").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    Toggle("Active (accepting orders)", isOn: Binding(
+                        get: { status == "active" },
+                        set: { status = $0 ? "active" : "draft" }
+                    ))
+                    .tint(theme.color.accent)
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                    DSButton(busy ? "Saving…" : "Save changes") { Task { await save() } }
+                        .disabled(!dirty || busy).opacity(!dirty || busy ? 0.5 : 1)
+                }
+            }
+        }
+    }
+
+    private func cap(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.headline).frame(width: 48, height: 48)
+                .foregroundStyle(theme.color.accent)
+                .background(theme.color.surface, in: Circle())
+                .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain).sensoryFeedback(.impact(weight: .light), trigger: maxOrders)
+    }
+
+    private func save() async {
+        busy = true; error = nil
+        do {
+            _ = try await api.send(.adminUpdateSlot(
+                id: s.id,
+                maxOrders: maxOrders != baseMax ? maxOrders : nil,
+                status: status != baseStatus ? status : nil))
+            // Adopt what we just persisted as the new baseline so the Save button
+            // returns to disabled and a second save doesn't re-send.
+            baseMax = maxOrders; baseStatus = status
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminSlot>.message(e)
+        } catch { self.error = "Couldn't save the slot" }
+        busy = false
     }
 }
 

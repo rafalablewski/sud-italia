@@ -45,7 +45,20 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
     /// Receives a `reload` closure so the action can refresh the list after a
     /// successful mutation. Type-erased to keep the generic two-parameter.
     private let toolbar: ((@escaping () async -> Void) -> AnyView)?
+    /// Optional searchable projection: each item → the text the search bar matches
+    /// against. When supplied, the surface gains a `.searchable` jump bar and the
+    /// header KPIs stay computed over the *full* set (search narrows rows only).
+    /// Nil (default) = no search bar, so every existing call site is unchanged.
+    private let searchKey: ((T) -> String)?
+    /// Optional row → detail-sheet projection. When supplied, every row becomes
+    /// tappable (with a chevron affordance) and presents this sheet — the native
+    /// twin of the web admin's inspect dialog. The sheet receives a `reload`
+    /// closure so a write action inside it can refresh the list (same contract as
+    /// `toolbar:`). Nil (default) = inert rows, so existing call sites are unchanged.
+    private let detail: ((T, @escaping () async -> Void) -> AnyView)?
     private let row: (T) -> Row
+    @State private var query = ""
+    @State private var selected: T?
 
     public init(
         title: String,
@@ -53,6 +66,8 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         loader: OperatorListLoader<T>,
         header: (([T]) -> AnyView)? = nil,
         toolbar: ((@escaping () async -> Void) -> AnyView)? = nil,
+        search: ((T) -> String)? = nil,
+        detail: ((T, @escaping () async -> Void) -> AnyView)? = nil,
         @ViewBuilder row: @escaping (T) -> Row
     ) {
         self.title = title
@@ -60,7 +75,37 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         _loader = State(initialValue: loader)
         self.header = header
         self.toolbar = toolbar
+        self.searchKey = search
+        self.detail = detail
         self.row = row
+    }
+
+    /// A row, made tappable when a `detail:` sheet is provided. The chevron is the
+    /// only added chrome so rows that already carry trailing content still read cleanly.
+    @ViewBuilder private func rowView(_ item: T) -> some View {
+        if detail != nil {
+            Button { selected = item } label: {
+                HStack(spacing: theme.space.sm) {
+                    row(item)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(theme.color.textSecondary.opacity(0.5))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            row(item)
+        }
+    }
+
+    /// Rows after the search query is applied. KPIs in `header` deliberately keep
+    /// seeing the unfiltered set — search is a row finder, not a metric filter.
+    private func visible(_ items: [T]) -> [T] {
+        guard let searchKey else { return items }
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return items }
+        return items.filter { searchKey($0).localizedCaseInsensitiveContains(q) }
     }
 
     public var body: some View {
@@ -73,13 +118,23 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
             case .loaded(let items) where items.isEmpty:
                 ContentUnavailableView(title, systemImage: "tray", description: Text(emptyText))
             case .loaded(let items):
+                let shown = visible(items)
                 List {
                     if let header {
                         header(items)
                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                     }
-                    ForEach(items) { row($0) }
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: query)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(shown) { rowView($0) }
+                    }
+                }
+                .modifier(OptionalSearchable(active: searchKey != nil, text: $query, prompt: "Search \(title.lowercased())"))
+                .sheet(item: $selected) { item in
+                    if let detail { detail(item) { await loader.load() } }
                 }
             }
         }
@@ -92,6 +147,21 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         }
         .task { await loader.load() }
         .refreshable { await loader.load() }
+    }
+}
+
+/// Applies `.searchable` only when the surface opted into search — keeps the
+/// search bar off screens that didn't supply a `search:` projection.
+private struct OptionalSearchable: ViewModifier {
+    let active: Bool
+    @Binding var text: String
+    let prompt: String
+    func body(content: Content) -> some View {
+        if active {
+            content.searchable(text: $text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: prompt)
+        } else {
+            content
+        }
     }
 }
 

@@ -1,0 +1,95 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OttavianoKDS — Wave B: analytics + ⓘ explainers</title>
+<!-- Static JS-free. Generated Core dark tokens (Tokens.generated.swift ← themes/core/tokens.css). -->
+<style>
+:root{--accent:#D23A55;--on-accent:#fff;--surface:#100F12;--surface2:#1A191E;--line:#39383A;--text:#F4F1EC;--text2:#B8B0A6;
+--success:#3AA978;--warning:#D99A3C;--danger:#E2574F;--info:#5B8BD0;--r-sm:7px;--r-md:10px;--r-lg:14px;--hair:rgba(255,255,255,.05)}
+*{box-sizing:border-box}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;display:inline-block;vertical-align:middle}
+body{margin:0;background:#0a090b;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:24px;margin:0 0 4px}.lead{color:var(--text2);font-size:14px;margin:0 0 8px;max-width:820px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:38px 0 14px;font-weight:700}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;color:var(--text2)}
+.tint-success{color:var(--success)}.tint-accent{color:var(--accent)}.tint-warning{color:var(--warning)}.tint-info{color:var(--info)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tile{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px}
+.tile .top{display:flex;justify-content:space-between;align-items:center;color:var(--text2);font-size:12px}
+.ti{display:flex;align-items:center;gap:7px}.ti .ic{width:16px;height:16px}
+.ibtn{background:none;border:none;color:var(--text2);cursor:pointer;padding:0;opacity:.7}.ii{width:15px;height:15px}
+.val{font-size:24px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.delta{font-size:12px;margin-top:4px;display:flex;align-items:center;gap:3px}.delta .ic{width:13px;height:13px}.up{color:var(--success)}.down{color:var(--danger)}
+.card{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;margin-top:18px}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-h .t{font-weight:700}.card-h .ibtn{opacity:.7}
+.chart{display:flex;align-items:flex-end;gap:6px;height:160px;padding-top:18px}
+.bar{flex:1;background:linear-gradient(180deg,var(--accent),rgba(210,58,85,.35));border-radius:5px 5px 0 0;position:relative;min-height:4px}
+.bar:last-child{background:linear-gradient(180deg,#ef6781,rgba(210,58,85,.5))}
+.bartip{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text2);white-space:nowrap;opacity:0}
+.bar:hover .bartip{opacity:1}
+.axis{display:flex;justify-content:space-between;color:var(--text2);font-size:11px;margin-top:8px}
+.donutwrap{display:flex;align-items:center;gap:22px}
+.donut{width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--success) 0deg 177.23076923076923deg,var(--accent) 177.23076923076923deg 284.3076923076923deg,var(--warning) 284.3076923076923deg 360deg);position:relative;flex:none}
+.donut::after{content:"";position:absolute;inset:22px;border-radius:50%;background:var(--surface2)}
+.donut .center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;z-index:1}
+.donut .ct{font-size:20px;font-weight:700}.donut .cl{font-size:11px;color:var(--text2)}
+.legend{display:flex;flex-direction:column;gap:10px}
+.leg{display:flex;align-items:center;gap:9px;font-size:14px}.dotc{width:11px;height:11px;border-radius:3px;flex:none}
+.leg .lv{margin-left:auto;color:var(--text2);font-variant-numeric:tabular-nums}
+.trow{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--hair)}.trow:last-child{border-bottom:none}
+.tname{width:140px;font-weight:600;font-size:14px}.tbarwrap{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:999px;overflow:hidden}
+.tbar{height:100%;background:var(--accent);border-radius:999px}.tqty{color:var(--text2);font-size:13px;font-variant-numeric:tabular-nums;width:48px;text-align:right}
+.trev{font-weight:600;font-variant-numeric:tabular-nums;width:64px;text-align:right}
+/* explainer sheet */
+.sheetcol{max-width:560px}
+.sheet{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.sheet-grab{width:38px;height:5px;border-radius:999px;background:var(--line);margin:0 auto 14px}
+.exp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.exp-title{font-size:20px;font-weight:700}
+.iconbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text2);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.exp-desc{font-size:14px;line-height:1.6;color:var(--text);margin:0 0 16px}
+.rail{border-left:3px solid var(--ra);padding:2px 0 2px 14px;margin-bottom:16px}
+.rl{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ra);margin-bottom:5px}.rli{width:14px;height:14px}
+.rb{font-size:13.5px;line-height:1.6;color:var(--text2)}
+.note{color:var(--text2);font-size:12px;margin-top:10px}
+</style></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.6" fill="currentColor" stroke="none"/></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M7 21h10"/><path d="M5 7h14"/><path d="m5 7-3 6h6Z"/><path d="m19 7-3 6h6Z"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10Z"/></symbol><symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="12" x2="8" y2="12.01"/><line x1="12" y1="12" x2="12" y2="12.01"/><line x1="16" y1="12" x2="16" y2="12.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></symbol><symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7Z"/><path d="M9 8a3 3 0 0 1 6 0"/></symbol><symbol id="i-percent" viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol></defs></svg>
+<div class="wrap">
+ <h1>Wave B — analytics &amp; the five-section ⓘ explainer</h1>
+ <p class="lead">Brings the web's charted analytics and its Rule&nbsp;#12 metric explainers to native. Every KPI gets an ⓘ that opens a sheet with the five required sections in the exact order/labels (<code>description → INSTITUTIONAL ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY</code>), built from a native <code>MetricExplainer</code> whose five props are all required — a half-written explanation won't compile. Reports gets a revenue bar chart, a fulfilment donut and ranked top-sellers — all hand-rolled (no Swift Charts API risk), fed by <code>GET /api/v1/admin/summary</code>.</p>
+
+ <h2>1 · Reports — KPIs (each with ⓘ) + charts</h2>
+ <div class="tiles">
+  <div class="tile">
+  <div class="top"><span>Revenue</span><span class="ti"><span class="tint-success"><svg class="ic"><use href="#i-banknote"/></svg></span><button class="ibtn"><svg class="ic ii"><use href="#i-info"/></svg></button></span></div>
+  <div class="val">98 400 zł</div><div class="delta up"><svg class="ic"><use href="#i-trend"/></svg>+8%</div></div>
+  <div class="tile">
+  <div class="top"><span>Profit</span><span class="ti"><span class="tint-accent"><svg class="ic"><use href="#i-trend"/></svg></span><button class="ibtn"><svg class="ic ii"><use href="#i-info"/></svg></button></span></div>
+  <div class="val">14 760 zł</div><div class="delta up"><svg class="ic"><use href="#i-trend"/></svg>+11%</div></div>
+  <div class="tile">
+  <div class="top"><span>Margin</span><span class="ti"><span class="tint-success"><svg class="ic"><use href="#i-percent"/></svg></span><button class="ibtn"><svg class="ic ii"><use href="#i-info"/></svg></button></span></div>
+  <div class="val">15%</div><div class="delta up"><svg class="ic"><use href="#i-trend"/></svg>+2pt</div></div>
+ </div>
+ <div class="card">
+  <div class="card-h"><span class="t">Revenue — last 14 days</span><button class="ibtn"><svg class="ic ii"><use href="#i-info"/></svg></button></div>
+  <div class="chart"><div class="bar" style="height:33%" title="3200 zł"><span class="bartip">3200 zł</span></div><div class="bar" style="height:42%" title="4100 zł"><span class="bartip">4100 zł</span></div><div class="bar" style="height:39%" title="3800 zł"><span class="bartip">3800 zł</span></div><div class="bar" style="height:57%" title="5600 zł"><span class="bartip">5600 zł</span></div><div class="bar" style="height:63%" title="6200 zł"><span class="bartip">6200 zł</span></div><div class="bar" style="height:72%" title="7100 zł"><span class="bartip">7100 zł</span></div><div class="bar" style="height:45%" title="4400 zł"><span class="bartip">4400 zł</span></div><div class="bar" style="height:40%" title="3900 zł"><span class="bartip">3900 zł</span></div><div class="bar" style="height:52%" title="5100 zł"><span class="bartip">5100 zł</span></div><div class="bar" style="height:69%" title="6800 zł"><span class="bartip">6800 zł</span></div><div class="bar" style="height:76%" title="7400 zł"><span class="bartip">7400 zł</span></div><div class="bar" style="height:62%" title="6100 zł"><span class="bartip">6100 zł</span></div><div class="bar" style="height:84%" title="8200 zł"><span class="bartip">8200 zł</span></div><div class="bar" style="height:100%" title="9800 zł"><span class="bartip">9800 zł</span></div></div>
+  <div class="axis"><span>14d ago</span><span>today</span></div>
+ </div>
+ <div class="grid">
+  <div class="card" style="margin-top:18px"><div class="card-h"><span class="t">Fulfilment mix</span></div>
+   <div class="donutwrap"><div class="donut"><div class="center"><div><div class="ct">195</div><div class="cl">orders</div></div></div></div>
+    <div class="legend"><div class="leg"><span class="dotc" style="background:var(--success)"></span>Dine-in<span class="lv">96 · 49%</span></div><div class="leg"><span class="dotc" style="background:var(--accent)"></span>Takeaway<span class="lv">58 · 30%</span></div><div class="leg"><span class="dotc" style="background:var(--warning)"></span>Delivery<span class="lv">41 · 21%</span></div></div></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-h"><span class="t">Top sellers</span></div><div class="trow"><div class="tname">Margherita</div><div class="tbarwrap"><div class="tbar" style="width:100%"></div></div><div class="tqty">×182</div><div class="trev">3640 zł</div></div><div class="trow"><div class="tname">Diavola</div><div class="tbarwrap"><div class="tbar" style="width:77%"></div></div><div class="tqty">×141</div><div class="trev">3384 zł</div></div><div class="trow"><div class="tname">Marinara</div><div class="tbarwrap"><div class="tbar" style="width:54%"></div></div><div class="tqty">×98</div><div class="trev">1666 zł</div></div><div class="trow"><div class="tname">Quattro Formaggi</div><div class="tbarwrap"><div class="tbar" style="width:42%"></div></div><div class="tqty">×76</div><div class="trev">2128 zł</div></div><div class="trow"><div class="tname">Tiramisù</div><div class="tbarwrap"><div class="tbar" style="width:35%"></div></div><div class="tqty">×64</div><div class="trev">896 zł</div></div></div>
+ </div>
+
+ <h2>2 · The ⓘ explainer sheet (Rule #12 — five sections, fixed order)</h2>
+ <div class="sheetcol"><div class="sheet">
+ <div class="sheet-grab"></div>
+ <div class="exp-head"><div class="exp-title">Profit margin</div><button class="iconbtn"><svg class="ic"><use href="#i-x"/></svg></button></div>
+ <p class="exp-desc">Share of every złoty of revenue left after food + labour + overhead — the headline efficiency number.</p>
+ <div class="rail" style="--ra:rgb(100,116,139)"><div class="rl"><svg class="ic rli"><use href="#i-scale"/></svg> INSTITUTIONAL ANALYSIS</div><div class="rb">A healthy quick-service pizza operation runs a 12–18% net margin; below 8% is a watch-flag, above 20% is top-decile. Investors gate follow-on capital on margin trend, not just revenue growth — a chain growing revenue while margin slips is buying sales with discounts.</div></div>
+ <div class="rail" style="--ra:var(--accent)"><div class="rl"><svg class="ic rli"><use href="#i-chat"/></svg> IN PLAIN TERMS</div><div class="rb">On a 9 800 zł day at 15% margin you keep about 1 470 zł after everything. Push margin two points to 17% and that same day keeps 1 666 zł — roughly an extra 70 000 zł a year per location, with no new customers.</div></div>
+ <div class="rail" style="--ra:var(--success)"><div class="rl"><svg class="ic rli"><use href="#i-bulb"/></svg> TIPS — HOW TO PUSH THIS LEVER</div><div class="rb">Trim the bottom-quartile dishes by food cost (see Menu engineering). Tighten portioning on cheese + cured meats. Shift labour to match the slot forecast. Move guests to higher-margin channels with a dine-in upsell.</div></div>
+ <div class="rail" style="--ra:var(--info)"><div class="rl"><svg class="ic rli"><use href="#i-calc"/></svg> METHODOLOGY — HOW THIS IS DETERMINED</div><div class="rb">margin = totalProfit ÷ totalRevenue, where profit = revenue − (food cost + labour + allocated overhead) over the selected range. Source: GET /api/v1/admin/summary (profitMargin), computed chain-wide from settled orders.</div></div>
+</div><div class="note">Native <code>MetricExplainer</code> mirrors <code>src/admin-v3/ui/Explainer.tsx</code> — same five labelled sections, accent rails, icons. Used by the ⓘ on every KPI / lever.</div></div>
+</div></body></html>

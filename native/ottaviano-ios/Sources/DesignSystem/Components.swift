@@ -194,18 +194,21 @@ public struct MetricTile: View {
     private let deltaUp: Bool
     private let icon: String?
     private let tint: Color?
+    /// Optional Rule #12 ⓘ — when present, the tile is self-explaining.
+    private let info: InfoButton?
 
-    public init(label: String, value: String, delta: String? = nil, deltaUp: Bool = true, icon: String? = nil, tint: Color? = nil) {
-        self.label = label; self.value = value; self.delta = delta; self.deltaUp = deltaUp; self.icon = icon; self.tint = tint
+    public init(label: String, value: String, delta: String? = nil, deltaUp: Bool = true, icon: String? = nil, tint: Color? = nil, info: InfoButton? = nil) {
+        self.label = label; self.value = value; self.delta = delta; self.deltaUp = deltaUp; self.icon = icon; self.tint = tint; self.info = info
     }
 
     public var body: some View {
         DSCard {
             VStack(alignment: .leading, spacing: theme.space.xs) {
-                HStack {
+                HStack(spacing: theme.space.xs) {
                     Text(label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
                     Spacer()
                     if let icon { Image(systemName: icon).foregroundStyle(tint ?? theme.color.accent) }
+                    if let info { info }
                 }
                 Text(value).textRole(.titleL).foregroundStyle(theme.color.textPrimary)
                 if let delta {

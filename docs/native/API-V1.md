@@ -79,6 +79,12 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | GET/POST/PUT/DELETE | `/api/v1/admin/pos/tabs` | Bearer (staff+) | open checks (Tabs) — list / open / edit / void; lines are id+qty(+course), prices server-resolved |
 | POST | `/api/v1/admin/pos/tabs/:id/fire` | Bearer (staff+) | send to KDS / fire course(s) (`{ courses?, fireAll? }`); shared `fireTab`, idempotent |
 | POST | `/api/v1/admin/pos/tabs/:id/charge` | Bearer (staff+) | settle + close the tab; shared `chargeTab`, idempotent |
+| POST | `/api/v1/admin/inventory` | Bearer (manager+) | adjust on-hand by a signed `delta` (`{ ingredientId, locationSlug, delta, reason? }`); records an `adjust` stock movement via the shared `createStockMovement`, returns the updated row |
+| PATCH | `/api/v1/admin/slots` | Bearer (manager+) | tune a fulfilment slot's capacity / status (`{ id, maxOrders?, status? }`); `maxOrders` can't drop below the booked count, `status` ∈ {draft, active} |
+| PATCH | `/api/v1/admin/events` | Bearer (manager+) | advance an event's lifecycle (`{ id, status }`, status ∈ {scheduled, live, done, cancelled}); re-saves via `saveEvent` so other fields persist |
+| PATCH | `/api/v1/admin/compliance` | Bearer (manager+) | renew a licence/inspection (`{ id, expiresAt }`); sets the new expiry and stamps `lastRenewedAt` server-side via `saveComplianceItem` |
+| PATCH | `/api/v1/admin/schedule` | Bearer (manager+) | advance a shift's status (`{ id, status }`, status ∈ {scheduled, in-progress, done, missed}); re-saves via `saveShift` so times/staff/role persist |
+| POST | `/api/v1/admin/handover` | Bearer (manager+) | record a shift handover (`{ locationSlug, shift, outgoingManager, tempChecksOk, equipmentOk, wasteNoted?, incomingManager?, managerComment? }`); `shift` ∈ {open, mid, close} |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create
