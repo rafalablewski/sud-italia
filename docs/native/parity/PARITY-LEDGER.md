@@ -9,7 +9,7 @@
 | Surface | Web route | Min role | State | v1 endpoint |
 |---|---|---|---|---|
 | POS | `/core/pos` | staff | 🟢 live | `/api/v1/admin/pos` |
-| Kitchen Display | `/core/kds` | kitchen | 🟢 live | — |
+| Kitchen Display | `/core/kds` | kitchen | 🟢 live | `/api/v1/admin/kds` |
 | Orders | `/core/orders` | staff | 🟢 live | — |
 | Guest Engagement | `/core/guest` | staff | 🟢 live | `/api/v1/admin/loyalty` |
 | Service | `/core/service` | staff | 🟢 live | `/api/v1/admin/slots` |
@@ -110,4 +110,4 @@
 
 ## /api/v1/admin coverage
 
-40 admin endpoints. Every endpoint is mapped to a surface.
+41 admin endpoints. Every endpoint is mapped to a surface.

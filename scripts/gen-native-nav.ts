@@ -203,6 +203,7 @@ const ENDPOINT_SURFACE: Record<string, string[]> = {
   pos: ["/core/pos"],
   slots: ["/core/service"],
   loyalty: ["/core/guest"],
+  kds: ["/core/kds"],
   // wave-4 generic settings endpoint backs the config surfaces (no secrets — env holds those)
   settings: [
     "/admin/settings",

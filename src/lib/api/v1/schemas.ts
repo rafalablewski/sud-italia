@@ -229,6 +229,75 @@ export const OrderSchema = z.object({
   prediction: OrderPredictionSchema.nullable(),
 });
 
+// ── KDS fleet (owner atlas) + floor-ops (manager header) feeds ─────────────
+
+/** Manager floor-control header signals not already in the order stream:
+ *  throughput (orders completed in the last 60 min) + staff on the clock.
+ *  Open/late/oldest are derived client-side from the streamed board. */
+export const FloorOpsSchema = z.object({
+  /** The location this reflects, or "" when aggregated chain-wide. */
+  locationSlug: z.string(),
+  throughputLastHour: z.number().int().describe("Orders completed in the last 60 min"),
+  onShift: z.number().int().describe("Staff currently clocked in"),
+});
+
+/** One station's capacity-vs-demand pace row on a fleet tile. */
+export const FleetStationSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  currentLoad: z.number().int(),
+  forecast: z.number().int(),
+  demand: z.number().int(),
+  capacity: z.number(),
+  pct: z.number().int().describe("util %, 999 when capacity is 0"),
+  tier: z.enum(["calm", "warn", "risk"]),
+});
+
+/** One truck's live KDS health + pace + active-ticket preview. */
+export const FleetTileSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  counts: z.object({
+    active: z.number().int(),
+    ready: z.number().int(),
+    late: z.number().int(),
+    risk: z.number().int(),
+  }),
+  health: z.number().int().describe("0–100 health score"),
+  healthState: z.string(),
+  healthClass: z.enum(["good", "warn", "risk", "alert"]),
+  onShift: z.number().int(),
+  throughputHr: z.number().int(),
+  coversHr: z.number().int(),
+  revenueHr: z.number().int().describe("Minor units (grosze), last 60 min"),
+  promiseAccuracy: z.number(),
+  stations: z.array(FleetStationSchema),
+  tickets: z.array(OrderSchema),
+});
+
+/** The owner Atlas board — every active truck's KDS health, the cross-truck
+ *  promise-accuracy benchmark, and fleet totals. */
+export const FleetBoardSchema = z.object({
+  generatedAt: z.string(),
+  paceWindowMin: z.number().int(),
+  promiseTarget: z.number().int(),
+  totals: z.object({
+    active: z.number().int(),
+    late: z.number().int(),
+    risk: z.number().int(),
+    ready: z.number().int(),
+    throughputHr: z.number().int(),
+    coversHr: z.number().int(),
+    revenueHr: z.number().int(),
+  }),
+  benchmark: z.object({
+    fleetAccuracy: z.number(),
+    leader: z.string().nullable(),
+    gap: z.number(),
+  }),
+  tiles: z.array(FleetTileSchema),
+});
+
 // ── Inferred TS types (consumed by the DTO mappers + routes) ───────────────
 
 export type LoginBody = z.infer<typeof LoginBodySchema>;
@@ -241,6 +310,10 @@ export type LocationDTO = z.infer<typeof LocationSchema>;
 export type MenuItemDTO = z.infer<typeof MenuItemSchema>;
 export type OrderLineDTO = z.infer<typeof OrderLineSchema>;
 export type OrderDTO = z.infer<typeof OrderSchema>;
+export type FloorOpsDTO = z.infer<typeof FloorOpsSchema>;
+export type FleetStationDTO = z.infer<typeof FleetStationSchema>;
+export type FleetTileDTO = z.infer<typeof FleetTileSchema>;
+export type FleetBoardDTO = z.infer<typeof FleetBoardSchema>;
 
 // ── Registry → drives OpenAPI components.schemas with shared $refs ─────────
 
@@ -254,3 +327,7 @@ apiRegistry.add(LocationSchema, { id: "Location" });
 apiRegistry.add(MenuItemSchema, { id: "MenuItem" });
 apiRegistry.add(OrderLineSchema, { id: "OrderLine" });
 apiRegistry.add(OrderSchema, { id: "Order" });
+apiRegistry.add(FloorOpsSchema, { id: "FloorOps" });
+apiRegistry.add(FleetStationSchema, { id: "FleetStation" });
+apiRegistry.add(FleetTileSchema, { id: "FleetTile" });
+apiRegistry.add(FleetBoardSchema, { id: "FleetBoard" });

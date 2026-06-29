@@ -341,6 +341,42 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/admin/kds/fleet": {
+        get: {
+          summary: "Owner fleet board (Atlas) — cross-truck KDS health",
+          description:
+            "Live KDS health for every active truck: counts, predicted-ready/at-risk, " +
+            "capacity-vs-demand pace, rate metrics, promise accuracy + on-shift, and a " +
+            "fleet benchmark. Owner-level; respects token scope. Inherently cross-location.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "includeSimulated", in: "query", required: false, schema: { type: "string", enum: ["1"] } },
+          ],
+          responses: {
+            "200": dataResponse("Fleet board", ref("FleetBoard"), true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/admin/kds/floor-ops": {
+        get: {
+          summary: "Manager KDS floor-ops header (throughput + on-shift)",
+          description:
+            "Throughput (orders completed in the last 60 min) + staff on the clock for " +
+            "the KDS KPI strip. Manager+; honors scope. With ?location= it reflects that " +
+            "truck; without one it aggregates across the operator's scoped locations.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "location", in: "query", required: false, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": dataResponse("Floor-ops signals", ref("FloorOps")),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+          },
+        },
+      },
       "/admin/pos/suggestions": {
         post: {
           summary: "Cross-sell suggestions for a POS ticket",
