@@ -81,7 +81,7 @@ public struct KDSBoardView: View {
             // the lane `accent` only tints the count badge. Each ticket is
             // Equatable so a single bump doesn't redraw the whole lane.
             ForEach(orders) { order in
-                KDSTicket(order: order, bumpTitle: bumpLabel(order.status)) {
+                KDSTicket(order: order, station: station, bumpTitle: bumpLabel(order.status)) {
                     await store.bumpForward(order)
                 }
                 .equatable()
@@ -90,11 +90,12 @@ public struct KDSBoardView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
+    // Web `BUMP_LABEL` (CoreKds.tsx) — the action the bump performs on each status.
     private func bumpLabel(_ s: OrderStatus) -> String? {
         switch s {
         case .pending, .confirmed: "Start firing"
-        case .preparing: "Bump to pass"
-        case .ready: "Complete"
+        case .preparing: "Mark ready"
+        case .ready: "Bump to pass"
         default: nil
         }
     }

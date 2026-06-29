@@ -2,64 +2,112 @@ import SwiftUI
 import CoreModels
 
 // KDSTicket — the single most performance-sensitive component (hundreds on a
-// busy line). DESIGN-SYSTEM §4.2: order #, items + mods, an age timer that shifts
-// the ticket fresh → cooking → late by elapsed time, and a bump action. Value-
-// driven and `Equatable` so a lane of tickets only redraws the ones whose data
-// changed. The age recomputes on a coarse TimelineView tick (every 30s) — no
-// per-ticket Timer, no main-thread churn.
+// busy line). DESIGN-SYSTEM §4.2 + web `/core/kds` TicketCard parity: short id,
+// channel chip, a predictive due countdown + SLA meter + at-risk tier (driven by
+// the server prediction block), coursing callout, station-grouped lines with
+// resolved modifiers (KDS-flag highlighted) + notes, an allergen line, the guest
+// note, and the bump action. Value-driven + `Equatable` so a lane only redraws
+// the tickets whose data changed; the live countdown ticks on a 1s TimelineView
+// (web parity) and only the timer/meter nodes recompute per tick.
 public struct KDSTicket: View, Equatable {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let order: Order
+    /// Focused station (nil = all). When all stations are shown and a ticket
+    /// spans several, lines are grouped under station headers (web semantics);
+    /// when a station is focused, off-station lines dim.
+    private let station: String?
     private let bumpTitle: String?
     private let onBump: (() async -> Void)?
 
-    public init(order: Order, bumpTitle: String? = nil, onBump: (() async -> Void)? = nil) {
-        self.order = order; self.bumpTitle = bumpTitle; self.onBump = onBump
+    public init(order: Order, station: String? = nil, bumpTitle: String? = nil, onBump: (() async -> Void)? = nil) {
+        self.order = order; self.station = station; self.bumpTitle = bumpTitle; self.onBump = onBump
     }
 
-    // Equatable on the data only — the closures don't affect the render. This is
-    // what lets SwiftUI skip untouched tickets when one updates. `nonisolated`
-    // because `View` is @MainActor but `Equatable.==` is a nonisolated requirement;
-    // the witness only reads immutable Sendable storage (order / bumpTitle), so it's
-    // safe off the main actor (Swift 6 strict concurrency).
+    // Equatable on the render-affecting data only (closures don't affect render).
+    // Order is Equatable, so a new SSE frame with a changed prediction / status /
+    // lines re-renders, while an idle frame between ticks does not. `nonisolated`
+    // because Equatable.== is a nonisolated requirement; it reads immutable
+    // Sendable storage only (Swift 6 strict concurrency).
     nonisolated public static func == (lhs: KDSTicket, rhs: KDSTicket) -> Bool {
-        lhs.order.id == rhs.order.id
-            && lhs.order.status == rhs.order.status
-            && lhs.bumpTitle == rhs.bumpTitle
-            && lhs.order.items.count == rhs.order.items.count
+        lhs.order == rhs.order && lhs.station == rhs.station && lhs.bumpTitle == rhs.bumpTitle
     }
 
     public var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { ctx in
-            let mins = elapsedMinutes(at: ctx.date)
-            let state = theme.ticketState(elapsedMinutes: mins)
-            ticket(state: state, accent: theme.ticketColor(state), minutes: mins)
+        // 1s tick for the live countdown + meter (web ticks the kitchen clock at
+        // 1s). The heavy layout (grouping, modifiers) is stable across ticks.
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let nowMs = ctx.date.timeIntervalSince1970 * 1000
+            ticket(nowMs: nowMs)
         }
     }
 
-    private func ticket(state: Theme.TicketState, accent: Color, minutes: Double) -> some View {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(order.id).textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
-                Spacer()
-                DSBadge(ageLabel(minutes), tone: badgeTone(state), systemImage: ageIcon(state))
-            }
-            Text(order.fulfillmentType.capitalized)
-                .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+    private func ticket(nowMs: Double) -> some View {
+        let due = order.kdsDue(nowMs: nowMs)
+        let accent = color(for: due.tone)
+        let atRisk = order.isAtRisk
+        let groups = order.groupedItems()
+        let grouped = station == nil && groups.count > 1
+        let allergens = order.ticketAllergens
+        let held = order.coursing?.held ?? []
 
-            ForEach(order.items) { line in
-                HStack(alignment: .top, spacing: theme.space.xs) {
-                    Text("\(line.quantity)×").textRole(.mono).foregroundStyle(accent)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(line.name).textRole(.body).foregroundStyle(theme.color.textPrimary)
-                        if let notes = line.notes, !notes.isEmpty {
-                            Text(notes).textRole(.caption).italic().foregroundStyle(theme.color.warning)
-                        }
-                    }
+        return VStack(alignment: .leading, spacing: theme.space.sm) {
+            // Header — short id + channel chip · at-risk pill + due countdown.
+            HStack(alignment: .firstTextBaseline) {
+                Text("#\(order.ticketShortId)").textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
+                Text(order.channelTag).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                Spacer()
+                if atRisk {
+                    DSBadge("At risk", tone: .warning, systemImage: "exclamationmark.triangle.fill")
+                }
+                Text(due.text).textRole(.mono).fontWeight(.semibold).foregroundStyle(accent)
+                    .accessibilityLabel("Due \(due.text)")
+            }
+
+            if order.simulated == true {
+                Text("Simulation — not a real order")
+                    .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+            }
+
+            if !held.isEmpty {
+                Text("Coursed · \(held.map(courseLabel).joined(separator: ", ")) held")
+                    .textRole(.caption).foregroundStyle(theme.info)
+            }
+
+            // Lines — station-grouped when showing all stations.
+            ForEach(groups) { group in
+                if grouped {
+                    Text(group.label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                        .padding(.top, 2)
+                }
+                ForEach(group.items) { line in
+                    lineRow(line, accent: accent, dim: station != nil && line.category != station)
                 }
             }
+
+            if !allergens.isEmpty {
+                Text("Allergens · \(allergens.joined(separator: " · "))")
+                    .textRole(.caption).foregroundStyle(theme.color.warning)
+            }
+
+            if let note = order.specialInstructions, !note.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+                    Text("Note").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textPrimary)
+                    Text(note).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                }
+            }
+
+            // Cook-time meter (0 fresh → 1 due), tinted to the live tone.
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(theme.color.line.opacity(0.5))
+                    Capsule().fill(accent)
+                        .frame(width: max(0, geo.size.width * order.slaFraction(nowMs: nowMs)))
+                }
+            }
+            .frame(height: 4)
+            .accessibilityHidden(true)
 
             if let bumpTitle, let onBump {
                 Button { Task { await onBump() } } label: {
@@ -79,47 +127,59 @@ public struct KDSTicket: View, Equatable {
                 .frame(width: 4).padding(.vertical, theme.space.xs)
         }
         .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(
-            state == .late ? theme.color.danger : .clear, lineWidth: 1.5))
-        .dsAnimation(theme.motion.snappy, value: state, reduceMotion: reduceMotion)
+            due.tone == .late ? theme.color.danger : .clear, lineWidth: 1.5))
+        .dsAnimation(theme.motion.snappy, value: due.tone, reduceMotion: reduceMotion)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Order \(order.id), \(stateLabel(state)), \(Int(minutes)) minutes")
+        .accessibilityLabel("Order \(order.ticketShortId), \(toneLabel(due.tone)), due \(due.text)")
     }
 
-    // MARK: timing
-
-    private func elapsedMinutes(at now: Date) -> Double {
-        guard let created = Self.parseISO(order.createdAt) else { return 0 }
-        return max(0, now.timeIntervalSince(created) / 60.0)
+    private func lineRow(_ line: OrderLine, accent: Color, dim: Bool) -> some View {
+        HStack(alignment: .top, spacing: theme.space.xs) {
+            Text("\(line.quantity)×").textRole(.mono).foregroundStyle(accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(line.name).textRole(.body).foregroundStyle(theme.color.textPrimary)
+                let mods = line.modifiers ?? []
+                ForEach(mods.indices, id: \.self) { i in
+                    // A KDS-flagged option (e.g. BUFALO MOZZ) is the cook's callout.
+                    Text(mods[i].flag ? mods[i].label.uppercased() : mods[i].label)
+                        .textRole(.caption)
+                        .foregroundStyle(mods[i].flag ? theme.color.warning : theme.color.textSecondary)
+                }
+                if let notes = line.notes, !notes.isEmpty {
+                    Text(notes).textRole(.caption).italic().foregroundStyle(theme.color.warning)
+                }
+            }
+        }
+        .opacity(dim ? 0.45 : 1)
     }
 
-    private func ageLabel(_ minutes: Double) -> String { "\(Int(minutes))m" }
-    private func badgeTone(_ s: Theme.TicketState) -> DSBadge.Tone {
-        switch s { case .fresh: .success; case .cooking: .warning; case .late: .danger }
-    }
-    private func ageIcon(_ s: Theme.TicketState) -> String {
-        switch s { case .fresh: "clock"; case .cooking: "flame.fill"; case .late: "exclamationmark.triangle.fill" }
-    }
-    private func stateLabel(_ s: Theme.TicketState) -> String {
-        switch s { case .fresh: "fresh"; case .cooking: "cooking"; case .late: "late" }
+    // MARK: tone → colour (web `t-*` tones)
+
+    private func color(for tone: KdsTone) -> Color {
+        switch tone {
+        case .ready: theme.color.success
+        case .late: theme.color.danger
+        case .risk: theme.risk
+        case .warn: theme.color.warning
+        case .firing: theme.info
+        case .queued: theme.color.textSecondary
+        }
     }
 
-    // Cached formatters — `parseISO` runs on every periodic tick for every ticket,
-    // and ISO8601DateFormatter init is costly. `nonisolated(unsafe)` because the
-    // type isn't Sendable but access is confined to the main actor (KDS rendering),
-    // so there's no real race.
-    nonisolated(unsafe) private static let isoFractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-    nonisolated(unsafe) private static let isoPlain: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
-    }()
-    private static func parseISO(_ s: String) -> Date? {
-        if let d = isoFractional.date(from: s) { return d }
-        return isoPlain.date(from: s)
+    private func toneLabel(_ tone: KdsTone) -> String {
+        switch tone {
+        case .ready: "ready"; case .late: "late"; case .risk: "at risk"
+        case .warn: "due soon"; case .firing: "firing"; case .queued: "queued"
+        }
+    }
+
+    // POS course → label (web POS_COURSE_LABELS).
+    private func courseLabel(_ c: String) -> String {
+        switch c {
+        case "starter": "Starters"; case "main": "Mains"
+        case "dessert": "Desserts"; case "drink": "Drinks"
+        default: c.prefix(1).uppercased() + c.dropFirst()
+        }
     }
 }
 
@@ -129,12 +189,17 @@ public struct KDSTicket: View, Equatable {
 private enum KDSTicketPreviewData {
     static let order: Order = {
         let json = """
-        {"id":"#A-204","locationSlug":"krakow","status":"preparing","fulfillmentType":"dine_in",
-         "customerName":"Ada","customerPhone":"+48500100200",
-         "items":[{"menuItemId":"pizza-margherita","name":"Margherita","quantity":2,"unitPrice":2790,"notes":"no basil"},
-                  {"menuItemId":"espresso","name":"Espresso","quantity":1,"unitPrice":900,"notes":null}],
+        {"id":"#A-204","shortId":"A-204","locationSlug":"krakow","status":"preparing","fulfillmentType":"dine-in",
+         "partySize":4,"channel":"web","customerName":"Ada","customerPhone":"+48500100200",
+         "specialInstructions":"Allergy table — keep nuts away",
+         "items":[{"menuItemId":"pizza-margherita","name":"Margherita","category":"pizza","quantity":2,"unitPrice":2790,"notes":"no basil",
+                   "modifiers":[{"label":"Bufala mozzarella","flag":true}],"allergens":["gluten","milk"]},
+                  {"menuItemId":"espresso","name":"Espresso","category":"drinks","quantity":1,"unitPrice":900,"notes":null,
+                   "modifiers":[],"allergens":[]}],
          "totalAmount":6480,"slotDate":"2026-06-26","slotTime":"19:00",
-         "createdAt":"2026-06-26T18:52:00.000Z","estimatedReadyAt":null}
+         "createdAt":"2026-06-26T18:52:00.000Z","estimatedReadyAt":"2026-06-26T19:05:00.000Z",
+         "coursing":{"fired":["starter"],"held":["main"]},"simulated":false,
+         "prediction":{"promisedReadyAtMs":1782507900000,"predictedReadyAtMs":1782508050000,"predSeconds":420,"atRisk":true}}
         """
         return (try? JSONDecoder().decode(Order.self, from: Data(json.utf8)))!
     }()
