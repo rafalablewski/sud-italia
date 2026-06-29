@@ -94,17 +94,22 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   (id/guest/phone/table), KPI strip, a **detail dialog** (inspect the full ticket)
   with **Mark paid** (settle) + **Print receipt**. **No "refund"** (the earlier
   audit note was wrong — it's settle + print).
-- **Native now:** KPI trio via **`MetricTile`**, a **search field + Current/All
-  scope** toggle (`shown` filter), `DSSectionHeader` sections, and **tappable rows
-  → read-only order detail sheet** (the inspect path) — added this pass.
 - **Shipped:** **Mark paid** — `POST /api/v1/orders/:id/settle` (idempotent,
   audited) wired into the detail sheet; the DTO already carried `channel`/`paidAt`
   so the native model now decodes them (paid/channel badges + an "unpaid" row
   marker).
 - **Shipped:** **Print receipt** — `POST /api/v1/orders/:id/receipt`; native shows
   the printer confirmation or a shareable plain-text preview (no-hardware fallback).
-- **Shipped:** **channel dropdown** filter in the Orders filter bar (scope +
-  channel, over the decoded field).
+- **Shipped:** **channel dropdown** filter.
+- **Shipped — board parity (this pass):** the KPI strip now mirrors the web's
+  **business** metrics (Orders **today** / **Current** / **To pay** / **Paid
+  today** revenue) instead of raw status counts (the sections still show those);
+  the scope toggle is the full **Current / Paid / All** (was Current/All); dine-in
+  rows + the detail sheet resolve **table numbers** (via the new
+  `GET /api/v1/admin/floor/tables`, loaded per board location since the board is
+  chain-wide) and **search now matches on table**; the detail sheet shows the
+  **seating line** (table · party size). No facade change — the order DTO already
+  carries `tableId`/`partySize`/`channel`/`paidAt`.
 
 ### Dashboard (`/admin` · `OperatorDashboardView.swift`) ✅
 - **Native now:** six KPIs via **`MetricTile`** (status-tinted icons), "Latest
