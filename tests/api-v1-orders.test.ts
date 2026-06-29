@@ -92,7 +92,7 @@ test("resolves modifier labels + flagOnKds from the menu's modifier groups", () 
     modifierGroups: [
       {
         id: "cheese",
-        name: "Cheese",
+        label: "Cheese",
         options: [{ id: "bufala", label: "Bufala mozzarella", priceDelta: 600, flagOnKds: true }],
       },
     ],

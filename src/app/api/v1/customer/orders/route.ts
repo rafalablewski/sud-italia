@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
   try {
     const orders = await getOrdersByPhone(phone, { includePending: true, sinceIso: since });
     const capped = orders.slice(0, HISTORY_LIMIT);
-    return apiOk(capped.map(toOrderDTO), { count: capped.length, limit: HISTORY_LIMIT });
+    // Per-order map — pass only the order (never map's index as `prediction`).
+    return apiOk(capped.map((o) => toOrderDTO(o)), { count: capped.length, limit: HISTORY_LIMIT });
   } catch (err) {
     logger.error("v1 customer orders failed", { layer: "api.v1.customer.orders" }, err as Error);
     return apiError("internal", "Could not load your orders");

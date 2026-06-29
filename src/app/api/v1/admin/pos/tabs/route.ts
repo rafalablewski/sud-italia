@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { requireRole, scopeAllows } from "@/lib/api/v1/guard";
 import { getPosTab, getPosTabs, savePosTab, deletePosTab } from "@/lib/store";
-import type { PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import type { PosTabLine, PosTabStatus, FulfillmentType, PosTabDiscount } from "@/data/types";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +69,9 @@ interface TabPut {
   customerPhone?: string;
   customerName?: string;
   coursed?: boolean;
+  /** Operator manual discount (on top of any auto combo). `null` clears it.
+   *  Server re-prices from this at fire/charge — never the client. */
+  discount?: PosTabDiscount | null;
 }
 
 export async function PUT(req: NextRequest) {
@@ -105,6 +108,9 @@ export async function PUT(req: NextRequest) {
         customerPhone: body.customerPhone,
         customerName: body.customerName,
         coursed: body.coursed,
+        // undefined preserves, null clears, object sets (mergePosTab). Server
+        // re-prices from this at fire/charge — the client total is never trusted.
+        discount: body.discount,
       },
       { mustExist: true },
     );
