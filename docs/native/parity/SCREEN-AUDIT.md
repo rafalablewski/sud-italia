@@ -81,12 +81,13 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   `PosTab` DTO + `PosTabSaveBody` carry `discount`/`address`, with explicit-clear
   encoding (omit = preserve, null = clear). Also fixed a KDS-pass bug where
   `/api/v1/customer/orders` fed `map`'s index as the new `prediction` arg.
-- **Honest gaps (facade-gated, not faked — Rule #1):** **table assignment** needs a
-  v1 `/admin/floor/tables` endpoint (web reads `/api/admin/floor/tables`); the
-  tab carries `tableId` but there's no native table picker yet. **Tender method**
-  (Cash/Card) on a *tab* charge — the counter sale captures it (`POSKeypad`), the
-  tab charge settles without recording the method. (Still *not* split-bill — the
-  web does coursing, not bill-splitting.)
+- **Shipped — table assignment (this pass):** `GET /api/v1/admin/floor/tables`
+  (staff+, read-only twin of web `/api/admin/floor/tables`) + a native table
+  picker in `CheckSheet` (dine-in) that seats the check (`tableId`).
+- **Honest gaps (not faked — Rule #1):** **Tender method** (Cash/Card) on a *tab*
+  charge — the counter sale captures it (`POSKeypad`), the tab charge settles
+  without recording the method. (Still *not* split-bill — the web does coursing,
+  not bill-splitting.)
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**

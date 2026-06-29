@@ -143,6 +143,18 @@ public struct Order: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+/// A floor table for the POS dine-in table picker (read-only over v1). Mirrors
+/// the web FloorTable (subset).
+public struct FloorTable: Codable, Sendable, Identifiable {
+    public let id: String
+    public let number: String
+    public let seats: Int
+    public let zone: String?
+    /// "available" | "seated" | "reserved" | "out-of-service".
+    public let status: String
+    public let notes: String?
+}
+
 /// Operator-applied manual discount on a POS check (on top of any auto combo).
 /// The server re-prices from this at fire/charge — never the client. Mirrors the
 /// web PosTabDiscount.

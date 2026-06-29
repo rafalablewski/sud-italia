@@ -378,6 +378,10 @@ public extension Endpoint {
         Endpoint<FloorOps>(.get, "admin/kds/floor-ops",
             query: location.map { ["location": $0] } ?? [:], requiresAuth: true)
     }
+    /// Floor tables for the POS dine-in table picker (read-only). Location required.
+    static func adminFloorTables(location: String) -> Endpoint<[FloorTable]> {
+        Endpoint<[FloorTable]>(.get, "admin/floor/tables", query: ["location": location], requiresAuth: true)
+    }
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }

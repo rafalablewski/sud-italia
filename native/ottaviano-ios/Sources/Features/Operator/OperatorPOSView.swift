@@ -112,6 +112,7 @@ public final class OperatorPOSStore {
         status: String? = nil,
         covers: Int? = nil,
         address: String? = nil,
+        tableId: String? = nil,
         discount: PosTabDiscount? = nil,
         discountProvided: Bool = false
     ) async -> PosTab? {
@@ -120,7 +121,7 @@ public final class OperatorPOSStore {
         let body = PosTabSaveBody(
             id: id, locationSlug: location,
             items: ticketLinesForSave(coursed: effectiveCoursed),
-            channel: channel, status: status, covers: covers, address: address,
+            channel: channel, status: status, tableId: tableId, covers: covers, address: address,
             coursed: effectiveCoursed, discount: discount, discountProvided: discountProvided
         )
         guard let saved = try? await api.send(.posTabSave(body)) else { return nil }
@@ -136,12 +137,21 @@ public final class OperatorPOSStore {
     public var channel: String? { currentTab?.channel }
     public var covers: Int { currentTab?.covers ?? 2 }
     public var address: String { currentTab?.address ?? "" }
+    public var tableId: String? { currentTab?.tableId }
     public var discount: PosTabDiscount? { currentTab?.discount }
     public var isParked: Bool { currentTab?.status == "parked" }
+
+    /// Floor tables for the dine-in table picker (read-only over v1).
+    public private(set) var tables: [FloorTable] = []
+    public func loadTables() async {
+        tables = (try? await api.send(.adminFloorTables(location: location))) ?? []
+    }
 
     public func setChannel(_ c: String) async { await saveCurrentTab(channel: c) }
     public func setCovers(_ n: Int) async { await saveCurrentTab(covers: max(1, min(50, n))) }
     public func setAddress(_ a: String) async { await saveCurrentTab(address: a) }
+    /// Seat the check at a table (empty string clears — mergePosTab drops it).
+    public func setTable(_ id: String) async { await saveCurrentTab(tableId: id) }
     public func togglePark() async { await saveCurrentTab(status: isParked ? "open" : "parked") }
     public func setDiscount(_ d: PosTabDiscount?) async {
         await saveCurrentTab(discount: d, discountProvided: true)
@@ -484,6 +494,7 @@ private struct CheckSheet: View {
     @State private var channel = ""
     @State private var covers = 2
     @State private var address = ""
+    @State private var tableId = ""
     @State private var discKind: DiscKind = .none
     @State private var discValue = ""
     @State private var message: String?
@@ -502,6 +513,12 @@ private struct CheckSheet: View {
                     .pickerStyle(.segmented)
                     if channel == "dine-in" {
                         Stepper("Covers: \(covers)", value: $covers, in: 1...50)
+                        Picker("Table", selection: $tableId) {
+                            Text("No table").tag("")
+                            ForEach(store.tables) { t in
+                                Text(tableLabel(t)).tag(t.id)
+                            }
+                        }
                     }
                     if channel == "delivery" {
                         TextField("Delivery address", text: $address, axis: .vertical)
@@ -582,13 +599,16 @@ private struct CheckSheet: View {
                 channel = store.channel ?? ""
                 covers = store.covers
                 address = store.address
+                tableId = store.tableId ?? ""
                 if let d = store.discount {
                     discKind = d.type == "percent" ? .percent : .amount
                     discValue = d.type == "percent" ? String(d.value) : String(format: "%.2f", Double(d.value) / 100)
                 }
+                Task { await store.loadTables() }
             }
             .onChange(of: channel) { _, c in if !c.isEmpty { Task { await store.setChannel(c) } } }
             .onChange(of: covers) { _, n in Task { await store.setCovers(n) } }
+            .onChange(of: tableId) { _, id in Task { await store.setTable(id) } }
             .dsToast($message)
         }
     }
@@ -601,6 +621,11 @@ private struct CheckSheet: View {
         }
         .font(bold ? .headline : .body)
         .foregroundStyle(theme.color.textPrimary)
+    }
+
+    private func tableLabel(_ t: FloorTable) -> String {
+        let zone = t.zone.map { "\($0) · " } ?? ""
+        return "\(zone)Table \(t.number) · \(t.seats) seats"
     }
 
     private func discountLabel(_ d: PosTabDiscount) -> String {

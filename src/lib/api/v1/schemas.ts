@@ -298,6 +298,16 @@ export const FleetBoardSchema = z.object({
   tiles: z.array(FleetTileSchema),
 });
 
+/** A floor table for the POS dine-in table picker (read-only over v1). */
+export const FloorTableSchema = z.object({
+  id: z.string(),
+  number: z.string(),
+  seats: z.number().int(),
+  zone: z.string().nullable(),
+  status: z.enum(["available", "seated", "reserved", "out-of-service"]),
+  notes: z.string().nullable(),
+});
+
 // ── Inferred TS types (consumed by the DTO mappers + routes) ───────────────
 
 export type LoginBody = z.infer<typeof LoginBodySchema>;
@@ -314,6 +324,7 @@ export type FloorOpsDTO = z.infer<typeof FloorOpsSchema>;
 export type FleetStationDTO = z.infer<typeof FleetStationSchema>;
 export type FleetTileDTO = z.infer<typeof FleetTileSchema>;
 export type FleetBoardDTO = z.infer<typeof FleetBoardSchema>;
+export type FloorTableDTO = z.infer<typeof FloorTableSchema>;
 
 // ── Registry → drives OpenAPI components.schemas with shared $refs ─────────
 
@@ -331,3 +342,4 @@ apiRegistry.add(FloorOpsSchema, { id: "FloorOps" });
 apiRegistry.add(FleetStationSchema, { id: "FleetStation" });
 apiRegistry.add(FleetTileSchema, { id: "FleetTile" });
 apiRegistry.add(FleetBoardSchema, { id: "FleetBoard" });
+apiRegistry.add(FloorTableSchema, { id: "FloorTable" });

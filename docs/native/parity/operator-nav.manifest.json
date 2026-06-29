@@ -27,7 +27,7 @@
           "kind": "live",
           "icon": "creditcard.and.123",
           "blurb": "Take counter & table orders, split bills, settle payment.",
-          "v1Endpoint": "pos"
+          "v1Endpoint": "floor"
         },
         {
           "href": "/core/kds",
@@ -578,6 +578,7 @@
     "events",
     "expansion",
     "feedback",
+    "floor",
     "haccp",
     "handover",
     "insights",

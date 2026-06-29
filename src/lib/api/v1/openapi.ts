@@ -359,6 +359,24 @@ export function buildOpenApiDocument(): JsonObject {
           },
         },
       },
+      "/admin/floor/tables": {
+        get: {
+          summary: "Floor tables for the POS dine-in table picker",
+          description:
+            "Read-only list of a location's floor tables (id, number, seats, zone, " +
+            "status). Staff+; location-scoped + required. Twin of web /api/admin/floor/tables.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "location", in: "query", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": dataResponse("Floor tables", { type: "array", items: ref("FloorTable") }, true),
+            "401": ERROR_RESPONSE,
+            "403": ERROR_RESPONSE,
+            "422": ERROR_RESPONSE,
+          },
+        },
+      },
       "/admin/kds/floor-ops": {
         get: {
           summary: "Manager KDS floor-ops header (throughput + on-shift)",
