@@ -380,6 +380,9 @@ struct ComplianceDetailView: View {
     let reload: () async -> Void
     @State private var expiresAt: String
     @State private var lastRenewedAt: String?
+    // The server's authoritative `expired` (exact-instant UTC), so the badge
+    // can't disagree with the list row; refreshed from the renew response.
+    @State private var expired: Bool
     @State private var busy = false
     @State private var error: String?
 
@@ -387,9 +390,8 @@ struct ComplianceDetailView: View {
         self.c = c; self.api = api; self.reload = reload
         _expiresAt = State(initialValue: c.expiresAt)
         _lastRenewedAt = State(initialValue: c.lastRenewedAt)
+        _expired = State(initialValue: c.expired)
     }
-
-    private var expired: Bool { (isoDay(expiresAt) ?? .distantPast) < Calendar.current.startOfDay(for: Date()) }
 
     var body: some View {
         OperatorDetailSheet(
@@ -438,15 +440,11 @@ struct ComplianceDetailView: View {
             let updated = try await api.send(.adminRenewCompliance(id: c.id, expiresAt: f.string(from: target)))
             expiresAt = updated.expiresAt
             lastRenewedAt = updated.lastRenewedAt
+            expired = updated.expired
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminComplianceItem>.message(e)
         } catch { error = "Couldn't renew" }
         busy = false
-    }
-
-    private func isoDay(_ s: String) -> Date? {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
-        return f.date(from: String(s.prefix(10)))
     }
 }

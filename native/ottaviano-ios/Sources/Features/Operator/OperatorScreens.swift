@@ -190,7 +190,7 @@ struct StockDetailView: View {
             VStack(alignment: .leading, spacing: theme.space.md) {
                 Text("ADJUST STOCK").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
                 HStack(spacing: theme.space.lg) {
-                    stepButton("minus") { delta -= 1 }
+                    stepButton("minus") { if onHand + delta > 0 { delta -= 1 } }
                     VStack(spacing: 2) {
                         Text("\(delta >= 0 ? "+" : "")\(fmt(delta)) \(r.unit)")
                             .textRole(.title).monospacedDigit()
@@ -543,6 +543,10 @@ struct SlotDetailView: View {
     let reload: () async -> Void
     @State private var maxOrders: Int
     @State private var status: String
+    // Last-saved baseline (not the immutable prop) so `dirty` settles back to
+    // false after a successful save — the prop `s` never updates.
+    @State private var baseMax: Int
+    @State private var baseStatus: String
     @State private var busy = false
     @State private var error: String?
 
@@ -550,9 +554,11 @@ struct SlotDetailView: View {
         self.s = s; self.api = api; self.reload = reload
         _maxOrders = State(initialValue: s.maxOrders)
         _status = State(initialValue: s.status)
+        _baseMax = State(initialValue: s.maxOrders)
+        _baseStatus = State(initialValue: s.status)
     }
 
-    private var dirty: Bool { maxOrders != s.maxOrders || status != s.status }
+    private var dirty: Bool { maxOrders != baseMax || status != baseStatus }
     private var free: Int { max(0, maxOrders - s.currentOrders) }
 
     var body: some View {
@@ -604,8 +610,11 @@ struct SlotDetailView: View {
         do {
             _ = try await api.send(.adminUpdateSlot(
                 id: s.id,
-                maxOrders: maxOrders != s.maxOrders ? maxOrders : nil,
-                status: status != s.status ? status : nil))
+                maxOrders: maxOrders != baseMax ? maxOrders : nil,
+                status: status != baseStatus ? status : nil))
+            // Adopt what we just persisted as the new baseline so the Save button
+            // returns to disabled and a second save doesn't re-send.
+            baseMax = maxOrders; baseStatus = status
             await reload()
         } catch let e as APIError {
             error = OperatorListLoader<AdminSlot>.message(e)

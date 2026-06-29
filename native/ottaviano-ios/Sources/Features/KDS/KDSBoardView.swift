@@ -8,6 +8,9 @@ import OttavianoKit
 /// (DESIGN-SYSTEM §4.2 KDSTicket). iPad-first; lanes stack on iPhone.
 public struct KDSBoardView: View {
     @Environment(\.theme) private var theme
+    /// iOS clears `isIdleTimerDisabled` when the app backgrounds; we re-apply
+    /// keep-awake on return so a kiosk board doesn't silently start sleeping.
+    @Environment(\.scenePhase) private var scenePhase
     @State private var store: KDSStore
     /// Station filter (nil = all). Mirrors the web STATION_FILTERS; a ticket shows
     /// when it has any line for the focused station.
@@ -145,6 +148,11 @@ public struct KDSBoardView: View {
         .persistentSystemOverlays(kiosk ? .hidden : .automatic)
         .navigationBarBackButtonHidden(kiosk)
         .overlay(alignment: .topTrailing) { if kiosk { kioskExit } }
+        // Re-assert keep-awake on foreground — iOS resets the idle timer when the
+        // app backgrounds, so a board still in kiosk would otherwise dim + sleep.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { KioskMode.keepAwake(kiosk) }
+        }
         // Ring the chime when a genuinely new ticket lands (web KDS sound parity),
         // unless the operator muted it or the board is paused. `chimeArmed` skips
         // the initial board population so opening the screen isn't a burst of dings.
