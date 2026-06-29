@@ -126,6 +126,8 @@ public final class OperatorPOSStore {
         covers: Int? = nil,
         address: String? = nil,
         tableId: String? = nil,
+        customerName: String? = nil,
+        customerPhone: String? = nil,
         discount: PosTabDiscount? = nil,
         discountProvided: Bool = false
     ) async -> PosTab? {
@@ -135,6 +137,7 @@ public final class OperatorPOSStore {
             id: id, locationSlug: location,
             items: ticketLinesForSave(coursed: effectiveCoursed),
             channel: channel, status: status, tableId: tableId, covers: covers, address: address,
+            customerName: customerName, customerPhone: customerPhone,
             coursed: effectiveCoursed, discount: discount, discountProvided: discountProvided
         )
         guard let saved = try? await api.send(.posTabSave(body)) else { return nil }
@@ -158,6 +161,29 @@ public final class OperatorPOSStore {
     public private(set) var tables: [FloorTable] = []
     public func loadTables() async {
         tables = (try? await api.send(.adminFloorTables(location: location))) ?? []
+    }
+
+    // ── Loyalty member on the check (web parity: a member accrues points on
+    //    payment). Persisted via the SAME tab PUT — PosTab already carries
+    //    customerName/customerPhone, so no new endpoint is needed.
+    public var memberName: String? { currentTab?.customerName }
+    public var memberPhone: String? { currentTab?.customerPhone }
+    public func setMember(name: String, phone: String) async {
+        await saveCurrentTab(customerName: name, customerPhone: phone)
+    }
+
+    // ── QR table-order queue (web `/core/pos` QR pill): unpaid orders placed via
+    //    the table QR. They come straight off the live board (channel == "qr");
+    //    "Mark paid" reuses the existing settle endpoint — no new facade route.
+    public private(set) var qrOrders: [Order] = []
+    public var unpaidQrCount: Int { qrOrders.filter { $0.paidAt == nil }.count }
+    public func loadQrOrders() async {
+        let board = (try? await api.send(.operatorBoard(location: location))) ?? []
+        qrOrders = board.filter { ($0.channel ?? "") == "qr" }.sorted { $0.createdAt > $1.createdAt }
+    }
+    public func settleOrder(_ id: String) async {
+        _ = try? await api.send(.settle(orderID: id))
+        await loadQrOrders()
     }
 
     public func setChannel(_ c: String) async { await saveCurrentTab(channel: c) }
@@ -255,6 +281,7 @@ public struct OperatorPOSView: View {
     @State private var showCharge = false
     @State private var showTabs = false
     @State private var showCheckSheet = false
+    @State private var showQR = false
     @State private var showNewCheck = false
     @State private var newCheckName = ""
     @State private var category: String?
@@ -283,14 +310,23 @@ public struct OperatorPOSView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button { showQR = true } label: {
+                    let n = store.unpaidQrCount
+                    Label(n > 0 ? "QR (\(n))" : "QR orders",
+                          systemImage: n > 0 ? "qrcode.viewfinder" : "qrcode")
+                        .foregroundStyle(n > 0 ? theme.color.warning : theme.color.accent)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showTabs = true } label: { Label("Manage checks", systemImage: "rectangle.stack.fill") }
             }
         }
         .task { if case .loading = store.state { await store.load() } }
-        .task { await store.refreshTabs(); await store.loadTables() }
+        .task { await store.refreshTabs(); await store.loadTables(); await store.loadQrOrders() }
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
         .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
+        .sheet(isPresented: $showQR) { QROrdersSheet(store: store) }
         .sheet(isPresented: $showCheckSheet) {
             NavigationStack {
                 POSCheckPanel(store: store, message: $tabMessage, onWalkInCharge: { showCheckSheet = false; showCharge = true })
@@ -617,6 +653,9 @@ private struct POSCheckPanel: View {
     @State private var discKind: DiscKind = .none
     @State private var discValue = ""
     @State private var showDiscount = false
+    @State private var showAddMember = false
+    @State private var memberNameInput = ""
+    @State private var memberPhoneInput = ""
     private enum DiscKind: Hashable { case none, percent, amount }
 
     private var hasTab: Bool { store.currentTabID != nil }
@@ -633,6 +672,7 @@ private struct POSCheckPanel: View {
                     } else {
                         if hasTab { channelSection }
                         linesSection
+                        if hasTab { memberSection }
                         if !store.suggestions.isEmpty { suggestionsRow }
                         discountSection
                     }
@@ -643,6 +683,50 @@ private struct POSCheckPanel: View {
         }
         .background(theme.color.surface2)
         .task(id: store.currentTabID) { syncFromStore(); await store.loadTables() }
+        .alert("Add member", isPresented: $showAddMember) {
+            TextField("Name", text: $memberNameInput)
+            TextField("Phone", text: $memberPhoneInput)
+            Button("Attach") {
+                let n = memberNameInput.trimmingCharacters(in: .whitespaces)
+                let p = memberPhoneInput.trimmingCharacters(in: .whitespaces)
+                if !p.isEmpty { Task { await store.setMember(name: n.isEmpty ? "Member" : n, phone: p) } }
+                memberNameInput = ""; memberPhoneInput = ""
+            }
+            Button("Cancel", role: .cancel) { memberNameInput = ""; memberPhoneInput = "" }
+        } message: { Text("Attach a loyalty member so this check earns points on payment.") }
+    }
+
+    // MARK: member
+
+    private var memberSection: some View {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
+            Text("MEMBER").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+            if let phone = store.memberPhone, !phone.isEmpty {
+                HStack(spacing: theme.space.sm) {
+                    Image(systemName: "person.crop.circle.badge.checkmark").foregroundStyle(theme.color.success)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(store.memberName ?? "Member").font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                        Text(phone).textRole(.caption).monospacedDigit().foregroundStyle(theme.color.textSecondary)
+                    }
+                    Spacer()
+                    Label("Earns points", systemImage: "gift.fill").textRole(.caption).foregroundStyle(theme.color.accent)
+                }
+                .padding(theme.space.sm)
+                .background(theme.successSoft, in: RoundedRectangle(cornerRadius: theme.radius.md))
+            } else {
+                Button {
+                    memberNameInput = store.memberName ?? ""
+                    memberPhoneInput = store.memberPhone ?? ""
+                    showAddMember = true
+                } label: {
+                    Label("Add member", systemImage: "person.badge.plus")
+                        .textRole(.callout).foregroundStyle(theme.color.accent)
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.md))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: header
@@ -958,6 +1042,58 @@ private struct TabsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
             .task { await store.refreshTabs() }
+        }
+    }
+}
+
+/// QR table-order queue — orders placed from a table's QR code (web `/core/pos`
+/// QR pill). Lists them with a Mark-paid action that settles via the shared order
+/// endpoint, so the order stays the single source of truth (no duplicate tab).
+private struct QROrdersSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let store: OperatorPOSStore
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if store.qrOrders.isEmpty {
+                    ContentUnavailableView("No QR orders", systemImage: "qrcode",
+                                           description: Text("Orders placed from a table QR appear here."))
+                } else {
+                    List {
+                        ForEach(store.qrOrders) { o in
+                            HStack(spacing: theme.space.sm) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("#\(o.ticketShortId) · \(o.customerName)")
+                                        .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                                    Text("\(o.tableId.map { "Table \($0) · " } ?? "")\(o.items.count) item\(o.items.count == 1 ? "" : "s") · \(o.createdAt.prefix(16).replacingOccurrences(of: "T", with: " "))")
+                                        .font(.caption).foregroundStyle(theme.color.textSecondary)
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    MoneyText(o.totalAmount).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                                    if o.paidAt == nil {
+                                        Button("Mark paid") { Task { await store.settleOrder(o.id) } }
+                                            .font(.caption.weight(.semibold)).buttonStyle(.borderedProminent).controlSize(.small)
+                                    } else {
+                                        Label("Paid", systemImage: "checkmark.circle.fill")
+                                            .font(.caption2.weight(.bold)).foregroundStyle(theme.color.success)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("QR orders")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button { Task { await store.loadQrOrders() } } label: { Image(systemName: "arrow.clockwise") } }
+                ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } }
+            }
+            .task { await store.loadQrOrders() }
         }
     }
 }
