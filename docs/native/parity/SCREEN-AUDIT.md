@@ -55,7 +55,7 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   - **Sound chimes / kiosk fullscreen** — on-device (audio + fullscreen are iOS
     runtime concerns; the iPad app is already chromeless).
 
-### POS — Till (`/core/pos` · `OperatorPOSView.swift`) 🟡
+### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
   combo discount + cross-sell, Send-to-KDS / Fire-course / Charge. **No split-bill**
   (the nav blurb overstates; the web does coursing, not bill-splitting).
@@ -70,7 +70,23 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped:** **coursing** — a shared `@/lib/pos/fireTab` actuator (web + v1 fire
   through one implementation) + `/api/v1/admin/pos/tabs/:id/{fire,charge}`; native
   Coursed toggle + Fire-course menu + Charge-tab (courses auto-assign by category).
-  Manual per-line recourse is the only follow-up. (Still *not* split-bill.)
+- **Shipped — check editor + broken-flow fix (this pass):** `fireTab`/`chargeTab`
+  hard-require a channel ("Pick a channel first"), but the app opened tabs with no
+  way to set one — so native tabs **couldn't fire or charge**. New **`CheckSheet`**
+  (off the ticket bar): **channel** picker (dine-in / takeaway / delivery, required),
+  dine-in **covers** stepper, delivery **address**, **per-line +/- editing** (was
+  add-only — no decrement except Clear), a manual **discount** (percent / amount,
+  discounted-total footer preview; server re-prices), and a **park** (hold) toggle.
+- **Shipped — facade:** the v1 tab PUT now forwards **`discount`** (was dropped);
+  `PosTab` DTO + `PosTabSaveBody` carry `discount`/`address`, with explicit-clear
+  encoding (omit = preserve, null = clear). Also fixed a KDS-pass bug where
+  `/api/v1/customer/orders` fed `map`'s index as the new `prediction` arg.
+- **Honest gaps (facade-gated, not faked — Rule #1):** **table assignment** needs a
+  v1 `/admin/floor/tables` endpoint (web reads `/api/admin/floor/tables`); the
+  tab carries `tableId` but there's no native table picker yet. **Tender method**
+  (Cash/Card) on a *tab* charge — the counter sale captures it (`POSKeypad`), the
+  tab charge settles without recording the method. (Still *not* split-bill — the
+  web does coursing, not bill-splitting.)
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
