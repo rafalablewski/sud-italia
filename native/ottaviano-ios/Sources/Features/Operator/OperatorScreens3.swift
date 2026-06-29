@@ -16,6 +16,15 @@ public struct OperatorUsersView: View {
             emptyText: "No staff accounts yet.",
             loader: OperatorListLoader { try await api.send(.adminUsers()) },
             search: { "\($0.name) \($0.email ?? "") \($0.role)" },
+            filters: [
+                OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.status == "active" },
+                OperatorFilter("MFA on", systemImage: "lock.shield.fill") { $0.mfaEnabled },
+                OperatorFilter("No MFA", systemImage: "lock.open.fill") { !$0.mfaEnabled },
+            ],
+            sorts: [
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Role") { $0.role.localizedCaseInsensitiveCompare($1.role) == .orderedAscending },
+            ],
             row: { u in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -229,6 +238,12 @@ public struct OperatorBusinessCostsView: View {
             title: "Business costs",
             emptyText: "No costs recorded.",
             loader: OperatorListLoader { try await api.send(.adminBusinessCosts()) },
+            search: { "\($0.name) \($0.category) \($0.vendor ?? "")" },
+            sorts: [
+                OperatorSortOption("Top cost") { $0.amountGrosze > $1.amountGrosze },
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Category") { $0.category.localizedCaseInsensitiveCompare($1.category) == .orderedAscending },
+            ],
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -265,6 +280,17 @@ public struct OperatorComplianceView: View {
                 })
             },
             detail: { c, reload in AnyView(ComplianceDetailView(c: c, api: api, reload: reload)) },
+            search: { "\($0.title) \($0.kind) \($0.locationSlug)" },
+            filters: [
+                OperatorFilter("Expired", systemImage: "xmark.octagon.fill") { $0.expired },
+                OperatorFilter("Expiring 30d", systemImage: "clock.badge.exclamationmark") {
+                    !$0.expired && String($0.expiresAt.prefix(10)) <= AnalyticsDates.iso(daysFromNow: 30)
+                },
+            ],
+            sorts: [
+                OperatorSortOption("Soonest expiry") { $0.expiresAt < $1.expiresAt },
+                OperatorSortOption("Location") { $0.locationSlug.localizedCaseInsensitiveCompare($1.locationSlug) == .orderedAscending },
+            ],
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -296,6 +322,16 @@ public struct OperatorEventsView: View {
             emptyText: "No events booked.",
             loader: OperatorListLoader { try await api.send(.adminEvents()) },
             detail: { e, reload in AnyView(EventDetailView(e: e, api: api, reload: reload)) },
+            search: { "\($0.name) \($0.locationSlug) \($0.status)" },
+            filters: [
+                OperatorFilter("Upcoming", systemImage: "calendar") { $0.status == "scheduled" || $0.status == "confirmed" },
+                OperatorFilter("Live", systemImage: "dot.radiowaves.left.and.right") { $0.status == "live" },
+                OperatorFilter("Done", systemImage: "checkmark.circle") { $0.status == "done" || $0.status == "completed" },
+            ],
+            sorts: [
+                OperatorSortOption("Date") { $0.date < $1.date },
+                OperatorSortOption("Top revenue") { ($0.actualRevenueGrosze ?? 0) > ($1.actualRevenueGrosze ?? 0) },
+            ],
             row: { e in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -329,6 +365,11 @@ public struct OperatorWasteView: View {
             emptyText: "No wastage recorded.",
             loader: OperatorListLoader { try await api.send(.adminWaste()) },
             toolbar: { reload in AnyView(LogWasteButton(api: api, reload: reload)) },
+            search: { "\($0.item) \($0.reason) \($0.locationSlug)" },
+            sorts: [
+                OperatorSortOption("Recent") { $0.recordedAt > $1.recordedAt },
+                OperatorSortOption("Top cost") { ($0.estimatedCostGrosze ?? 0) > ($1.estimatedCostGrosze ?? 0) },
+            ],
             row: { w in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -359,6 +400,15 @@ public struct OperatorSurveysView: View {
             title: "Pulse surveys",
             emptyText: "No surveys configured.",
             loader: OperatorListLoader { try await api.send(.adminSurveys()) },
+            search: { "\($0.question) \($0.trigger)" },
+            filters: [
+                OperatorFilter("Active", systemImage: "dot.radiowaves.left.and.right") { $0.active },
+                OperatorFilter("Off", systemImage: "pause.circle") { !$0.active },
+            ],
+            sorts: [
+                OperatorSortOption("Top rated") { $0.avgRating > $1.avgRating },
+                OperatorSortOption("Most responses") { $0.responseCount > $1.responseCount },
+            ],
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

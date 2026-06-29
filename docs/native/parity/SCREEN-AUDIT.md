@@ -194,6 +194,31 @@ cramped. This pass rebuilds their layouts to a polished, iPad-first standard.
   (members · new-30d · **birthdays this month** · contactable), search + sort
   (recent / A–Z) and richer member cards. Two five-section ⓘ.
 
+### Operator ergonomics — substrate UX uplift (this pass) ✅
+"Keep the web's complexity, make it smoother on touch" — applied to **every**
+list-based admin/core page at once by upgrading the shared `OperatorListView`
+substrate (`OperatorData.swift`) rather than 25 screens individually:
+- **Quick-filter chips** — a tap-to-narrow chip bar (each chip shows its live
+  count) so an operator slices a dense board without scrolling. New optional
+  `filters:` param (`OperatorFilter<T>`).
+- **Sort menu** — a toolbar sort control with the active order checked. New
+  optional `sorts:` param (`OperatorSortOption<T>`).
+- **Pinned search + result count** — search stays reachable and a "N of M"
+  caption shows when the list is narrowed.
+- **Glanceable detail sheets** — `OperatorDetailSheet` now opens at a
+  medium/large **detent** (drag to expand) instead of a full-screen slab, so a
+  drill-in is a glance, not a context switch — across every surface that uses it.
+All additive + backward-compatible: every existing call site keeps working and
+gains the base ergonomics (pinned search, result count, refined chrome) for free.
+Bespoke filters/sorts wired into 11 high-traffic surfaces so far — **Customers**
+(VIP / has-points / lapsed; spend·orders·name), **Staff** (active/inactive;
+name·rate·role), **Suppliers** (name·lead), **Inventory** (low-stock; lowest·name),
+**Users** (active / MFA; name·role), **Business costs** (cost·name·category),
+**Compliance** (expired / expiring-30d; expiry·location), **Events** (upcoming /
+live / done; date·revenue), **Waste** (recent·cost), **Surveys** (active/off;
+rating·responses), **Schedule** (scheduled / in-progress / done; start·staff) —
+with the same one-line pattern available to the rest.
+
 **Honest scope note.** Several web `/core` features are deliberately deferred —
 they need `/api/v1` endpoints the facade doesn't yet expose or data the current
 DTOs don't carry: the **Floor plan** (predictive seating, zones, table CRUD —

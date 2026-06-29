@@ -296,6 +296,15 @@ public struct OperatorScheduleView: View {
             loader: OperatorListLoader { try await api.send(.adminSchedule()) },
             search: { "\($0.staffName) \($0.role) \($0.locationSlug)" },
             detail: { s, reload in AnyView(ScheduleDetailView(s: s, api: api, reload: reload)) },
+            filters: [
+                OperatorFilter("Scheduled", systemImage: "calendar") { $0.status == "scheduled" },
+                OperatorFilter("In progress", systemImage: "play.circle") { $0.status == "in-progress" || $0.status == "in_progress" },
+                OperatorFilter("Done", systemImage: "checkmark.circle") { $0.status == "done" || $0.status == "completed" },
+            ],
+            sorts: [
+                OperatorSortOption("Start time") { $0.startAt < $1.startAt },
+                OperatorSortOption("Staff") { $0.staffName.localizedCaseInsensitiveCompare($1.staffName) == .orderedAscending },
+            ],
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

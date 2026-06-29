@@ -24,6 +24,16 @@ public struct OperatorCustomersView: View {
             },
             search: { "\($0.name ?? "") \($0.phone)" },
             detail: { c, _ in AnyView(CustomerDetailView(c: c)) },
+            filters: [
+                OperatorFilter("VIP", systemImage: "star.fill") { $0.totalSpentGrosze >= 50000 },
+                OperatorFilter("Has points", systemImage: "gift.fill") { ($0.loyaltyPointsBalance + $0.manualPointsAdjust) > 0 },
+                OperatorFilter("Lapsed", systemImage: "moon.zzz.fill") { ($0.lastOrderAt ?? "") < AnalyticsDates.window(for: .quarter).from },
+            ],
+            sorts: [
+                OperatorSortOption("Top spend") { $0.totalSpentGrosze > $1.totalSpentGrosze },
+                OperatorSortOption("Most orders") { $0.orderCount > $1.orderCount },
+                OperatorSortOption("Name") { ($0.name ?? $0.phone).localizedCaseInsensitiveCompare($1.name ?? $1.phone) == .orderedAscending },
+            ],
             row: { c in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: c.name ?? c.phone)
@@ -260,6 +270,15 @@ public struct OperatorStaffView: View {
             },
             search: { "\($0.name) \($0.role) \($0.locationSlug)" },
             detail: { s, _ in AnyView(StaffDetailView(s: s)) },
+            filters: [
+                OperatorFilter("Active", systemImage: "checkmark.circle.fill") { $0.status == "active" },
+                OperatorFilter("Inactive", systemImage: "pause.circle") { $0.status != "active" },
+            ],
+            sorts: [
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Top rate") { $0.hourlyRateGrosze > $1.hourlyRateGrosze },
+                OperatorSortOption("Role") { $0.role.localizedCaseInsensitiveCompare($1.role) == .orderedAscending },
+            ],
             row: { s in
                 HStack(spacing: theme.space.sm) {
                     Avatar(name: s.name)
@@ -332,6 +351,10 @@ public struct OperatorSuppliersView: View {
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
             search: { "\($0.name) \($0.contactName ?? "")" },
             detail: { s, _ in AnyView(SupplierDetailView(s: s)) },
+            sorts: [
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+                OperatorSortOption("Fastest lead") { ($0.leadTimeDays ?? .max) < ($1.leadTimeDays ?? .max) },
+            ],
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -480,6 +503,13 @@ public struct OperatorInventoryView: View {
             },
             search: { "\($0.name) \($0.locationSlug)" },
             detail: { r, reload in AnyView(StockDetailView(r: r, api: api, reload: reload)) },
+            filters: [
+                OperatorFilter("Low stock", systemImage: "exclamationmark.triangle.fill") { $0.low },
+            ],
+            sorts: [
+                OperatorSortOption("Lowest first") { ($0.parLevel > 0 ? $0.onHand / $0.parLevel : 0) < ($1.parLevel > 0 ? $1.onHand / $1.parLevel : 0) },
+                OperatorSortOption("Name") { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            ],
             row: { r in
                 // On-hand vs par as a fill, with the reorder point as a benchmark
                 // tick — a glanceable "how full, how close to reordering" read.

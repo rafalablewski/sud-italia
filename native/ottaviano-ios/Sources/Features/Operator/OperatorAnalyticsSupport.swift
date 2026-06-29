@@ -59,6 +59,14 @@ public enum AnalyticsDates {
 
     public static func iso(_ date: Date) -> String { formatter.string(from: date) }
 
+    /// ISO `yyyy-MM-dd` for `days` from today (negative = past) — used by
+    /// "expiring soon" filters and similar forward/backward windows.
+    public static func iso(daysFromNow days: Int, now: Date = Date()) -> String {
+        let cal = calendar
+        let d = cal.date(byAdding: .day, value: days, to: cal.startOfDay(for: now)) ?? now
+        return iso(d)
+    }
+
     /// The current `range`-length window ending today, and the equal-length window
     /// immediately before it.
     public static func window(for range: PeriodRange, now: Date = Date()) -> DateWindow {
