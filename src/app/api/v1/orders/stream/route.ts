@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireOperator, scopeAllows, scopedLocations } from "@/lib/api/v1/guard";
-import { toOrderDTO } from "@/lib/api/v1/order-dto";
+import { toOrderDTOs } from "@/lib/api/v1/order-dto";
 import { getOrders, ORDERS_BOARD_LIMIT } from "@/lib/store";
 import { subscribeOrderEvents } from "@/lib/order-events";
 import type { Order } from "@/data/types";
@@ -67,7 +67,10 @@ export async function GET(req: NextRequest) {
       const sendIfChanged = async () => {
         if (closed) return;
         try {
-          const dtos = (await readBoard()).map(toOrderDTO);
+          // Board-level mapper: the predictive block (SLA meter / at-risk tier)
+          // is computed per location via analyzeTruck on each frame — so the
+          // native KDS card matches the web board tick-for-tick.
+          const dtos = toOrderDTOs(await readBoard());
           if (closed) return;
           const payload = JSON.stringify({ orders: dtos });
           if (payload !== lastJson) {

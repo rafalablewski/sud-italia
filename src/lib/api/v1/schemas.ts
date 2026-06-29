@@ -169,11 +169,40 @@ export const OrderLineSchema = z.object({
   quantity: z.number().int(),
   unitPrice: z.number().int().describe("Minor units (grosze)"),
   notes: z.string().nullable(),
-  modifiers: z.array(z.object({ groupId: z.string(), optionId: z.string() })),
+  // Resolved for the line cook: option label + the menu's `flagOnKds` callout
+  // (e.g. BUFALO MOZZ), so the app needn't carry the modifier catalogue. Mirrors
+  // the web KDS ticket (`buildKdsTicket`).
+  modifiers: z.array(z.object({ label: z.string(), flag: z.boolean() })),
+  // Allergens for the line's dish — the KDS allergen callout. Web parity.
+  allergens: z.array(z.string()),
+});
+
+/** POS coursing state (dine-in) — which courses are away vs still in the
+ *  kitchen. Drives the KDS "Coursed · … held" callout. */
+export const OrderCoursingSchema = z.object({
+  fired: z.array(z.string()),
+  held: z.array(z.string()),
+});
+
+/** Predicted-ready model output for one ticket (server-computed via
+ *  `analyzeTruck`, per location). Powers the KDS SLA meter, due countdown and
+ *  the at-risk tone tier — the signature predictive parity with the web board.
+ *  Null on non-active tickets (completed / cancelled) the model doesn't score. */
+export const OrderPredictionSchema = z.object({
+  /** Promised-ready instant (ms epoch) from the order SLA, or null. */
+  promisedReadyAtMs: z.number().nullable(),
+  /** Model's predicted-ready instant (ms epoch). */
+  predictedReadyAtMs: z.number(),
+  /** Seconds until predicted plate-up, from the frame's compute time. */
+  predSeconds: z.number().int(),
+  /** Model predicts the promise will be missed, before it is actually late. */
+  atRisk: z.boolean(),
 });
 
 export const OrderSchema = z.object({
   id: z.string(),
+  /** Short, glanceable ticket id (last 6, uppercased) — the KDS card header. */
+  shortId: z.string(),
   locationSlug: z.string(),
   status: z.enum(ORDER_STATUSES),
   fulfillmentType: z.enum(["takeout", "delivery", "dine-in"]),
@@ -193,6 +222,11 @@ export const OrderSchema = z.object({
   paidAt: z.string().nullable(),
   estimatedReadyAt: z.string().nullable(),
   queuePosition: z.number().int().nullable(),
+  // KDS ticket enrichment (web `KdsTicket` parity) — coursing callout, the
+  // simulation marker, and the predictive block (SLA meter / at-risk tier).
+  coursing: OrderCoursingSchema.nullable(),
+  simulated: z.boolean(),
+  prediction: OrderPredictionSchema.nullable(),
 });
 
 // ── Inferred TS types (consumed by the DTO mappers + routes) ───────────────

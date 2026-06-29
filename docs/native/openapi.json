@@ -500,18 +500,24 @@
             "items": {
               "type": "object",
               "properties": {
-                "groupId": {
+                "label": {
                   "type": "string"
                 },
-                "optionId": {
-                  "type": "string"
+                "flag": {
+                  "type": "boolean"
                 }
               },
               "required": [
-                "groupId",
-                "optionId"
+                "label",
+                "flag"
               ],
               "additionalProperties": false
+            }
+          },
+          "allergens": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
@@ -522,7 +528,8 @@
           "quantity",
           "unitPrice",
           "notes",
-          "modifiers"
+          "modifiers",
+          "allergens"
         ],
         "additionalProperties": false
       },
@@ -530,6 +537,9 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string"
+          },
+          "shortId": {
             "type": "string"
           },
           "locationSlug": {
@@ -678,10 +688,83 @@
                 "type": "null"
               }
             ]
+          },
+          "coursing": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fired": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "held": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "fired",
+                  "held"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "promisedReadyAtMs": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "predictedReadyAtMs": {
+                    "type": "number"
+                  },
+                  "predSeconds": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "atRisk": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "promisedReadyAtMs",
+                  "predictedReadyAtMs",
+                  "predSeconds",
+                  "atRisk"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "id",
+          "shortId",
           "locationSlug",
           "status",
           "fulfillmentType",
@@ -700,7 +783,10 @@
           "createdAt",
           "paidAt",
           "estimatedReadyAt",
-          "queuePosition"
+          "queuePosition",
+          "coursing",
+          "simulated",
+          "prediction"
         ],
         "additionalProperties": false
       }
