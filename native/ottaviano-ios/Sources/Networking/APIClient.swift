@@ -441,16 +441,50 @@ public struct PosTabSaveBody: Encodable, Sendable {
     public let items: [Line]
     public let tableId: String?
     public let covers: Int?
+    public let address: String?
     public let customerName: String?
     public let customerPhone: String?
     public let coursed: Bool?
+    /// Manual discount value when `discountProvided` is true.
+    public let discount: PosTabDiscount?
+    /// When true the discount key is serialized (null clears, object sets);
+    /// when false it's omitted so the server preserves its current value.
+    public let discountProvided: Bool
+
     public init(id: String, locationSlug: String, items: [Line], name: String? = nil,
                 channel: String? = nil, status: String? = nil, tableId: String? = nil,
-                covers: Int? = nil, customerName: String? = nil, customerPhone: String? = nil,
-                coursed: Bool? = nil) {
+                covers: Int? = nil, address: String? = nil, customerName: String? = nil,
+                customerPhone: String? = nil, coursed: Bool? = nil,
+                discount: PosTabDiscount? = nil, discountProvided: Bool = false) {
         self.id = id; self.locationSlug = locationSlug; self.items = items; self.name = name
         self.channel = channel; self.status = status; self.tableId = tableId; self.covers = covers
-        self.customerName = customerName; self.customerPhone = customerPhone; self.coursed = coursed
+        self.address = address; self.customerName = customerName; self.customerPhone = customerPhone
+        self.coursed = coursed; self.discount = discount; self.discountProvided = discountProvided
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, locationSlug, name, channel, status, items, tableId, covers, address
+        case customerName, customerPhone, coursed, discount
+    }
+
+    // Optionals omit when nil (the server preserves those fields) — EXCEPT a
+    // provided discount, which is always written so a full-tab PUT can clear it
+    // (null) or set it (object), mirroring the web tab PUT.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(locationSlug, forKey: .locationSlug)
+        try c.encodeIfPresent(name, forKey: .name)
+        try c.encodeIfPresent(channel, forKey: .channel)
+        try c.encodeIfPresent(status, forKey: .status)
+        try c.encode(items, forKey: .items)
+        try c.encodeIfPresent(tableId, forKey: .tableId)
+        try c.encodeIfPresent(covers, forKey: .covers)
+        try c.encodeIfPresent(address, forKey: .address)
+        try c.encodeIfPresent(customerName, forKey: .customerName)
+        try c.encodeIfPresent(customerPhone, forKey: .customerPhone)
+        try c.encodeIfPresent(coursed, forKey: .coursed)
+        if discountProvided { try c.encode(discount, forKey: .discount) }
     }
 }
 

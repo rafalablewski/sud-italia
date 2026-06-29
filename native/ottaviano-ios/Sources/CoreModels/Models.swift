@@ -143,6 +143,19 @@ public struct Order: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+/// Operator-applied manual discount on a POS check (on top of any auto combo).
+/// The server re-prices from this at fire/charge — never the client. Mirrors the
+/// web PosTabDiscount.
+public struct PosTabDiscount: Codable, Sendable, Equatable {
+    /// "amount" (grosze) or "percent" (whole 0–100).
+    public let type: String
+    public let value: Int
+    public let reason: String?
+    public init(type: String, value: Int, reason: String? = nil) {
+        self.type = type; self.value = value; self.reason = reason
+    }
+}
+
 /// An open POS check (Tabs). Lines carry id+qty(+course) only; prices resolve
 /// server-side at send/charge. Mirrors the web PosTab.
 public struct PosTabLine: Codable, Sendable {
@@ -160,8 +173,12 @@ public struct PosTab: Codable, Sendable, Identifiable {
     public let items: [PosTabLine]
     public let tableId: String?
     public let covers: Int?
+    /// Delivery: free-text address.
+    public let address: String?
     public let customerName: String?
     public let customerPhone: String?
+    /// Operator manual discount (on top of any auto combo).
+    public let discount: PosTabDiscount?
     public let coursed: Bool?
     /// Server-owned: which courses have been fired to the kitchen so far.
     public let firedCourses: [String]?
