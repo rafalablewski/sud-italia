@@ -93,7 +93,7 @@ final class OperatorCashStore {
     func load() async {
         do { items = try await api.send(.adminCash()); error = nil }
         catch let e as APIError { error = OperatorListLoader<Int>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
         loaded = true
     }
 }

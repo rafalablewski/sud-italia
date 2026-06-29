@@ -561,7 +561,7 @@ final class OperatorSlotsStore {
     func load() async {
         do { slots = try await api.send(.adminSlots()); error = nil }
         catch let e as APIError { error = OperatorListLoader<AdminSlot>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
         loaded = true
     }
 }

@@ -55,7 +55,7 @@ final class OperatorGuestStore {
     func load() async {
         do { members = try await api.send(.adminLoyalty()); error = nil }
         catch let e as APIError { error = OperatorListLoader<AdminLoyaltyMember>.message(e) }
-        catch { error = "Something went wrong" }
+        catch { self.error = "Something went wrong" }
         loaded = true
     }
 }

@@ -25,7 +25,7 @@ final class OperatorFloorStore {
     func load() async {
         do { room = try await api.send(.adminFloorRoom(location: location)); error = nil }
         catch let e as APIError { if room == nil { error = OperatorListLoader<Int>.message(e) } }
-        catch { if room == nil { error = "Something went wrong" } }
+        catch { if room == nil { self.error = "Something went wrong" } }
         loaded = true
     }
     func setLocation(_ slug: String) async { location = slug; room = nil; loaded = false; await load() }
@@ -35,7 +35,7 @@ final class OperatorFloorStore {
             _ = try await api.send(.adminFloorSeat(location: location, tableId: table.id, seat: seat))
             await load()
         } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
-        catch { message = "Couldn't update the table" }
+        catch { self.message = "Couldn't update the table" }
         busyTableId = nil
     }
 }
@@ -338,7 +338,7 @@ final class OperatorDemandStore {
     func load() async {
         do { board = try await api.send(.adminDemandBoard(location: location)).board; error = nil }
         catch let e as APIError { if board == nil { error = OperatorListLoader<Int>.message(e) } }
-        catch { if board == nil { error = "Something went wrong" } }
+        catch { if board == nil { self.error = "Something went wrong" } }
         loaded = true
     }
     func setLocation(_ slug: String) async { location = slug; board = nil; loaded = false; await load() }
@@ -350,7 +350,7 @@ final class OperatorDemandStore {
                                                          minSpendGrosze: r.recommendedMinSpendGrosze > 0 ? r.recommendedMinSpendGrosze : nil))
             await load(); message = "Capacity applied"
         } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
-        catch { message = "Couldn't apply the capacity" }
+        catch { self.message = "Couldn't apply the capacity" }
         busy = false
     }
     func applyAll() async {
@@ -359,7 +359,7 @@ final class OperatorDemandStore {
             let res = try await api.send(.adminApplyAllDemand(location: location))
             await load(); message = "Applied to \(res.applied ?? 0) slot\((res.applied ?? 0) == 1 ? "" : "s")"
         } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
-        catch { message = "Couldn't apply recommendations" }
+        catch { self.message = "Couldn't apply recommendations" }
         busy = false
     }
 }

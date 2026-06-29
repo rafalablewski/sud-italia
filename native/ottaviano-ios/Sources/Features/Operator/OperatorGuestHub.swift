@@ -94,7 +94,7 @@ final class CrmDetailStore {
         loading = detail == nil
         do { detail = try await api.send(.adminCustomerDetail(phone: phone)); error = nil }
         catch let e as APIError { if detail == nil { error = OperatorListLoader<Int>.message(e) } }
-        catch { if detail == nil { error = "Something went wrong" } }
+        catch { if detail == nil { self.error = "Something went wrong" } }
         loading = false
     }
     func addNote(_ text: String) async { busy = true; _ = try? await api.send(.adminAddCustomerNote(phone: phone, text: text)); await load(); busy = false }
@@ -296,7 +296,7 @@ final class GuestBookStore {
     func book(_ b: BookingBody) async {
         do { _ = try await api.send(.adminCreateBooking(b)); message = "Booked"; await load() }
         catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
-        catch { message = "Couldn't book" }
+        catch { self.message = "Couldn't book" }
     }
     func cancel(_ id: String) async { _ = try? await api.send(.adminCancelReservation(id: id, location: location)); await load() }
 }
