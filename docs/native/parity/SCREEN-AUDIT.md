@@ -147,10 +147,17 @@ operator-log surfaces on it:
   a native **`NewAnnouncementButton` → New-announcement sheet** (title, message,
   pin). The view takes `role` and shows the action only to owners (managers see
   the list) — `toolbar:` is simply `nil` otherwise.
+- **Cash** — `POST /api/v1/admin/cash` (manager, opens a till session; 409 if one
+  is already open) + a native **`OpenCashButton` → Open-till sheet** (location,
+  opening float, notes).
+- **Feedback** — `PATCH /api/v1/admin/feedback` (manager) + a **per-row status
+  menu** (new → reviewed → responded). Shows the other variant: `OperatorFeedbackView`
+  became a dedicated mutable view (store + per-row write + reload), the template
+  for any per-item action that the toolbar slot can't express.
 
 The same template extends to the other write surfaces as they land (handover
-close, inventory adjust, cash count, PO receive, feedback respond, …) — each is a
-v1 mutation endpoint + a toolbar (or per-row) action. Tracked as the waves continue.
+close, inventory adjust, PO receive, events, compliance, …) — each is a v1
+mutation endpoint + a toolbar or per-row action. Tracked as the waves continue.
 
 ## Scaffolds (2) 🏗 — intentional
 `/admin/soc2` and `/admin/capabilities` render `OperatorSurfaceView` (purpose +

@@ -106,36 +106,104 @@ public struct OperatorSuppliersView: View {
 
 // MARK: - Feedback (/admin/feedback)
 
-public struct OperatorFeedbackView: View {
-    @Environment(\.theme) private var theme
+/// Feedback triage — a dedicated mutable surface (per-row write): each review
+/// carries a status menu (new → reviewed → responded) that PATCHes
+/// /api/v1/admin/feedback and reloads. Web `/admin/feedback` parity.
+@MainActor
+@Observable
+public final class OperatorFeedbackStore {
+    public enum State: Sendable { case loading, loaded([AdminFeedback]), failed(String) }
+    public private(set) var state: State = .loading
     private let api: APIClient
     public init(api: APIClient) { self.api = api }
+
+    public func load() async {
+        state = .loading
+        do { state = .loaded(try await api.send(.adminFeedback())) }
+        catch let e as APIError { state = .failed(OperatorListLoader<AdminFeedback>.message(e)) }
+        catch { state = .failed("Something went wrong") }
+    }
+
+    public func setStatus(_ f: AdminFeedback, _ status: String) async {
+        guard f.status != status else { return }
+        _ = try? await api.send(.adminSetFeedbackStatus(id: f.id, status: status))
+        await load() // reconcile to server truth
+    }
+}
+
+public struct OperatorFeedbackView: View {
+    @Environment(\.theme) private var theme
+    @State private var store: OperatorFeedbackStore
+    public init(api: APIClient) { _store = State(initialValue: OperatorFeedbackStore(api: api)) }
+
     public var body: some View {
-        OperatorListView(
-            title: "Feedback",
-            emptyText: "No reviews in yet.",
-            loader: OperatorListLoader { try await api.send(.adminFeedback()) },
-            header: { (items: [AdminFeedback]) in
-                let avg = items.isEmpty ? 0 : items.reduce(0.0) { $0 + $1.overallRating } / Double(items.count)
-                return AnyView(HStack(spacing: theme.space.sm) {
-                    OperatorStatChip("Reviews", "\(items.count)", tint: theme.color.accent)
-                    OperatorStatChip("Avg", String(format: "%.1f★", avg), tint: theme.color.warning)
-                })
-            },
-            row: { f in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(stars(f.overallRating)).foregroundStyle(theme.color.warning)
-                        Spacer()
-                        if let s = f.sentiment { sentimentTag(s) }
+        Group {
+            switch store.state {
+            case .loading:
+                List { ForEach(0..<6, id: \.self) { _ in OperatorRowSkeleton() } }
+            case .failed(let m):
+                ContentUnavailableView("Couldn't load feedback", systemImage: "wifi.slash", description: Text(m))
+            case .loaded(let items) where items.isEmpty:
+                ContentUnavailableView("Feedback", systemImage: "tray", description: Text("No reviews in yet."))
+            case .loaded(let items):
+                List {
+                    let avg = items.isEmpty ? 0 : items.reduce(0.0) { $0 + $1.overallRating } / Double(items.count)
+                    HStack(spacing: theme.space.sm) {
+                        OperatorStatChip("Reviews", "\(items.count)", tint: theme.color.accent)
+                        OperatorStatChip("Avg", String(format: "%.1f★", avg), tint: theme.color.warning)
+                        OperatorStatChip("New", "\(items.filter { $0.status == "new" }.count)", tint: theme.color.warning)
                     }
-                    if !f.comment.isEmpty {
-                        Text(f.comment).font(.subheadline).foregroundStyle(theme.color.textPrimary).lineLimit(3)
-                    }
-                    Text("\(f.customerName) · \(f.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    ForEach(items) { row($0) }
                 }
             }
-        )
+        }
+        .navigationTitle("Feedback")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await store.load() }
+        .refreshable { await store.load() }
+    }
+
+    private func row(_ f: AdminFeedback) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(stars(f.overallRating)).foregroundStyle(theme.color.warning)
+                Spacer()
+                if let s = f.sentiment { sentimentTag(s) }
+                statusMenu(f)
+            }
+            if !f.comment.isEmpty {
+                Text(f.comment).font(.subheadline).foregroundStyle(theme.color.textPrimary).lineLimit(3)
+            }
+            Text("\(f.customerName) · \(f.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
+        }
+    }
+
+    // Tap the status pill to advance triage (new → reviewed → responded).
+    private func statusMenu(_ f: AdminFeedback) -> some View {
+        Menu {
+            ForEach(["new", "reviewed", "responded"], id: \.self) { s in
+                Button {
+                    Task { await store.setStatus(f, s) }
+                } label: {
+                    if f.status == s { Label(s.capitalized, systemImage: "checkmark") } else { Text(s.capitalized) }
+                }
+            }
+        } label: {
+            let tint = statusTint(f.status)
+            Text(f.status.capitalized).font(.caption2.weight(.bold))
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(tint.opacity(0.18), in: Capsule()).foregroundStyle(tint)
+        }
+    }
+
+    private func statusTint(_ s: String) -> Color {
+        switch s {
+        case "responded": theme.color.success
+        case "reviewed": theme.info
+        default: theme.color.warning
+        }
     }
     private func stars(_ r: Double) -> String {
         let n = max(0, min(5, Int(r.rounded())))

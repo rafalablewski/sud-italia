@@ -407,10 +407,23 @@ public extension Endpoint {
         let payload = try? JSONEncoder().encode(PostAnnouncementBody(title: title, body: body, pinned: pinned))
         return Endpoint<AdminAnnouncement>(.post, "admin/announcements", body: payload, requiresAuth: true)
     }
+    /// Open a till session (manager). 409 if one is already open at the location.
+    static func adminOpenCashSession(locationSlug: String, openingFloat: Grosze, notes: String? = nil) -> Endpoint<AdminCashSession> {
+        let payload = try? JSONEncoder().encode(OpenCashBody(locationSlug: locationSlug, openingFloat: openingFloat, notes: notes))
+        return Endpoint<AdminCashSession>(.post, "admin/cash", body: payload, requiresAuth: true)
+    }
+    /// Advance a review's triage status (manager): new | reviewed | responded.
+    static func adminSetFeedbackStatus(id: String, status: String) -> Endpoint<AdminFeedback> {
+        let payload = try? JSONEncoder().encode(["id": id, "status": status])
+        return Endpoint<AdminFeedback>(.patch, "admin/feedback", body: payload, requiresAuth: true)
+    }
 }
 
 private struct PostAnnouncementBody: Encodable {
     let title: String; let body: String; let pinned: Bool
+}
+private struct OpenCashBody: Encodable {
+    let locationSlug: String; let openingFloat: Grosze; let notes: String?
 }
 
 private struct LogTempBody: Encodable {

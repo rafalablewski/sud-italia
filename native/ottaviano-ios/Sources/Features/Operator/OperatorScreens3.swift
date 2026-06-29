@@ -82,6 +82,7 @@ public struct OperatorCashView: View {
                     OperatorStatChip("Open", "\(items.filter(\.open).count)", tint: theme.color.success)
                 })
             },
+            toolbar: { reload in AnyView(OpenCashButton(api: api, reload: reload)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

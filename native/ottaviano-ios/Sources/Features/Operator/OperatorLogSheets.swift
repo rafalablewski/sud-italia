@@ -84,6 +84,82 @@ private struct LogTempSheet: View {
     }
 }
 
+// MARK: - Cash — open a till session (manager)
+
+struct OpenCashButton: View {
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var show = false
+    var body: some View {
+        Button { show = true } label: { Label("Open session", systemImage: "plus.circle.fill") }
+            .sheet(isPresented: $show) { OpenCashSheet(api: api) { await reload() } }
+    }
+}
+
+private struct OpenCashSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let api: APIClient
+    let onOpened: () async -> Void
+
+    @State private var locations: [Location] = []
+    @State private var locationSlug = ""
+    @State private var floatText = ""
+    @State private var notes = ""
+    @State private var busy = false
+    @State private var error: String?
+
+    private var float: Double? { Double(floatText.replacingOccurrences(of: ",", with: ".")) }
+    private var valid: Bool { !locationSlug.isEmpty && (float ?? -1) >= 0 }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if locations.count > 1 {
+                    Picker("Location", selection: $locationSlug) {
+                        ForEach(locations) { Text($0.name).tag($0.slug) }
+                    }
+                }
+                Section("Opening float") {
+                    TextField("Opening float in zł", text: $floatText).keyboardType(.decimalPad)
+                    TextField("Notes (optional)", text: $notes)
+                }
+                if let error {
+                    Text(error).font(.footnote).foregroundStyle(theme.color.danger)
+                }
+                Section {
+                    DSButton(busy ? "Opening…" : "Open session") { Task { await submit() } }
+                        .disabled(busy || !valid)
+                }
+            }
+            .navigationTitle("Open till")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .task {
+                if let locs = try? await api.send(.locations()) {
+                    locations = locs
+                    if locationSlug.isEmpty { locationSlug = locs.first?.slug ?? "" }
+                }
+            }
+        }
+    }
+
+    private func submit() async {
+        guard let f = float else { return }
+        busy = true; defer { busy = false }
+        do {
+            _ = try await api.send(.adminOpenCashSession(
+                locationSlug: locationSlug,
+                openingFloat: Int((f * 100).rounded()),
+                notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)))
+            await onOpened()
+            dismiss()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminCashSession>.message(e)
+        } catch { error = "Something went wrong" }
+    }
+}
+
 // MARK: - Announcements — post a team broadcast (owner)
 
 struct NewAnnouncementButton: View {
