@@ -28,7 +28,7 @@ public final class KDSFleetStore {
                         if case .api(_, let m, _) = e { error = m } else { error = "You appear to be offline" }
                     }
                 } catch {
-                    if board == nil { error = "Could not load the fleet board" }
+                    if board == nil { self.error = "Could not load the fleet board" }
                 }
                 if Task.isCancelled { break }
                 try? await Task.sleep(for: .seconds(6))

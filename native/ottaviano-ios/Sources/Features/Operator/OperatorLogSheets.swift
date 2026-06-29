@@ -80,7 +80,7 @@ private struct LogTempSheet: View {
             dismiss()
         } catch let e as APIError {
             error = OperatorListLoader<AdminTempLog>.message(e)
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
     }
 }
 
@@ -156,7 +156,7 @@ private struct OpenCashSheet: View {
             dismiss()
         } catch let e as APIError {
             error = OperatorListLoader<AdminCashSession>.message(e)
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
     }
 }
 
@@ -221,7 +221,7 @@ private struct NewAnnouncementSheet: View {
             dismiss()
         } catch let e as APIError {
             error = OperatorListLoader<AdminAnnouncement>.message(e)
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
     }
 }
 
@@ -321,6 +321,6 @@ private struct LogWasteSheet: View {
             dismiss()
         } catch let e as APIError {
             error = OperatorListLoader<AdminWasteEntry>.message(e)
-        } catch { error = "Something went wrong" }
+        } catch { self.error = "Something went wrong" }
     }
 }
