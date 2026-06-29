@@ -407,6 +407,16 @@ public extension Endpoint {
             ingredientId: ingredientId, locationSlug: locationSlug, delta: delta, reason: reason))
         return Endpoint<AdminStockRow>(.post, "admin/inventory", body: body, requiresAuth: true)
     }
+    /// Tune a fulfilment slot's capacity and/or status (manager). Returns the row.
+    static func adminUpdateSlot(id: String, maxOrders: Int? = nil, status: String? = nil) -> Endpoint<AdminSlot> {
+        let body = try? JSONEncoder().encode(UpdateSlotBody(id: id, maxOrders: maxOrders, status: status))
+        return Endpoint<AdminSlot>(.patch, "admin/slots", body: body, requiresAuth: true)
+    }
+    /// Advance an event's lifecycle status (manager). Returns the updated row.
+    static func adminSetEventStatus(id: String, status: String) -> Endpoint<AdminEvent> {
+        let body = try? JSONEncoder().encode(SetEventStatusBody(id: id, status: status))
+        return Endpoint<AdminEvent>(.patch, "admin/events", body: body, requiresAuth: true)
+    }
 }
 
 public extension Endpoint {
@@ -450,6 +460,8 @@ private struct LogWasteBody: Encodable {
 private struct AdjustStockBody: Encodable {
     let ingredientId: String; let locationSlug: String; let delta: Double; let reason: String?
 }
+private struct UpdateSlotBody: Encodable { let id: String; let maxOrders: Int?; let status: String? }
+private struct SetEventStatusBody: Encodable { let id: String; let status: String }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
 

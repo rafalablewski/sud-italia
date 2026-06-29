@@ -186,6 +186,7 @@ public struct OperatorEventsView: View {
             title: "Events",
             emptyText: "No events booked.",
             loader: OperatorListLoader { try await api.send(.adminEvents()) },
+            detail: { e, reload in AnyView(EventDetailView(e: e, api: api, reload: reload)) },
             row: { e in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -265,5 +266,105 @@ public struct OperatorSurveysView: View {
                 }
             }
         )
+    }
+}
+
+/// Event detail — advance the booking through its lifecycle. Tapping a status
+/// chip PATCHes `/api/v1/admin/events` (manager+) and reloads. Other fields are
+/// read-only here (revenue/attendance come from the run-sheet). Rule #1.
+struct EventDetailView: View {
+    @Environment(\.theme) private var theme
+    let e: AdminEvent
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var status: String
+    @State private var busy = false
+    @State private var error: String?
+
+    init(e: AdminEvent, api: APIClient, reload: @escaping () async -> Void) {
+        self.e = e; self.api = api; self.reload = reload
+        _status = State(initialValue: e.status)
+    }
+
+    private let statuses = ["scheduled", "live", "done", "cancelled"]
+    private func tone(_ s: String) -> DSBadge.Tone {
+        switch s { case "done": .success; case "live": .warning; case "cancelled": .danger; default: .info }
+    }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("ticket.fill"),
+            title: e.name,
+            badge: (status.capitalized, tone(status)),
+            meta: [OperatorMetaRow("calendar", "\(e.date.prefix(10)) · \(e.locationSlug.capitalized)")]
+        ) {
+            if e.expectedAttendance != nil || e.actualRevenueGrosze != nil {
+                OperatorStatBand([
+                    OperatorStatTile("Expected", e.expectedAttendance.map { "\($0) pax" } ?? "—"),
+                    OperatorStatTile("Revenue", e.actualRevenueGrosze.map { MoneyText.format($0) } ?? "—"),
+                ])
+            }
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("STATUS").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    FlowStatusRow(statuses: statuses, current: status, tone: tone) { picked in
+                        Task { await save(picked) }
+                    }
+                    if busy { ProgressView().controlSize(.small) }
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                }
+            }
+        }
+    }
+
+    private func save(_ next: String) async {
+        guard next != status, !busy else { return }
+        busy = true; error = nil
+        do {
+            let updated = try await api.send(.adminSetEventStatus(id: e.id, status: next))
+            status = updated.status
+            await reload()
+        } catch let err as APIError {
+            error = OperatorListLoader<AdminEvent>.message(err)
+        } catch { error = "Couldn't update the event" }
+        busy = false
+    }
+}
+
+/// A wrapping row of selectable status chips (the current one filled).
+struct FlowStatusRow: View {
+    @Environment(\.theme) private var theme
+    let statuses: [String]
+    let current: String
+    let tone: (String) -> DSBadge.Tone
+    let onPick: (String) -> Void
+    var body: some View {
+        HStack(spacing: theme.space.sm) {
+            ForEach(statuses, id: \.self) { s in
+                Button { onPick(s) } label: {
+                    Text(s.capitalized)
+                        .textRole(.caption).fontWeight(.semibold)
+                        .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            s == current ? toneColor(tone(s)).opacity(0.22) : theme.color.surface,
+                            in: Capsule()
+                        )
+                        .overlay(Capsule().strokeBorder(s == current ? toneColor(tone(s)) : theme.color.line, lineWidth: 1))
+                        .foregroundStyle(s == current ? toneColor(tone(s)) : theme.color.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    private func toneColor(_ t: DSBadge.Tone) -> Color {
+        switch t {
+        case .success: theme.color.success
+        case .warning: theme.color.warning
+        case .danger: theme.color.danger
+        case .info: theme.info
+        case .accent: theme.color.accent
+        case .neutral: theme.color.textSecondary
+        }
     }
 }

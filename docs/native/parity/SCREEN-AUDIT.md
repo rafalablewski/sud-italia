@@ -134,9 +134,21 @@ actions. Wave D opens the **first new write** that needed facade work:
   and reloads the list. `OperatorListView.detail:` now passes a `reload` closure
   (same contract as `toolbar:`), so any detail sheet can write-then-refresh.
 
-Remaining Wave D surfaces (events, compliance, handover-close, schedule edit,
-service slots) follow the same recipe — a v1 mutation endpoint + a detail/toolbar
-action — as each lands.
+**Service slots — capacity + status (this pass).** New `PATCH /api/v1/admin/slots`
+(manager+, scope-gated, `{ id, maxOrders?, status? }`); `maxOrders` can't drop
+below the booked count. Native `SlotDetailView` — a capacity ±stepper (floored at
+the booked count) + an Active toggle (draft⇄active) → PATCH + reload. **Verified
+live:** capacity 40→45, below-booked → 422, status flip ok, unknown → 404, no
+token → 401.
+
+**Events — lifecycle status (this pass).** New `PATCH /api/v1/admin/events`
+(manager+, `{ id, status }` ∈ {scheduled, live, done, cancelled}); re-saves via
+`saveEvent` so revenue/attendance persist. Native `EventDetailView` — a status
+chip row (`FlowStatusRow`) → PATCH + reload. **Verified live:** scheduled→live→
+done with fields preserved, invalid → 422, unknown → 404.
+
+Remaining Wave D surfaces (compliance renew, handover-close, schedule edit)
+follow the same recipe — a v1 mutation endpoint + a detail action — as each lands.
 
 ## Wave C — CORE depth + detail-sheet breadth (partial this pass)
 

@@ -516,6 +516,7 @@ public struct OperatorSlotsView: View {
             title: "Service",
             emptyText: "No fulfilment slots scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSlots()) },
+            detail: { s, reload in AnyView(SlotDetailView(s: s, api: api, reload: reload)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -529,6 +530,87 @@ public struct OperatorSlotsView: View {
                 }
             }
         )
+    }
+}
+
+/// Service-slot detail — capacity + status, with live edits. The capacity stepper
+/// can't go below the slot's already-booked count; the status toggle flips
+/// draft⇄active. Both PATCH `/api/v1/admin/slots` (manager+) and reload. Rule #1.
+struct SlotDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminSlot
+    let api: APIClient
+    let reload: () async -> Void
+    @State private var maxOrders: Int
+    @State private var status: String
+    @State private var busy = false
+    @State private var error: String?
+
+    init(s: AdminSlot, api: APIClient, reload: @escaping () async -> Void) {
+        self.s = s; self.api = api; self.reload = reload
+        _maxOrders = State(initialValue: s.maxOrders)
+        _status = State(initialValue: s.status)
+    }
+
+    private var dirty: Bool { maxOrders != s.maxOrders || status != s.status }
+    private var free: Int { max(0, maxOrders - s.currentOrders) }
+
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("calendar.badge.clock"),
+            title: "\(s.date) · \(s.time)",
+            badge: (status.capitalized, status == "active" ? .success : .neutral),
+            meta: [OperatorMetaRow("mappin.and.ellipse", "\(s.locationSlug.capitalized) · \(s.fulfillmentTypes.joined(separator: ", "))")]
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Capacity", "\(maxOrders)"),
+                OperatorStatTile("Booked", "\(s.currentOrders)"),
+                OperatorStatTile("Free", "\(free)", subTone: free == 0 ? theme.color.danger : nil),
+            ])
+            DSCard {
+                VStack(alignment: .leading, spacing: theme.space.md) {
+                    Text("CAPACITY").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                    HStack(spacing: theme.space.lg) {
+                        cap("minus") { if maxOrders > s.currentOrders { maxOrders -= 1 } }
+                        Text("\(maxOrders)").textRole(.titleL).monospacedDigit().foregroundStyle(theme.color.textPrimary).frame(maxWidth: .infinity)
+                        cap("plus") { if maxOrders < 1000 { maxOrders += 1 } }
+                    }
+                    Text("Can't drop below the \(s.currentOrders) already booked.").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    Toggle("Active (accepting orders)", isOn: Binding(
+                        get: { status == "active" },
+                        set: { status = $0 ? "active" : "draft" }
+                    ))
+                    .tint(theme.color.accent)
+                    if let error { Text(error).textRole(.caption).foregroundStyle(theme.color.danger) }
+                    DSButton(busy ? "Saving…" : "Save changes") { Task { await save() } }
+                        .disabled(!dirty || busy).opacity(!dirty || busy ? 0.5 : 1)
+                }
+            }
+        }
+    }
+
+    private func cap(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.headline).frame(width: 48, height: 48)
+                .foregroundStyle(theme.color.accent)
+                .background(theme.color.surface, in: Circle())
+                .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain).sensoryFeedback(.impact(weight: .light), trigger: maxOrders)
+    }
+
+    private func save() async {
+        busy = true; error = nil
+        do {
+            _ = try await api.send(.adminUpdateSlot(
+                id: s.id,
+                maxOrders: maxOrders != s.maxOrders ? maxOrders : nil,
+                status: status != s.status ? status : nil))
+            await reload()
+        } catch let e as APIError {
+            error = OperatorListLoader<AdminSlot>.message(e)
+        } catch { error = "Couldn't save the slot" }
+        busy = false
     }
 }
 

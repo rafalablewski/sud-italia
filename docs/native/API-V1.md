@@ -80,6 +80,8 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/admin/pos/tabs/:id/fire` | Bearer (staff+) | send to KDS / fire course(s) (`{ courses?, fireAll? }`); shared `fireTab`, idempotent |
 | POST | `/api/v1/admin/pos/tabs/:id/charge` | Bearer (staff+) | settle + close the tab; shared `chargeTab`, idempotent |
 | POST | `/api/v1/admin/inventory` | Bearer (manager+) | adjust on-hand by a signed `delta` (`{ ingredientId, locationSlug, delta, reason? }`); records an `adjust` stock movement via the shared `createStockMovement`, returns the updated row |
+| PATCH | `/api/v1/admin/slots` | Bearer (manager+) | tune a fulfilment slot's capacity / status (`{ id, maxOrders?, status? }`); `maxOrders` can't drop below the booked count, `status` ∈ {draft, active} |
+| PATCH | `/api/v1/admin/events` | Bearer (manager+) | advance an event's lifecycle (`{ id, status }`, status ∈ {scheduled, live, done, cancelled}); re-saves via `saveEvent` so other fields persist |
 | GET | `/api/v1/openapi.json` | none | the contract document |
 
 ### Customer auth (phone OTP) + order create
