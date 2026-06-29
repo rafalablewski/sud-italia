@@ -39,11 +39,15 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   collapses to one column), a **Chef** make-queue mode (station queue, oldest-first
   + depth header), a **multi-entry recall tray** (`KDSStore.liveRecents`, 10-min,
   via `POST /api/v1/orders/:id/recall`), and a **pause/resume** SSE control.
-- **Honest gaps (facade/hardware-gated, not faked — Rule #1):**
-  - **Fleet (owner atlas)** — the web `/api/admin/kds/fleet` cross-truck board has
-    no `/api/v1` equivalent; the native Fleet view awaits that facade endpoint.
-  - **Done/hr + On-shift KPIs** — need a `/api/v1/admin/kds/floor-ops` endpoint
-    (web reads `/api/admin/kds/floor-ops`); the eight board-derived KPIs ship now.
+- **Shipped — Fleet + floor-ops (this pass):** the two facade feeds landed.
+  - **Fleet (owner atlas)** — `GET /api/v1/admin/kds/fleet` (owner; pure mappers in
+    `fleet-dto.ts`, unit-tested) + a native **`KDSFleetView`** (owner-gated view
+    segment, polled by `KDSFleetStore`): cross-truck totals, the promise-accuracy
+    benchmark, per-truck tiles (health · counts · pace · urgent-first ticket
+    preview). Tile previews reuse the enriched Order, so they match the KDS board.
+  - **Done/hr + On-shift KPIs** — `GET /api/v1/admin/kds/floor-ops` (manager+,
+    scope-aware, aggregates chain-wide) → two extra KPI cells for manager+ tokens.
+- **Honest gaps (wiring/hardware-gated, not faked — Rule #1):**
   - **86 (eighty-six) dialog** — `adminSet86`/`adminMenu` exist, but the dialog
     needs a single-location scope; the native KDS is wired chain-wide
     (`location: nil`), so it's deferred until the board carries a location focus.
@@ -132,10 +136,11 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
   modifiers + allergens + guest note.
 - ✅ **KDS board chrome** — KPI strip, station strip, lane segment, Chef mode,
   multi-entry recall tray, pause/resume.
-- ⏳ **KDS Fleet + floor-ops + 86 + sound** — facade/wiring/hardware-gated (see the
-  KDS deep-dive "honest gaps"): Fleet needs a v1 fleet endpoint; Done/hr + On-shift
-  need a v1 floor-ops endpoint; the 86 dialog needs a per-location board scope;
-  sound/kiosk are on-device.
+- ✅ **KDS Fleet (owner atlas)** — `/api/v1/admin/kds/fleet` + native `KDSFleetView`
+  (totals, benchmark, per-truck tiles with pace + ticket preview).
+- ✅ **KDS Done/hr + On-shift KPIs** — `/api/v1/admin/kds/floor-ops` (manager+).
+- ⏳ **KDS 86 + sound** — wiring/hardware-gated (KDS deep-dive "honest gaps"): the
+  86 dialog needs a per-location board scope; sound/kiosk are on-device.
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.
