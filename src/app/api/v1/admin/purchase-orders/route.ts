@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { requireRole, resolveLocationFilter, scopeAllows } from "@/lib/api/v1/guard";
-import { getPurchaseOrders, getSuppliers, updatePurchaseOrderStatus } from "@/lib/store";
+import { getPurchaseOrder, getPurchaseOrders, getSuppliers, updatePurchaseOrderStatus } from "@/lib/store";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -61,11 +61,15 @@ export async function PATCH(req: NextRequest) {
     return apiError("validation_failed", "id and a valid status (draft | sent | received | cancelled) are required");
   }
   try {
+    // Authorize BEFORE mutating — marking "received" posts stock movements, so an
+    // out-of-scope write must be rejected before any side effect commits.
+    const existing = await getPurchaseOrder(body.id);
+    if (!existing) return apiError("not_found", "Purchase order not found");
+    if (!scopeAllows(guard.claims.scope, existing.locationSlug)) {
+      return apiError("forbidden", `Not authorized for location "${existing.locationSlug}"`);
+    }
     const updated = await updatePurchaseOrderStatus(body.id, body.status as "draft" | "sent" | "received" | "cancelled");
     if (!updated) return apiError("not_found", "Purchase order not found");
-    if (!scopeAllows(guard.claims.scope, updated.locationSlug)) {
-      return apiError("forbidden", `Not authorized for location "${updated.locationSlug}"`);
-    }
     const suppliers = await getSuppliers();
     const supplierName = suppliers.find((s) => s.id === updated.supplierId)?.name ?? updated.supplierId;
     return apiOk(

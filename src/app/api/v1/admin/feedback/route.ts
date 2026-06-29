@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
-import { requireRole, resolveLocationFilter } from "@/lib/api/v1/guard";
+import { requireRole, resolveLocationFilter, scopeAllows } from "@/lib/api/v1/guard";
 import { getFeedback, updateFeedbackStatus } from "@/lib/store";
 import { logger } from "@/lib/logger";
 
@@ -50,6 +50,13 @@ export async function PATCH(req: NextRequest) {
     return apiError("validation_failed", "id and a valid status (new | reviewed | responded) are required");
   }
   try {
+    // Scope-gate before mutating — the GET is scope-filtered, so a review the
+    // operator can't see can't be triaged either.
+    const existing = (await getFeedback()).find((f) => f.id === body.id);
+    if (!existing) return apiError("not_found", "Feedback not found");
+    if (!scopeAllows(guard.claims.scope, existing.locationSlug)) {
+      return apiError("forbidden", `Not authorized for location "${existing.locationSlug}"`);
+    }
     const updated = await updateFeedbackStatus(body.id, body.status as "new" | "reviewed" | "responded");
     if (!updated) return apiError("not_found", "Feedback not found");
     return apiOk(updated, { changed: true });
