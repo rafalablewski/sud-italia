@@ -15,6 +15,7 @@ public struct OperatorUsersView: View {
             title: "Users",
             emptyText: "No staff accounts yet.",
             loader: OperatorListLoader { try await api.send(.adminUsers()) },
+            search: { "\($0.name) \($0.email ?? "") \($0.role)" },
             row: { u in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -49,6 +50,7 @@ public struct OperatorAuditView: View {
             title: "Audit log",
             emptyText: "No audit entries.",
             loader: OperatorListLoader { try await api.send(.adminAuditLog()) },
+            search: { "\($0.action) \($0.actor ?? "") \($0.entityType ?? "") \($0.entityId ?? "")" },
             row: { e in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {

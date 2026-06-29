@@ -118,6 +118,25 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ---
 
+## Shell + navigation polish — done this pass
+
+The operator rail is the one surface seen across all 54 screens, so it got the
+visual + usability pass first (`OttavianoKDSApp.swift`):
+- **Branded identity header** — a tappable card (mark · operator · role badge ·
+  on-shift dot) replacing the bare wordmark; opens the account sheet.
+- **`.searchable` over the whole IA** — filters `OPERATOR_NAV` live on label +
+  blurb, empty sections drop, no-match → `ContentUnavailableView.search`; prompt
+  counts the role's reachable surfaces.
+- **`OperatorNavRow`** — icon-chip + label rows (web-rail parity); scaffolds
+  carry a subtle wrench glyph (live vs. layout-parity at a glance).
+- **Universal list search** — `OperatorListView` gained an optional `search:`
+  projection; wired into Customers, Staff, Suppliers, Inventory, Guest, Recipes,
+  Schedule, Users, Audit log. Header KPIs stay over the full set (search is a
+  row-finder, not a metric filter). Purely additive — bar-free without `search:`.
+
+All chrome resolves through the generated web tokens (`themes/core/tokens.css` →
+`Tokens.generated.swift`); native SwiftUI is reserved for the nav container.
+
 ## Design-system adoption — done this pass
 
 Every **fixed-size text** site (`.font(.system(size:))` on `Text`/`MoneyText`) —

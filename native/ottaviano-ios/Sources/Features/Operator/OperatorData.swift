@@ -45,7 +45,13 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
     /// Receives a `reload` closure so the action can refresh the list after a
     /// successful mutation. Type-erased to keep the generic two-parameter.
     private let toolbar: ((@escaping () async -> Void) -> AnyView)?
+    /// Optional searchable projection: each item → the text the search bar matches
+    /// against. When supplied, the surface gains a `.searchable` jump bar and the
+    /// header KPIs stay computed over the *full* set (search narrows rows only).
+    /// Nil (default) = no search bar, so every existing call site is unchanged.
+    private let searchKey: ((T) -> String)?
     private let row: (T) -> Row
+    @State private var query = ""
 
     public init(
         title: String,
@@ -53,6 +59,7 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         loader: OperatorListLoader<T>,
         header: (([T]) -> AnyView)? = nil,
         toolbar: ((@escaping () async -> Void) -> AnyView)? = nil,
+        search: ((T) -> String)? = nil,
         @ViewBuilder row: @escaping (T) -> Row
     ) {
         self.title = title
@@ -60,7 +67,17 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         _loader = State(initialValue: loader)
         self.header = header
         self.toolbar = toolbar
+        self.searchKey = search
         self.row = row
+    }
+
+    /// Rows after the search query is applied. KPIs in `header` deliberately keep
+    /// seeing the unfiltered set — search is a row finder, not a metric filter.
+    private func visible(_ items: [T]) -> [T] {
+        guard let searchKey else { return items }
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return items }
+        return items.filter { searchKey($0).localizedCaseInsensitiveContains(q) }
     }
 
     public var body: some View {
@@ -73,14 +90,21 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
             case .loaded(let items) where items.isEmpty:
                 ContentUnavailableView(title, systemImage: "tray", description: Text(emptyText))
             case .loaded(let items):
+                let shown = visible(items)
                 List {
                     if let header {
                         header(items)
                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                     }
-                    ForEach(items) { row($0) }
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: query)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(shown) { row($0) }
+                    }
                 }
+                .modifier(OptionalSearchable(active: searchKey != nil, text: $query, prompt: "Search \(title.lowercased())"))
             }
         }
         .navigationTitle(title)
@@ -92,6 +116,21 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         }
         .task { await loader.load() }
         .refreshable { await loader.load() }
+    }
+}
+
+/// Applies `.searchable` only when the surface opted into search — keeps the
+/// search bar off screens that didn't supply a `search:` projection.
+private struct OptionalSearchable: ViewModifier {
+    let active: Bool
+    @Binding var text: String
+    let prompt: String
+    func body(content: Content) -> some View {
+        if active {
+            content.searchable(text: $text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: prompt)
+        } else {
+            content
+        }
     }
 }
 

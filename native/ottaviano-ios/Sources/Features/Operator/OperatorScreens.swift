@@ -22,6 +22,7 @@ public struct OperatorCustomersView: View {
                     OperatorStatChip("VIPs", "\(items.filter { $0.totalSpentGrosze >= 50000 }.count)", tint: theme.color.success)
                 })
             },
+            search: { "\($0.name ?? "") \($0.phone)" },
             row: { c in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -54,6 +55,7 @@ public struct OperatorStaffView: View {
                     OperatorStatChip("Active", "\(items.filter { $0.status == "active" }.count)", tint: theme.color.success)
                 })
             },
+            search: { "\($0.name) \($0.role) \($0.locationSlug)" },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -88,6 +90,7 @@ public struct OperatorSuppliersView: View {
             title: "Suppliers",
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
+            search: { "\($0.name) \($0.contactName ?? "")" },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -234,6 +237,7 @@ public struct OperatorInventoryView: View {
                     OperatorStatChip("Low", "\(items.filter(\.low).count)", tint: theme.color.danger)
                 })
             },
+            search: { "\($0.name) \($0.locationSlug)" },
             row: { r in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

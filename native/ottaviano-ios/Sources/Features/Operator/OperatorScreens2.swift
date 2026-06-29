@@ -16,6 +16,7 @@ public struct OperatorRecipesView: View {
             title: "Recipes",
             emptyText: "No recipes defined yet.",
             loader: OperatorListLoader { try await api.send(.adminRecipes()) },
+            search: { "\($0.dishName) \($0.ingredients.map(\.name).joined(separator: " "))" },
             row: { r in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -46,6 +47,7 @@ public struct OperatorGuestView: View {
             header: { (items: [AdminLoyaltyMember]) in
                 AnyView(OperatorStatChip("Members", "\(items.count)", tint: theme.color.accent))
             },
+            search: { "\($0.name ?? "") \($0.lastName ?? "") \($0.phone) \($0.email ?? "")" },
             row: { m in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -135,6 +137,7 @@ public struct OperatorScheduleView: View {
             title: "Schedule",
             emptyText: "No shifts scheduled.",
             loader: OperatorListLoader { try await api.send(.adminSchedule()) },
+            search: { "\($0.staffName) \($0.role) \($0.locationSlug)" },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {

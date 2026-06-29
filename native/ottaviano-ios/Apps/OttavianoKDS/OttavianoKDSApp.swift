@@ -41,11 +41,28 @@ struct OperatorRootView: View {
 
     @State private var selection: OperatorNavItem?
     @State private var showAccount = false
+    /// Free-text jump bar over the whole IA — an operator app with 54 surfaces
+    /// is unusable without one. Filters sections by label + purpose blurb.
+    @State private var query = ""
 
     /// The staff role drives the rail — the same gate as the web admin sidebar
     /// (`filterNavForRoleV3`). Unknown/legacy roles fall to the lowest rank.
     private var role: OperatorRole { OperatorRole.from(session.user?.role) }
     private var sections: [OperatorNavSection] { filteredNav(for: role) }
+
+    /// The rail the sidebar actually renders: every section the role unlocks,
+    /// narrowed live by the search query (matched on label + blurb). Empty
+    /// sections drop out so the result list stays tight.
+    private var visibleSections: [OperatorNavSection] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return sections }
+        return sections.compactMap { section in
+            let hits = section.items.filter {
+                $0.label.localizedCaseInsensitiveContains(q) || $0.blurb.localizedCaseInsensitiveContains(q)
+            }
+            return hits.isEmpty ? nil : OperatorNavSection(section.id, section.label, hits)
+        }
+    }
 
     var body: some View {
         switch session.state {
@@ -61,15 +78,34 @@ struct OperatorRootView: View {
     private var shell: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach(sections) { section in
-                    Section(section.label) {
-                        ForEach(section.items) { item in
-                            Label(item.label, systemImage: item.icon).tag(item)
+                identityCard
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 12, trailing: 12))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                if visibleSections.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(visibleSections) { section in
+                        Section {
+                            ForEach(section.items) { item in
+                                OperatorNavRow(item: item).tag(item)
+                            }
+                        } header: {
+                            Text(section.label)
+                                .textRole(.caption).fontWeight(.bold)
+                                .tracking(0.6)
+                                .foregroundStyle(theme.color.textSecondary)
                         }
                     }
                 }
             }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background(theme.color.surface)
             .navigationTitle("OttavianoKDS")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search \(surfaceCount) surfaces")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAccount = true } label: { Image(systemName: "person.crop.circle") }
@@ -85,6 +121,45 @@ struct OperatorRootView: View {
             }
         }
         .onAppear { if selection == nil { selection = defaultItem } }
+    }
+
+    /// Total surfaces the signed-in role can reach — drives the search prompt so
+    /// the operator knows the rail's true breadth ("Search 41 surfaces").
+    private var surfaceCount: Int { sections.reduce(0) { $0 + $1.items.count } }
+
+    /// The sidebar identity header: brand mark + signed-in operator + role badge,
+    /// tappable to open the account sheet. Replaces a bare wordmark — the rail now
+    /// states *who's on shift and what they can reach* the moment it opens.
+    private var identityCard: some View {
+        Button { showAccount = true } label: {
+            HStack(spacing: theme.space.sm) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(theme.color.onAccent)
+                    .frame(width: 44, height: 44)
+                    .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.radius.md))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(session.user?.name ?? "OttavianoKDS")
+                        .textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Circle().fill(theme.color.success).frame(width: 6, height: 6)
+                        Text(role.displayName)
+                            .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(theme.color.textSecondary)
+            }
+            .padding(theme.space.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Account — signed in as \(session.user?.name ?? "operator"), \(role.displayName)")
     }
 
     /// First landing surface: the dashboard for managers+, the KDS lanes for a
@@ -204,5 +279,31 @@ struct OperatorRootView: View {
         default:
             OperatorSurfaceView(item: item)
         }
+    }
+}
+
+/// One row in the operator rail — an icon chip + label, mirroring the web admin
+/// sidebar's glyph-led items. Scaffold surfaces (data pending `/api/v1`) carry a
+/// subtle wrench so the operator can tell live from layout-parity at a glance.
+struct OperatorNavRow: View {
+    @Environment(\.theme) private var theme
+    let item: OperatorNavItem
+    var body: some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: item.icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(theme.color.accent)
+                .frame(width: 28, height: 28)
+                .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.sm))
+            Text(item.label).textRole(.body).foregroundStyle(theme.color.textPrimary)
+            Spacer(minLength: 0)
+            if item.kind == .scaffold {
+                Image(systemName: "wrench.adjustable")
+                    .font(.caption2)
+                    .foregroundStyle(theme.color.textSecondary.opacity(0.55))
+                    .accessibilityLabel("Layout-parity scaffold")
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
