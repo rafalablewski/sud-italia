@@ -326,6 +326,14 @@ public struct OperatorRegulatoryView: View {
             title: "Regulatory",
             emptyText: "No locations to disclose.",
             loader: OperatorListLoader { try await api.send(.adminRegulatory()) },
+            search: { "\($0.city) \($0.zone)" },
+            filters: [
+                OperatorFilter("Calorie labels", systemImage: "list.bullet.rectangle") { $0.calorieDisclosureRequired },
+                OperatorFilter("Halal", systemImage: "checkmark.seal.fill") { $0.halalCertId != nil },
+            ],
+            sorts: [
+                OperatorSortOption("City") { $0.city.localizedCaseInsensitiveCompare($1.city) == .orderedAscending },
+            ],
             row: { r in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {

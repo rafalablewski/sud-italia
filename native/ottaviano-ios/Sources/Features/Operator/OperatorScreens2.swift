@@ -17,6 +17,11 @@ public struct OperatorRecipesView: View {
             emptyText: "No recipes defined yet.",
             loader: OperatorListLoader { try await api.send(.adminRecipes()) },
             search: { "\($0.dishName) \($0.ingredients.map(\.name).joined(separator: " "))" },
+            sorts: [
+                OperatorSortOption("Name") { $0.dishName.localizedCaseInsensitiveCompare($1.dishName) == .orderedAscending },
+                OperatorSortOption("Most ingredients") { $0.ingredients.count > $1.ingredients.count },
+                OperatorSortOption("Top yield") { $0.yieldPortions > $1.yieldPortions },
+            ],
             row: { r in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -231,6 +236,13 @@ public struct OperatorAlertsView: View {
             title: "Alerts",
             emptyText: "All clear — no alerts.",
             loader: OperatorListLoader { try await api.send(.adminAlerts()) },
+            search: { "\($0.title) \($0.message) \($0.type)" },
+            filters: [
+                OperatorFilter("Unread", systemImage: "circle.fill") { !$0.read },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.createdAt > $1.createdAt },
+            ],
             row: { a in
                 HStack(alignment: .top, spacing: theme.space.sm) {
                     Image(systemName: icon(a.type)).foregroundStyle(a.read ? theme.color.textSecondary : theme.color.warning)
@@ -269,6 +281,14 @@ public struct OperatorAnnouncementsView: View {
             loader: OperatorListLoader { try await api.send(.adminAnnouncements()) },
             // Posting is owner-only (web parity); managers see the list, not the action.
             toolbar: role == .owner ? { reload in AnyView(NewAnnouncementButton(api: api, reload: reload)) } : nil,
+            search: { "\($0.title) \($0.body) \($0.createdByName)" },
+            filters: [
+                OperatorFilter("Pinned", systemImage: "pin.fill") { $0.pinned },
+            ],
+            sorts: [
+                OperatorSortOption("Recent") { $0.createdAt > $1.createdAt },
+                OperatorSortOption("Most read") { $0.readCount > $1.readCount },
+            ],
             row: { a in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {

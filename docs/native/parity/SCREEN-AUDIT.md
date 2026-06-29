@@ -210,14 +210,16 @@ substrate (`OperatorData.swift`) rather than 25 screens individually:
   drill-in is a glance, not a context switch — across every surface that uses it.
 All additive + backward-compatible: every existing call site keeps working and
 gains the base ergonomics (pinned search, result count, refined chrome) for free.
-Bespoke filters/sorts wired into 11 high-traffic surfaces so far — **Customers**
-(VIP / has-points / lapsed; spend·orders·name), **Staff** (active/inactive;
-name·rate·role), **Suppliers** (name·lead), **Inventory** (low-stock; lowest·name),
-**Users** (active / MFA; name·role), **Business costs** (cost·name·category),
-**Compliance** (expired / expiring-30d; expiry·location), **Events** (upcoming /
-live / done; date·revenue), **Waste** (recent·cost), **Surveys** (active/off;
-rating·responses), **Schedule** (scheduled / in-progress / done; start·staff) —
-with the same one-line pattern available to the rest.
+Bespoke filters/sorts now wired into **every** `OperatorListView` surface (22):
+Customers (VIP / has-points / lapsed), Staff (active/inactive), Suppliers,
+Inventory (low-stock), Users (active / MFA), Business costs, Compliance (expired /
+expiring-30d), Events (upcoming / live / done), Waste, Surveys (active/off),
+Schedule (scheduled / in-progress / done), Recipes, Alerts (unread),
+Announcements (pinned), Corporate, Manage-locations (active / off / alcohol),
+Campaigns (sent / sending / failures), Handover (issues), Expansion (in-progress /
+ready), Scheduled-bundles (active/paused), Regulatory (calorie / halal) — each with
+a matching sort set. The 2 non-list admin pages (Permissions matrix, settings
+renderer) keep their bespoke layouts.
 
 **Honest scope note.** Several web `/core` features are deliberately deferred —
 they need `/api/v1` endpoints the facade doesn't yet expose or data the current
