@@ -462,6 +462,10 @@ public struct OperatorPOSView: View {
         .disabled(!item.available)
         .opacity(item.available ? 1 : 0.55)
         .sensoryFeedback(.impact(weight: .light), trigger: qty)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(item.name), \(MoneyText.format(item.price))\(item.available ? "" : ", sold out")\(qty > 0 ? ", \(qty) in check" : "")")
+        .accessibilityHint(item.available ? "Adds one to the check" : "")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: compact cart bar (iPhone)

@@ -9,15 +9,26 @@ import OttavianoKit
 public final class OperatorListLoader<T: Sendable> {
     public enum State: Sendable { case loading, loaded([T]), failed(String) }
     public private(set) var state: State = .loading
+    /// A transient fetch error when we're keeping last-good rows on screen (a
+    /// failed refresh) — surfaced as a subtle banner, never by blanking the board.
+    public private(set) var refreshError: String?
     private let fetch: () async throws -> [T]
 
     public init(fetch: @escaping () async throws -> [T]) { self.fetch = fetch }
 
     public func load() async {
-        state = .loading
-        do { state = .loaded(try await fetch()) }
-        catch let e as APIError { state = .failed(Self.message(e)) }
-        catch { state = .failed("Something went wrong") }
+        // Only show the skeleton on the FIRST load. A pull-to-refresh keeps the
+        // current rows visible while it runs (the board never flashes empty).
+        if case .loaded = state {} else { state = .loading }
+        do {
+            state = .loaded(try await fetch())
+            refreshError = nil
+        } catch {
+            let message = (error as? APIError).map(Self.message) ?? "Something went wrong"
+            // A failed refresh keeps the last-good rows; only a failed FIRST load
+            // shows the full error state (there's nothing to preserve).
+            if case .loaded = state { refreshError = message } else { state = .failed(message) }
+        }
     }
 
     static func message(_ e: APIError) -> String {
@@ -151,6 +162,7 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
             case .loaded(let items):
                 let shown = visible(items)
                 VStack(spacing: 0) {
+                    if let refreshError = loader.refreshError { staleBanner(refreshError) }
                     if !filters.isEmpty { filterBar(items, shown: shown) }
                     List {
                         if let header {
@@ -195,6 +207,20 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         }
         .task { await loader.load() }
         .refreshable { await loader.load() }
+    }
+
+    /// Shown when a refresh failed but we kept the last-good rows — honest about
+    /// staleness without yanking the board out from under the operator.
+    private func staleBanner(_ message: String) -> some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: "wifi.exclamationmark").foregroundStyle(theme.color.warning)
+            Text("Showing last update — \(message.lowercased())").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+            Spacer()
+        }
+        .padding(.horizontal, theme.space.lg).padding(.vertical, theme.space.xs)
+        .frame(maxWidth: .infinity)
+        .background(theme.warningSoft)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - filter chip bar
@@ -242,6 +268,8 @@ public struct OperatorListView<T: Identifiable & Sendable, Row: View>: View {
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.selection, trigger: active)
+        .accessibilityLabel("Filter \(label), \(count)")
+        .accessibilityAddTraits(active ? [.isSelected, .isButton] : .isButton)
     }
 }
 
