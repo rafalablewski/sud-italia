@@ -29,8 +29,8 @@ public struct OperatorDashboardView: View {
                         MetricTile(label: "In the kitchen", value: "\(cookingCount)", icon: "flame.fill", tint: theme.color.warning)
                         MetricTile(label: "Ready", value: "\(readyCount)", icon: "checkmark.circle.fill", tint: theme.color.success)
                         MetricTile(label: "Completed", value: "\(completedCount)", icon: "bag.fill", tint: theme.color.textSecondary)
-                        MetricTile(label: "Revenue (board)", value: MoneyText.format(revenueGrosze), icon: "banknote.fill", tint: theme.color.success)
-                        MetricTile(label: "Avg ticket", value: MoneyText.format(avgTicketGrosze), icon: "chart.bar.fill", tint: theme.color.accent)
+                        MetricTile(label: "Revenue (board)", value: MoneyText.format(revenueGrosze), icon: "banknote.fill", tint: theme.color.success, info: Self.boardRevenueInfo)
+                        MetricTile(label: "Avg ticket", value: MoneyText.format(avgTicketGrosze), icon: "chart.bar.fill", tint: theme.color.accent, info: Self.boardAvgInfo)
                     }
                     recent
                 }
@@ -82,5 +82,26 @@ public struct OperatorDashboardView: View {
             if case .api(_, let m, _) = e { error = m } else { error = "You appear to be offline" }
         } catch { self.error = "Something went wrong" }
         loaded = true
+    }
+}
+
+// MARK: - Dashboard KPI explainers (Rule #12 — all five sections)
+
+private extension OperatorDashboardView {
+    static var boardRevenueInfo: InfoButton {
+        InfoButton(title: "Revenue (board)",
+            description: "Revenue from every order currently on the board (this service), cancelled excluded.",
+            institutional: "The live board total is the shift's running till — a manager reads it against the daypart forecast to flex labour up or down in real time. A board tracking below the same-weekday pace by mid-service is the cue to push covers, not wait for the end-of-day report.",
+            plain: "Add up every active order's total — if the board holds 11 orders worth 1 480 zł, that's your revenue so far this shift.",
+            tips: "Turn waiting tables faster, prompt dolce + espresso at the pass, and clear the Ready lane so covers keep moving.",
+            methodology: "Sum of totalAmount for board orders where status ≠ cancelled. Source: GET /api/v1/orders.")
+    }
+    static var boardAvgInfo: InfoButton {
+        InfoButton(title: "Avg ticket (board)",
+            description: "Average value of the orders currently on the board.",
+            institutional: "Per-ticket value on the live board is the fastest read on whether tonight's mix is premium or thin — and it's the lever a manager can actually move within one shift via the pass, unlike menu pricing.",
+            plain: "11 orders worth 1 480 zł is ~135 zł each — nudge a third of tables to add a 12 zł espresso and the average rises before close.",
+            tips: "Coach the pass to suggest sides + drinks, surface the combo deals, and seat larger parties into higher-cover tables.",
+            methodology: "Board revenue ÷ billable board orders (status ≠ cancelled). Source: GET /api/v1/orders.")
     }
 }

@@ -47,19 +47,49 @@ public struct OperatorGuestView: View {
             header: { (items: [AdminLoyaltyMember]) in
                 AnyView(OperatorStatChip("Members", "\(items.count)", tint: theme.color.accent))
             },
-            search: { "\($0.name ?? "") \($0.lastName ?? "") \($0.phone) \($0.email ?? "")" },
+            search: { "\($0.name) \($0.lastName ?? "") \($0.phone) \($0.email ?? "")" },
+            detail: { m in AnyView(GuestDetailView(m: m)) },
             row: { m in
-                HStack {
+                HStack(spacing: theme.space.sm) {
+                    Avatar(name: [m.name, m.lastName ?? ""].joined(separator: " "))
                     VStack(alignment: .leading, spacing: 2) {
                         Text([m.name, m.lastName].compactMap { $0 }.joined(separator: " "))
                             .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         Text(m.phone).font(.caption.monospaced()).foregroundStyle(theme.color.textSecondary)
                     }
-                    Spacer()
+                    Spacer(minLength: theme.space.sm)
                     if let email = m.email { Text(email).font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1) }
                 }
             }
         )
+    }
+}
+
+/// Loyalty member profile — the AdminLoyaltyMember DTO's fields (Rule #1). Spend
+/// + points live on the Customers DTO (a different record keyed by phone), so
+/// they're shown there, not invented here.
+struct GuestDetailView: View {
+    @Environment(\.theme) private var theme
+    let m: AdminLoyaltyMember
+    private var fullName: String { [m.name, m.lastName].compactMap { $0 }.joined(separator: " ") }
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .initials(fullName),
+            title: fullName.isEmpty ? m.phone : fullName,
+            badge: ("Member", .accent),
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("Member since", String(m.signedUpAt.prefix(10))),
+                OperatorStatTile("Birthday", m.dob.map { String($0.prefix(10)) } ?? "—"),
+            ])
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var r = [OperatorMetaRow("phone.fill", m.phone)]
+        if let n = m.nickname, !n.isEmpty { r.append(OperatorMetaRow("person.fill", "“\(n)”")) }
+        if let e = m.email { r.append(OperatorMetaRow("envelope.fill", e)) }
+        return r
     }
 }
 

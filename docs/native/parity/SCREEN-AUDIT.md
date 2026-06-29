@@ -118,6 +118,25 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 
 ---
 
+## Wave C — CORE depth + detail-sheet breadth (partial this pass)
+
+Extends the Wave A drill-in and Wave B ⓘ patterns across CORE + more of Admin:
+- **Guest (loyalty) profile sheet** (`/core/guest`) — member identity + contact +
+  signed-up / birthday tiles. Spend/points stay on the Customers record (keyed by
+  phone), not duplicated/invented (Rule #1).
+- **Supplier** and **Stock-item** detail sheets — contact + lead time + notes;
+  on-hand vs par vs reorder with the server's low-stock verdict.
+- **Dashboard money KPIs** (board revenue, avg ticket) gained five-section ⓘ
+  explainers.
+Detail drill-in now covers **Customers, Staff, Guest, Suppliers, Stock**; the
+pattern keeps extending.
+
+**Honest gaps in Wave C (not faked):**
+- **KDS sound chimes / kiosk fullscreen** — on-device only (audio + fullscreen
+  are iOS runtime concerns); unchanged from the KDS audit above.
+- **Service slot editing** — a write surface; needs a `/api/v1/admin/slots`
+  mutation endpoint (read-only today). Tracked with Wave D.
+
 ## Wave B — analytics + five-section ⓘ explainers (done this pass)
 
 Brings the web's charted analytics and its Rule #12 metric explainers to native.

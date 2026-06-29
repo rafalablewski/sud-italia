@@ -119,6 +119,61 @@ struct Avatar: View {
     }
 }
 
+/// Supplier detail — the AdminSupplier DTO's fields (Rule #1).
+struct SupplierDetailView: View {
+    @Environment(\.theme) private var theme
+    let s: AdminSupplier
+    var body: some View {
+        OperatorDetailSheet(leading: .icon("shippingbox.and.arrow.backward.fill"), title: s.name, meta: meta) {
+            if let lead = s.leadTimeDays {
+                OperatorStatBand([OperatorStatTile("Lead time", "\(lead)", sub: "days")])
+            }
+            if let notes = s.notes, !notes.isEmpty {
+                DSCard {
+                    VStack(alignment: .leading, spacing: theme.space.xs) {
+                        Text("NOTES").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+                        Text(notes).textRole(.callout).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var r: [OperatorMetaRow] = []
+        if let c = s.contactName { r.append(OperatorMetaRow("person.fill", c)) }
+        if let p = s.phone { r.append(OperatorMetaRow("phone.fill", p)) }
+        if let e = s.email { r.append(OperatorMetaRow("envelope.fill", e)) }
+        return r
+    }
+}
+
+/// Stock-item detail — the AdminStockRow DTO's fields (Rule #1). On-hand vs par
+/// vs reorder, with the low-stock verdict the server already computed.
+struct StockDetailView: View {
+    @Environment(\.theme) private var theme
+    let r: AdminStockRow
+    private func fmt(_ d: Double) -> String { d == d.rounded() ? String(Int(d)) : String(format: "%.1f", d) }
+    var body: some View {
+        OperatorDetailSheet(
+            leading: .icon("shippingbox.fill"),
+            title: r.name,
+            badge: r.low ? ("Low stock", .danger) : ("In stock", .success),
+            meta: meta
+        ) {
+            OperatorStatBand([
+                OperatorStatTile("On hand", "\(fmt(r.onHand)) \(r.unit)", subTone: r.low ? theme.color.danger : nil),
+                OperatorStatTile("Par level", "\(fmt(r.parLevel)) \(r.unit)"),
+                OperatorStatTile("Reorder at", "\(fmt(r.reorderPoint)) \(r.unit)"),
+            ])
+        }
+    }
+    private var meta: [OperatorMetaRow] {
+        var m = [OperatorMetaRow("tag.fill", "\(r.category.capitalized) · \(r.locationSlug.capitalized)")]
+        if let c = r.lastCountedAt { m.append(OperatorMetaRow("calendar", "Last counted \(c.prefix(10))")) }
+        return m
+    }
+}
+
 // MARK: - Staff (/admin/staff)
 
 public struct OperatorStaffView: View {
@@ -209,6 +264,7 @@ public struct OperatorSuppliersView: View {
             emptyText: "No suppliers configured yet.",
             loader: OperatorListLoader { try await api.send(.adminSuppliers()) },
             search: { "\($0.name) \($0.contactName ?? "")" },
+            detail: { s in AnyView(SupplierDetailView(s: s)) },
             row: { s in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -356,6 +412,7 @@ public struct OperatorInventoryView: View {
                 })
             },
             search: { "\($0.name) \($0.locationSlug)" },
+            detail: { r in AnyView(StockDetailView(r: r)) },
             row: { r in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
