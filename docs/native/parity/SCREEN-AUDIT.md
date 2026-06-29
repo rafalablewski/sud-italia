@@ -154,10 +154,14 @@ operator-log surfaces on it:
   menu** (new → reviewed → responded). Shows the other variant: `OperatorFeedbackView`
   became a dedicated mutable view (store + per-row write + reload), the template
   for any per-item action that the toolbar slot can't express.
+- **Purchase orders** — `PATCH /api/v1/admin/purchase-orders` (manager) + a per-row
+  status menu (draft → sent → received → cancelled); marking **received** posts the
+  receive stock movements server-side (`updatePurchaseOrderStatus` →
+  `receivePurchaseOrder`). `OperatorPurchaseOrdersView` is now a mutable view.
 
 The same template extends to the other write surfaces as they land (handover
-close, inventory adjust, PO receive, events, compliance, …) — each is a v1
-mutation endpoint + a toolbar or per-row action. Tracked as the waves continue.
+close, inventory adjust, events, compliance, …) — each is a v1 mutation endpoint
++ a toolbar or per-row action. Tracked as the waves continue.
 
 ## Scaffolds (2) 🏗 — intentional
 `/admin/soc2` and `/admin/capabilities` render `OperatorSurfaceView` (purpose +

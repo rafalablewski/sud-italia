@@ -417,6 +417,12 @@ public extension Endpoint {
         let payload = try? JSONEncoder().encode(["id": id, "status": status])
         return Endpoint<AdminFeedback>(.patch, "admin/feedback", body: payload, requiresAuth: true)
     }
+    /// Advance a PO's status (manager): draft | sent | received | cancelled.
+    /// `received` posts the receive stock movements server-side.
+    static func adminSetPurchaseOrderStatus(id: String, status: String) -> Endpoint<AdminPurchaseOrder> {
+        let payload = try? JSONEncoder().encode(["id": id, "status": status])
+        return Endpoint<AdminPurchaseOrder>(.patch, "admin/purchase-orders", body: payload, requiresAuth: true)
+    }
 }
 
 private struct PostAnnouncementBody: Encodable {

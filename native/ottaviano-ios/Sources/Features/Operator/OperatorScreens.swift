@@ -288,32 +288,87 @@ public struct OperatorSlotsView: View {
 
 // MARK: - Purchase orders (/admin/purchase-orders)
 
-public struct OperatorPurchaseOrdersView: View {
-    @Environment(\.theme) private var theme
+/// Purchase orders — a dedicated mutable surface (per-row write): each PO carries
+/// a status menu (draft → sent → received → cancelled) that PATCHes
+/// /api/v1/admin/purchase-orders and reloads. Marking "received" posts the
+/// receive stock movements server-side. Web `/admin/purchase-orders` parity.
+@MainActor
+@Observable
+public final class OperatorPurchaseOrdersStore {
+    public enum State: Sendable { case loading, loaded([AdminPurchaseOrder]), failed(String) }
+    public private(set) var state: State = .loading
     private let api: APIClient
     public init(api: APIClient) { self.api = api }
+
+    public func load() async {
+        state = .loading
+        do { state = .loaded(try await api.send(.adminPurchaseOrders())) }
+        catch let e as APIError { state = .failed(OperatorListLoader<AdminPurchaseOrder>.message(e)) }
+        catch { state = .failed("Something went wrong") }
+    }
+
+    public func setStatus(_ p: AdminPurchaseOrder, _ status: String) async {
+        guard p.status != status else { return }
+        _ = try? await api.send(.adminSetPurchaseOrderStatus(id: p.id, status: status))
+        await load()
+    }
+}
+
+public struct OperatorPurchaseOrdersView: View {
+    @Environment(\.theme) private var theme
+    @State private var store: OperatorPurchaseOrdersStore
+    public init(api: APIClient) { _store = State(initialValue: OperatorPurchaseOrdersStore(api: api)) }
+
     public var body: some View {
-        OperatorListView(
-            title: "Purchase orders",
-            emptyText: "No purchase orders raised yet.",
-            loader: OperatorListLoader { try await api.send(.adminPurchaseOrders()) },
-            row: { p in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(p.supplierName).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text("\(p.lineCount) lines · \(p.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        MoneyText(p.totalCents).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
-                        Text(p.status.capitalized).font(.caption2.weight(.bold))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(statusTint(p.status).opacity(0.18), in: Capsule()).foregroundStyle(statusTint(p.status))
-                    }
+        Group {
+            switch store.state {
+            case .loading:
+                List { ForEach(0..<6, id: \.self) { _ in OperatorRowSkeleton() } }
+            case .failed(let m):
+                ContentUnavailableView("Couldn't load purchase orders", systemImage: "wifi.slash", description: Text(m))
+            case .loaded(let items) where items.isEmpty:
+                ContentUnavailableView("Purchase orders", systemImage: "tray", description: Text("No purchase orders raised yet."))
+            case .loaded(let items):
+                List { ForEach(items) { row($0) } }
+            }
+        }
+        .navigationTitle("Purchase orders")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await store.load() }
+        .refreshable { await store.load() }
+    }
+
+    private func row(_ p: AdminPurchaseOrder) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(p.supplierName).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                Text("\(p.lineCount) lines · \(p.locationSlug.capitalized)").font(.caption).foregroundStyle(theme.color.textSecondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                MoneyText(p.totalCents).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                statusMenu(p)
+            }
+        }
+    }
+
+    // Tap the status pill to advance the PO (draft → sent → received → cancelled).
+    private func statusMenu(_ p: AdminPurchaseOrder) -> some View {
+        Menu {
+            ForEach(["draft", "sent", "received", "cancelled"], id: \.self) { s in
+                Button {
+                    Task { await store.setStatus(p, s) }
+                } label: {
+                    if p.status == s { Label(s.capitalized, systemImage: "checkmark") } else { Text(s.capitalized) }
                 }
             }
-        )
+        } label: {
+            Text(p.status.capitalized).font(.caption2.weight(.bold))
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(statusTint(p.status).opacity(0.18), in: Capsule()).foregroundStyle(statusTint(p.status))
+        }
     }
+
     private func statusTint(_ s: String) -> Color {
         switch s {
         case "received": theme.color.success
