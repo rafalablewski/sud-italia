@@ -501,6 +501,7 @@ private struct CreateHandoverBody: Encodable {
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
+private struct SetConciergeExposureBody: Encodable { let capability: String; let exposed: Bool }
 
 /// Body for `POST /api/v1/admin/pos/order`.
 public struct PosOrderBody: Encodable, Sendable {
@@ -605,6 +606,12 @@ public extension Endpoint {
     }
     static func adminConcierge() -> Endpoint<ConciergeInfo> {
         Endpoint<ConciergeInfo>(.get, "admin/concierge", requiresAuth: true)
+    }
+    /// Flip one MCP capability's exposure to agents (manager+). Returns the full
+    /// refreshed capability list so the app reconciles from the server.
+    static func adminSetConciergeExposure(capability: String, exposed: Bool) -> Endpoint<ConciergeInfo> {
+        let body = try? JSONEncoder().encode(SetConciergeExposureBody(capability: capability, exposed: exposed))
+        return Endpoint<ConciergeInfo>(.patch, "admin/concierge", body: body, requiresAuth: true)
     }
 
     // Demand Exchange (Service · Demand tab).

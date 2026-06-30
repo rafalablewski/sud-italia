@@ -263,15 +263,20 @@ typechecks clean; **verified live** against `npm run dev`).
   six **MCP capabilities** from the same `CAPABILITY_META` + `getConciergeSettings`
   the web page and the public `/api/agent/:capability` endpoint read, with each
   capability's live/hidden **exposure**, the two **transports** (HTTP read API +
-  WhatsApp webhook), and the `whatsAppConfigured` flag. Read-only mirror — exposure
-  is toggled on the web (no secrets are ever returned; provider tokens stay in env).
+  WhatsApp webhook), and the `whatsAppConfigured` flag. Now a **full write surface**:
+  `PATCH /api/v1/admin/concierge` ({ capability, exposed }, manager+, audited
+  `concierge.exposure.set`) flips a capability live — the native tab renders a real
+  per-capability **`Toggle`** (optimistic, reverts on failure, VoiceOver switch with
+  label/value/hint), so hiding `place_order` takes it offline for agents instantly,
+  exactly like the web. No secrets are ever returned; provider tokens stay in env.
+  *Verified live:* toggle hides/restores + `liveCount` tracks; unknown capability →
+  422, missing `exposed` → 422, no token → 401.
 
 **Honest scope note.** Still deliberately deferred (need endpoints/data not yet
-present, or genuinely new server logic): the **Slots Demand-Exchange** (forecast +
-tier levers) and **POS split-bill** (splitting an order into N checks — no server
-function exists). These remain honest gaps rather than mocked surfaces (Rule #1).
-Concierge **exposure writes** (the per-capability toggle) are intentionally
-web-only for now — the native tab is a faithful read-only mirror.
+present, or genuinely new server logic): the **POS split-bill** (splitting an order
+into N checks — no server function exists). These remain honest gaps rather than
+mocked surfaces (Rule #1). (Slots **Demand-Exchange** is now live — Service hub
+**Floor | Slots | Demand**, off `/api/v1/admin/demand-exchange`.)
 
 ---
 

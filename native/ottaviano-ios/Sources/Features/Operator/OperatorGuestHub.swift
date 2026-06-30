@@ -310,24 +310,60 @@ private struct MessageBubble: View {
 @Observable
 final class GuestConciergeStore {
     var info: ConciergeInfo?
+    /// Live exposure, keyed by capability id. Kept beside `info` (whose structs are
+    /// immutable) so a toggle can update optimistically and revert on failure.
+    var exposure: [String: Bool] = [:]
+    var busy: Set<String> = []
     var loading = true
     var error: String?
+    var toast: String?
     private let api: APIClient
     init(api: APIClient) { self.api = api }
 
+    var liveCount: Int { exposure.values.filter { $0 }.count }
+    var total: Int { info?.totalCount ?? exposure.count }
+
+    private func syncExposure(_ info: ConciergeInfo) {
+        exposure = Dictionary(uniqueKeysWithValues: info.capabilities.map { ($0.id, $0.exposed) })
+    }
+
     func load() async {
         loading = info == nil
-        do { info = try await api.send(.adminConcierge()); error = nil }
+        do {
+            let fresh = try await api.send(.adminConcierge())
+            info = fresh; syncExposure(fresh); error = nil
+        }
         catch let e as APIError { if info == nil { error = OperatorListLoader<Int>.message(e) } }
         catch { if info == nil { self.error = "Something went wrong" } }
         loading = false
     }
+
+    /// Flip one capability's exposure (toggle = saved). Optimistic, reverts on
+    /// failure; reconciles from the server's authoritative response on success.
+    func toggle(_ id: String) async {
+        guard !busy.contains(id) else { return }
+        let next = !(exposure[id] ?? true)
+        exposure[id] = next            // optimistic
+        busy.insert(id)
+        defer { busy.remove(id) }
+        do {
+            let updated = try await api.send(.adminSetConciergeExposure(capability: id, exposed: next))
+            info = updated; syncExposure(updated)
+        } catch let e as APIError {
+            exposure[id] = !next        // revert
+            toast = OperatorListLoader<Int>.message(e)
+        } catch {
+            exposure[id] = !next
+            toast = "Couldn't update exposure"
+        }
+    }
 }
 
 /// Guest → Concierge — the MCP capability layer an external agent (or the
-/// WhatsApp bot) reaches, with each capability's live/hidden exposure and the two
-/// transports. Read-only mirror of web `CoreConcierge` (exposure is toggled on
-/// the web, where the public `/api/agent` endpoint reads the same store).
+/// WhatsApp bot) reaches. Each capability can be **exposed or hidden** to agents
+/// right here (toggle = saved): the switch PATCHes `/api/v1/admin/concierge` and
+/// the public `/api/agent/:capability` endpoint reads the same store, so the
+/// change is live at once — full parity with web `CoreConcierge` (manager+).
 struct GuestConciergeTab: View {
     @Environment(\.theme) private var theme
     @State private var store: GuestConciergeStore
@@ -352,11 +388,12 @@ struct GuestConciergeTab: View {
         .background(theme.color.surface)
         .task { await store.load() }
         .refreshable { await store.load() }
+        .dsToast(Binding(get: { store.toast }, set: { store.toast = $0 }))
     }
 
     private func kpis(_ info: ConciergeInfo) -> some View {
         HStack(spacing: theme.space.sm) {
-            OperatorStatChip("Live", "\(info.liveCount)/\(info.totalCount)", tint: theme.color.accent)
+            OperatorStatChip("Live", "\(store.liveCount)/\(store.total)", tint: theme.color.accent)
             OperatorStatChip("WhatsApp", info.whatsAppConfigured ? "On" : "Off",
                              tint: info.whatsAppConfigured ? theme.color.success : theme.color.textSecondary)
         }
@@ -387,27 +424,51 @@ struct GuestConciergeTab: View {
 
     private func capabilitiesCard(_ info: ConciergeInfo) -> some View {
         card("MCP capabilities") {
-            VStack(spacing: theme.space.sm) {
+            VStack(spacing: theme.space.md) {
+                Text("Exposed capabilities are reachable by AI agents and the WhatsApp bot. Hide one to take it offline instantly.")
+                    .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(info.capabilities) { cap in
-                    HStack(alignment: .top, spacing: theme.space.sm) {
-                        Text(cap.kind).font(.caption2.weight(.bold)).textCase(.uppercase)
-                            .foregroundStyle(cap.kind == "tool" ? theme.color.accent : theme.color.warning)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background((cap.kind == "tool" ? theme.color.accent : theme.color.warning).opacity(0.14), in: Capsule())
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(cap.label).font(.subheadline.weight(.semibold).monospaced()).foregroundStyle(theme.color.textPrimary)
-                            Text(cap.desc).textRole(.caption).foregroundStyle(theme.color.textSecondary)
-                            Text(cap.transport).font(.caption2).foregroundStyle(theme.color.textSecondary)
-                        }
-                        Spacer(minLength: theme.space.sm)
-                        Circle().fill(cap.exposed ? theme.color.success : theme.color.textSecondary.opacity(0.4))
-                            .frame(width: 10, height: 10)
-                            .accessibilityLabel(cap.exposed ? "Exposed" : "Hidden")
-                    }
-                    .padding(.vertical, 2)
+                    capabilityRow(cap)
+                    if cap.id != info.capabilities.last?.id { Divider().overlay(theme.color.line) }
                 }
             }
         }
+    }
+
+    private func capabilityRow(_ cap: ConciergeCapability) -> some View {
+        let isOn = store.exposure[cap.id] ?? cap.exposed
+        return HStack(alignment: .center, spacing: theme.space.sm) {
+            Text(cap.kind).font(.caption2.weight(.bold)).textCase(.uppercase)
+                .foregroundStyle(cap.kind == "tool" ? theme.color.accent : theme.color.warning)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background((cap.kind == "tool" ? theme.color.accent : theme.color.warning).opacity(0.14), in: Capsule())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(cap.label).font(.subheadline.weight(.semibold).monospaced()).foregroundStyle(theme.color.textPrimary)
+                Text(cap.desc).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                Text("\(cap.kind) · \(cap.transport)").font(.caption2).foregroundStyle(theme.color.textSecondary)
+            }
+            Spacer(minLength: theme.space.sm)
+            if store.busy.contains(cap.id) {
+                ProgressView().controlSize(.small).frame(width: 51) // hold the switch's slot so the row doesn't jump
+            } else {
+                Toggle("", isOn: Binding(
+                    get: { isOn },
+                    set: { _ in Task { await store.toggle(cap.id) } }))
+                    .labelsHidden()
+                    .tint(theme.color.success)
+            }
+        }
+        .padding(.vertical, 2)
+        // The whole row is one VoiceOver switch: hearing the capability + its
+        // description, toggled on/off, is enough — no stray decorative nodes.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(cap.label). \(cap.desc)")
+        .accessibilityValue(isOn ? "Exposed to agents" : "Hidden")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double tap to \(isOn ? "hide" : "expose")")
+        .accessibilityAction { Task { await store.toggle(cap.id) } }
     }
 
     private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
