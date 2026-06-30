@@ -3,11 +3,12 @@
 <!--
   Apple privacy manifest for the OttavianoKDS operator app.
 
-  This is an internal back-of-house tool for restaurant staff. It authenticates a
-  staff member (operator email + the issued session token, kept in the Keychain —
-  Security framework, not a required-reason API) and reads operator data over
-  URLSession. It uses none of the required-reason API categories, does no tracking,
-  and contacts no tracking domains. The only data collected FROM THE APP'S USER
+  This is an internal back-of-house tool for restaurant staff. It is a WKWebView
+  shell that renders the web operator suite; a staff member signs in through the
+  web and the session is kept in the WebKit website data store (cookies — not a
+  required-reason API). The app's own code uses none of the required-reason API
+  categories, does no tracking, and contacts no tracking domains. The only data
+  collected FROM THE APP'S USER
   (the operator) is their work email + name for sign-in; the customer records the
   operator views are processed on the business's behalf, not collected from this
   app's user. Keep in lockstep with the App Store Connect privacy label.

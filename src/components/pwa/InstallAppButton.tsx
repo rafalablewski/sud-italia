@@ -41,6 +41,14 @@ function isIos(): boolean {
   return iOSDevice || iPadOS;
 }
 
+// The native iOS apps (Ottaviano / OttavianoKDS) render the web inside a
+// WKWebView whose user agent carries a `NativeWrapper` token. Offering to
+// "install the app" inside an already-native app is nonsense — so suppress it.
+function isNativeWrapper(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /NativeWrapper/.test(navigator.userAgent);
+}
+
 export function InstallAppButton({
   appName,
   tone = "light",
@@ -56,8 +64,8 @@ export function InstallAppButton({
   const [showHowTo, setShowHowTo] = useState(false);
   // Browser-only capabilities (display-mode, iOS UA) are unknown during SSR —
   // resolve them once after mount. `mounted` also gates the portal render.
-  const [env, setEnv] = useState({ mounted: false, installed: false, ios: false });
-  const { mounted, installed, ios } = env;
+  const [env, setEnv] = useState({ mounted: false, installed: false, ios: false, nativeWrapper: false });
+  const { mounted, installed, ios, nativeWrapper } = env;
 
   useEffect(() => {
     // Single post-mount snapshot of client capabilities (one setState → no
@@ -65,7 +73,7 @@ export function InstallAppButton({
     // display-mode + iOS UA are unavailable during SSR, so this MUST run in an
     // effect — the one legitimate setState-in-effect (client-only detection).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEnv({ mounted: true, installed: isStandalone(), ios: isIos() });
+    setEnv({ mounted: true, installed: isStandalone(), ios: isIos(), nativeWrapper: isNativeWrapper() });
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -84,8 +92,8 @@ export function InstallAppButton({
     };
   }, []);
 
-  // Already installed → nothing to offer.
-  if (!mounted || installed) return null;
+  // Already installed, or running inside the native iOS wrapper → nothing to offer.
+  if (!mounted || installed || nativeWrapper) return null;
 
   // Non-iOS browsers that never fired beforeinstallprompt (e.g. already
   // dismissed, unsupported) → don't show a button that can't do anything.

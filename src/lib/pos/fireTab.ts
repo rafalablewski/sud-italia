@@ -52,8 +52,8 @@ const clampG = (v: unknown, max: number): number => {
 /**
  * POS tab → Order actuator (the shared core).
  *
- * Extracted from `/api/admin/pos/orders` so the web POS and the `/api/v1` native
- * POS fire/charge the SAME way — one implementation, no drift (Rule #1/#8). Both
+ * Extracted from `/api/admin/pos/orders` so every POS caller fires/charges the
+ * SAME way — one implementation, no drift (Rule #1/#8). Both
  * `fireTab` and `chargeTab` read the tab from the store as the source of truth, so
  * a caller can only point at a tab id; it can never dictate items, prices, courses
  * or totals. Prices/discounts/combos are resolved server-side off the live menu.
@@ -242,8 +242,7 @@ export async function fireTab(opts: {
  * (live menu, combos, discount); the comp is clamped to the bill and gated by
  * the same per-shift refund guard as a post-sale refund; payments are validated
  * to cover net due + tip. A bare call (no `tender`) charges the full bill, no
- * tip — the original single-tap behaviour, so the native `/api/v1` POS is
- * unaffected.
+ * tip — the original single-tap behaviour.
  */
 export async function chargeTab(opts: {
   tabId: string;

@@ -3,12 +3,13 @@
 <!--
   Apple privacy manifest for the Ottaviano customer app.
 
-  Truthful to the code: the app stores its rotating refresh token in the Keychain
-  (Security framework — NOT a "required reason" API) and talks to the backend over
-  URLSession. It uses none of the required-reason API categories (no UserDefaults,
-  file-timestamp, system-boot-time, disk-space or active-keyboard access), so
-  NSPrivacyAccessedAPITypes is empty. It does no tracking and contacts no tracking
-  domains. Data collected is the minimum to take an order + run loyalty (Rule #6):
+  Truthful to the code: the app is a WKWebView shell that renders the web app and
+  keeps its session in the WebKit website data store (cookies/localStorage — NOT a
+  "required reason" API). The app's own code uses none of the required-reason API
+  categories (no UserDefaults, file-timestamp, system-boot-time, disk-space or
+  active-keyboard access), so NSPrivacyAccessedAPITypes is empty. It does no
+  tracking and contacts no tracking domains. Data collected is the minimum to take
+  an order + run loyalty (Rule #6):
   name, email, phone and purchase history — all linked to identity, used only for
   app functionality, never for tracking. Keep this in lockstep with the App Store
   Connect privacy "nutrition label".

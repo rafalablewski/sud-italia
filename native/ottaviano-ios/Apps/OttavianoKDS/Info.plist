@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  OttavianoKDS (operator) — Info.plist.
+
+  The OTTWeb* keys are read by WebAppConfig at launch; they are the ONLY thing
+  that differs from the customer app. The shell opens /operator (the operator
+  launcher → KDS / POS / Orders / full admin) on the live web host, so the app
+  renders the web operator suite 1:1. Forced dark + light status bar match the
+  Core operator theme; iPad-first landscape orientations.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>OttavianoKDS</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+
+  <!-- Where the wrapper points. baseURL is overridable by the
+       OTTAVIANO_WEB_BASE_URL scheme env for staging/local dev. -->
+  <key>OTTWebBaseURL</key>
+  <string>https://ottaviano.pl</string>
+  <key>OTTWebStartPath</key>
+  <string>/operator</string>
+  <key>OTTAppUAToken</key>
+  <string>OttavianoKDS</string>
+  <key>OTTBackgroundHex</key>
+  <string>#070A0F</string>
+  <key>OTTStatusBarStyle</key>
+  <string>light</string>
+
+  <!-- Operator shell is dark to match the Core theme. -->
+  <key>UIUserInterfaceStyle</key>
+  <string>Dark</string>
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <true/>
+
+  <key>UILaunchScreen</key>
+  <dict/>
+
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+          <key>UISceneConfigurationName</key>
+          <string>Default</string>
+          <key>UISceneDelegateClassName</key>
+          <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+        </dict>
+      </array>
+    </dict>
+  </dict>
+
+  <!-- The app talks only to its own HTTPS origin, so default ATS stands;
+       NSAllowsLocalNetworking lets a dev point OTTAVIANO_WEB_BASE_URL at a
+       local http://… host without weakening production transport security. -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
+
+  <!-- Uses only standard HTTPS encryption — declare it so TestFlight doesn't
+       prompt for export-compliance docs on every upload. -->
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+</dict>
+</plist>

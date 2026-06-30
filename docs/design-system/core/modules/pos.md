@@ -198,7 +198,7 @@ cap); payments are validated to cover net due + tip or the charge 400s; cash
 change is `tendered − cash share`. The tender lands on the `Order` as
 `tipAmount` / `payments` / `compAmount` + `compReasonCode` + `compNote` /
 `cashTendered` + `changeGiven`. A bare PATCH with no `tender` still charges the
-full bill (the native `/api/v1` till is unchanged).
+full bill (the original single-tap behaviour).
 
 ## Engine + API contract
 

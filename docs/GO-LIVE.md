@@ -132,10 +132,18 @@ is your live checklist.
 
 ---
 
-## About a true native App Store app
-These are **installable web apps (PWAs)** — they add to the iPhone/iPad home
-screen and run full-screen, no App Store needed. A *native* App Store app
-additionally requires an **Apple Developer account** (~$99/yr, in your name —
-Apple verifies your identity, so this step can't be done for you) plus a Mac/CI
-to build and sign it. The native code is started under `native/ottaviano-ios/`
-for that day; until then, the PWAs are the complete, no-extra-account path.
+## About the native App Store apps
+There are two ways to put Ottaviano / OttavianoKDS on a device:
+
+1. **Installable web apps (PWAs)** — add to the iPhone/iPad/Android home screen,
+   run full-screen, no App Store and no extra account needed. The complete
+   zero-setup path, and the only path for non-Apple devices.
+2. **Native iOS apps** — real, signable apps under `native/ottaviano-ios/`. Each
+   is a pure-UIKit `WKWebView` shell that renders the live web app, so it reflects
+   the web 1:1 (no separate UI to maintain — see `docs/native/README.md`).
+   Shipping them additionally requires an **Apple Developer account** (~$99/yr, in
+   your name — Apple verifies your identity, so this step can't be done for you)
+   plus a Mac/CI to build and sign (`Scripts/testflight.sh`,
+   `.github/workflows/ios*.yml`). OttavianoKDS goes through Apple Business Manager
+   (internal staff tool); the public Ottaviano app also needs in-app Stripe
+   checkout and a web customer account-deletion page before review (5.1.1(v)).

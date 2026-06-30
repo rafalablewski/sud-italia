@@ -1,69 +1,89 @@
-# Ottaviano Native Platform — spec set
+# Native iOS apps — the web shell
 
-The staged rewrite of the customer + operator experience into two native SwiftUI
-apps, keeping this repo's backend as a versioned, **host-portable** API (the
-business is leaving Vercel — designed for from day one).
+Ottaviano (customer) and OttavianoKDS (operator) ship as **native iOS apps that
+render the live web app inside a `WKWebView`.** There is no second UI: each
+screen *is* the web UI, so the apps reflect the web 1:1 by construction and can
+never drift.
 
-> **Why specs, not Swift, in this repo:** SwiftUI/iOS can't compile or run in the
-> web dev container (Linux). These documents are the durable, reviewable
-> artifacts; the Swift apps live in the dedicated **`ottaviano-ios`** repo and are
-> built in Xcode on a Mac. See `ARCHITECTURE.md` §0.
+This replaced an earlier **SwiftUI rebuild** (a parallel native implementation
+of every screen, fed by a versioned `/api/v1` JSON facade). That approach had to
+mirror the web by hand and constantly drift back into parity, and it could not be
+compiled in the web dev container. It was **retired**: the SwiftUI sources, the
+`/api/v1` facade (78 routes), its store plumbing, the OpenAPI contract, and the
+native code-generators are all gone.
 
-## Documents
-| Doc | Stage | What it locks down |
-|---|---|---|
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 1 | System topology, backend-as-API (`/api/v1` facade), Vercel-exit portability, app architecture, offline-first sync, security, performance budgets, roadmap, **signed-off decisions** |
-| [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md) | 3a | Tokens (color/type/space/motion), theming, component catalog, accessibility gates |
-| [`APP-SHELL.md`](./APP-SHELL.md) | 3b | SwiftPM package graph, DI, typed Router, per-platform shells, launch sequence, feature-module contract |
-| [`API-V1.md`](./API-V1.md) | 2 | The `/api/v1` facade: envelope, auth/token lifecycle, endpoints, OpenAPI/codegen, host-portability |
-| [`VERCEL-EXIT.md`](./VERCEL-EXIT.md) | infra | Host-migration cutover plan — portable runtime, cron/CDN/storage swaps, zero-downtime sequence |
+## Where the code lives
 
-## Decisions (signed off 2026-06-26)
-- **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.
-  Build host-portable — **the business is leaving Vercel 100%** (ARCHITECTURE §2.1).
-- **Code home:** native apps in a dedicated **`ottaviano-ios`** repo; this repo
-  stays the backend and hosts the API facade.
+```
+native/ottaviano-ios/
+  project.yml                 XcodeGen spec → Ottaviano.xcodeproj (two app targets)
+  Sources/WebShell/           the entire UI — ONE shared pure-UIKit shell
+    AppDelegate.swift           @main, scene wiring
+    SceneDelegate.swift         builds the window, roots the web view controller
+    WebAppConfig.swift          reads the per-app Info.plist OTTWeb* keys
+    WebAppViewController.swift   the WKWebView host (the whole app)
+    OfflineRetryView.swift      branded offline fallback
+    Support.swift               UIColor(hex:) + Bundle.shortVersion
+  Apps/
+    Ottaviano/                  Info.plist (start = "/") + Assets + PrivacyInfo
+    OttavianoKDS/               Info.plist (start = "/operator") + Assets + PrivacyInfo
+  Scripts/testflight.sh       archive → export → upload one scheme to TestFlight
+```
 
-## Status & next
-- ✅ Stage 1 — architecture spec
-- ✅ Stage 3a — design-system spec
-- ✅ Stage 3b — app-shell / navigation spec
-- 🟡 **Stage 2 — in progress (this repo, verifiable here):** the `/api/v1`
-  facade is live — single envelope, JWT access + rotating refresh auth,
-  `auth/{login,refresh,logout,me}`, public `locations` + `menu`, and an OpenAPI
-  3.1 contract at `/api/v1/openapi.json` **generated from the server Zod
-  schemas** (DECISION B ✅ — one definition drives validation, the TS response
-  types, and the contract), plus the operator order spine + live SSE board. See
-  [`API-V1.md`](./API-V1.md). Committed codegen artifact: `docs/native/openapi.json`
-  (`npm run gen:openapi`), the operator order spine + SSE, **customer phone-OTP
-  auth + server-priced order create** (guest or customer, idempotent), and the
-  `VERCEL-EXIT.md` cutover plan, and **customer order history + live tracking**
-  (ownership-gated, SSE — operator bump → customer tracker in real time), and
-  **Stripe PaymentIntent + Apple Pay** payment (`/orders/:id/payment-intent` +
-  the `payment_intent.succeeded` webhook). **Stage 2 backend is contract-complete.**
-- 🟡 **Stage 4 — web-layout parity in progress:** the SwiftUI app seed lives at
-  [`native/ottaviano-ios/`](../../native/ottaviano-ios/) — SwiftPM spine
-  (CoreModels, Networking with APIClient/TokenStore/SSE, DesignSystem, AppInfra
-  Router+DI), and both apps now mirror the **web information architecture**:
-  - **Ottaviano (customer)** — TabView `Order · Rewards · Orders · More`, with the
-    full order path (browse → add-to-cart → location switch → guest/customer
-    checkout via server-priced `POST /orders` → confirmation → live SSE tracking).
-  - **OttavianoKDS (operator)** — NavigationSplitView whose sidebar is a 1:1 Swift
-    mirror of the web admin rail (`src/admin-v3/nav.config.ts`) plus the Core
-    surfaces (`CoreNav.tsx`), **role-filtered** by the signed-in staff rank exactly
-    like `filterNavForRoleV3` (owner → all, franchisee → scope, kitchen → line).
-    See [`Sources/AppInfra/OperatorNav.swift`](../../native/ottaviano-ios/Sources/AppInfra/OperatorNav.swift).
-  Live today: the whole customer path, and the operator Dashboard, Orders board,
-  KDS, **Reports, Customers, Staff, Suppliers, Feedback, Inventory, Purchase
-  orders and Service/slots** — each off a new bearer-authed, role-gated
-  `/api/v1/admin/*` endpoint (`src/app/api/v1/admin/`). Remaining surfaces are
-  parity scaffolds (purpose + role + honest wiring status, never fake data —
-  Rule #1) going live wave by wave as the facade expands.
-  **Authored, not compiled here** (no SwiftUI toolchain in the web container) —
-  extract to the dedicated `ottaviano-ios` repo and build in Xcode on a Mac, with
-  `swift-openapi-generator` pointed at `openapi.json` to replace the hand-written
-  models. See that folder's README.
+**No SwiftUI. No SwiftPM package.** The whole iOS surface is the six WebShell
+files plus the two `Info.plist`s.
 
-Open technical calls deferred to their stage: contract source (OpenAPI-from-Zod),
-persistence engine (GRDB vs SwiftData), iOS minimum. Recommendations recorded in
-`ARCHITECTURE.md` §13.
+## How the two apps differ
+
+Only by **data in `Info.plist`** (read by `WebAppConfig`), so the same Swift
+compiles into both:
+
+| key                 | Ottaviano        | OttavianoKDS      |
+| ------------------- | ---------------- | ----------------- |
+| `OTTWebBaseURL`     | `https://ottaviano.pl` | `https://ottaviano.pl` |
+| `OTTWebStartPath`   | `/`              | `/operator`       |
+| `OTTAppUAToken`     | `Ottaviano`      | `OttavianoKDS`    |
+| `OTTBackgroundHex`  | `#FFFFFF`        | `#070A0F`         |
+| `OTTStatusBarStyle` | `dark`           | `light`           |
+
+The base URL is overridable at launch by the `OTTAVIANO_WEB_BASE_URL` process
+env (set it in the Xcode scheme to point at staging or a local `http://…` dev
+server — `NSAllowsLocalNetworking` permits the latter without weakening
+production transport security).
+
+## What the shell adds over Safari
+
+So it feels like a real app, not a browser tab:
+
+- a **persistent** website data store — the operator/customer session survives
+  relaunch;
+- a `NativeWrapper` **user-agent token**, so the web hides its "Install this app"
+  PWA prompt inside the already-native app
+  (`src/components/pwa/InstallAppButton.tsx`);
+- pull-to-refresh, swipe back/forward, a slim top progress bar;
+- a **branded offline-retry screen** instead of WebKit's raw error page;
+- system handling of `tel:` / `mailto:` / maps / `_blank` links.
+
+Because it is a web wrapper it uses the **same web routes and cookie auth as the
+browser** — there is no JSON API facade to build or keep in sync. Sign-in,
+checkout (web Stripe), KDS SSE, everything runs through the existing web app.
+
+## Build & ship (on a Mac / CI — this Linux container can't compile iOS)
+
+1. `brew install xcodegen && xcodegen generate` → `Ottaviano.xcodeproj`.
+2. Open in Xcode, pick a scheme (`Ottaviano` or `OttavianoKDS`), run on a
+   simulator/device. `.github/workflows/ios.yml` does the simulator build in CI.
+3. TestFlight: `Scripts/testflight.sh <Scheme> <BuildNumber>`, or trigger
+   `.github/workflows/ios-testflight.yml` (manual dispatch or a `[testflight]`
+   commit; append `(KDS)` to ship the operator app).
+
+## Distribution notes
+
+- **OttavianoKDS** is an internal staff tool → **Apple Business Manager**
+  (custom/unlisted app), not the public App Store.
+- **Ottaviano** (public App Store) still needs, before a real submission:
+  Stripe checkout completing in-app, a **web customer account-deletion + export
+  page** (Apple Guideline 5.1.1(v) — see the Capabilities ledger entry), an
+  Apple Developer account, and App Store Connect metadata.
+- Each app ships a truthful `PrivacyInfo.xcprivacy` (no tracking, no
+  required-reason APIs — the WebKit data store + URLSession only).

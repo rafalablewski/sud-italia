@@ -33,8 +33,8 @@ function parseTender(raw: unknown): PosTender | undefined {
 
 /**
  * POS order actuator (the web POS). The tab → Order bridge is the SHARED
- * `@/lib/pos/fireTab` (also used by `/api/v1/admin/pos/tabs/:id/{fire,charge}`),
- * so the web and native tills fire/charge through one implementation.
+ * `@/lib/pos/fireTab`, so every POS surface fires/charges through one
+ * implementation.
  *
  *   GET   → this location's live (active) orders, for any board that wants them.
  *   POST  → "Send to KDS" / "Fire course" (build/re-sync the tab's Order).
