@@ -157,6 +157,21 @@ private struct ConversationRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
+        // One spoken element per conversation; the row's Button already adds the
+        // .isButton trait + the "opens transcript" affordance.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(voiceLabel)
+        .accessibilityHint("Opens the conversation")
+    }
+
+    private var voiceLabel: String {
+        var parts = [c.customerName ?? c.phone]
+        if c.hasActiveSession { parts.append("live") }
+        if c.cartCount > 0 { parts.append("\(c.cartCount) in cart") }
+        if c.pendingPaymentUrl != nil { parts.append("awaiting payment") }
+        parts.append(c.lastBody.isEmpty ? "no messages" : c.lastBody)
+        parts.append(waAgo(c.lastAt))
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -283,6 +298,9 @@ private struct MessageBubble: View {
             }
             if m.inbound { Spacer(minLength: 40) }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(m.inbound ? "Guest" : m.actor.capitalized), \(waAgo(m.at))")
+        .accessibilityValue(m.body)
     }
 }
 

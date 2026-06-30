@@ -832,11 +832,15 @@ private struct POSCheckPanel: View {
 
     private func stepBtn(_ icon: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.footnote.weight(.bold)).frame(width: 30, height: 30)
+            Image(systemName: icon).font(.footnote.weight(.bold)).frame(width: 32, height: 32)
                 .foregroundStyle(theme.color.accent)
                 .background(theme.color.surface, in: Circle())
                 .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
-        }.buttonStyle(.plain)
+                .frame(width: 44, height: 44)        // 44pt hit target around the 32pt glyph
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(icon == "plus" ? "Increase quantity" : "Decrease quantity")
     }
 
     // MARK: cross-sell

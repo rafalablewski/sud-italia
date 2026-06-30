@@ -53,71 +53,82 @@ public struct KDSTicket: View, Equatable {
         let held = order.coursing?.held ?? []
 
         return VStack(alignment: .leading, spacing: theme.space.sm) {
-            // Header — short id + channel chip · at-risk pill + due countdown.
-            HStack(alignment: .firstTextBaseline) {
-                Text("#\(order.ticketShortId)").textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
-                Text(order.channelTag).textRole(.caption).foregroundStyle(theme.color.textSecondary)
-                Spacer()
-                if atRisk {
-                    DSBadge("At risk", tone: .warning, systemImage: "exclamationmark.triangle.fill")
+            // Informational content — one VoiceOver element that speaks the WHOLE
+            // ticket (id · channel · tone · due · every line + flagged mods + notes ·
+            // allergens · guest note), so a blind line cook hears what to make, not
+            // just "order A-204". The bump button stays a SEPARATE element below so
+            // it's independently actionable.
+            VStack(alignment: .leading, spacing: theme.space.sm) {
+                // Header — short id + channel chip · at-risk pill + due countdown.
+                HStack(alignment: .firstTextBaseline) {
+                    Text("#\(order.ticketShortId)").textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
+                    Text(order.channelTag).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    Spacer()
+                    if atRisk {
+                        DSBadge("At risk", tone: .warning, systemImage: "exclamationmark.triangle.fill")
+                    }
+                    Text(due.text).textRole(.mono).fontWeight(.semibold).foregroundStyle(accent)
                 }
-                Text(due.text).textRole(.mono).fontWeight(.semibold).foregroundStyle(accent)
-                    .accessibilityLabel("Due \(due.text)")
-            }
 
-            if order.simulated == true {
-                Text("Simulation — not a real order")
-                    .textRole(.caption).foregroundStyle(theme.color.textSecondary)
-            }
-
-            if !held.isEmpty {
-                Text("Coursed · \(held.map(courseLabel).joined(separator: ", ")) held")
-                    .textRole(.caption).foregroundStyle(theme.info)
-            }
-
-            // Lines — station-grouped when showing all stations.
-            ForEach(groups) { group in
-                if grouped {
-                    Text(group.label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
-                        .padding(.top, 2)
+                if order.simulated == true {
+                    Text("Simulation — not a real order")
+                        .textRole(.caption).foregroundStyle(theme.color.textSecondary)
                 }
-                ForEach(group.items) { line in
-                    lineRow(line, accent: accent, dim: station != nil && line.category != station)
-                }
-            }
 
-            if !allergens.isEmpty {
-                Text("Allergens · \(allergens.joined(separator: " · "))")
-                    .textRole(.caption).foregroundStyle(theme.color.warning)
-            }
-
-            if let note = order.specialInstructions, !note.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
-                    Text("Note").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textPrimary)
-                    Text(note).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                if !held.isEmpty {
+                    Text("Coursed · \(held.map(courseLabel).joined(separator: ", ")) held")
+                        .textRole(.caption).foregroundStyle(theme.info)
                 }
-            }
 
-            // Cook-time meter (0 fresh → 1 due), tinted to the live tone.
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(theme.color.line.opacity(0.5))
-                    Capsule().fill(accent)
-                        .frame(width: max(0, geo.size.width * order.slaFraction(nowMs: nowMs)))
+                // Lines — station-grouped when showing all stations.
+                ForEach(groups) { group in
+                    if grouped {
+                        Text(group.label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                            .padding(.top, 2)
+                    }
+                    ForEach(group.items) { line in
+                        lineRow(line, accent: accent, dim: station != nil && line.category != station)
+                    }
                 }
+
+                if !allergens.isEmpty {
+                    Text("Allergens · \(allergens.joined(separator: " · "))")
+                        .textRole(.caption).foregroundStyle(theme.color.warning)
+                }
+
+                if let note = order.specialInstructions, !note.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+                        Text("Note").textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textPrimary)
+                        Text(note).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                    }
+                }
+
+                // Cook-time meter (0 fresh → 1 due), tinted to the live tone.
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(theme.color.line.opacity(0.5))
+                        Capsule().fill(accent)
+                            .frame(width: max(0, geo.size.width * order.slaFraction(nowMs: nowMs)))
+                    }
+                }
+                .frame(height: 4)
+                .accessibilityHidden(true)
             }
-            .frame(height: 4)
-            .accessibilityHidden(true)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(voiceLabel(due: due, groups: groups, allergens: allergens))
 
             if let bumpTitle, let onBump {
                 Button { Task { await onBump() } } label: {
-                    Text(bumpTitle).textRole(.bodyEmphasis)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    Label(bumpTitle, systemImage: "checkmark.circle.fill").textRole(.bodyEmphasis)
+                        .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(theme.color.onAccent)
                         .background(accent, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(DSPressStyle())
                 .sensoryFeedback(.success, trigger: order.status)
+                .accessibilityLabel("\(bumpTitle), order \(order.ticketShortId)")
+                .accessibilityHint("Advances this order to the next kitchen stage")
             }
         }
         .padding(theme.space.md)
@@ -129,8 +140,28 @@ public struct KDSTicket: View, Equatable {
         .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(
             due.tone == .late ? theme.color.danger : .clear, lineWidth: 1.5))
         .dsAnimation(theme.motion.snappy, value: due.tone, reduceMotion: reduceMotion)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Order \(order.ticketShortId), \(toneLabel(due.tone)), due \(due.text)")
+    }
+
+    /// The full ticket spoken as one phrase for VoiceOver — every line (with
+    /// flagged modifiers + notes), allergens and the guest note, so the kitchen is
+    /// usable eyes-free / by a low-vision cook. Built off the same resolved data
+    /// the visual rows render (Rule #1 — nothing invented).
+    private func voiceLabel(due: (text: String, tone: KdsTone), groups: [KdsItemGroup], allergens: [String]) -> String {
+        var parts: [String] = ["Order \(order.ticketShortId)", order.channelTag, toneLabel(due.tone)]
+        if order.isAtRisk { parts.append("at risk") }
+        parts.append("due \(due.text)")
+        for group in groups {
+            for line in group.items {
+                var l = "\(line.quantity) \(line.name)"
+                let flagged = (line.modifiers ?? []).filter(\.flag).map(\.label)
+                if !flagged.isEmpty { l += ", \(flagged.joined(separator: ", "))" }
+                if let n = line.notes, !n.isEmpty { l += ", \(n)" }
+                parts.append(l)
+            }
+        }
+        if !allergens.isEmpty { parts.append("Allergens: \(allergens.joined(separator: ", "))") }
+        if let note = order.specialInstructions, !note.isEmpty { parts.append("Note: \(note)") }
+        return parts.joined(separator: ". ")
     }
 
     private func lineRow(_ line: OrderLine, accent: Color, dim: Bool) -> some View {

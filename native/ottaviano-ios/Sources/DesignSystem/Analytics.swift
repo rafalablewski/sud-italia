@@ -652,12 +652,16 @@ public struct DSSegmented<Value: Hashable>: View {
                 let active = opt.value == selection
                 Button { selection = opt.value } label: {
                     Text(opt.label).textRole(.caption).fontWeight(.semibold)
-                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .lineLimit(1).minimumScaleFactor(0.75) // long labels (e.g. "Concierge") shrink, never truncate
+                        .frame(maxWidth: .infinity, minHeight: 36) // finger-friendly segment (gloved operators)
+                        .padding(.vertical, 6)
                         .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
                         .background(active ? theme.color.accent : Color.clear,
                                     in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+                        .contentShape(Rectangle()) // whole segment is the hit area, not just the glyphs
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(opt.label)
                 .accessibilityAddTraits(active ? [.isSelected, .isButton] : .isButton)
             }
         }
