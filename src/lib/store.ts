@@ -2,8 +2,9 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { posLineKey } from "@/lib/pos-line";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -8785,7 +8786,7 @@ function startOfWarsawDayIso(now: Date = new Date()): string {
   return new Date(wallMidnight - offsetMs).toISOString();
 }
 
-const REFUND_AUDIT_ACTIONS = ["orders.refund_full", "orders.refund_partial"];
+const REFUND_AUDIT_ACTIONS = ["orders.refund_full", "orders.refund_partial", "pos.comp"];
 
 /**
  * Sum of one actor's `manager_comp` refunds at a location since Warsaw midnight.
@@ -14116,6 +14117,21 @@ export async function deleteReservation(id: string, locationSlug?: string): Prom
 const POS_TAB_STATUSES: PosTabStatus[] = ["open", "parked", "pay"];
 const POS_FULFILLMENTS: FulfillmentType[] = ["takeout", "delivery", "dine-in"];
 
+/** Validate a caller-supplied modifier-selection list. Keeps only well-formed
+ *  {groupId, optionId} string pairs (capped) — the price/cost of each pick is
+ *  resolved server-side off the live menu, so a bogus id simply isn't priced. */
+function sanitizeSelectedModifiers(input: unknown): SelectedModifier[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  const out: SelectedModifier[] = [];
+  for (const raw of input) {
+    const groupId = typeof raw?.groupId === "string" ? raw.groupId.slice(0, 80) : "";
+    const optionId = typeof raw?.optionId === "string" ? raw.optionId.slice(0, 80) : "";
+    if (groupId && optionId) out.push({ groupId, optionId });
+    if (out.length >= 24) break;
+  }
+  return out.length ? out : undefined;
+}
+
 function sanitizePosTabLines(input: unknown): PosTabLine[] {
   if (!Array.isArray(input)) return [];
   const lines: PosTabLine[] = [];
@@ -14123,15 +14139,26 @@ function sanitizePosTabLines(input: unknown): PosTabLine[] {
     const id = typeof raw?.menuItemId === "string" ? raw.menuItemId : "";
     const qty = Math.max(1, Math.min(99, Math.round(Number(raw?.quantity) || 0)));
     if (!id || qty < 1) continue;
-    // One line per menu item — an item lives in exactly one course; the last
-    // course wins if the same item appears twice (re-course moves it).
     const course = POS_COURSES.has(raw?.course) ? (raw.course as PosTabLine["course"]) : undefined;
-    const existing = lines.find((l) => l.menuItemId === id);
+    const modifiers = sanitizeSelectedModifiers(raw?.modifiers);
+    const notes = typeof raw?.notes === "string" ? raw.notes.trim().slice(0, 200) || undefined : undefined;
+    // Identity is the item + its modifier picks + its note — so a plain item and
+    // a customised one (or two with different notes) stay on separate lines, and
+    // only a genuinely-identical re-add stacks. The last course wins on a merge
+    // (a re-course move re-sends the same configured line).
+    const key = posLineKey({ menuItemId: id, modifiers, notes });
+    const existing = lines.find((l) => posLineKey(l) === key);
     if (existing) {
       existing.quantity = Math.min(99, existing.quantity + qty);
       if (course) existing.course = course;
     } else {
-      lines.push(course ? { menuItemId: id, quantity: qty, course } : { menuItemId: id, quantity: qty });
+      lines.push({
+        menuItemId: id,
+        quantity: qty,
+        ...(course ? { course } : {}),
+        ...(modifiers ? { modifiers } : {}),
+        ...(notes ? { notes } : {}),
+      });
     }
   }
   return lines;
@@ -14246,7 +14273,9 @@ export function mergePosTab(
     (!existing ||
       existing.items.length !== items.length ||
       existing.items.some(
-        (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
+        (l, idx) =>
+          posLineKey(l) !== posLineKey(items[idx] ?? { menuItemId: "" }) ||
+          l.quantity !== items[idx]?.quantity,
       ));
   return {
     id,

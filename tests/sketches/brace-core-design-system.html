@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BRACE — the whole Core (OttavianoKDS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===================== BRACE — Core design system ===================== */
+  :root, [data-mode="dark"] {
+    --bg:#15110D; --panel:#1F1A14; --panel-2:#28211A; --panel-3:#322A21; --hover:#3A3026;
+    --ink:#F8F1E7; --ink-2:#C9BBA9; --ink-3:#908172;
+    --line:rgba(255,247,235,.10); --line-2:rgba(255,247,235,.18);
+    --brand:#E86B3E; --brand-bright:#FF905E; --brand-wash:rgba(232,107,62,.16);
+    --basil:#6FB155; --basil-bright:#8FD06F; --basil-wash:rgba(111,177,85,.16);
+    --saffron:#E9B24A; --saffron-bright:#F6CD6E; --saffron-wash:rgba(233,178,74,.16);
+    --tomato:#E5484A; --tomato-wash:rgba(229,72,74,.16);
+    --info:#3FA7CE; --info-bright:#63C3E4; --info-wash:rgba(63,167,206,.18);
+    --on-accent:#2A160B; --on-basil:#0C1A0F; --on-tomato:#FFF4F0;
+    --t-queued:#8A7C6B; --t-firing:#3FA7CE; --t-warn:#E8A23C; --t-risk:#9B7BD0; --t-late:#E5484A; --t-ready:#6FB155;
+    --sh:0 8px 26px rgba(0,0,0,.5); --sh-1:0 1px 2px rgba(0,0,0,.4);
+    --glow:0 0 0 1px rgba(232,107,62,.4), 0 8px 26px rgba(232,107,62,.30);
+    --wall:#0F0C09;
+  }
+  [data-mode="light"] {
+    --bg:#FBF5EC; --panel:#FFFFFF; --panel-2:#F7F0E6; --panel-3:#EFE6D9; --hover:#F3EADC;
+    --ink:#241A12; --ink-2:#5E5040; --ink-3:#8C7C69;
+    --line:rgba(40,26,16,.10); --line-2:rgba(40,26,16,.17);
+    --brand:#D85F2E; --brand-bright:#E86B3E; --brand-wash:#FBEDE3;
+    --basil:#46934F; --basil-bright:#6FB155; --basil-wash:#EAF3E1;
+    --saffron:#C2841C; --saffron-bright:#E9B24A; --saffron-wash:#FAF0DA;
+    --tomato:#D23B3D; --tomato-wash:#FBE9E6;
+    --info:#2E86AE; --info-bright:#3FA7CE; --info-wash:#E6F2F7;
+    --on-accent:#FFF6EE; --on-basil:#FFFFFF; --on-tomato:#FFFFFF;
+    --t-queued:#9B8E7C; --t-firing:#2E86AE; --t-warn:#C2841C; --t-risk:#7B5BC0; --t-late:#D23B3D; --t-ready:#3E8B4E;
+    --sh:0 10px 30px rgba(40,26,16,.12); --sh-1:0 1px 2px rgba(40,26,16,.07);
+    --glow:0 0 0 1px rgba(216,95,46,.35), 0 8px 24px rgba(216,95,46,.20);
+    --wall:#0F0C09; /* the mounted kiosk stays dark even in light mode */
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:
+      radial-gradient(1100px 460px at 85% -12%, rgba(232,107,62,.10), transparent 60%),
+      radial-gradient(820px 460px at -8% 112%, rgba(63,167,206,.06), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:'Inter',system-ui,sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; padding:42px 26px 80px; transition:background .3s, color .3s; }
+  .wrap { max-width:1200px; margin:0 auto; }
+  .topbar { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+  .eyebrow { font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--brand); }
+  .toggle { margin-left:auto; display:inline-flex; gap:3px; padding:3px; background:var(--panel-2); border:1px solid var(--line); border-radius:9px; }
+  .toggle button { border:none; cursor:pointer; font:600 12px 'Inter'; padding:6px 13px; border-radius:7px; color:var(--ink-3); background:transparent; }
+  .toggle button.on { background:var(--brand); color:var(--on-accent); }
+  h1 { font-family:'Bricolage Grotesque'; font-weight:700; font-size:58px; line-height:1; letter-spacing:-.02em; margin:4px 0 8px; }
+  h1 .amp { color:var(--brand); }
+  .lede { color:var(--ink-2); font-size:17px; max-width:740px; } .lede b { color:var(--ink); font-weight:600; }
+  h2 { font-family:'Bricolage Grotesque'; font-weight:600; font-size:25px; letter-spacing:-.01em; margin:52px 0 5px; }
+  h2 .n { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--brand); vertical-align:super; margin-right:9px; }
+  .sub { color:var(--ink-3); font-size:14px; margin-bottom:18px; max-width:800px; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+
+  .grid { display:grid; gap:12px; }
+  .g6{grid-template-columns:repeat(6,1fr);} .g5{grid-template-columns:repeat(5,1fr);} .g4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.g6,.g5,.g4{grid-template-columns:repeat(3,1fr);}}
+  .sw { border-radius:12px; overflow:hidden; border:1px solid var(--line); background:var(--panel); box-shadow:var(--sh-1); }
+  .sw .chip { height:66px; display:flex; align-items:flex-end; padding:8px; font:700 11px 'Inter'; }
+  .sw .meta { padding:8px 10px 10px; } .sw .nm { font-size:12px; font-weight:600; } .sw .hx { font:500 10.5px 'JetBrains Mono'; color:var(--ink-3); margin-top:2px; } .sw .tok { font:500 10px 'JetBrains Mono'; color:var(--ink-3); opacity:.85; }
+
+  .ramp { display:grid; grid-template-columns:repeat(6,1fr); border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .ramp .seg { padding:15px 12px 13px; background:var(--panel); border-right:1px solid var(--line); } .ramp .seg:last-child{border:none;}
+  .ramp .bar { height:6px; border-radius:3px; margin-bottom:10px; } .ramp .st { font-family:'Bricolage Grotesque'; font-weight:600; font-size:14px; } .ramp .dx { font-size:10.5px; color:var(--ink-3); margin-top:2px; } .ramp .hx { font:500 9.5px 'JetBrains Mono'; color:var(--ink-3); margin-top:6px; }
+
+  .type { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px 26px; box-shadow:var(--sh-1); }
+  .type .fr { font-family:'Fraunces',serif; font-weight:600; font-size:40px; letter-spacing:-.01em; }
+  .type .br { font-family:'Bricolage Grotesque'; font-weight:700; font-size:28px; margin-top:6px; }
+  .type .b { font-size:15px; color:var(--ink-2); margin-top:10px; max-width:640px; }
+  .type .m { font:700 28px 'JetBrains Mono'; margin-top:12px; color:var(--brand); }
+  .scale { display:flex; flex-wrap:wrap; gap:7px 15px; margin-top:16px; } .scale span { color:var(--ink-3); font:500 12px 'JetBrains Mono'; }
+
+  .screens { display:grid; grid-template-columns:1fr 1fr; gap:18px; } @media(max-width:900px){.screens{grid-template-columns:1fr;}}
+  .scr { background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:var(--sh); }
+  .scr.wide { grid-column:1 / -1; }
+  .scr-h { display:flex; align-items:center; gap:9px; padding:11px 15px; border-bottom:1px solid var(--line); background:var(--bg); }
+  .scr-h .dot { width:8px; height:8px; border-radius:50%; } .scr-h .t { font-weight:600; font-size:13px; } .scr-h .e { margin-left:auto; font:500 10px 'JetBrains Mono'; color:var(--ink-3); text-transform:uppercase; letter-spacing:.08em; }
+  .scr-b { padding:15px; }
+  .btn { border:none; cursor:pointer; font-family:inherit; font-weight:700; border-radius:9px; }
+  .btn-brand { background:var(--brand); color:var(--on-accent); box-shadow:var(--glow); }
+  .btn-ghost { background:transparent; border:1px solid var(--line-2); color:var(--ink-2); }
+  .pill { display:inline-flex; align-items:center; gap:5px; font:700 10px 'Inter'; padding:2px 8px; border-radius:6px; }
+
+  /* POS */
+  .pos { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .prod { background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:9px 10px; }
+  .prod .pn { font-weight:600; font-size:12.5px; } .prod .pd { color:var(--ink-3); font-size:10px; margin:3px 0 7px; }
+  .prod .pf { display:flex; justify-content:space-between; align-items:center; } .prod .pp { font:600 12px 'JetBrains Mono'; }
+  .prod .add { width:22px; height:22px; border-radius:6px; background:var(--brand); color:var(--on-accent); display:grid; place-items:center; font-weight:700; }
+  .check { background:var(--bg); border:1px solid var(--line); border-radius:11px; padding:11px; }
+  .ln { display:flex; gap:7px; padding:6px 0; border-bottom:1px solid var(--line); font-size:12px; } .ln .q{font:500 11px 'JetBrains Mono'; color:var(--ink-3);} .ln .nm{flex:1;} .ln .lp{font:500 12px 'JetBrains Mono';}
+  .tot { display:flex; justify-content:space-between; align-items:baseline; margin-top:9px; } .tot b { font:700 22px 'JetBrains Mono'; }
+
+  /* floor */
+  .floor { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  .tbl { border-radius:11px; padding:10px 9px; border:1px solid var(--line); border-left:3px solid var(--line-2); background:var(--panel-2); position:relative; }
+  .tbl .tn { font-family:'Bricolage Grotesque'; font-weight:700; font-size:18px; } .tbl .tc { font-size:9.5px; color:var(--ink-3); }
+  .tbl .ts { font:600 9.5px 'Inter'; margin-top:6px; display:inline-block; padding:2px 7px; border-radius:6px; }
+  .tbl.free{border-left-color:var(--basil);} .tbl.free .ts{background:var(--basil-wash); color:var(--basil);}
+  .tbl.walkin{border-left-color:var(--brand);} .tbl.walkin .ts{background:var(--brand-wash); color:var(--brand);}
+  .tbl.booked{border-left-color:var(--info);} .tbl.booked .ts{background:var(--info-wash); color:var(--info);}
+  .tbl.freeing{border-left-color:var(--saffron);} .tbl.freeing .ts{background:var(--saffron-wash); color:var(--saffron);}
+  .tbl.oos{opacity:.5;}
+  .tbl .order { position:absolute; bottom:6px; right:6px; font:700 9px 'Inter'; background:var(--brand); color:var(--on-accent); padding:2px 6px; border-radius:5px; }
+
+  /* KDS */
+  .wallhdr { display:flex; align-items:center; gap:9px; }
+  .kpis { display:flex; gap:13px; margin-left:auto; } .kpi{text-align:right;} .kpi .kl{font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3);} .kpi .kv{font:700 16px 'JetBrains Mono';}
+  .kv.firing{color:var(--t-firing);} .kv.late{color:var(--t-late);} .kv.ready{color:var(--t-ready);}
+  .lanes { display:grid; grid-template-columns:repeat(3,1fr); }
+  .lane { padding:12px; border-right:1px solid var(--line); } .lane:last-child{border:none;}
+  .lane-h { font:700 10px 'Inter'; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px; } .lane-h b{font-family:'JetBrains Mono'; color:var(--ink);}
+  .tk { background:var(--panel-2); border:1px solid var(--line); border-left:4px solid var(--t-queued); border-radius:10px; padding:10px 11px; margin-bottom:9px; }
+  .tk.firing{border-left-color:var(--t-firing);} .tk.warn{border-left-color:var(--t-warn);} .tk.risk{border-left-color:var(--t-risk);} .tk.late{border-left-color:var(--t-late); border-color:rgba(229,72,74,.4);} .tk.ready{border-left-color:var(--t-ready);}
+  .tk-h { display:flex; align-items:center; gap:6px; } .tk-h .id{font:700 12px 'JetBrains Mono';} .tk-h .ch{font:600 9px 'Inter'; color:var(--ink-2); background:var(--panel-3); border-radius:5px; padding:2px 5px;} .tk-h .due{margin-left:auto; font:700 13px 'JetBrains Mono'; color:var(--t-queued);}
+  .tk.firing .due{color:var(--t-firing);} .tk.warn .due{color:var(--t-warn);} .tk.risk .due{color:var(--t-risk);} .tk.late .due{color:var(--t-late);} .tk.ready .due{color:var(--t-ready);}
+  .tk-it { font-size:12.5px; margin-top:7px; } .tk-it .qn{font:500 12px 'JetBrains Mono'; color:var(--ink-3); margin-right:4px;}
+  .tk-mod { font-size:10px; color:var(--ink-3); margin-left:16px; } .tk-alrg { margin-top:6px; font:700 10px 'Inter'; color:var(--t-late); background:var(--tomato-wash); border-left:2px solid var(--t-late); padding:3px 7px; border-radius:5px; }
+  .meter { height:5px; border-radius:3px; background:var(--panel-3); margin-top:8px; overflow:hidden; } .meter i{display:block; height:100%;}
+  .bump { margin-top:9px; width:100%; height:34px; border:none; border-radius:8px; font:700 12px 'Inter'; cursor:pointer; background:var(--panel-3); color:var(--ink); }
+  .tk.ready .bump{background:var(--t-ready); color:var(--on-basil);} .tk.late .bump{background:var(--t-late); color:var(--on-tomato);}
+
+  /* reservation */
+  .steps { display:flex; gap:6px; margin-bottom:13px; } .steps span{flex:1; height:4px; border-radius:2px; background:var(--panel-3);} .steps span.on{background:var(--brand);}
+  .party { display:flex; gap:7px; margin:12px 0; } .party .p{flex:1; text-align:center; padding:9px 0; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); font-weight:600; font-size:13px;} .party .p.on{border-color:var(--saffron); background:var(--saffron-wash); color:var(--saffron);}
+  .slots { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; } .slot{text-align:center; padding:8px 0; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); font:500 12px 'JetBrains Mono';} .slot.on{background:var(--brand); color:var(--on-accent); border-color:transparent; font-weight:700;} .slot.off{color:var(--ink-3); opacity:.45;}
+
+  .legend { display:flex; flex-wrap:wrap; gap:8px 15px; margin-top:13px; font-size:12px; color:var(--ink-2); } .legend i{width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:6px; vertical-align:-1px;}
+  .note { font-size:12.5px; color:var(--ink-3); margin-top:11px; }
+  .foot { margin-top:54px; color:var(--ink-3); font-size:13px; border-top:1px solid var(--line); padding-top:16px; } .foot .mono{color:var(--ink-2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="eyebrow">OttavianoKDS · the whole Core</div>
+    <div class="toggle">
+      <button id="bd" class="on" onclick="setMode('dark')">● Dark</button>
+      <button id="bl" onclick="setMode('light')">○ Light</button>
+    </div>
+  </div>
+
+  <h1>Brace<span class="amp"> &amp;</span> Basil</h1>
+  <p class="lede">One warm-dark identity across the whole Core — POS, the floor, the kitchen wall, the guest flow. The <b>glow of the forno</b> replaces cool black-and-red: warm espresso surfaces, an <b>ember</b> accent, fresh <b>basil</b>, a touch of <b>saffron</b>. Food looks appetising, status reads at a glance, and it holds up in a bright kitchen <i>and</i> a candle-lit room. Toggle <b>Light</b> top-right — the kiosk wall stays dark regardless.</p>
+
+  <!-- 1 -->
+  <h2><span class="n">01</span>Surfaces &amp; ink</h2>
+  <p class="sub">Warm espresso (dark) / warm linen (light), never clinical black or stark white. Flatters food, calm over a long shift. Five elevation steps + warm cream ink.</p>
+  <div class="grid g6">
+    <div class="sw"><div class="chip" style="background:var(--bg)"></div><div class="meta"><div class="nm">Canvas</div><div class="tok">--bg</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel)"></div><div class="meta"><div class="nm">Panel</div><div class="tok">--panel</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel-2)"></div><div class="meta"><div class="nm">Card</div><div class="tok">--panel-2</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel-3)"></div><div class="meta"><div class="nm">Raised</div><div class="tok">--panel-3</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="meta"><div class="nm">Ink-2</div><div class="tok">--ink-2</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="meta"><div class="nm">Ink</div><div class="tok">--ink</div></div></div>
+  </div>
+
+  <!-- 2 -->
+  <h2><span class="n">02</span>Brand &amp; accents</h2>
+  <p class="sub">Ember terracotta is the brand — the warm char of a wood-fired crust; energetic where red was aggressive. Basil for go/fresh, saffron for premium, San Marzano red kept only as a tasteful accent / error.</p>
+  <div class="grid g5">
+    <div class="sw"><div class="chip" style="background:var(--brand); color:var(--on-accent)">CTA</div><div class="meta"><div class="nm">Ember — brand</div><div class="tok">--brand</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--brand-bright); color:var(--on-accent)">glow</div><div class="meta"><div class="nm">Ember bright</div><div class="tok">--brand-bright</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--basil); color:var(--on-basil)">fresh</div><div class="meta"><div class="nm">Basil</div><div class="tok">--basil</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--saffron); color:#2a1d05">premium</div><div class="meta"><div class="nm">Saffron</div><div class="tok">--saffron</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--tomato); color:var(--on-tomato)">accent</div><div class="meta"><div class="nm">San Marzano</div><div class="tok">--tomato</div></div></div>
+  </div>
+
+  <!-- 3 -->
+  <h2><span class="n">03</span>Semantic, table-state &amp; the SLA ramp</h2>
+  <p class="sub">Status spans hue <b>and</b> brightness (colour-blind safe) and always pairs with an icon. Tables read on a warm↔cool axis — live walk-ins glow ember, booked tables sit cool blue.</p>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="sw"><div class="chip" style="background:var(--basil)"></div><div class="meta"><div class="nm">✓ Success</div><div class="tok">--basil</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--saffron)"></div><div class="meta"><div class="nm">⚠ Warning</div><div class="tok">--saffron / amber</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--tomato)"></div><div class="meta"><div class="nm">✕ Error</div><div class="tok">--tomato / danger</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--info)"></div><div class="meta"><div class="nm">ⓘ Info</div><div class="tok">--info</div></div></div>
+  </div>
+  <div class="ramp">
+    <div class="seg"><div class="bar" style="background:var(--t-queued)"></div><div class="st">Queued</div><div class="dx">Just placed</div><div class="hx">--t-queued</div></div>
+    <div class="seg"><div class="bar" style="background:var(--t-firing)"></div><div class="st">Firing</div><div class="dx">On the line</div><div class="hx">--t-firing</div></div>
+    <div class="seg"><div class="bar" style="background:var(--t-warn)"></div><div class="st">Warn</div><div class="dx">Nearing promise</div><div class="hx">--t-warn</div></div>
+    <div class="seg"><div class="bar" style="background:var(--t-risk)"></div><div class="st">At risk</div><div class="dx">Predicted slip</div><div class="hx">--t-risk</div></div>
+    <div class="seg"><div class="bar" style="background:var(--t-late)"></div><div class="st">Late</div><div class="dx">Breached</div><div class="hx">--t-late</div></div>
+    <div class="seg"><div class="bar" style="background:var(--t-ready)"></div><div class="st">Ready</div><div class="dx">Run it</div><div class="hx">--t-ready</div></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--basil)"></i>Free</span>
+    <span><i style="background:var(--brand)"></i>Walk-in · live (warm)</span>
+    <span><i style="background:var(--info)"></i>Booked · reserved (cool)</span>
+    <span><i style="background:var(--saffron)"></i>Freeing ≤15m</span>
+    <span><i style="background:var(--ink-3)"></i>Out of service</span>
+  </div>
+
+  <!-- 6 -->
+  <h2><span class="n">04</span>Typography</h2>
+  <p class="sub"><b>Fraunces</b> (optical serif) for guest/menu warmth · <b>Bricolage Grotesque</b> for operational headers/stations · <b>Inter</b> for dense UI · <b>JetBrains Mono</b> for prices &amp; timers.</p>
+  <div class="type">
+    <div class="fr">Pizza del Pizzaiolo</div>
+    <div class="br">Forno 1 · Chef line</div>
+    <div class="b">Inter carries the working interface — order lines, KDS tickets, labels — legible across a busy line and a dim room.</div>
+    <div class="m">48,00 zł · 3:10 · #A4F1</div>
+    <div class="scale"><span>Fraunces display 40+</span><span>Bricolage H 25</span><span>Body 16</span><span>Small 13</span><span>Micro 11</span><span>Mono figures</span></div>
+  </div>
+
+  <!-- 9 -->
+  <h2><span class="n">05</span>The whole Core, in service</h2>
+  <p class="sub">One palette, four surfaces. Warm, glanceable, premium — bright kitchen or candle-lit room.</p>
+  <div class="screens">
+
+    <!-- POS -->
+    <div class="scr">
+      <div class="scr-h"><span class="dot" style="background:var(--brand)"></span><span class="t">POS · Till 1</span><span class="e">order</span></div>
+      <div class="scr-b">
+        <div class="pos">
+          <div style="display:grid; gap:8px">
+            <div class="prod"><div class="pn">Margherita</div><div class="pd">San Marzano · fior di latte</div><div class="pf"><span class="pp">38,00</span><span class="add">+</span></div></div>
+            <div class="prod"><div class="pn">Diavola <span class="pill" style="background:var(--saffron-wash); color:var(--saffron); margin-left:3px">★ Hero</span></div><div class="pd">spicy salami · options</div><div class="pf"><span class="pp">46,00</span><span class="add">⋯</span></div></div>
+          </div>
+          <div class="check">
+            <div style="font-size:10.5px; color:var(--ink-3); margin-bottom:5px">Table 7 · 2 covers</div>
+            <div class="ln"><span class="q">2×</span><span class="nm">Margherita</span><span class="lp">76,00</span></div>
+            <div class="ln" style="border:none"><span class="q">1×</span><span class="nm">Diavola</span><span class="lp">46,00</span></div>
+            <div style="font-size:10px; color:var(--ink-3); margin:1px 0 0 20px">no chilli · ⚠ nut allergy</div>
+            <div class="tot"><span style="font-size:10px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em">Total</span><b>122,00</b></div>
+            <button class="btn btn-brand" style="width:100%; height:40px; margin-top:11px; font-size:14px">Charge 122,00 zł</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floor -->
+    <div class="scr">
+      <div class="scr-h"><span class="dot" style="background:var(--info)"></span><span class="t">Floor · Sala</span><span class="e">service</span></div>
+      <div class="scr-b">
+        <div class="floor">
+          <div class="tbl free"><div class="tn">1</div><div class="tc">4 seats</div><div class="ts">● Free</div></div>
+          <div class="tbl walkin"><div class="tn">7</div><div class="tc">2 / 4</div><div class="ts">● Walk-in</div><span class="order">🧾</span></div>
+          <div class="tbl booked"><div class="tn">8</div><div class="tc">19:30</div><div class="ts">● Booked</div></div>
+          <div class="tbl freeing"><div class="tn">9</div><div class="tc">≤15m</div><div class="ts">● Freeing</div></div>
+          <div class="tbl walkin"><div class="tn">12</div><div class="tc">6 / 6</div><div class="ts">● Walk-in</div></div>
+          <div class="tbl booked"><div class="tn">14</div><div class="tc">20:00</div><div class="ts">● Booked</div></div>
+          <div class="tbl free"><div class="tn">15</div><div class="tc">2 seats</div><div class="ts">● Free</div></div>
+          <div class="tbl oos"><div class="tn">16</div><div class="tc">—</div><div class="ts" style="background:var(--panel-3); color:var(--ink-3)">● OOS</div></div>
+        </div>
+        <div class="note">Warm = happening now · cool = on the books. Hue <i>and</i> warm/cool axis — colour-blind safe.</div>
+      </div>
+    </div>
+
+    <!-- KDS wall (wide, always dark) -->
+    <div class="scr wide" style="background:var(--wall)">
+      <div class="scr-h" style="background:linear-gradient(var(--panel),var(--wall)); border-color:rgba(255,247,235,.10)"><span class="dot" style="background:var(--basil)"></span><div class="wallhdr" style="flex:1; color:var(--ink)"><span class="t" style="color:#F8F1E7">OttavianoKDS · Forno · the wall</span><div class="kpis"><div class="kpi"><div class="kl">Firing</div><div class="kv firing">5</div></div><div class="kpi"><div class="kl">Late</div><div class="kv late">1</div></div><div class="kpi"><div class="kl">Ready</div><div class="kv ready">3</div></div></div></div><span class="e" style="color:#908172">kiosk · always dark</span></div>
+      <div class="lanes" style="color:#F8F1E7">
+        <div class="lane">
+          <div class="lane-h" style="color:#908172">New <b style="color:#F8F1E7">2</b></div>
+          <div class="tk" style="background:#28211A; box-shadow:var(--glow)"><div class="tk-h"><span class="id">#A4F7</span><span class="ch" style="background:rgba(255,247,235,.07)">Dine-in · T7</span><span class="due">0:40</span></div><div class="tk-it"><span class="qn">2×</span>Margherita</div><div class="tk-alrg">⚠ Allergen · nuts</div><div class="meter" style="background:rgba(255,247,235,.10)"><i style="width:10%; background:var(--t-queued)"></i></div></div>
+          <div class="tk" style="background:#28211A"><div class="tk-h"><span class="id">#A4F5</span><span class="ch" style="background:rgba(255,247,235,.07)">QR · T12</span><span class="due">1:05</span></div><div class="tk-it"><span class="qn">1×</span>Marinara</div><div class="meter" style="background:rgba(255,247,235,.10)"><i style="width:16%; background:var(--t-queued)"></i></div></div>
+        </div>
+        <div class="lane">
+          <div class="lane-h" style="color:#908172">Firing <b style="color:#F8F1E7">2</b></div>
+          <div class="tk warn" style="background:#28211A"><div class="tk-h"><span class="id">#A4E8</span><span class="ch" style="background:rgba(255,247,235,.07)">Takeaway</span><span class="due">6:30</span></div><div class="tk-it"><span class="qn">1×</span>Capricciosa</div><div class="meter" style="background:rgba(255,247,235,.10)"><i style="width:74%; background:var(--t-warn)"></i></div></div>
+          <div class="tk risk" style="background:#28211A"><div class="tk-h"><span class="id">#A4E2</span><span class="ch" style="background:rgba(255,247,235,.07)">Delivery</span><span class="due">8:15</span></div><div class="tk-it"><span class="qn">3×</span>Margherita</div><div class="meter" style="background:rgba(255,247,235,.10)"><i style="width:88%; background:var(--t-risk)"></i></div></div>
+        </div>
+        <div class="lane">
+          <div class="lane-h" style="color:#908172">Ready · Expo <b style="color:#F8F1E7">2</b></div>
+          <div class="tk late" style="background:#28211A"><div class="tk-h"><span class="id">#A4D2</span><span class="ch" style="background:rgba(255,247,235,.07)">Delivery</span><span class="due">+2:20</span></div><div class="tk-it"><span class="qn">2×</span>Diavola</div><button class="bump" style="background:var(--t-late); color:#fff">Bump · late</button></div>
+          <div class="tk ready" style="background:#28211A"><div class="tk-h"><span class="id">#A4C9</span><span class="ch" style="background:rgba(255,247,235,.07)">Dine-in · T9</span><span class="due">Ready</span></div><div class="tk-it"><span class="qn">1×</span>Margherita</div><button class="bump" style="background:var(--t-ready); color:#0C1A0F">✓ Bump &amp; run</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservation -->
+    <div class="scr">
+      <div class="scr-h"><span class="dot" style="background:var(--saffron)"></span><span class="t">Reserve a table</span><span class="e">guest</span></div>
+      <div class="scr-b">
+        <div class="steps"><span class="on"></span><span class="on"></span><span></span></div>
+        <div style="font-family:'Fraunces',serif; font-size:21px; font-weight:600">Tonight at Ottaviano</div>
+        <div style="font-size:11.5px; color:var(--ink-3); margin-bottom:12px">Friday 4 July · Kraków</div>
+        <div class="party"><div class="p">1</div><div class="p on">2</div><div class="p">3</div><div class="p">4</div><div class="p">6+</div></div>
+        <div style="font-size:11.5px; color:var(--ink-3); margin:2px 0 7px">Choose a time</div>
+        <div class="slots"><div class="slot off">18:00</div><div class="slot">18:30</div><div class="slot on">19:00</div><div class="slot">19:30</div><div class="slot">20:00</div><div class="slot off">20:30</div><div class="slot">21:00</div><div class="slot">21:30</div></div>
+        <button class="btn btn-brand" style="width:100%; height:42px; margin-top:14px; font-size:14px">Confirm · party of 2 · 19:00</button>
+      </div>
+    </div>
+
+    <!-- Guest / loyalty -->
+    <div class="scr">
+      <div class="scr-h"><span class="dot" style="background:var(--basil)"></span><span class="t">Guest · loyalty</span><span class="e">crm</span></div>
+      <div class="scr-b">
+        <div style="display:flex; align-items:center; gap:11px; margin-bottom:12px">
+          <div style="width:44px; height:44px; border-radius:12px; background:var(--brand-wash); color:var(--brand); display:grid; place-items:center; font-family:'Fraunces',serif; font-weight:600; font-size:20px">A</div>
+          <div><div style="font-weight:600; font-size:15px">Anna K.</div><div style="font-size:11.5px; color:var(--ink-3)">3rd visit · always Diavola</div></div>
+          <div style="margin-left:auto; text-align:right"><div style="font:700 20px 'JetBrains Mono'; color:var(--saffron)">240</div><div style="font-size:10px; color:var(--ink-3)">points</div></div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <div style="flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px"><div style="font:700 18px 'JetBrains Mono'; color:var(--basil)">★ Gold</div><div style="font-size:10.5px; color:var(--ink-3)">tier</div></div>
+          <div style="flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px"><div style="font:700 18px 'JetBrains Mono'">12</div><div style="font-size:10.5px; color:var(--ink-3)">visits</div></div>
+          <div style="flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px"><div style="font:700 18px 'JetBrains Mono'">580<span style="font-size:11px"> zł</span></div><div style="font-size:10.5px; color:var(--ink-3)">CLV</div></div>
+        </div>
+        <button class="btn btn-ghost" style="width:100%; height:36px; margin-top:11px; font-size:12.5px">Send a free dessert reward →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">BRACE — OttavianoKDS · whole-Core warm-luxe palette · re-skins <span class="mono">src/app/themes/core/tokens.css</span> (dark + light) → web Core <i>and</i> the native app via <span class="mono">gen:native → Theme.kds</span>. The mounted kiosk wall stays dark in both modes. A draft sketch in /tests/ — never ships.</div>
+
+</div>
+<script>
+  function setMode(m){ document.documentElement.dataset.mode=m; document.getElementById('bd').classList.toggle('on',m==='dark'); document.getElementById('bl').classList.toggle('on',m==='light'); }
+</script>
+</body>
+</html>

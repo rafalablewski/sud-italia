@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -17,6 +18,9 @@ interface Kitchen {
 }
 
 const STATUSES: TableStatus[] = ["available", "seated", "reserved", "out-of-service"];
+/** A service note that names an allergy / dietary risk gets the amber safety
+ *  treatment on the tile — a glance has to catch it, not a hover. */
+const ALLERGY_RE = /allerg|gluten|nut|coeliac|celiac|dairy|lactose|shellfish|epi|anaphyl/i;
 const zl0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
 const zl2 = (g: number) => `${(g / 100).toFixed(2)} zł`;
 
@@ -336,9 +340,17 @@ export function CoreFloor() {
                           disabled={acting === t.id || t.status === "out-of-service"}
                           title={t.status === "out-of-service" ? "Out of service" : t.occupied ? "Clear table" : "Seat table"}
                         >
-                          <span className="tnum">{t.number}{t.notes ? <span className="core-tnote" title={t.notes}> 📝</span> : null}</span>
+                          <span className="tnum">{t.number}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
                           <span className={`tst ${st.cls}`}>● {st.label}</span>
+                          {t.notes ? (
+                            <span
+                              className={`core-tnote-chip${ALLERGY_RE.test(t.notes) ? " alrg" : ""}`}
+                              title={t.notes}
+                            >
+                              {ALLERGY_RE.test(t.notes) ? "⚠ " : "📝 "}{t.notes}
+                            </span>
+                          ) : null}
                           {tUnpaid.length > 0 ? (
                             <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
                               {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
@@ -358,6 +370,16 @@ export function CoreFloor() {
                         >
                           ⋯
                         </button>
+                        {t.status !== "out-of-service" && (
+                          <Link
+                            className="core-tbl2-order"
+                            href={`/core/pos?table=${encodeURIComponent(t.id)}&covers=${t.party ?? t.seats}`}
+                            title={`Open the till on a dine-in check for table ${t.number}`}
+                            aria-label={`New order for table ${t.number}`}
+                          >
+                            🧾 Order
+                          </Link>
+                        )}
                       </div>
                     );
                   })}

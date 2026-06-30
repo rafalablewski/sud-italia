@@ -11,17 +11,21 @@ import { CoreDialog } from "@/core/ui/Dialog";
 import { CoreQrQueue } from "@/core/pos/CoreQrQueue";
 import {
   MENU_CATEGORY_LABELS,
+  type CartItem,
   type FloorTable,
   type FulfillmentType,
   type MenuCategory,
   type MenuItem,
+  type ModifierGroup,
   type PosCourse,
   type PosTab,
   type PosTabDiscount,
   type PosTabLine,
+  type SelectedModifier,
 } from "@/data/types";
-import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
+import { getActiveComboDeals, getCartSuggestions, effectiveUnitPrice, type UpsellConfig } from "@/lib/upsell";
 import { manualDiscountGrosze } from "@/lib/pos-discount";
+import { posLineKey } from "@/lib/pos-line";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
@@ -44,6 +48,32 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   lto: { label: "LTO", cls: "lto" },
 };
 const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+
+/** A line note that names an allergy / dietary risk gets the amber safety
+ *  treatment on the check + KDS — it can't read as a normal preference. */
+const ALLERGY_NOTE_RE = /allerg|gluten|coeliac|celiac|nut|dairy|lactose|shellfish|anaphyl|epipen|intoleran/i;
+
+/** Quick-pick note chips offered in the line editor, on top of free text. The
+ *  allergy chip is special — it prefixes a flag the kitchen can't miss. */
+const NOTE_CHIPS = ["No cheese", "Light sauce", "Extra crispy", "Well done", "On the side", "Cut in half"];
+const ALLERGY_CHIP = "⚠ ALLERGY: ";
+
+/** Tip presets (percent of the bill) offered in the tender sheet. */
+const TIP_PCTS = [0, 5, 10, 15];
+/** Comp reasons — all recorded server-side as `manager_comp` (the note carries
+ *  the specific reason), so the per-shift comp cap counts them all. */
+const COMP_REASONS = ["Kitchen error", "Manager goodwill", "Birthday", "VIP / regular", "Long wait"];
+
+/** Client tender payload sent to PATCH /api/admin/pos/orders. The server
+ *  re-derives the bill and clamps every figure — this is only a proposal. */
+type TenderInput = {
+  tipGrosze?: number;
+  compGrosze?: number;
+  compNote?: string;
+  payments?: { method: "cash" | "card"; amount: number }[];
+  cashTenderedGrosze?: number;
+  defaultMethod?: "cash" | "card";
+};
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
@@ -302,11 +332,14 @@ export function CorePos({
     }
   }, [tabs, persistTab]);
 
+  // Quick-add (tap a product card with no modifier groups). Stacks onto the
+  // bare line for that item — a customised line of the same item (its key
+  // carries the modifier/note signature) is never touched.
   const addLine = useCallback(
     (id: string) =>
       mutateActive((t) => {
         const items = [...t.items];
-        const i = items.findIndex((l) => l.menuItemId === id);
+        const i = items.findIndex((l) => posLineKey(l) === id);
         if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + 1) };
         else {
           const c = byId(id)?.category;
@@ -317,12 +350,40 @@ export function CorePos({
     [mutateActive, byId],
   );
 
+  // Add (or save an edit of) a configured line — chosen modifiers + note + qty.
+  // `replaceKey` is the line being edited; absent = a fresh add. Merges onto an
+  // existing line with the same composite identity.
+  const addConfiguredLine = useCallback(
+    (menuItemId: string, modifiers: SelectedModifier[] | undefined, notes: string | undefined, qty: number, replaceKey?: string) =>
+      mutateActive((t) => {
+        const cleanMods = modifiers && modifiers.length ? modifiers : undefined;
+        const cleanNotes = notes && notes.trim() ? notes.trim().slice(0, 200) : undefined;
+        const c = byId(menuItemId)?.category;
+        const prior = replaceKey ? t.items.find((l) => posLineKey(l) === replaceKey) : undefined;
+        const built: PosTabLine = {
+          menuItemId,
+          quantity: Math.max(1, Math.min(99, Math.round(qty))),
+          course: prior?.course ?? (c ? defaultCourseForCategory(c) : "main"),
+          ...(cleanMods ? { modifiers: cleanMods } : {}),
+          ...(cleanNotes ? { notes: cleanNotes } : {}),
+        };
+        const newKey = posLineKey(built);
+        // Drop the line being edited, then merge the rebuilt line by its new key.
+        const items = t.items.filter((l) => posLineKey(l) !== replaceKey);
+        const i = items.findIndex((l) => posLineKey(l) === newKey);
+        if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + built.quantity) };
+        else items.push(built);
+        return { ...t, items, sentKds: false, status: t.status === "parked" ? "open" : t.status };
+      }),
+    [mutateActive, byId],
+  );
+
   const changeQty = useCallback(
-    (id: string, delta: number) =>
+    (key: string, delta: number) =>
       mutateActive((t) => ({
         ...t,
         items: t.items
-          .map((l) => (l.menuItemId === id ? { ...l, quantity: l.quantity + delta } : l))
+          .map((l) => (posLineKey(l) === key ? { ...l, quantity: l.quantity + delta } : l))
           .filter((l) => l.quantity > 0),
         sentKds: false,
       })),
@@ -362,8 +423,8 @@ export function CorePos({
   const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
   const recourse = useCallback(
-    (menuItemId: string, course: PosCourse) =>
-      mutateActive((t) => ({ ...t, items: t.items.map((l) => (l.menuItemId === menuItemId ? { ...l, course } : l)) })),
+    (key: string, course: PosCourse) =>
+      mutateActive((t) => ({ ...t, items: t.items.map((l) => (posLineKey(l) === key ? { ...l, course } : l)) })),
     [mutateActive],
   );
 
@@ -411,7 +472,7 @@ export function CorePos({
     [pageLoc],
   );
 
-  const newTab = useCallback(async () => {
+  const newTab = useCallback(async (init?: { channel?: FulfillmentType; tableId?: string; covers?: number }) => {
     if (!pageLoc) return;
     // Derive the next default name from the highest existing "Tab N" so it never
     // collides — even after middle checks are closed (a plain counter repeats).
@@ -433,9 +494,12 @@ export function CorePos({
       id: tempId,
       locationSlug: pageLoc,
       name,
-      channel: null,
+      channel: init?.channel ?? null,
       status: "open",
       items: [],
+      tableId: init?.tableId,
+      covers: init?.covers,
+      coursed: init?.channel === "dine-in" ? true : undefined,
       sentKds: false,
       createdAt: now,
       updatedAt: now,
@@ -530,6 +594,38 @@ export function CorePos({
     };
   }, [pageLoc]);
   const tableById = useCallback((id?: string) => (id ? tables.find((t) => t.id === id) : undefined), [tables]);
+
+  // Deep-link from the Floor: `/core/pos?table=<id>&covers=<n>` opens (or focuses)
+  // a dine-in check for that table — the "tap a table → build its check" flow, so
+  // the floor map and the till share one spatial model instead of two table UIs.
+  // Read once on mount; consumed when the tables list has loaded.
+  const tableParamRef = useRef<{ id: string; covers?: number } | null | undefined>(undefined);
+  useEffect(() => {
+    if (tableParamRef.current !== undefined || typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const id = sp.get("table");
+    if (!id) { tableParamRef.current = null; return; }
+    const c = parseInt(sp.get("covers") || "", 10);
+    tableParamRef.current = { id, covers: Number.isFinite(c) ? c : undefined };
+    // Drop the query so a refresh doesn't re-open a fresh check for the table.
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  useEffect(() => {
+    const p = tableParamRef.current;
+    if (!p || tables.length === 0) return;
+    const t = tables.find((x) => x.id === p.id);
+    if (!t) return;
+    tableParamRef.current = null; // consume once, whatever the outcome
+    // Already a check on this table? Focus it instead of opening a duplicate.
+    const open = tabs.find((tb) => tb.tableId === t.id && tb.status !== "parked");
+    if (open) {
+      setActiveTabId(open.id);
+      toast(`Table ${t.number} · open check`, "default");
+      return;
+    }
+    void newTab({ channel: "dine-in", tableId: t.id, covers: p.covers ?? t.seats ?? 2 });
+    toast(`New check · Table ${t.number}`, "success");
+  }, [tables, tabs, newTab, toast]);
   const tablesByZone = useMemo(() => {
     const m = new Map<string, FloorTable[]>();
     for (const t of tables) {
@@ -600,7 +696,7 @@ export function CorePos({
 
   const [tenderOpen, setTenderOpen] = useState(false);
   const pay = useCallback(
-    async (method: "Cash" | "Card") => {
+    async (tender: TenderInput, label: string) => {
       const t = getActive();
       if (!t || busyTabId) return;
       setBusyTabId(t.id);
@@ -610,7 +706,7 @@ export function CorePos({
         const { res, queued } = await durableMutate({
           url,
           method: "PATCH",
-          body: { tabId: t.id },
+          body: { tabId: t.id, tender },
           entity: `tab:${t.id}`,
           desc: `Charge · #${t.id}`,
           onReject: (s) => toast(`Charge for #${t.id} was rejected (${s})`, "danger"),
@@ -624,13 +720,20 @@ export function CorePos({
           // Offline: close the check optimistically; the outbox charges it (once,
           // under its idempotency key) when the network returns.
           closeTab();
-          return toast(`Saved offline — charges ${method} on reconnect · #${t.id}`, "default");
+          return toast(`Saved offline — charges ${label} on reconnect · #${t.id}`, "default");
         }
-        const data = (await res!.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
+        const data = (await res!.json().catch(() => ({}))) as {
+          error?: string; totalAmount?: number; tip?: number; comp?: number; change?: number;
+        };
         if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
         const amt = data.totalAmount ?? grandG(t);
         closeTab();
-        toast(`Paid ✓ #${t.id} · ${method} · ${fmtPLN(amt)}`, "success");
+        const extras = [
+          data.comp && data.comp > 0 ? `comp ${fmtPLN(data.comp)}` : "",
+          data.tip && data.tip > 0 ? `+tip ${fmtPLN(data.tip)}` : "",
+          data.change && data.change > 0 ? `change ${fmtPLN(data.change)}` : "",
+        ].filter(Boolean).join(" · ");
+        toast(`Paid ✓ #${t.id} · ${label} · ${fmtPLN(amt)}${extras ? ` · ${extras}` : ""}`, "success");
       } finally {
         setBusyTabId(null);
       }
@@ -711,15 +814,24 @@ export function CorePos({
 
   // --- Pricing (real menu + real combo discount) ---------------------------
   const cartOf = useCallback(
-    (t: PosTab) =>
+    (t: PosTab): CartItem[] =>
       t.items.flatMap((l) => {
         const m = byId(l.menuItemId);
-        return m ? [{ menuItem: m, quantity: l.quantity, locationSlug: pageLoc }] : [];
+        if (!m) return [];
+        return [{
+          menuItem: m,
+          quantity: l.quantity,
+          locationSlug: pageLoc,
+          ...(l.modifiers && l.modifiers.length ? { selectedModifiers: l.modifiers } : {}),
+          ...(l.notes ? { notes: l.notes } : {}),
+        }];
       }),
     [byId, pageLoc],
   );
   const comboOf = useCallback((t: PosTab) => getActiveComboDeals(cartOf(t), config, t.channel ?? undefined), [cartOf, config]);
-  const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0), [cartOf]);
+  // Modifier price deltas (extra cheese, truffle) are part of the subtotal — the
+  // same `effectiveUnitPrice` the server charges with, so till and bill agree.
+  const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + effectiveUnitPrice(ci) * ci.quantity, 0), [cartOf]);
   const discountG = useCallback((t: PosTab) => (comboOf(t).isComplete ? comboOf(t).savings : 0), [comboOf]);
   // Manual operator discount, on top of the auto combo (same pure helper as the server).
   const manualDiscountG = useCallback((t: PosTab) => manualDiscountGrosze(Math.max(0, subtotalG(t) - discountG(t)), t.discount), [subtotalG, discountG]);
@@ -849,6 +961,17 @@ export function CorePos({
   // fires from a finger, so the grip doubles as a tap target that reveals an
   // inline course chooser; native drag stays as a mouse-only enhancement.
   const [recourseFor, setRecourseFor] = useState<string | null>(null);
+  // Line editor (modifier picks + special-request note). `item` is the menu item
+  // being configured; `editKey` is set when editing a line already on the check
+  // (vs a fresh add), so Save replaces it in place rather than stacking a second.
+  const [editor, setEditor] = useState<{ item: MenuItem; editKey?: string; initial?: PosTabLine } | null>(null);
+  const openEditor = useCallback(
+    (m: MenuItem, line?: PosTabLine) => {
+      if (!active) { toast("Open a check first"); return; }
+      setEditor({ item: m, editKey: line ? posLineKey(line) : undefined, initial: line });
+    },
+    [active, toast],
+  );
   const [kiosk, setKiosk] = useState(false);
   const toggleKiosk = useCallback(() => {
     setKiosk((k) => {
@@ -901,8 +1024,16 @@ export function CorePos({
     );
   };
 
+  // Tapping a card that has modifier groups opens the editor to configure the
+  // line; a plain item adds straight to the check (the fast path is unchanged).
+  const customisable = (m: MenuItem) => !!m.modifierGroups && m.modifierGroups.length > 0;
   const productCard = (m: MenuItem) => (
-    <button key={m.id} type="button" className="core-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
+    <button
+      key={m.id}
+      type="button"
+      className="core-prod"
+      onClick={() => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
+    >
       <div className="pn">
         {m.name}
         {m.menuRole && <span className={`core-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
@@ -912,28 +1043,38 @@ export function CorePos({
         {m.tags.map((t) => (
           <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
         ))}
+        {customisable(m) && <span className="core-tag opt">options</span>}
         {steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
         {steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
       </div>
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>+</span>
+        <span className="add" aria-hidden>{customisable(m) ? "⋯" : "+"}</span>
       </div>
     </button>
   );
 
   const lineRow = (l: PosTabLine, coursed: boolean) => {
-    const menuItemId = l.menuItemId;
-    const m = byId(menuItemId);
+    const m = byId(l.menuItemId);
     if (!m) return null;
-    const picking = recourseFor === menuItemId;
+    const key = posLineKey(l);
+    const picking = recourseFor === key;
+    // Resolve the chosen options to their menu labels so the line reads in plain
+    // language; a `flagOnKds` pick (e.g. buffalo mozzarella) renders emphasised.
+    const modChips = (l.modifiers ?? []).flatMap((sel) => {
+      const g = m.modifierGroups?.find((mg) => mg.id === sel.groupId);
+      const opt = g?.options.find((o) => o.id === sel.optionId);
+      return opt ? [{ label: opt.label, flag: !!opt.flagOnKds, delta: opt.priceDelta }] : [];
+    });
+    const lineUnit = effectiveUnitPrice({ menuItem: m, selectedModifiers: l.modifiers });
+    const allergy = !!l.notes && ALLERGY_NOTE_RE.test(l.notes);
     return (
       <div
         className={`core-line${picking ? " picking" : ""}`}
-        key={menuItemId}
+        key={key}
         draggable={coursed}
         onDragStart={() => {
-          if (coursed) dragItem.current = menuItemId;
+          if (coursed) dragItem.current = key;
         }}
         onDragEnd={() => {
           dragItem.current = null;
@@ -947,7 +1088,7 @@ export function CorePos({
               title="Move to another course"
               aria-label={`Move ${m.name} to another course`}
               aria-expanded={picking}
-              onClick={() => setRecourseFor((cur) => (cur === menuItemId ? null : menuItemId))}
+              onClick={() => setRecourseFor((cur) => (cur === key ? null : key))}
             >
               ⠿
             </button>
@@ -955,17 +1096,30 @@ export function CorePos({
             <span className="core-grip" aria-hidden>⠿</span>
           )}
           <div className="core-qstep">
-            <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
+            <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
               −
             </button>
             <span className="q mono">{l.quantity}</span>
-            <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
+            <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
               +
             </button>
           </div>
-          <div className="ln">{m.name}</div>
-          <span className="lp mono">{zl(m.price * l.quantity)}</span>
+          <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
+            {m.name}
+            <span className="ln-pen" aria-hidden>✎</span>
+          </button>
+          <span className="lp mono">{zl(lineUnit * l.quantity)}</span>
         </div>
+        {(modChips.length > 0 || l.notes) && (
+          <div className="core-line-mods">
+            {modChips.map((c, i) => (
+              <span key={i} className={`core-mod-chip${c.flag ? " flag" : ""}`}>
+                {c.label}{c.delta > 0 ? ` +${zl(c.delta)}` : ""}
+              </span>
+            ))}
+            {l.notes && <span className={`core-mod-note${allergy ? " alrg" : ""}`}>{allergy ? "⚠ " : "“"}{l.notes}{allergy ? "" : "”"}</span>}
+          </div>
+        )}
         {picking && coursed && (
           <div className="core-recourse" role="group" aria-label="Move to course">
             {POS_COURSE_ORDER.map((c) => {
@@ -976,7 +1130,7 @@ export function CorePos({
                   type="button"
                   className={`core-recourse-opt${on ? " on" : ""}`}
                   onClick={() => {
-                    if (!on) recourse(menuItemId, c);
+                    if (!on) recourse(key, c);
                     setRecourseFor(null);
                   }}
                 >
@@ -1365,37 +1519,16 @@ export function CorePos({
       </div>
 
       {/* Tender */}
-      <CoreDialog
-        open={tenderOpen && !!active}
-        onClose={() => setTenderOpen(false)}
-        title="Take payment"
-        footer={
-          <button type="button" className="core-btn ghost" onClick={() => setTenderOpen(false)}>
-            Cancel
-          </button>
-        }
-      >
-        {active && (
-          <div className="core-tender">
-            <div className="core-tender-tot">
-              <span>Total due</span>
-              <b className="mono">{fmtPLN(grandG(active))}</b>
-            </div>
-            <p className="core-tender-note">
-              {active.name} · {CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}
-              {active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}
-            </p>
-            <div className="core-tender-pads">
-              <button type="button" className="core-pay" disabled={!!busyTabId} onClick={() => void pay("Card")}>
-                💳 Card
-              </button>
-              <button type="button" className="core-pay" disabled={!!busyTabId} onClick={() => void pay("Cash")}>
-                💵 Cash
-              </button>
-            </div>
-          </div>
-        )}
-      </CoreDialog>
+      {tenderOpen && active && (
+        <TenderDialog
+          billG={grandG(active)}
+          subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
+          covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
+          busy={!!busyTabId}
+          onClose={() => setTenderOpen(false)}
+          onCharge={(tender, label) => void pay(tender, label)}
+        />
+      )}
 
       {/* Void confirmation — only when the check has rung items */}
       <CoreDialog
@@ -1480,7 +1613,346 @@ export function CorePos({
           onRemove={() => { removeMember(); setMemberOpen(false); }}
         />
       )}
+      {editor && (
+        <LineEditorDialog
+          item={editor.item}
+          initial={editor.initial}
+          editing={!!editor.editKey}
+          onClose={() => setEditor(null)}
+          onSubmit={(mods, notes, qty) => {
+            addConfiguredLine(editor.item.id, mods, notes, qty, editor.editKey);
+            setEditor(null);
+          }}
+        />
+      )}
     </CoreShell>
+  );
+}
+
+/* ── line editor — modifiers + special-request note ─────────────────────── */
+function LineEditorDialog({
+  item,
+  initial,
+  editing,
+  onClose,
+  onSubmit,
+}: {
+  item: MenuItem;
+  initial?: PosTabLine;
+  editing: boolean;
+  onClose: () => void;
+  onSubmit: (mods: SelectedModifier[] | undefined, notes: string | undefined, qty: number) => void;
+}) {
+  const groups = item.modifierGroups ?? [];
+  const [picks, setPicks] = useState<SelectedModifier[]>(initial?.modifiers ?? []);
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [qty, setQty] = useState(initial?.quantity ?? 1);
+
+  const isOn = (groupId: string, optionId: string) => picks.some((p) => p.groupId === groupId && p.optionId === optionId);
+  const toggle = (g: ModifierGroup, optionId: string) => {
+    const max = g.maxSelections ?? 1;
+    setPicks((cur) => {
+      const mine = cur.filter((p) => p.groupId === g.id);
+      const others = cur.filter((p) => p.groupId !== g.id);
+      const already = mine.some((p) => p.optionId === optionId);
+      if (already) return [...others, ...mine.filter((p) => p.optionId !== optionId)];
+      // radio (max 1) replaces; multi keeps up to max (drop the oldest over cap).
+      if (max <= 1) return [...others, { groupId: g.id, optionId }];
+      const next = [...mine, { groupId: g.id, optionId }];
+      while (next.length > max) next.shift();
+      return [...others, ...next];
+    });
+  };
+
+  // Required groups (minSelections ≥ 1) must have a pick before the line can add.
+  const unmet = groups.filter((g) => (g.minSelections ?? 0) >= 1 && !picks.some((p) => p.groupId === g.id));
+  const deltaG = picks.reduce((s, p) => {
+    const opt = groups.find((g) => g.id === p.groupId)?.options.find((o) => o.id === p.optionId);
+    return s + (opt && opt.priceDelta > 0 ? opt.priceDelta : 0);
+  }, 0);
+  const unitG = item.price + deltaG;
+
+  const addChip = (text: string) =>
+    setNotes((n) => {
+      const t = n.trim();
+      if (t.toLowerCase().includes(text.trim().toLowerCase())) return n; // no dupes
+      return t ? `${t}, ${text}` : text;
+    });
+
+  return (
+    <CoreDialog
+      open
+      onClose={onClose}
+      title={editing ? `Edit · ${item.name}` : item.name}
+      width={520}
+      footer={
+        <>
+          <button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="core-btn primary"
+            disabled={unmet.length > 0}
+            onClick={() => onSubmit(picks.length ? picks : undefined, notes.trim() || undefined, qty)}
+          >
+            {unmet.length > 0 ? `Pick ${unmet[0].label}` : editing ? `Save · ${fmtPLN(unitG * qty)}` : `Add · ${fmtPLN(unitG * qty)}`}
+          </button>
+        </>
+      }
+    >
+      <div className="core-lineeditor">
+        {groups.map((g) => {
+          const multi = (g.maxSelections ?? 1) > 1;
+          const required = (g.minSelections ?? 0) >= 1;
+          return (
+            <div key={g.id} className="core-modgroup">
+              <div className="core-modgroup-h">
+                {g.label}
+                <span className="core-modgroup-rule">{required ? "required" : "optional"}{multi ? ` · up to ${g.maxSelections}` : ""}</span>
+              </div>
+              <div className="core-modopts">
+                {g.options.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className={`core-modopt${isOn(g.id, o.id) ? " on" : ""}`}
+                    onClick={() => toggle(g, o.id)}
+                  >
+                    <span className="mo-l">{o.label}{o.flagOnKds ? <span className="mo-flag" title="Flagged on the kitchen ticket"> ★</span> : null}</span>
+                    {o.priceDelta > 0 && <span className="mo-p mono">+{zl(o.priceDelta)}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="core-modgroup">
+          <div className="core-modgroup-h">Special request<span className="core-modgroup-rule">to the kitchen</span></div>
+          <div className="core-notechips">
+            {NOTE_CHIPS.map((c) => (
+              <button key={c} type="button" className="core-notechip" onClick={() => addChip(c)}>{c}</button>
+            ))}
+            <button type="button" className="core-notechip alrg" onClick={() => addChip(ALLERGY_CHIP)}>⚠ Allergy</button>
+          </div>
+          <textarea
+            className="core-textarea"
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value.slice(0, 200))}
+            placeholder="e.g. no chili, well done — or ⚠ allergy details"
+          />
+          {notes && ALLERGY_NOTE_RE.test(notes) && (
+            <div className="core-alrg-banner">⚠ Allergy flagged — this prints emphasised on the kitchen ticket.</div>
+          )}
+        </div>
+
+        <div className="core-editor-qty">
+          <span>Quantity</span>
+          <div className="core-qstep big">
+            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Fewer">−</button>
+            <span className="q mono">{qty}</span>
+            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} aria-label="More">+</button>
+          </div>
+        </div>
+      </div>
+    </CoreDialog>
+  );
+}
+
+/* ── tender sheet — tip · comp · split · cash change ────────────────────── */
+function TenderDialog({
+  billG,
+  subtitle,
+  covers,
+  busy,
+  onClose,
+  onCharge,
+}: {
+  billG: number;
+  subtitle: string;
+  covers: number;
+  busy: boolean;
+  onClose: () => void;
+  onCharge: (tender: TenderInput, label: string) => void;
+}) {
+  const [tipPct, setTipPct] = useState<number | "custom">(0);
+  const [tipCustom, setTipCustom] = useState(""); // zł text
+  const [compOpen, setCompOpen] = useState(false);
+  const [compZl, setCompZl] = useState("");
+  const [compReason, setCompReason] = useState(COMP_REASONS[0]);
+  const [splitN, setSplitN] = useState(1);
+  const [shareMethods, setShareMethods] = useState<("cash" | "card")[]>([]);
+  const [cashOpen, setCashOpen] = useState(false);
+  const [cashGiven, setCashGiven] = useState(""); // zł text
+
+  const zlToG = (s: string) => Math.round((parseFloat(s.replace(",", ".")) || 0) * 100);
+  const comp = compOpen ? Math.min(billG, Math.max(0, zlToG(compZl) || billG)) : 0;
+  const net = Math.max(0, billG - comp);
+  const tip = tipPct === "custom" ? Math.max(0, zlToG(tipCustom)) : Math.round((net * tipPct) / 100);
+  const total = net + tip;
+
+  // Even split — each share equal, the last absorbs the rounding remainder.
+  const shareOf = (i: number) => {
+    const base = Math.floor(total / splitN);
+    return i === splitN - 1 ? total - base * (splitN - 1) : base;
+  };
+  const methodFor = (i: number) => shareMethods[i] ?? "card";
+  const setMethod = (i: number, m: "cash" | "card") =>
+    setShareMethods((cur) => { const next = [...cur]; next[i] = m; return next; });
+
+  const compNote = compOpen && comp > 0 ? compReason : undefined;
+  const cashGivenG = zlToG(cashGiven);
+  const change = cashOpen ? Math.max(0, cashGivenG - total) : 0;
+
+  const chargeSingle = (method: "cash" | "card") => {
+    if (method === "cash" && !cashOpen) { setCashOpen(true); return; } // reveal change pad first
+    const tender: TenderInput = {
+      ...(tip > 0 ? { tipGrosze: tip } : {}),
+      ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      payments: [{ method, amount: total }],
+      defaultMethod: method,
+      ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
+    };
+    onCharge(tender, method === "cash" ? "Cash" : "Card");
+  };
+
+  const chargeSplit = () => {
+    const payments = Array.from({ length: splitN }, (_, i) => ({ method: methodFor(i), amount: shareOf(i) }));
+    const cashShares = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0);
+    const tender: TenderInput = {
+      ...(tip > 0 ? { tipGrosze: tip } : {}),
+      ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      payments,
+      ...(cashShares > 0 && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
+    };
+    onCharge(tender, `Split ${splitN}`);
+  };
+
+  return (
+    <CoreDialog
+      open
+      onClose={onClose}
+      title="Take payment"
+      width={520}
+      footer={<button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>}
+    >
+      <div className="core-tender">
+        <div className="core-tender-tot">
+          <span>{comp > 0 || tip > 0 ? "To collect" : "Total due"}</span>
+          <b className="mono">{fmtPLN(total)}</b>
+        </div>
+        <p className="core-tender-note">{subtitle}</p>
+        {(comp > 0 || tip > 0) && (
+          <div className="core-tender-breakdown">
+            <span>Bill {fmtPLN(billG)}</span>
+            {comp > 0 && <span className="comp">− comp {fmtPLN(comp)}</span>}
+            {tip > 0 && <span className="tip">+ tip {fmtPLN(tip)}</span>}
+          </div>
+        )}
+
+        {/* Tip */}
+        <div className="core-tender-sec">
+          <div className="core-tender-sec-h">Tip</div>
+          <div className="core-tender-chips">
+            {TIP_PCTS.map((p) => (
+              <button key={p} type="button" className={`core-tchip${tipPct === p ? " on" : ""}`} onClick={() => setTipPct(p)}>
+                {p === 0 ? "None" : `${p}%`}{p > 0 ? <span className="sub mono"> {fmtPLN(Math.round((net * p) / 100))}</span> : null}
+              </button>
+            ))}
+            <button type="button" className={`core-tchip${tipPct === "custom" ? " on" : ""}`} onClick={() => setTipPct("custom")}>Custom</button>
+            {tipPct === "custom" && (
+              <input className="core-inp tip-inp" inputMode="decimal" value={tipCustom} onChange={(e) => setTipCustom(e.target.value)} placeholder="zł" />
+            )}
+          </div>
+        </div>
+
+        {/* Comp */}
+        <div className="core-tender-sec">
+          <div className="core-tender-sec-h">
+            Comp <span className="muted">on the house</span>
+            <button type="button" className={`core-tender-toggle${compOpen ? " on" : ""}`} onClick={() => setCompOpen((v) => !v)}>
+              {compOpen ? "Remove comp" : "Comp this check"}
+            </button>
+          </div>
+          {compOpen && (
+            <div className="core-comp-body">
+              <div className="core-tender-chips">
+                {COMP_REASONS.map((r) => (
+                  <button key={r} type="button" className={`core-tchip${compReason === r ? " on" : ""}`} onClick={() => setCompReason(r)}>{r}</button>
+                ))}
+              </div>
+              <label className="core-comp-amt">
+                Amount comped
+                <input className="core-inp" inputMode="decimal" value={compZl} onChange={(e) => setCompZl(e.target.value)} placeholder={`whole bill · ${fmtPLN(billG)}`} />
+              </label>
+              <div className="core-alrg-banner" style={{ background: "var(--brand-wash)", color: "var(--brand-bright)" }}>
+                Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Split */}
+        {covers > 1 && (
+          <div className="core-tender-sec">
+            <div className="core-tender-sec-h">
+              Split evenly
+              <div className="core-qstep">
+                <button type="button" onClick={() => setSplitN((n) => Math.max(1, n - 1))} aria-label="Fewer ways">−</button>
+                <span className="q mono">{splitN === 1 ? "1" : `${splitN}×`}</span>
+                <button type="button" onClick={() => setSplitN((n) => Math.min(covers, n + 1))} aria-label="More ways">+</button>
+              </div>
+            </div>
+            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} guests)</div>}
+          </div>
+        )}
+
+        {/* Tender action */}
+        {splitN > 1 ? (
+          <>
+            <div className="core-split-rows">
+              {Array.from({ length: splitN }, (_, i) => (
+                <div key={i} className="core-split-row">
+                  <span className="sr-l">Guest {i + 1}</span>
+                  <span className="sr-a mono">{fmtPLN(shareOf(i))}</span>
+                  <div className="core-seg sm">
+                    <button className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
+                    <button className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="core-charge" disabled={busy} onClick={chargeSplit}>
+              Charge split · {fmtPLN(total)}
+            </button>
+          </>
+        ) : cashOpen ? (
+          <div className="core-cashpad">
+            <div className="core-cashpad-h">Cash given<button type="button" className="core-tender-toggle" onClick={() => setCashOpen(false)}>← Back</button></div>
+            <div className="core-tender-chips">
+              {[total, Math.ceil(total / 1000) * 1000, Math.ceil(total / 5000) * 5000, Math.ceil(total / 10000) * 10000]
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .map((v) => (
+                  <button key={v} type="button" className="core-tchip" onClick={() => setCashGiven((v / 100).toFixed(2))}>{fmtPLN(v)}</button>
+                ))}
+              <input className="core-inp tip-inp" inputMode="decimal" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="zł" autoFocus />
+            </div>
+            <div className="core-change-row">
+              <span>Change due</span>
+              <b className="mono">{fmtPLN(change)}</b>
+            </div>
+            <button type="button" className="core-charge" disabled={busy || cashGivenG < total} onClick={() => chargeSingle("cash")}>
+              {cashGivenG < total ? `Need ${fmtPLN(total)}` : `Confirm cash · change ${fmtPLN(change)}`}
+            </button>
+          </div>
+        ) : (
+          <div className="core-tender-pads">
+            <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("card")}>💳 Card</button>
+            <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("cash")}>💵 Cash</button>
+          </div>
+        )}
+      </div>
+    </CoreDialog>
   );
 }
 

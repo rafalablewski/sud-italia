@@ -41,11 +41,15 @@ inside the shell body: **rail · menu · ticket**.
   name, with a `.core-role` menu-engineering badge — Hero / Profit / Anchor
   / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
   `.core-tagrow` of `.core-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
-  gluten-free → `.fast`) plus a live `.core-steer-tag` pace cue (**★ make
+  gluten-free → `.fast`, plus an `.opt` **options** chip when the item has
+  `modifierGroups`) plus a live `.core-steer-tag` pace cue (**★ make
   now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
-  with the `.pp` mono price and the burgundy `.add` button. Cards **stretch to equal height per row** and the `.pf`
+  with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
+  the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
-  description can't make one card taller than its row-mates.
+  description can't make one card taller than its row-mates. Tapping a plain
+  card adds it straight to the check; a **customisable** card opens the line
+  editor first (see *Line editor* below).
 - **`.core-ticket`** — the open-check panel. Today it shows
   `.core-ticket-empty` (the no-open-check state).
 
@@ -75,8 +79,15 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
   renderer reads to course or flat-list the ticket.
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
-  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter and a mono line
-  price. Dine-in coursed checks group lines into `.core-course` blocks with a
+  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter, the **tappable
+  line name** (`.ln-edit`, reveals a `✎` on hover → opens the line editor) and a
+  mono line price (modifier deltas included). Under the name, `.core-line-mods`
+  renders the chosen modifiers as `.core-mod-chip` chips (a `flagOnKds` pick →
+  `.flag` amber) and the special-request note as `.core-mod-note` (amber `.alrg`
+  when it names an allergy). **Line identity** is the item + its modifier picks +
+  its note (`posLineKey`, `@/lib/pos-line`), so a plain item and a customised one
+  sit on separate rows and the stepper / re-course / edit target the right line.
+  Dine-in coursed checks group lines into `.core-course` blocks with a
   `.core-course-h` header and a per-course **Fire** button; fired courses dim
   (`.core-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
   a coursed line the grip is a `<button>` that toggles `.core-line.picking`,
@@ -127,6 +138,59 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   fire-and-forget DELETE used to release the guard on any failure, so the 5s
   cross-till poll re-added the check the operator had just voided.
 
+## Line editor (modifiers + special request)
+
+`LineEditorDialog` (a `CoreDialog`, portaled) — opened from a customisable
+product card or by tapping a line's name (`.ln-edit`). It builds the line's
+`modifiers` + `notes` before they go on the check:
+
+- **`.core-modgroup`** per `MenuItem.modifierGroups` group — a `.core-modgroup-h`
+  header with a `.core-modgroup-rule` (required/optional · up-to-N) over a
+  `.core-modopts` grid of `.core-modopt` toggles (`.on` when picked). Radio
+  groups (`maxSelections ≤ 1`) replace; multi-select keeps up to `maxSelections`.
+  A `flagOnKds` option shows a `★`; a positive `priceDelta` shows `+zł`.
+  **Required** groups (`minSelections ≥ 1`) gate the Add button until satisfied.
+- **`.core-notechips`** — quick note chips (`NOTE_CHIPS`) plus a special
+  `.core-notechip.alrg` **⚠ Allergy** chip that prefixes the note; under them a
+  `.core-textarea` (200-char cap). When the note matches the allergy regex a
+  `.core-alrg-banner` warns it prints emphasised on the kitchen ticket.
+- **`.core-editor-qty`** — a `.core-qstep.big` quantity stepper. The footer
+  button reads **Add · zł** (or **Save · zł** when editing) with the live
+  unit×qty total including modifier deltas.
+
+The editor only ever writes the line shape (`menuItemId` + `modifiers` +
+`notes` + `quantity`); **all pricing stays server-side** — `buildOrderShape`
+re-resolves each pick against the live menu (`effectiveUnitPrice`), drops any
+option id not on that item, and adds the menu's `priceDelta`. The KDS ticket
+already renders `selectedModifiers` (`.mod` / `.mod.flag`) and the per-line
+`notes`, so a customised line and its allergy flag reach the line cook unchanged.
+
+## Tender sheet (tip · split · comp · cash change)
+
+`TenderDialog` (a `CoreDialog`, portaled) replaces the old bare Card/Cash pad.
+It composes the tender and PATCHes it as `{ tabId, tender }`:
+
+- **Tip** — `.core-tchip` presets (None / 5 / 10 / 15 % of the net) + Custom zł.
+- **Comp** — a `.core-tender-toggle` reveals reason chips (`COMP_REASONS`) + an
+  amount (defaults to the whole bill). Recorded server-side as a single
+  `manager_comp` (the chip is the note), so it shows in Reports and counts toward
+  the per-shift comp cap (`getActorCompTotalToday`, audit action `pos.comp`).
+- **Split evenly** — a stepper up to the cover count; each guest share is an
+  equal slice (last absorbs the rounding remainder) with its own Cash/Card
+  `.core-seg.sm` toggle. `Charge split` sends one `payments[]` entry per share.
+- **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
+  quick denomination chips + a free amount, a live `.core-change-row` change-due,
+  and a Confirm gated until the cash covers the total.
+
+**Every figure is server-authoritative** (`chargeTab`, `src/lib/pos/fireTab.ts`):
+the bill comes from `buildOrderShape`; the comp is clamped to the bill and gated
+by the shared `evaluateRefundGuard` (owners bypass, others hit the per-shift comp
+cap); payments are validated to cover net due + tip or the charge 400s; cash
+change is `tendered − cash share`. The tender lands on the `Order` as
+`tipAmount` / `payments` / `compAmount` + `compReasonCode` + `compNote` /
+`cashTendered` + `changeGiven`. A bare PATCH with no `tender` still charges the
+full bill (the native `/api/v1` till is unchanged).
+
 ## Engine + API contract
 
 Real, server-resolved; **no mock data** (Rule #1). The server owns the
@@ -146,8 +210,10 @@ total and the `orderId` — the till only ever sends item ids + quantities.
   reconciled by `updatedAt` so an already-in-flight poll can't revert a
   fresher local edit.
 - **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
-- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
-  returns the authoritative `totalAmount`, closes the tab.
+- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId, tender? }` → applies the
+  tender (tip / split / comp / cash), marks `paidAt`, returns the authoritative
+  `{ totalAmount, tip, comp, change, netCollected }`, closes the tab. See
+  *Tender sheet* below.
 - **Pricing** — `getActiveComboDeals` (discount gated on `isComplete`,
   subtracted from the real total) + `getCartSuggestions`, both from
   `@/lib/upsell`; prices in grosze, formatted `27,90`.
@@ -159,6 +225,12 @@ POS uses Core's **own** kit (no `src/ui`): `CoreDialog`
 `useCoreToast` (`src/core/ui/Toast.tsx`) — both portaled into the
 `.core` theme root. Classes: `.core-scrim` / `.core-modal*` / `.core-btn` /
 `.core-toast*`.
+
+**Deep-link from the Floor** — `/core/pos?table=<id>&covers=<n>` (the Floor's
+*Order →* link) is read once on mount: when the tables list has loaded the till
+opens a **dine-in check pre-assigned to that table** (party as covers), or
+focuses the existing open check for it instead of duplicating. The query is
+stripped via `history.replaceState` so a refresh doesn't re-open a fresh check.
 
 The **table picker** is **not** a modal — it takes over the middle (menu)
 pane (`.core-tablepick`) for a full-size, **zone-grouped** board
@@ -189,10 +261,15 @@ Park) surfaces the dine-in orders guests placed by scanning a table QR
 every 8s; the pill goes `on` and shows an "N to pay" count when any are
 unpaid. Opening it lists each order in a `CoreDialog` — table number,
 guest, party size, line items, elapsed time, total and a paid/unpaid·status
-chip. **Mark paid** (`.core-charge`) posts `{ orderId, action: "settle" }`,
-which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
-(status → `confirmed`). The order stays the single source of truth — no
-duplicate tab is created, mirroring how the POS already owns totals
+chip. **Take payment** expands an inline `QrTenderPanel` (`.core-qr-tender`) —
+method (Card/Cash), tip presets, and a cash change-due — and **Settle** posts
+`{ orderId, action: "settle", tender }`. The route applies the tender to the
+**existing** order (no duplicate order/tab, so no double-charge): it sets
+`paidAt`, fires a still-pending demo-mode order to the kitchen (status →
+`confirmed`), and writes the same `tipAmount` / `payments` / `cashTendered` +
+`changeGiven` fields the POS tender uses, so a guest order settles through the
+same money model as a server-rung check. A bare settle (no `tender`) still just
+marks it paid. The order stays the single source of truth — totals owned
 server-side.
 
 The same dialog's **Print table QR** tab generates a printable per-table QR

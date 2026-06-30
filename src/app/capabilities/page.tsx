@@ -74,6 +74,34 @@ export default async function CapabilitiesPage() {
             "The till never loses a ticket or double-charges on a flaky network. Server withIdempotency(key, fn) (src/lib/store.ts) runs each POS mutation at most once per Idempotency-Key — serialized by the distributed lock, memoizing only successes with a 24h TTL — so a charge re-sent after a lost response replays its original { orderId, total } instead of taking a second payment or 404-ing on the deleted tab; applied to POST send-to-KDS + PATCH charge (pos/orders). Client idempotentFetch (src/lib/idempotentFetch.ts) attaches the key and retries transient blips (dropped connection / 5xx) with backoff; wired into POS send / fire-course / charge + the KDS bump. When the network is genuinely down, durableMutate (src/store/writeQueue.ts) parks the write in a localStorage outbox under its key, closes the check optimistically, and replays it — exactly once, FIFO per tab — on reconnect, surviving a reload; a '↻ N writes syncing' amber pill on the POS check-bar shows pending writes. Verified by idempotency.test.ts + writeQueue.core.test.ts.",
         },
         {
+          name: "Guest QR orders settle through the tender model",
+          status: "live",
+          href: "/core/pos",
+          summary:
+            "Guest-placed QR table orders already surface as first-class per-table entities on the Floor (channel 'qr', with a 'QR · … to pay' chip + inline settle) and in the POS QR queue. Settling one is now a real tender, not a bare 'Mark paid': QrTenderPanel (src/core/pos/CoreQrQueue.tsx) captures method (Card/Cash), a tip preset and a cash change-due before confirming. The settle route (src/app/api/admin/pos/qr-orders/route.ts) applies the tender to the EXISTING order — no duplicate order or tab, so there is no double-charge — writing the same tipAmount / payments[] / cashTendered+changeGiven fields the POS tender uses, so a guest order and a server-rung check settle through one money model. A bare settle (no tender) still just marks it paid; the order stays the single server-owned source of truth.",
+        },
+        {
+          name: "Floor → till table flow (one table model)",
+          status: "live",
+          href: "/core/service/floor",
+          summary:
+            "The Floor map and the POS now share one table model instead of two table UIs. Every non-out-of-service tile on the Floor (src/core/service/CoreFloor.tsx) carries an 'Order →' deep-link to /core/pos?table=<id>&covers=<party|seats>. The till (CorePos) reads the param once on mount and, when the tables list has loaded, opens a dine-in check pre-assigned to that table with the party as covers — or focuses the existing open check for it instead of duplicating — then strips the query so a refresh doesn't re-open a fresh check. The Order link is always visible on touch terminals (@media hover:none) and hover-revealed on pointer devices, so the 'tap a table → build its check' flow works on the real POS hardware.",
+        },
+        {
+          name: "POS tender — tips, splits, comps & cash change",
+          status: "live",
+          href: "/core/pos",
+          summary:
+            "The charge step is a real tender sheet, not a bare Card/Cash tap. TenderDialog (src/core/pos/CorePos.tsx) captures: a tip (5/10/15% of net or custom zł), a manager comp with reason chips, an even split across the cover count (per-guest share + Cash/Card per share), and a cash change-due calculator with denomination quick-keys. Everything is server-authoritative in chargeTab (src/lib/pos/fireTab.ts): the bill is re-derived by buildOrderShape; the comp is clamped to the bill and gated by the shared evaluateRefundGuard (owners bypass, others hit the per-shift comp cap) and logged via appendAuditLog action 'pos.comp' so Reports + getActorCompTotalToday count it; split payments are validated to cover net due + tip (a short tender 400s); cash change = tendered − cash share. The tender persists on the Order as tipAmount / payments[] / compAmount+compReasonCode+compNote / cashTendered+changeGiven (PosPayment type), so receipts, Reports and cash reconciliation read a real breakdown. PATCH /api/admin/pos/orders now takes { tabId, tender } and returns { totalAmount, tip, comp, change, netCollected }; a bare PATCH still charges the full bill so the native /api/v1 till is unchanged.",
+        },
+        {
+          name: "POS line modifiers & special requests",
+          status: "live",
+          href: "/core/pos",
+          summary:
+            "The till can now author per-line modifier picks and a special-request note, closing the gap where only the guest app could customise a line. A customisable product card (an item with modifierGroups) opens LineEditorDialog (src/core/pos/CorePos.tsx): radio/checkbox option groups honouring min/max selections (required groups gate the Add button), quick note chips plus free text, and a ⚠ Allergy chip that flags the note. Each line carries its modifiers + notes (PosTabLine extended; sanitised + persisted in savePosTab); line identity is the item + picks + note (posLineKey, src/lib/pos-line.ts) so a plain and a customised line of the same dish stay separate and the stepper / re-course / edit target the right row. Pricing stays server-owned — buildOrderShape (src/lib/pos/fireTab.ts) re-resolves each pick against the live menu, drops any option id not on that item, and adds the menu's priceDelta via effectiveUnitPrice; the same number drives the till subtotal. The KDS ticket already renders selectedModifiers (.mod / .mod.flag) + the per-line note, so a customised line and its allergy flag reach the line cook unchanged.",
+        },
+        {
           name: "Rate limiting",
           status: "live",
           summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback, plus a blanket per-user limit on EVERY admin API route (default 1200/min/user, override ADMIN_RATE_LIMIT_PER_MIN) enforced inside withAdmin. Fail-open on Redis error.",

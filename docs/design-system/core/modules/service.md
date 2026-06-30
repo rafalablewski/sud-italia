@@ -14,6 +14,12 @@ Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
   is toned by state — free · seated · **freeing** (predicted ≤15m) ·
   reserved · out-of-service — and shows party / dwell / open check; hover
   reveals a `⋯` **edit** affordance. Tap a table to **seat / clear**.
+- **Order → (`.core-tbl2-order`)** — a brand link on each non-OOS tile that
+  deep-links to the till (`/core/pos?table=<id>&covers=<party|seats>`). The POS
+  opens (or focuses, if one already exists) a **dine-in check pre-assigned to
+  that table** with the party as covers — so the floor map and the till share
+  one table model instead of two. Always shown on touch (`@media (hover:none)`),
+  hover-revealed on pointer devices.
 - **Predictive-seating recommender** (`.core-floor-bar`): type a party size
   and `recommendSeating(twin, n)` ranks best-fit tables as `.core-fchip`
   chips — *seat* now or *~Nm* until free; click to seat directly.
@@ -68,7 +74,9 @@ The Floor board pairs the predictive twin with the table's **live orders**:
   `GET /api/admin/floor/orders` (today's active orders, grouped by `tableId`,
   tagged with channel + paid/unpaid). Unpaid → a brand `… to pay` chip
   (prefixed `QR ·` for QR-channel orders); fully paid → a basil `✓ paid` chip.
-  A `📝` glyph on the table number flags a service note. Polls every 10s.
+  A glanceable service-note chip (`.core-tnote-chip`) sits on the tile; a note
+  naming an allergy/dietary risk goes amber (`.alrg`, `⚠`) so it reads across
+  the room, not on hover. Polls every 10s.
 - **To pay KPI** — count of unpaid active orders across the floor.
 - **Order lookup** — a `⌕ Find order` box filters active orders by id, guest
   name or table number; each result shows channel + paid status with a

@@ -5,21 +5,49 @@ import {
   linkPosTabOrder,
   deletePosTab,
   getUpsellSettings,
+  getSettings,
+  getActorCompTotalToday,
+  appendAuditLog,
   withIdempotency,
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getActiveComboDeals } from "@/lib/upsell";
+import { getActiveComboDeals, effectiveUnitPrice } from "@/lib/upsell";
 import { manualDiscountGrosze } from "@/lib/pos-discount";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { POS_COURSE_ORDER, courseOf } from "@/lib/pos-coursing";
+import { DEFAULT_REFUND_CONTROLS, evaluateRefundGuard } from "@/lib/refund-guard";
+import type { AdminRole } from "@/lib/admin-roles";
 import type {
   CartItem,
   FulfillmentType,
   Order,
+  PosPayment,
   PosCourse,
   PosTab,
   PosTabLine,
+  RefundReasonCode,
 } from "@/data/types";
+
+/** Tender details from the POS tender sheet — tip, split payments, a manager
+ *  comp, and cash handling. All optional; an absent payload charges the full
+ *  bill with no tip (the legacy single-tap behaviour). */
+export interface PosTender {
+  tipGrosze?: number;
+  /** Manager comp (food off the bill) in grosze + the operator's reason note. */
+  compGrosze?: number;
+  compNote?: string;
+  /** One entry per tender; a split has several. If omitted the server records a
+   *  single payment of the net due in `defaultMethod`. */
+  payments?: PosPayment[];
+  /** Cash physically handed over (grosze) — drives the change-due figure. */
+  cashTenderedGrosze?: number;
+  defaultMethod?: "cash" | "card";
+}
+
+const clampG = (v: unknown, max: number): number => {
+  const n = Math.round(Number(v) || 0);
+  return Math.max(0, Math.min(max, n));
+};
 
 /**
  * POS tab → Order actuator (the shared core).
@@ -75,11 +103,22 @@ async function buildOrderShape(
     const m = byId.get(li.menuItemId);
     const qty = Math.max(1, Math.min(99, Math.round(li.quantity)));
     if (!m) continue;
-    items.push({ menuItem: m, quantity: qty, locationSlug });
+    // Keep only modifier picks that resolve against THIS item's live groups —
+    // the till can't invent an option id, and the priced delta is the menu's.
+    const validOptions = new Set((m.modifierGroups ?? []).flatMap((g) => g.options.map((o) => o.id)));
+    const modifiers = (li.modifiers ?? []).filter((sel) => validOptions.has(sel.optionId));
+    items.push({
+      menuItem: m,
+      quantity: qty,
+      locationSlug,
+      ...(modifiers.length ? { selectedModifiers: modifiers } : {}),
+      ...(li.notes ? { notes: li.notes } : {}),
+    });
   }
   if (items.length === 0) return { error: "No valid items for this menu", status: 400 };
 
-  const itemsTotal = items.reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0);
+  // Modifier price deltas count toward the charged total (extra cheese +6 zł).
+  const itemsTotal = items.reduce((s, ci) => s + effectiveUnitPrice(ci) * ci.quantity, 0);
   const config = (await getUpsellSettings())[locationSlug];
   const combo = getActiveComboDeals(items, config ?? null, tab.channel);
   const comboDiscount = combo.isComplete ? combo.savings : 0;
@@ -101,6 +140,9 @@ async function persistTabOrder(
   shape: { items: CartItem[]; totalAmount: number; fulfillmentType: FulfillmentType },
   paid: boolean,
   coursing?: Order["coursing"],
+  /** Charge-time tender fields (tip / payments / comp / cash) merged onto the
+   *  order. Only set on the charge path. */
+  tender?: Partial<Order>,
 ): Promise<Order> {
   const now = new Date();
   const partySize = tab.channel === "dine-in" ? tab.covers ?? 2 : undefined;
@@ -120,6 +162,7 @@ async function persistTabOrder(
       customerName,
       customerPhone,
       ...(coursing !== undefined ? { coursing } : {}),
+      ...(tender ?? {}),
       ...(paid ? { paidAt: now.toISOString() } : {}),
     });
     if (patched) return patched;
@@ -139,6 +182,7 @@ async function persistTabOrder(
     tableId,
     deliveryAddress,
     coursing,
+    ...(tender ?? {}),
     slotId: "walkin",
     slotDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
     slotTime: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
@@ -189,16 +233,36 @@ export async function fireTab(opts: {
 }
 
 /**
- * "Charge". Ensures the order exists, stamps it paid, and closes the tab.
- * Idempotent per `idempotencyKey` — a retry after a lost response returns the
- * memoized result, never a second payment or a 404 (the tab is already gone).
+ * "Charge". Ensures the order exists, applies the tender (tip / split / comp /
+ * cash change), stamps it paid, and closes the tab. Idempotent per
+ * `idempotencyKey` — a retry after a lost response returns the memoized result,
+ * never a second payment or a 404 (the tab is already gone).
+ *
+ * The server owns every figure: the bill total comes from `buildOrderShape`
+ * (live menu, combos, discount); the comp is clamped to the bill and gated by
+ * the same per-shift refund guard as a post-sale refund; payments are validated
+ * to cover net due + tip. A bare call (no `tender`) charges the full bill, no
+ * tip — the original single-tap behaviour, so the native `/api/v1` POS is
+ * unaffected.
  */
 export async function chargeTab(opts: {
   tabId: string;
   locationSlug: string;
   idempotencyKey?: string | null;
-}): Promise<{ ok: true; orderId: string; totalAmount: number }> {
-  const { tabId, locationSlug } = opts;
+  tender?: PosTender;
+  /** Actor id + role for the comp audit trail and per-shift comp cap. */
+  actor?: string;
+  role?: AdminRole;
+}): Promise<{
+  ok: true;
+  orderId: string;
+  totalAmount: number;
+  tip: number;
+  comp: number;
+  change: number;
+  netCollected: number;
+}> {
+  const { tabId, locationSlug, tender } = opts;
   return withIdempotency(opts.idempotencyKey ?? null, async () => {
     const tab = await getPosTab(tabId, locationSlug);
     if (!tab || tab.locationSlug !== locationSlug) throw new PosActionError(404, "Tab not found");
@@ -206,8 +270,73 @@ export async function chargeTab(opts: {
     const shape = await buildOrderShape(tab, locationSlug);
     if ("error" in shape) throw new PosActionError(shape.status, shape.error);
 
-    const order = await persistTabOrder(tab, locationSlug, shape, true);
+    const bill = shape.totalAmount;
+    const tip = clampG(tender?.tipGrosze, 5_000_00); // sanity ceiling 5000 zł
+    const comp = clampG(tender?.compGrosze, bill); // can't comp more than the bill
+    const netDue = Math.max(0, bill - comp);
+
+    // Comp guard — a manager can't comp the whole shift away (audit §11.2). Same
+    // pure decision the refund dialog/route use; owners bypass. Checked before
+    // the order is stamped paid so a blocked comp never settles the check.
+    if (comp > 0 && opts.role) {
+      const actor = opts.actor ?? "pos";
+      const limits = (await getSettings()).refundControls ?? DEFAULT_REFUND_CONTROLS;
+      const compTotalToday = await getActorCompTotalToday(actor, locationSlug);
+      const guard = evaluateRefundGuard({
+        role: opts.role,
+        reasonCode: "manager_comp" as RefundReasonCode,
+        amountGrosze: comp,
+        actorCompTotalTodayGrosze: compTotalToday,
+        limits,
+      });
+      if (!guard.allowed) throw new PosActionError(403, guard.message ?? "Comp not allowed");
+    }
+
+    // Tender breakdown. Default to a single payment of the net due + tip in the
+    // chosen method; otherwise take the operator's split, clamped so the
+    // recorded payments never exceed what's owed.
+    const target = netDue + tip;
+    let payments: PosPayment[] = (tender?.payments ?? [])
+      .map((p) => ({ method: p.method === "cash" ? "cash" : "card", amount: clampG(p.amount, target) } as PosPayment))
+      .filter((p) => p.amount > 0);
+    if (payments.length === 0 && target > 0) {
+      payments = [{ method: tender?.defaultMethod === "cash" ? "cash" : "card", amount: target }];
+    }
+    const paid = payments.reduce((s, p) => s + p.amount, 0);
+    if (target > 0 && paid < target) {
+      throw new PosActionError(400, `Tendered ${(paid / 100).toFixed(2)} zł is short of ${(target / 100).toFixed(2)} zł due`);
+    }
+
+    // Cash change: what was physically handed over minus the cash share of the bill.
+    const cashShare = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0);
+    const cashTendered = tender?.cashTenderedGrosze != null ? clampG(tender.cashTenderedGrosze, 50_000_00) : undefined;
+    const change = cashTendered != null ? Math.max(0, cashTendered - cashShare) : 0;
+
+    const tenderFields: Partial<Order> = {
+      ...(tip > 0 ? { tipAmount: tip } : {}),
+      ...(comp > 0
+        ? { compAmount: comp, compReasonCode: "manager_comp" as RefundReasonCode, ...(tender?.compNote ? { compNote: tender.compNote.slice(0, 200) } : {}) }
+        : {}),
+      ...(payments.length ? { payments } : {}),
+      ...(cashTendered != null ? { cashTendered, changeGiven: change } : {}),
+    };
+
+    const order = await persistTabOrder(tab, locationSlug, shape, true, undefined, tenderFields);
+
+    // A comp is food given away — log it so Reports and the per-shift comp cap
+    // (getActorCompTotalToday) count it, exactly like a post-sale partial refund.
+    if (comp > 0) {
+      await appendAuditLog({
+        actor: opts.actor ?? "pos",
+        action: "pos.comp",
+        entityType: "order",
+        entityId: order.id,
+        before: { totalAmount: bill },
+        after: { refundAmount: comp, reasonCode: "manager_comp", locationSlug, note: tender?.compNote ?? null },
+      });
+    }
+
     await deletePosTab(tab.id, locationSlug);
-    return { ok: true as const, orderId: order.id, totalAmount: order.totalAmount };
+    return { ok: true as const, orderId: order.id, totalAmount: order.totalAmount, tip, comp, change, netCollected: paid };
   });
 }

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BRACE — OttavianoKDS visual identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== BRACE — the warm-dark skin for OttavianoKDS (Theme.kds) ===== */
+  :root {
+    /* warm-espresso ramp (replaces cool near-black #100f12) */
+    --bg:#15110D; --panel:#1F1A14; --panel-2:#28211A; --panel-3:#322A21; --hover:#3A3026;
+    --line:rgba(255,247,235,.10); --line-2:rgba(255,247,235,.18);
+    --ink:#F8F1E7; --ink-2:#C9BBA9; --ink-3:#908172;
+    /* hero — ember terracotta (replaces magenta-red #d23a55) */
+    --brand:#E86B3E; --brand-bright:#FF905E; --brand-wash:rgba(232,107,62,.16); --on-accent:#2A160B;
+    /* SLA tone ramp — the heart of the wall (hue + brightness separated = colour-blind safe) */
+    --t-queued:#8A7C6B;  /* stone — just placed, calm   */
+    --t-firing:#3FA7CE;  /* tyrrhenian blue — cooking now */
+    --t-warn:#E8A23C;    /* saffron — nearing the promise */
+    --t-risk:#9B7BD0;    /* plum — predicted to slip      */
+    --t-late:#E5484A;    /* San Marzano — breached        */
+    --t-ready:#6FB155;   /* basil — done, run it          */
+    --gold:#E9B24A;
+    --kds-veil:rgba(255,247,235,.07); --kds-track:rgba(255,247,235,.10);
+    --r:12px; --r-sm:8px;
+    --sh:0 8px 26px rgba(0,0,0,.5);
+    --glow:0 0 0 1px rgba(232,107,62,.4), 0 8px 26px rgba(232,107,62,.30);
+    --sans:'Inter',system-ui,sans-serif; --display:'Bricolage Grotesque',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:
+      radial-gradient(1100px 460px at 85% -12%, rgba(232,107,62,.10), transparent 60%),
+      radial-gradient(820px 460px at -8% 112%, rgba(63,167,206,.06), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5; -webkit-font-smoothing:antialiased; padding:46px 26px 80px; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--brand); }
+  h1 { font-family:var(--display); font-weight:700; font-size:60px; line-height:1; letter-spacing:-.02em; margin:10px 0 8px; }
+  h1 .amp { color:var(--brand); }
+  .lede { color:var(--ink-2); font-size:17.5px; max-width:720px; }
+  .lede b { color:var(--ink); font-weight:600; }
+  h2 { font-family:var(--display); font-weight:600; font-size:26px; letter-spacing:-.01em; margin:54px 0 6px; }
+  h2 .n { font-family:var(--mono); font-size:13px; color:var(--brand); vertical-align:super; margin-right:10px; }
+  .sub { color:var(--ink-3); font-size:14px; margin-bottom:20px; max-width:780px; }
+  section { border-top:1px solid var(--line); }
+
+  .grid { display:grid; gap:13px; }
+  .g6 { grid-template-columns:repeat(6,1fr); } .g4 { grid-template-columns:repeat(4,1fr); }
+  @media(max-width:880px){ .g6{grid-template-columns:repeat(3,1fr);} .g4{grid-template-columns:repeat(2,1fr);} }
+  .sw { border-radius:var(--r); overflow:hidden; border:1px solid var(--line); background:var(--panel); }
+  .sw .chip { height:70px; } .sw .meta { padding:8px 10px 10px; }
+  .sw .nm { font-size:12px; font-weight:600; } .sw .hx { font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:2px; }
+  .sw .tok { font-family:var(--mono); font-size:10px; color:var(--ink-3); opacity:.85; margin-top:1px; }
+
+  /* SLA ramp */
+  .ramp { display:grid; grid-template-columns:repeat(6,1fr); gap:0; border-radius:var(--r); overflow:hidden; border:1px solid var(--line); }
+  .ramp .seg { padding:16px 12px 14px; background:var(--panel); border-right:1px solid var(--line); }
+  .ramp .seg:last-child { border-right:none; }
+  .ramp .bar { height:6px; border-radius:3px; margin-bottom:11px; }
+  .ramp .st { font-family:var(--display); font-weight:600; font-size:14px; }
+  .ramp .dx { font-size:11px; color:var(--ink-3); margin-top:3px; line-height:1.35; }
+  .ramp .hx { font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:7px; }
+
+  /* type */
+  .type { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:24px 26px; }
+  .type .d1 { font-family:var(--display); font-weight:700; font-size:40px; letter-spacing:-.02em; }
+  .type .b { font-size:15px; color:var(--ink-2); margin-top:10px; max-width:640px; }
+  .type .m { font-family:var(--mono); font-weight:600; font-size:30px; margin-top:14px; color:var(--brand); }
+  .scale { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:18px; }
+  .scale span { color:var(--ink-3); font-size:12px; font-family:var(--mono); }
+
+  /* the wall */
+  .wall { background:#0F0C09; border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--sh); }
+  .wall-top { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line); background:linear-gradient(var(--panel),var(--bg)); }
+  .wall-top .brand { font-family:var(--display); font-weight:700; font-size:15px; } .wall-top .brand b { color:var(--brand); }
+  .kpis { display:flex; gap:16px; margin-left:auto; }
+  .kpi { text-align:right; } .kpi .kl { font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); } .kpi .kv { font-family:var(--mono); font-weight:700; font-size:17px; }
+  .kv.firing { color:var(--t-firing); } .kv.late { color:var(--t-late); } .kv.ready { color:var(--t-ready); }
+  .lanes { display:grid; grid-template-columns:repeat(3,1fr); gap:0; }
+  .lane { padding:14px; border-right:1px solid var(--line); min-height:430px; }
+  .lane:last-child { border-right:none; }
+  .lane-h { font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-bottom:12px; display:flex; gap:7px; align-items:center; }
+  .lane-h b { font-family:var(--mono); color:var(--ink); }
+
+  .tk { background:var(--panel-2); border:1px solid var(--line); border-left:4px solid var(--t-queued); border-radius:var(--r); padding:12px 13px; margin-bottom:11px; }
+  .tk.firing { border-left-color:var(--t-firing); } .tk.warn { border-left-color:var(--t-warn); }
+  .tk.risk { border-left-color:var(--t-risk); } .tk.late { border-left-color:var(--t-late); border-color:rgba(229,72,74,.45); }
+  .tk.ready { border-left-color:var(--t-ready); }
+  .tk-h { display:flex; align-items:center; gap:7px; }
+  .tk-h .id { font-family:var(--mono); font-weight:700; font-size:13px; }
+  .tk-h .ch { font-size:9.5px; font-weight:600; color:var(--ink-2); background:var(--kds-veil); border-radius:5px; padding:2px 6px; }
+  .tk-h .due { margin-left:auto; font-family:var(--mono); font-weight:700; font-size:14px; color:var(--t-queued); }
+  .tk.firing .due { color:var(--t-firing); } .tk.warn .due { color:var(--t-warn); } .tk.risk .due { color:var(--t-risk); }
+  .tk.late .due { color:var(--t-late); } .tk.ready .due { color:var(--t-ready); }
+  .tk-it { font-size:13px; margin-top:9px; } .tk-it .qn { font-family:var(--mono); color:var(--ink-3); margin-right:5px; }
+  .tk-mod { font-size:11px; color:var(--ink-3); margin:2px 0 0 19px; } .tk-mod.flag { color:var(--t-warn); font-weight:600; }
+  .tk-alrg { margin-top:8px; font-size:11px; font-weight:700; color:var(--t-late); background:rgba(229,72,74,.14); border-left:2px solid var(--t-late); padding:4px 8px; border-radius:5px; }
+  .meter { height:6px; border-radius:3px; background:var(--kds-track); margin-top:10px; overflow:hidden; }
+  .meter i { display:block; height:100%; border-radius:3px; }
+  .bump { margin-top:11px; width:100%; height:38px; border:none; border-radius:var(--r-sm); font-family:var(--sans); font-weight:700; font-size:13px; cursor:pointer; background:var(--kds-veil); color:var(--ink); }
+  .tk.ready .bump { background:var(--t-ready); color:#0c1a0f; }
+  .tk.late .bump { background:var(--t-late); color:#fff; }
+  .new-flash { box-shadow:var(--glow); }
+
+  /* station / all-day */
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:880px){ .two{grid-template-columns:1fr;} }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--sh); }
+  .card-h { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--bg); }
+  .card-h .t { font-weight:600; font-size:13px; } .card-h .e { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.08em; }
+  .card-b { padding:16px; }
+  .allday { display:flex; flex-direction:column; gap:9px; }
+  .ad { display:flex; align-items:center; gap:12px; padding:11px 13px; background:var(--panel-2); border:1px solid var(--line); border-radius:var(--r); }
+  .ad .n { font-family:var(--mono); font-weight:700; font-size:24px; min-width:42px; color:var(--brand); }
+  .ad .nm { font-weight:600; font-size:14px; flex:1; } .ad .sub { font-size:11px; color:var(--ink-3); }
+  .ad .tag { font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; background:var(--brand-wash); color:var(--brand-bright); }
+  .depth { display:flex; gap:10px; margin-bottom:14px; }
+  .depth .d { flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:var(--r); padding:11px; text-align:center; }
+  .depth .dv { font-family:var(--mono); font-weight:700; font-size:26px; } .depth .dv.warn { color:var(--t-warn); }
+  .depth .dl { font-size:10px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+  .stn { display:flex; gap:7px; flex-wrap:wrap; }
+  .stn b { font-size:11px; font-weight:600; padding:5px 11px; border-radius:7px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink-2); }
+  .stn b.on { background:var(--brand); color:var(--on-accent); border-color:transparent; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:14px; font-size:12px; color:var(--ink-2); }
+  .legend i { width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:6px; vertical-align:-1px; }
+  .kiosk-note { margin-top:18px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--brand); border-radius:var(--r); font-size:13px; color:var(--ink-2); }
+  .foot { margin-top:56px; color:var(--ink-3); font-size:13px; border-top:1px solid var(--line); padding-top:18px; }
+  .foot .mono { font-family:var(--mono); color:var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">OttavianoKDS · Theme.kds · the kitchen wall</div>
+    <h1>Brace<span class="amp"> &amp;</span> Basil</h1>
+    <p class="lede">A warm-dark re-skin for the kitchen display. The wall trades cool near-black and magenta-red for the <b>glow of the forno</b> — warm espresso surfaces, an <b>ember</b> accent, fresh <b>basil</b> for done — so tickets read at a glance under bright kitchen glare and the timing ramp tells a whole story by colour alone. Drop-in over the Core dark tokens → flows to the Swift palette via <b>gen:native</b>.</p>
+  </header>
+
+  <!-- foundation -->
+  <h2><span class="n">01</span>Surfaces &amp; ink — warm, not clinical</h2>
+  <p class="sub">The wall canvas warms from <span class="mono">#100f12</span> (cool) to <span class="mono">#15110D</span> (espresso). Same depth, but it reads as a calm room, not a dead screen — and food on the line looks appetising, not grey. Ink is warm cream for a 12-hour shift.</p>
+  <div class="grid g6">
+    <div class="sw"><div class="chip" style="background:#15110D"></div><div class="meta"><div class="nm">Wall</div><div class="hx">#15110D</div><div class="tok">--bg</div></div></div>
+    <div class="sw"><div class="chip" style="background:#1F1A14"></div><div class="meta"><div class="nm">Panel</div><div class="hx">#1F1A14</div><div class="tok">--panel</div></div></div>
+    <div class="sw"><div class="chip" style="background:#28211A"></div><div class="meta"><div class="nm">Ticket</div><div class="hx">#28211A</div><div class="tok">--panel-2</div></div></div>
+    <div class="sw"><div class="chip" style="background:#E86B3E"></div><div class="meta"><div class="nm">Ember</div><div class="hx">#E86B3E</div><div class="tok">--brand</div></div></div>
+    <div class="sw"><div class="chip" style="background:#E9B24A"></div><div class="meta"><div class="nm">Saffron</div><div class="hx">#E9B24A</div><div class="tok">--gold</div></div></div>
+    <div class="sw"><div class="chip" style="background:#F8F1E7"></div><div class="meta"><div class="nm">Ink</div><div class="hx">#F8F1E7</div><div class="tok">--ink</div></div></div>
+  </div>
+
+  <!-- SLA ramp -->
+  <h2><span class="n">02</span>The ticket lifecycle — one ramp, read across the room</h2>
+  <p class="sub">A KDS lives or dies on glanceability. Six tones span the whole hue wheel <b>and</b> brightness, so a cook reads a ticket's state from 4 metres — and a colour-blind cook reads it too (no red-vs-green reliance; stone→blue→saffron→plum→tomato→basil). Drives the card's left border, the due clock and the meter fill.</p>
+  <div class="ramp">
+    <div class="seg"><div class="bar" style="background:#8A7C6B"></div><div class="st">Queued</div><div class="dx">Just placed</div><div class="hx">#8A7C6B · --t-queued</div></div>
+    <div class="seg"><div class="bar" style="background:#3FA7CE"></div><div class="st">Firing</div><div class="dx">On the line</div><div class="hx">#3FA7CE · --t-firing</div></div>
+    <div class="seg"><div class="bar" style="background:#E8A23C"></div><div class="st">Warn</div><div class="dx">Nearing promise</div><div class="hx">#E8A23C · --t-warn</div></div>
+    <div class="seg"><div class="bar" style="background:#9B7BD0"></div><div class="st">At risk</div><div class="dx">Predicted to slip</div><div class="hx">#9B7BD0 · --t-risk</div></div>
+    <div class="seg"><div class="bar" style="background:#E5484A"></div><div class="st">Late</div><div class="dx">Breached</div><div class="hx">#E5484A · --t-late</div></div>
+    <div class="seg"><div class="bar" style="background:#6FB155"></div><div class="st">Ready</div><div class="dx">Run it</div><div class="hx">#6FB155 · --t-ready</div></div>
+  </div>
+
+  <!-- type -->
+  <h2><span class="n">03</span>Type — built for the glance</h2>
+  <p class="sub"><b>Bricolage Grotesque</b> for headers/station names (optical, characterful) · <b>Inter</b> for ticket lines (dense, legible) · <b>JetBrains Mono</b> for IDs, counts and the timer that everyone watches.</p>
+  <div class="type">
+    <div class="d1">Pizza · Forno 1</div>
+    <div class="b">Ticket lines stay calm and dense in Inter — 2× Margherita · no chilli · ⚠ nut allergy — legible across a hot, steamy line.</div>
+    <div class="m">#A4F1 · 3:10 · 12 all-day</div>
+    <div class="scale"><span>Station 40</span><span>Ticket line 16</span><span>Chip 11</span><span>Due / mono</span><span>All-day 26 mono</span></div>
+  </div>
+
+  <!-- the wall -->
+  <h2><span class="n">04</span>The wall</h2>
+  <p class="sub">New → Firing → Ready·Expo. Each ticket toned by SLA; the meter fills toward the promise; allergens never drop. A new ticket lands with an ember glow + chime.</p>
+  <div class="wall">
+    <div class="wall-top">
+      <div class="brand">Ottaviano<b>KDS</b> · Kraków · Forno</div>
+      <div class="kpis">
+        <div class="kpi"><div class="kl">Firing</div><div class="kv firing">5</div></div>
+        <div class="kpi"><div class="kl">At risk</div><div class="kv">2</div></div>
+        <div class="kpi"><div class="kl">Late</div><div class="kv late">1</div></div>
+        <div class="kpi"><div class="kl">Ready</div><div class="kv ready">3</div></div>
+      </div>
+    </div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-h">New <b>2</b></div>
+        <div class="tk new-flash"><div class="tk-h"><span class="id">#A4F7</span><span class="ch">Dine-in · T7</span><span class="due">0:40</span></div><div class="tk-it"><span class="qn">2×</span>Margherita</div><div class="tk-it"><span class="qn">1×</span>Diavola</div><div class="tk-mod flag">no chilli · light base</div><div class="tk-alrg">⚠ Allergen · nuts</div><div class="meter"><i style="width:10%; background:var(--t-queued)"></i></div></div>
+        <div class="tk"><div class="tk-h"><span class="id">#A4F5</span><span class="ch">QR · T12</span><span class="due">1:05</span></div><div class="tk-it"><span class="qn">1×</span>Marinara</div><div class="meter"><i style="width:16%; background:var(--t-queued)"></i></div></div>
+      </div>
+      <div class="lane">
+        <div class="lane-h">Firing <b>3</b></div>
+        <div class="tk firing"><div class="tk-h"><span class="id">#A4F1</span><span class="ch">Dine-in · T3</span><span class="due">3:10</span></div><div class="tk-it"><span class="qn">2×</span>Quattro Formaggi</div><div class="meter"><i style="width:46%; background:var(--t-firing)"></i></div></div>
+        <div class="tk warn"><div class="tk-h"><span class="id">#A4E8</span><span class="ch">Takeaway</span><span class="due">6:30</span></div><div class="tk-it"><span class="qn">1×</span>Capricciosa</div><div class="tk-mod">well done</div><div class="meter"><i style="width:74%; background:var(--t-warn)"></i></div></div>
+        <div class="tk risk"><div class="tk-h"><span class="id">#A4E2</span><span class="ch">Delivery</span><span class="due">8:15</span></div><div class="tk-it"><span class="qn">3×</span>Margherita</div><div class="meter"><i style="width:88%; background:var(--t-risk)"></i></div></div>
+      </div>
+      <div class="lane">
+        <div class="lane-h">Ready · Expo <b>2</b></div>
+        <div class="tk late"><div class="tk-h"><span class="id">#A4D2</span><span class="ch">Delivery</span><span class="due">+2:20</span></div><div class="tk-it"><span class="qn">2×</span>Diavola</div><div class="meter"><i style="width:100%; background:var(--t-late)"></i></div><button class="bump">Bump · late</button></div>
+        <div class="tk ready"><div class="tk-h"><span class="id">#A4C9</span><span class="ch">Dine-in · T9</span><span class="due">Ready</span></div><div class="tk-it"><span class="qn">1×</span>Margherita</div><button class="bump">✓ Bump &amp; run</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- station + all-day -->
+  <h2><span class="n">05</span>Chef view &amp; all-day</h2>
+  <p class="sub">The single-station make-queue and the batch counts the pizzaiolo actually cooks from — ember marks the active station and the live count.</p>
+  <div class="two">
+    <div class="card">
+      <div class="card-h"><span class="t">Chef · station queue</span><span class="e">forno</span></div>
+      <div class="card-b">
+        <div class="depth">
+          <div class="d"><div class="dv">7</div><div class="dl">In queue</div></div>
+          <div class="d"><div class="dv warn">9:40</div><div class="dl">Oldest</div></div>
+          <div class="d"><div class="dv">2:50</div><div class="dl">Avg age</div></div>
+        </div>
+        <div class="stn"><b class="on">Forno</b><b>Fryer</b><b>Cold</b><b>Pass</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="t">All-day · what's cooking</span><span class="e">batch</span></div>
+      <div class="card-b">
+        <div class="allday">
+          <div class="ad"><span class="n">12</span><div><div class="nm">Margherita</div><div class="sub">across 8 tickets</div></div><span class="tag">make now</span></div>
+          <div class="ad"><span class="n">5</span><div><div class="nm">Diavola</div><div class="sub">across 4 tickets</div></div></div>
+          <div class="ad"><span class="n">3</span><div><div class="nm">Quattro Formaggi</div><div class="sub">across 3 tickets</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:#8A7C6B"></i>Queued</span>
+    <span><i style="background:#3FA7CE"></i>Firing</span>
+    <span><i style="background:#E8A23C"></i>Warn</span>
+    <span><i style="background:#9B7BD0"></i>At risk</span>
+    <span><i style="background:#E5484A"></i>Late</span>
+    <span><i style="background:#6FB155"></i>Ready</span>
+    <span><i style="background:#E86B3E"></i>Ember (new ticket · active station · primary)</span>
+  </div>
+
+  <div class="kiosk-note"><b>Mounted kiosk stays dark, always.</b> The fullscreen wall ignores light mode — a glare-readable warm-dark board for the line. Big bump targets (≥38px) for gloved hands, number-key bump, and the ember chime-flash on a new ticket are the only motion on the wall — calm by default, loud only when something's late.</div>
+
+  <div class="foot">BRACE — OttavianoKDS / <span class="mono">Theme.kds</span> · re-skins <span class="mono">src/app/themes/core/tokens.css</span> (dark) → <span class="mono">gen:native</span> → <span class="mono">Tokens.generated.swift</span>. A draft sketch in /tests/ — it never ships.</div>
+
+</div>
+</body>
+</html>

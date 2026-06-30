@@ -525,8 +525,13 @@ export function CoreKds() {
           ))}
         </div>
         {recalls.length > 0 && (
-          <button type="button" className="core-iconbtn" title={`Recall ${recalls[0].label}`} onClick={() => void recall(recalls[0].orderId)}>
-            ↩ {recalls.length}
+          <button
+            type="button"
+            className="core-iconbtn core-recall-btn"
+            title={`Undo last bump — restores ${recalls[0].label}`}
+            onClick={() => void recall(recalls[0].orderId)}
+          >
+            ↩ Undo{recalls.length > 1 ? ` · ${recalls.length}` : ""}
           </button>
         )}
         <button type="button" className="core-iconbtn" title="Refresh now" onClick={() => refresh()}>⟳</button>

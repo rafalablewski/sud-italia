@@ -552,6 +552,27 @@ export interface Order {
    *  reports or CRM, and never trigger stock decrement, customer rollups, or
    *  customer comms. */
   simulated?: boolean;
+  /** Tender breakdown captured at POS charge — how the bill was settled. One
+   *  entry for a single payment, several for a split. Sums to net due + tip. */
+  payments?: PosPayment[];
+  /** Cash handling at charge: total cash handed over and change returned
+   *  (grosze). Set only when (part of) the bill was paid in cash. */
+  cashTendered?: number;
+  changeGiven?: number;
+  /** Manager comp applied at the till (grosze) — food taken off the bill, a
+   *  pure loss tracked separately from the gross `totalAmount` (which stays the
+   *  full menu value, like a refund). Audited + capped per shift via the same
+   *  refund-guard path as post-sale refunds. */
+  compAmount?: number;
+  compReasonCode?: RefundReasonCode;
+  compNote?: string;
+}
+
+/** A single tender against a POS check (one of several when the bill is split).
+ *  `amount` is what was applied to the bill in grosze, excluding any cash change. */
+export interface PosPayment {
+  method: "cash" | "card";
+  amount: number;
 }
 
 // --- Floor: physical tables + reservations (per location) ---
@@ -624,6 +645,13 @@ export interface PosTabLine {
   /** Which course this line belongs to (dine-in coursing). Absent lines are
    *  treated as "main" so legacy / non-coursed tabs still resolve. */
   course?: PosCourse;
+  /** Per-line modifier selections (group id + option id). Priced server-side
+   *  off the live menu's option `priceDelta`s — the till never sends a price.
+   *  Two otherwise-identical lines with different picks stay separate. */
+  modifiers?: SelectedModifier[];
+  /** Free-text special request for this line ("no chili", "well done", an
+   *  allergy flag). Surfaced on the KDS ticket and the receipt. */
+  notes?: string;
 }
 
 /** An open check at the counter — the "Tabs" POS lets staff juggle several at

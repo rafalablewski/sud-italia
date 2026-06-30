@@ -1,7 +1,35 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getOrders } from "@/lib/store";
-import { fireTab, chargeTab, PosActionError } from "@/lib/pos/fireTab";
+import { getCurrentActor } from "@/lib/admin-auth";
+import { fireTab, chargeTab, PosActionError, type PosTender } from "@/lib/pos/fireTab";
+import type { PosPayment } from "@/data/types";
+
+/** Validate the tender payload off the wire — the till proposes amounts, the
+ *  server re-derives the bill and clamps everything in chargeTab; this just
+ *  shapes the input so a malformed body can't crash the handler. */
+function parseTender(raw: unknown): PosTender | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const b = raw as Record<string, unknown>;
+  const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : undefined);
+  const payments: PosPayment[] = Array.isArray(b.payments)
+    ? b.payments
+        .map((p): PosPayment | null => {
+          const method = (p as Record<string, unknown>)?.method === "cash" ? "cash" : "card";
+          const amount = num((p as Record<string, unknown>)?.amount);
+          return amount && amount > 0 ? { method, amount } : null;
+        })
+        .filter((p): p is PosPayment => p !== null)
+    : [];
+  return {
+    tipGrosze: num(b.tipGrosze),
+    compGrosze: num(b.compGrosze),
+    compNote: typeof b.compNote === "string" ? b.compNote.slice(0, 200) : undefined,
+    payments: payments.length ? payments : undefined,
+    cashTenderedGrosze: num(b.cashTenderedGrosze),
+    defaultMethod: b.defaultMethod === "cash" ? "cash" : b.defaultMethod === "card" ? "card" : undefined,
+  };
+}
 
 /**
  * POS order actuator (the web POS). The tab → Order bridge is the SHARED
@@ -75,14 +103,21 @@ export const POST = withAdmin(
 // Charge a tab: ensure the order exists, mark it paid, then close the tab.
 export const PATCH = withAdmin(
   { roles: ["staff"], locationParam: "location" },
-  async (req, _ctx, { locationSlug }) => {
+  async (req, _ctx, { locationSlug, user }) => {
     if (!locationSlug) return NextResponse.json({ error: "location required" }, { status: 400 });
     const body = await req.json().catch(() => null);
     const tabId = body && typeof body.tabId === "string" ? body.tabId : "";
     if (!tabId) return NextResponse.json({ error: "tabId required" }, { status: 400 });
 
     try {
-      const result = await chargeTab({ tabId, locationSlug, idempotencyKey: idemKey(req) });
+      const result = await chargeTab({
+        tabId,
+        locationSlug,
+        idempotencyKey: idemKey(req),
+        tender: parseTender(body?.tender),
+        actor: await getCurrentActor(),
+        role: user.role,
+      });
       return NextResponse.json(result);
     } catch (e) {
       if (e instanceof PosActionError) return NextResponse.json({ error: e.message }, { status: e.httpStatus });

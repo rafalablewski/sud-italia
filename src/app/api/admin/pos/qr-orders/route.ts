@@ -58,11 +58,30 @@ export const POST = withAdmin(
       return NextResponse.json({ error: "unknown action" }, { status: 400 });
     }
 
+    // Optional tender — settle a guest order through the same money model as a
+    // POS check (tip + method + cash change) instead of a bare "paid" flag. We
+    // operate on the EXISTING order (no new order, so no double-charge); the
+    // figures land on the same Order fields the POS tender writes.
+    const t = (body as { tender?: Record<string, unknown> } | null)?.tender;
+    const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+    const method = t?.method === "cash" ? "cash" : "card";
+    const tip = Math.min(500_00, num(t?.tipGrosze));
+    const billPlusTip = order.totalAmount + tip;
+    const cashTendered = method === "cash" && t?.cashTenderedGrosze != null ? Math.min(5_000_00, num(t.cashTenderedGrosze)) : undefined;
+    const tenderFields = t
+      ? {
+          ...(tip > 0 ? { tipAmount: tip } : {}),
+          payments: [{ method: method as "cash" | "card", amount: billPlusTip }],
+          ...(cashTendered != null ? { cashTendered, changeGiven: Math.max(0, cashTendered - billPlusTip) } : {}),
+        }
+      : {};
+
     const updated = await updateOrder(orderId, {
       paidAt: order.paidAt ?? new Date().toISOString(),
       // A demo-mode QR order sits at "pending" until paid; settling fires it
       // to the kitchen. A Stripe-paid order is already confirmed — leave it.
       status: order.status === "pending" ? "confirmed" : order.status,
+      ...tenderFields,
     });
     if (!updated) {
       return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
@@ -72,7 +91,7 @@ export const POST = withAdmin(
       action: "pos.qr_settle",
       entityType: "order",
       entityId: orderId,
-      after: { paidAt: updated?.paidAt, status: updated?.status },
+      after: { paidAt: updated?.paidAt, status: updated?.status, tip: updated?.tipAmount ?? 0 },
     });
     return NextResponse.json({ ok: true, order: { id: orderId, paid: !!updated?.paidAt, status: updated?.status } });
   },
