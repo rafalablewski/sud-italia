@@ -22,15 +22,21 @@ export interface SurfaceConfig {
   titleKey?: string;
   /** Field(s) on each row to show as a secondary line. */
   subtitleKeys?: string[];
+  /**
+   * The endpoint is per-location and requires a `?location=` (it 422s with
+   * "location is required" otherwise — e.g. POS open checks, the floor map).
+   * `DataSurface` then renders a site switcher and scopes the fetch.
+   */
+  needsLocation?: boolean;
 }
 
 export const SURFACE_CONFIG: Record<string, SurfaceConfig> = {
   // Core
-  "/core/pos": { kind: "data", endpoint: "/admin/pos/tabs", titleKey: "label", subtitleKeys: ["status", "total"] },
+  "/core/pos": { kind: "data", endpoint: "/admin/pos/tabs", titleKey: "label", subtitleKeys: ["status", "total"], needsLocation: true },
   "/core/kds": { kind: "kds" },
   "/core/orders": { kind: "orders" },
   "/core/guest": { kind: "data", endpoint: "/admin/loyalty", titleKey: "name", subtitleKeys: ["phone", "points", "tier"] },
-  "/core/service": { kind: "data", endpoint: "/admin/floor/tables", titleKey: "number", subtitleKeys: ["zone", "seats", "status"] },
+  "/core/service": { kind: "data", endpoint: "/admin/floor/tables", titleKey: "number", subtitleKeys: ["zone", "seats", "status"], needsLocation: true },
 
   // Overview
   "/admin/welcome": { kind: "dashboard" },
