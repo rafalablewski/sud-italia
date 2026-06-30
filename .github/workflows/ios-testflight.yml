@@ -39,13 +39,6 @@ jobs:
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      # Build on the legacy architecture. RN 0.79's New-Arch codegen for the
-      # third-party JSI specs (react-native-screens / safe-area-context) races
-      # during `xcodebuild archive` — ReactCodegen compiles
-      # `…JSI-generated.cpp` before the generate-specs script writes it. Read by
-      # `pod install` (react_native_pods.rb) so old arch is configured and those
-      # specs are never generated/compiled. Both libs support old arch in 0.79.
-      RCT_NEW_ARCH_ENABLED: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
