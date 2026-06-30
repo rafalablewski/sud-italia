@@ -198,6 +198,16 @@ public extension Endpoint {
         Endpoint<PaymentIntentDTO>(.post, "orders/\(orderID)/payment-intent", requiresAuth: true)
     }
 
+    // Account data & privacy — self-serve export (GDPR Art. 15) + delete (Art. 17,
+    // Apple App Store 5.1.1(v)). Both act on the token's own phone (subject).
+    static func customerExport() -> Endpoint<CustomerDataExport> {
+        Endpoint<CustomerDataExport>(.get, "customer/account/export", requiresAuth: true)
+    }
+    static func customerDeleteAccount() -> Endpoint<AccountDeleteResult> {
+        let body = try? JSONEncoder().encode(["confirm": true])
+        return Endpoint<AccountDeleteResult>(.delete, "customer/account", body: body, requiresAuth: true)
+    }
+
     // Operator admin reads (OttavianoKDS) — mirror the web /admin/* data over the
     // bearer-authed, role-gated /api/v1/admin facade. `location` scopes to a site.
     static func adminCustomers() -> Endpoint<[AdminCustomer]> {

@@ -11,6 +11,10 @@ public struct AccountView: View {
     private let session: CustomerSession
     private let locations: LocationsStore
     @State private var presentingAuth = false
+    @State private var showDeleteConfirm = false
+    @State private var working = false
+    @State private var message: String?
+    @State private var exportJSON: String?
 
     public init(session: CustomerSession, locations: LocationsStore) {
         self.session = session; self.locations = locations
@@ -30,6 +34,23 @@ public struct AccountView: View {
         .background(theme.color.surface)
         .navigationTitle("More")
         .task { await locations.load() }
+        .dsToast($message)
+        .sheet(item: Binding(get: { exportJSON.map { ExportPayload(text: $0) } }, set: { exportJSON = $0?.text })) { payload in
+            DataExportSheet(json: payload.text)
+        }
+        .alert("Delete your account?", isPresented: $showDeleteConfirm) {
+            Button("Delete account", role: .destructive) {
+                Task {
+                    working = true
+                    defer { working = false }
+                    do { _ = try await session.deleteAccount(); message = "Your account and data were deleted" }
+                    catch { message = "Couldn't delete the account — please try again" }
+                }
+            }
+            Button("Keep my account", role: .cancel) {}
+        } message: {
+            Text("This permanently erases your profile, loyalty points and saved details, and signs you out of every device. Your past order receipts are kept anonymised for tax records. This can't be undone.")
+        }
         .sheet(isPresented: $presentingAuth) { AuthSheet(session: session) }
     }
 
@@ -100,18 +121,94 @@ public struct AccountView: View {
 
     private var aboutLinks: some View {
         VStack(alignment: .leading, spacing: theme.space.md) {
-            link("Privacy", "lock.fill")
+            Text("Privacy & data").font(.headline).foregroundStyle(theme.color.textPrimary)
+            // Privacy policy is always reachable (Apple requires an accessible
+            // policy); the data controls only apply to a signed-in guest.
+            Link(destination: URL(string: "https://ottaviano.pl/privacy")!) {
+                linkRow("Privacy policy", "lock.fill", trailing: "arrow.up.right")
+            }
+            if session.state == .signedIn {
+                Divider().overlay(theme.color.line)
+                Button { Task { await runExport() } } label: {
+                    linkRow("Export my data", "square.and.arrow.up", trailing: working ? nil : "chevron.right")
+                }.buttonStyle(.plain).disabled(working)
+                Divider().overlay(theme.color.line)
+                Button(role: .destructive) { showDeleteConfirm = true } label: {
+                    HStack(spacing: theme.space.md) {
+                        Image(systemName: "trash.fill").foregroundStyle(theme.color.danger).frame(width: 22)
+                        Text("Delete account").foregroundStyle(theme.color.danger)
+                        Spacer()
+                    }
+                }.buttonStyle(.plain).disabled(working)
+            }
             Divider().overlay(theme.color.line)
             link("Pizza napoletana · forno a legna", "flame.fill")
         }
         .panel(theme)
     }
 
+    /// Pull the guest's own data and hand it to the share sheet as pretty JSON.
+    private func runExport() async {
+        working = true
+        defer { working = false }
+        do {
+            let data = try await session.exportData()
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+            if let blob = try? enc.encode(data), let text = String(data: blob, encoding: .utf8) {
+                exportJSON = text
+            } else {
+                message = "Couldn't prepare the export"
+            }
+        } catch { message = "Couldn't export your data — please try again" }
+    }
+
     private func link(_ title: String, _ icon: String) -> some View {
+        linkRow(title, icon, trailing: nil)
+    }
+
+    private func linkRow(_ title: String, _ icon: String, trailing: String?) -> some View {
         HStack(spacing: theme.space.md) {
             Image(systemName: icon).foregroundStyle(theme.color.accent).frame(width: 22)
             Text(title).foregroundStyle(theme.color.textPrimary)
             Spacer()
+            if let trailing { Image(systemName: trailing).font(.caption).foregroundStyle(theme.color.textSecondary) }
+        }
+    }
+}
+
+/// Identifiable wrapper so the export JSON can drive `.sheet(item:)`.
+private struct ExportPayload: Identifiable {
+    let text: String
+    var id: String { String(text.count) }
+}
+
+/// Presents the guest's data export with a system share sheet (save to Files,
+/// AirDrop, mail). Genuinely portable — satisfies the GDPR Art. 15 promise.
+private struct DataExportSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let json: String
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                Text(json)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(theme.color.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(theme.space.lg)
+            }
+            .background(theme.color.surface)
+            .navigationTitle("Your data")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: json) { Image(systemName: "square.and.arrow.up") }
+                }
+            }
         }
     }
 }

@@ -14740,6 +14740,31 @@ export async function revokeApiRefreshTokenFamily(family: string): Promise<numbe
   });
 }
 
+/**
+ * Kill every live refresh token for one subject (and one app audience) — used by
+ * customer self-serve account deletion so erasing the account signs the guest
+ * out of every device, not just the one that issued the DELETE. `userId` is the
+ * phone for customer (`ottaviano`) tokens. Returns the count revoked.
+ */
+export async function revokeApiRefreshTokensForUser(
+  userId: string,
+  aud: ApiRefreshToken["aud"],
+): Promise<number> {
+  return withLock(API_REFRESH_KEY, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tokens = await readJSON<ApiRefreshToken[]>(API_REFRESH_KEY, []);
+    let n = 0;
+    for (const t of tokens) {
+      if (t.userId === userId && t.aud === aud && !t.revokedAt) {
+        t.revokedAt = now;
+        n++;
+      }
+    }
+    if (n > 0) await writeJSON(API_REFRESH_KEY, tokens);
+    return n;
+  });
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // Native /api/v1 customer OTP challenges + order idempotency (Stage 2).
 //
