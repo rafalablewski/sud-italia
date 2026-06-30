@@ -39,6 +39,13 @@ jobs:
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      # Build on the legacy architecture. RN 0.79's New-Arch codegen for the
+      # third-party JSI specs (react-native-screens / safe-area-context) races
+      # during `xcodebuild archive` — ReactCodegen compiles
+      # `…JSI-generated.cpp` before the generate-specs script writes it. Read by
+      # `pod install` (react_native_pods.rb) so old arch is configured and those
+      # specs are never generated/compiled. Both libs support old arch in 0.79.
+      RCT_NEW_ARCH_ENABLED: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,23 +100,6 @@ jobs:
       - name: pod install
         working-directory: native/ottaviano-rn/ios
         run: bundle exec pod install
-
-      - name: Pre-generate React Native codegen artifacts
-        # `xcodebuild archive` schedules the ReactCodegen target's CompileC before
-        # the "Generate Specs" script phase (whose outputs aren't declared), so the
-        # archive fails with "Build input file cannot be found:
-        # …safeareacontextJSI-generated.cpp". (A plain `xcodebuild build` happens to
-        # order it correctly, which is why the simulator CI is green.) Generating the
-        # artifacts up-front into ios/build/generated/ios makes them present before
-        # xcodebuild runs, regardless of phase ordering.
-        working-directory: native/ottaviano-rn
-        run: |
-          node node_modules/react-native/scripts/generate-codegen-artifacts.js \
-            --path . \
-            --outputPath ios \
-            --targetPlatform ios
-          echo "── generated codegen artifacts ──"
-          ls -R ios/build/generated/ios | head -50
 
       - name: Write App Store Connect API key
         # altool / xcodebuild read AuthKey_<id>.p8 from ~/.appstoreconnect/private_keys.
