@@ -8,7 +8,7 @@ import {
   withIdempotency,
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getActiveComboDeals } from "@/lib/upsell";
+import { getActiveComboDeals, effectiveUnitPrice } from "@/lib/upsell";
 import { manualDiscountGrosze } from "@/lib/pos-discount";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { POS_COURSE_ORDER, courseOf } from "@/lib/pos-coursing";
@@ -75,11 +75,22 @@ async function buildOrderShape(
     const m = byId.get(li.menuItemId);
     const qty = Math.max(1, Math.min(99, Math.round(li.quantity)));
     if (!m) continue;
-    items.push({ menuItem: m, quantity: qty, locationSlug });
+    // Keep only modifier picks that resolve against THIS item's live groups —
+    // the till can't invent an option id, and the priced delta is the menu's.
+    const validOptions = new Set((m.modifierGroups ?? []).flatMap((g) => g.options.map((o) => o.id)));
+    const modifiers = (li.modifiers ?? []).filter((sel) => validOptions.has(sel.optionId));
+    items.push({
+      menuItem: m,
+      quantity: qty,
+      locationSlug,
+      ...(modifiers.length ? { selectedModifiers: modifiers } : {}),
+      ...(li.notes ? { notes: li.notes } : {}),
+    });
   }
   if (items.length === 0) return { error: "No valid items for this menu", status: 400 };
 
-  const itemsTotal = items.reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0);
+  // Modifier price deltas count toward the charged total (extra cheese +6 zł).
+  const itemsTotal = items.reduce((s, ci) => s + effectiveUnitPrice(ci) * ci.quantity, 0);
   const config = (await getUpsellSettings())[locationSlug];
   const combo = getActiveComboDeals(items, config ?? null, tab.channel);
   const comboDiscount = combo.isComplete ? combo.savings : 0;

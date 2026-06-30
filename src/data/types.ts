@@ -624,6 +624,13 @@ export interface PosTabLine {
   /** Which course this line belongs to (dine-in coursing). Absent lines are
    *  treated as "main" so legacy / non-coursed tabs still resolve. */
   course?: PosCourse;
+  /** Per-line modifier selections (group id + option id). Priced server-side
+   *  off the live menu's option `priceDelta`s — the till never sends a price.
+   *  Two otherwise-identical lines with different picks stay separate. */
+  modifiers?: SelectedModifier[];
+  /** Free-text special request for this line ("no chili", "well done", an
+   *  allergy flag). Surfaced on the KDS ticket and the receipt. */
+  notes?: string;
 }
 
 /** An open check at the counter — the "Tabs" POS lets staff juggle several at

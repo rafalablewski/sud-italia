@@ -249,6 +249,37 @@
 .core .core-qstep button { width: 22px; height: 22px; border-radius: 6px; color: var(--ink-2); font-size: 14px; }
 .core .core-qstep button:hover { background: var(--hover); color: var(--ink); }
 .core .core-qstep .q { min-width: 22px; text-align: center; font-weight: 600; font-size: 12.5px; }
+.core .core-qstep.big button { width: 34px; height: 34px; font-size: 18px; }
+.core .core-qstep.big .q { min-width: 34px; font-size: 15px; }
+/* tappable line name → opens the line editor (modifiers + note) */
+.core .core-line .ln-edit { display: inline-flex; align-items: center; gap: 6px; text-align: left; color: var(--ink); }
+.core .core-line .ln-edit .ln-pen { color: var(--ink-3); font-size: 11px; opacity: 0; transition: opacity var(--fast); }
+.core .core-line-main:hover .ln-edit .ln-pen { opacity: 1; }
+/* per-line modifier chips + note, under the line name */
+.core .core-line-mods { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 16px 9px 92px; }
+.core .core-mod-chip { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
+.core .core-mod-chip.flag { background: var(--amber-wash); color: var(--amber); }
+.core .core-mod-note { font-size: 10.5px; font-style: italic; padding: 2px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
+.core .core-mod-note.alrg { background: var(--amber-wash); color: var(--amber); font-style: normal; font-weight: 600; }
+.core .core-tag.opt { background: var(--info-wash); color: var(--info); }
+
+/* ---------- line editor (modifiers + special request) ---------- */
+.core .core-lineeditor { display: flex; flex-direction: column; gap: 16px; }
+.core .core-modgroup { display: flex; flex-direction: column; gap: 9px; }
+.core .core-modgroup-h { display: flex; align-items: baseline; justify-content: space-between; font-family: var(--display); font-weight: 600; font-size: 14px; }
+.core .core-modgroup-rule { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.core .core-modopts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.core .core-modopt { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; min-height: 44px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel); text-align: left; transition: all var(--fast); }
+.core .core-modopt:hover { border-color: var(--line-2); background: var(--hover); }
+.core .core-modopt.on { border-color: var(--brand); background: var(--brand-wash); color: var(--brand-bright); }
+.core .core-modopt .mo-l { font-size: 13px; font-weight: 500; } .core .core-modopt .mo-flag { color: var(--amber); }
+.core .core-modopt .mo-p { font-size: 12px; color: var(--ink-2); } .core .core-modopt.on .mo-p { color: var(--brand-bright); }
+.core .core-notechips { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-notechip { font-size: 12px; font-weight: 500; padding: 6px 11px; min-height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); }
+.core .core-notechip:hover { border-color: var(--line-2); background: var(--hover); color: var(--ink); }
+.core .core-notechip.alrg { background: var(--amber-wash); border-color: transparent; color: var(--amber); }
+.core .core-alrg-banner { margin-top: 8px; padding: 8px 11px; border-radius: 8px; background: var(--amber-wash); color: var(--amber); font-size: 11.5px; font-weight: 600; }
+.core .core-editor-qty { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; font-weight: 600; font-size: 13px; }
 
 /* ---------- cross-sell offer ---------- */
 .core .core-offer { display: flex; align-items: center; gap: 10px; margin: 8px 14px; padding: 9px 12px; width: calc(100% - 28px);

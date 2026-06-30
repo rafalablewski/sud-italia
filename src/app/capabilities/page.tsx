@@ -74,6 +74,13 @@ export default async function CapabilitiesPage() {
             "The till never loses a ticket or double-charges on a flaky network. Server withIdempotency(key, fn) (src/lib/store.ts) runs each POS mutation at most once per Idempotency-Key — serialized by the distributed lock, memoizing only successes with a 24h TTL — so a charge re-sent after a lost response replays its original { orderId, total } instead of taking a second payment or 404-ing on the deleted tab; applied to POST send-to-KDS + PATCH charge (pos/orders). Client idempotentFetch (src/lib/idempotentFetch.ts) attaches the key and retries transient blips (dropped connection / 5xx) with backoff; wired into POS send / fire-course / charge + the KDS bump. When the network is genuinely down, durableMutate (src/store/writeQueue.ts) parks the write in a localStorage outbox under its key, closes the check optimistically, and replays it — exactly once, FIFO per tab — on reconnect, surviving a reload; a '↻ N writes syncing' amber pill on the POS check-bar shows pending writes. Verified by idempotency.test.ts + writeQueue.core.test.ts.",
         },
         {
+          name: "POS line modifiers & special requests",
+          status: "live",
+          href: "/core/pos",
+          summary:
+            "The till can now author per-line modifier picks and a special-request note, closing the gap where only the guest app could customise a line. A customisable product card (an item with modifierGroups) opens LineEditorDialog (src/core/pos/CorePos.tsx): radio/checkbox option groups honouring min/max selections (required groups gate the Add button), quick note chips plus free text, and a ⚠ Allergy chip that flags the note. Each line carries its modifiers + notes (PosTabLine extended; sanitised + persisted in savePosTab); line identity is the item + picks + note (posLineKey, src/lib/pos-line.ts) so a plain and a customised line of the same dish stay separate and the stepper / re-course / edit target the right row. Pricing stays server-owned — buildOrderShape (src/lib/pos/fireTab.ts) re-resolves each pick against the live menu, drops any option id not on that item, and adds the menu's priceDelta via effectiveUnitPrice; the same number drives the till subtotal. The KDS ticket already renders selectedModifiers (.mod / .mod.flag) + the per-line note, so a customised line and its allergy flag reach the line cook unchanged.",
+        },
+        {
           name: "Rate limiting",
           status: "live",
           summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback, plus a blanket per-user limit on EVERY admin API route (default 1200/min/user, override ADMIN_RATE_LIMIT_PER_MIN) enforced inside withAdmin. Fail-open on Redis error.",

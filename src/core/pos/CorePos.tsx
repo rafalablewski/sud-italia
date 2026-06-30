@@ -11,17 +11,21 @@ import { CoreDialog } from "@/core/ui/Dialog";
 import { CoreQrQueue } from "@/core/pos/CoreQrQueue";
 import {
   MENU_CATEGORY_LABELS,
+  type CartItem,
   type FloorTable,
   type FulfillmentType,
   type MenuCategory,
   type MenuItem,
+  type ModifierGroup,
   type PosCourse,
   type PosTab,
   type PosTabDiscount,
   type PosTabLine,
+  type SelectedModifier,
 } from "@/data/types";
-import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
+import { getActiveComboDeals, getCartSuggestions, effectiveUnitPrice, type UpsellConfig } from "@/lib/upsell";
 import { manualDiscountGrosze } from "@/lib/pos-discount";
+import { posLineKey } from "@/lib/pos-line";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
@@ -44,6 +48,15 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   lto: { label: "LTO", cls: "lto" },
 };
 const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+
+/** A line note that names an allergy / dietary risk gets the amber safety
+ *  treatment on the check + KDS — it can't read as a normal preference. */
+const ALLERGY_NOTE_RE = /allerg|gluten|coeliac|celiac|nut|dairy|lactose|shellfish|anaphyl|epipen|intoleran/i;
+
+/** Quick-pick note chips offered in the line editor, on top of free text. The
+ *  allergy chip is special — it prefixes a flag the kitchen can't miss. */
+const NOTE_CHIPS = ["No cheese", "Light sauce", "Extra crispy", "Well done", "On the side", "Cut in half"];
+const ALLERGY_CHIP = "⚠ ALLERGY: ";
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
@@ -302,11 +315,14 @@ export function CorePos({
     }
   }, [tabs, persistTab]);
 
+  // Quick-add (tap a product card with no modifier groups). Stacks onto the
+  // bare line for that item — a customised line of the same item (its key
+  // carries the modifier/note signature) is never touched.
   const addLine = useCallback(
     (id: string) =>
       mutateActive((t) => {
         const items = [...t.items];
-        const i = items.findIndex((l) => l.menuItemId === id);
+        const i = items.findIndex((l) => posLineKey(l) === id);
         if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + 1) };
         else {
           const c = byId(id)?.category;
@@ -317,12 +333,40 @@ export function CorePos({
     [mutateActive, byId],
   );
 
+  // Add (or save an edit of) a configured line — chosen modifiers + note + qty.
+  // `replaceKey` is the line being edited; absent = a fresh add. Merges onto an
+  // existing line with the same composite identity.
+  const addConfiguredLine = useCallback(
+    (menuItemId: string, modifiers: SelectedModifier[] | undefined, notes: string | undefined, qty: number, replaceKey?: string) =>
+      mutateActive((t) => {
+        const cleanMods = modifiers && modifiers.length ? modifiers : undefined;
+        const cleanNotes = notes && notes.trim() ? notes.trim().slice(0, 200) : undefined;
+        const c = byId(menuItemId)?.category;
+        const prior = replaceKey ? t.items.find((l) => posLineKey(l) === replaceKey) : undefined;
+        const built: PosTabLine = {
+          menuItemId,
+          quantity: Math.max(1, Math.min(99, Math.round(qty))),
+          course: prior?.course ?? (c ? defaultCourseForCategory(c) : "main"),
+          ...(cleanMods ? { modifiers: cleanMods } : {}),
+          ...(cleanNotes ? { notes: cleanNotes } : {}),
+        };
+        const newKey = posLineKey(built);
+        // Drop the line being edited, then merge the rebuilt line by its new key.
+        const items = t.items.filter((l) => posLineKey(l) !== replaceKey);
+        const i = items.findIndex((l) => posLineKey(l) === newKey);
+        if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + built.quantity) };
+        else items.push(built);
+        return { ...t, items, sentKds: false, status: t.status === "parked" ? "open" : t.status };
+      }),
+    [mutateActive, byId],
+  );
+
   const changeQty = useCallback(
-    (id: string, delta: number) =>
+    (key: string, delta: number) =>
       mutateActive((t) => ({
         ...t,
         items: t.items
-          .map((l) => (l.menuItemId === id ? { ...l, quantity: l.quantity + delta } : l))
+          .map((l) => (posLineKey(l) === key ? { ...l, quantity: l.quantity + delta } : l))
           .filter((l) => l.quantity > 0),
         sentKds: false,
       })),
@@ -362,8 +406,8 @@ export function CorePos({
   const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
   const recourse = useCallback(
-    (menuItemId: string, course: PosCourse) =>
-      mutateActive((t) => ({ ...t, items: t.items.map((l) => (l.menuItemId === menuItemId ? { ...l, course } : l)) })),
+    (key: string, course: PosCourse) =>
+      mutateActive((t) => ({ ...t, items: t.items.map((l) => (posLineKey(l) === key ? { ...l, course } : l)) })),
     [mutateActive],
   );
 
@@ -711,15 +755,24 @@ export function CorePos({
 
   // --- Pricing (real menu + real combo discount) ---------------------------
   const cartOf = useCallback(
-    (t: PosTab) =>
+    (t: PosTab): CartItem[] =>
       t.items.flatMap((l) => {
         const m = byId(l.menuItemId);
-        return m ? [{ menuItem: m, quantity: l.quantity, locationSlug: pageLoc }] : [];
+        if (!m) return [];
+        return [{
+          menuItem: m,
+          quantity: l.quantity,
+          locationSlug: pageLoc,
+          ...(l.modifiers && l.modifiers.length ? { selectedModifiers: l.modifiers } : {}),
+          ...(l.notes ? { notes: l.notes } : {}),
+        }];
       }),
     [byId, pageLoc],
   );
   const comboOf = useCallback((t: PosTab) => getActiveComboDeals(cartOf(t), config, t.channel ?? undefined), [cartOf, config]);
-  const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0), [cartOf]);
+  // Modifier price deltas (extra cheese, truffle) are part of the subtotal — the
+  // same `effectiveUnitPrice` the server charges with, so till and bill agree.
+  const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + effectiveUnitPrice(ci) * ci.quantity, 0), [cartOf]);
   const discountG = useCallback((t: PosTab) => (comboOf(t).isComplete ? comboOf(t).savings : 0), [comboOf]);
   // Manual operator discount, on top of the auto combo (same pure helper as the server).
   const manualDiscountG = useCallback((t: PosTab) => manualDiscountGrosze(Math.max(0, subtotalG(t) - discountG(t)), t.discount), [subtotalG, discountG]);
@@ -849,6 +902,17 @@ export function CorePos({
   // fires from a finger, so the grip doubles as a tap target that reveals an
   // inline course chooser; native drag stays as a mouse-only enhancement.
   const [recourseFor, setRecourseFor] = useState<string | null>(null);
+  // Line editor (modifier picks + special-request note). `item` is the menu item
+  // being configured; `editKey` is set when editing a line already on the check
+  // (vs a fresh add), so Save replaces it in place rather than stacking a second.
+  const [editor, setEditor] = useState<{ item: MenuItem; editKey?: string; initial?: PosTabLine } | null>(null);
+  const openEditor = useCallback(
+    (m: MenuItem, line?: PosTabLine) => {
+      if (!active) { toast("Open a check first"); return; }
+      setEditor({ item: m, editKey: line ? posLineKey(line) : undefined, initial: line });
+    },
+    [active, toast],
+  );
   const [kiosk, setKiosk] = useState(false);
   const toggleKiosk = useCallback(() => {
     setKiosk((k) => {
@@ -901,8 +965,16 @@ export function CorePos({
     );
   };
 
+  // Tapping a card that has modifier groups opens the editor to configure the
+  // line; a plain item adds straight to the check (the fast path is unchanged).
+  const customisable = (m: MenuItem) => !!m.modifierGroups && m.modifierGroups.length > 0;
   const productCard = (m: MenuItem) => (
-    <button key={m.id} type="button" className="core-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
+    <button
+      key={m.id}
+      type="button"
+      className="core-prod"
+      onClick={() => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
+    >
       <div className="pn">
         {m.name}
         {m.menuRole && <span className={`core-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
@@ -912,28 +984,38 @@ export function CorePos({
         {m.tags.map((t) => (
           <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
         ))}
+        {customisable(m) && <span className="core-tag opt">options</span>}
         {steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
         {steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
       </div>
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>+</span>
+        <span className="add" aria-hidden>{customisable(m) ? "⋯" : "+"}</span>
       </div>
     </button>
   );
 
   const lineRow = (l: PosTabLine, coursed: boolean) => {
-    const menuItemId = l.menuItemId;
-    const m = byId(menuItemId);
+    const m = byId(l.menuItemId);
     if (!m) return null;
-    const picking = recourseFor === menuItemId;
+    const key = posLineKey(l);
+    const picking = recourseFor === key;
+    // Resolve the chosen options to their menu labels so the line reads in plain
+    // language; a `flagOnKds` pick (e.g. buffalo mozzarella) renders emphasised.
+    const modChips = (l.modifiers ?? []).flatMap((sel) => {
+      const g = m.modifierGroups?.find((mg) => mg.id === sel.groupId);
+      const opt = g?.options.find((o) => o.id === sel.optionId);
+      return opt ? [{ label: opt.label, flag: !!opt.flagOnKds, delta: opt.priceDelta }] : [];
+    });
+    const lineUnit = effectiveUnitPrice({ menuItem: m, selectedModifiers: l.modifiers });
+    const allergy = !!l.notes && ALLERGY_NOTE_RE.test(l.notes);
     return (
       <div
         className={`core-line${picking ? " picking" : ""}`}
-        key={menuItemId}
+        key={key}
         draggable={coursed}
         onDragStart={() => {
-          if (coursed) dragItem.current = menuItemId;
+          if (coursed) dragItem.current = key;
         }}
         onDragEnd={() => {
           dragItem.current = null;
@@ -947,7 +1029,7 @@ export function CorePos({
               title="Move to another course"
               aria-label={`Move ${m.name} to another course`}
               aria-expanded={picking}
-              onClick={() => setRecourseFor((cur) => (cur === menuItemId ? null : menuItemId))}
+              onClick={() => setRecourseFor((cur) => (cur === key ? null : key))}
             >
               ⠿
             </button>
@@ -955,17 +1037,30 @@ export function CorePos({
             <span className="core-grip" aria-hidden>⠿</span>
           )}
           <div className="core-qstep">
-            <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
+            <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
               −
             </button>
             <span className="q mono">{l.quantity}</span>
-            <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
+            <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
               +
             </button>
           </div>
-          <div className="ln">{m.name}</div>
-          <span className="lp mono">{zl(m.price * l.quantity)}</span>
+          <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
+            {m.name}
+            <span className="ln-pen" aria-hidden>✎</span>
+          </button>
+          <span className="lp mono">{zl(lineUnit * l.quantity)}</span>
         </div>
+        {(modChips.length > 0 || l.notes) && (
+          <div className="core-line-mods">
+            {modChips.map((c, i) => (
+              <span key={i} className={`core-mod-chip${c.flag ? " flag" : ""}`}>
+                {c.label}{c.delta > 0 ? ` +${zl(c.delta)}` : ""}
+              </span>
+            ))}
+            {l.notes && <span className={`core-mod-note${allergy ? " alrg" : ""}`}>{allergy ? "⚠ " : "“"}{l.notes}{allergy ? "" : "”"}</span>}
+          </div>
+        )}
         {picking && coursed && (
           <div className="core-recourse" role="group" aria-label="Move to course">
             {POS_COURSE_ORDER.map((c) => {
@@ -976,7 +1071,7 @@ export function CorePos({
                   type="button"
                   className={`core-recourse-opt${on ? " on" : ""}`}
                   onClick={() => {
-                    if (!on) recourse(menuItemId, c);
+                    if (!on) recourse(key, c);
                     setRecourseFor(null);
                   }}
                 >
@@ -1480,7 +1575,149 @@ export function CorePos({
           onRemove={() => { removeMember(); setMemberOpen(false); }}
         />
       )}
+      {editor && (
+        <LineEditorDialog
+          item={editor.item}
+          initial={editor.initial}
+          editing={!!editor.editKey}
+          onClose={() => setEditor(null)}
+          onSubmit={(mods, notes, qty) => {
+            addConfiguredLine(editor.item.id, mods, notes, qty, editor.editKey);
+            setEditor(null);
+          }}
+        />
+      )}
     </CoreShell>
+  );
+}
+
+/* ── line editor — modifiers + special-request note ─────────────────────── */
+function LineEditorDialog({
+  item,
+  initial,
+  editing,
+  onClose,
+  onSubmit,
+}: {
+  item: MenuItem;
+  initial?: PosTabLine;
+  editing: boolean;
+  onClose: () => void;
+  onSubmit: (mods: SelectedModifier[] | undefined, notes: string | undefined, qty: number) => void;
+}) {
+  const groups = item.modifierGroups ?? [];
+  const [picks, setPicks] = useState<SelectedModifier[]>(initial?.modifiers ?? []);
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [qty, setQty] = useState(initial?.quantity ?? 1);
+
+  const isOn = (groupId: string, optionId: string) => picks.some((p) => p.groupId === groupId && p.optionId === optionId);
+  const toggle = (g: ModifierGroup, optionId: string) => {
+    const max = g.maxSelections ?? 1;
+    setPicks((cur) => {
+      const mine = cur.filter((p) => p.groupId === g.id);
+      const others = cur.filter((p) => p.groupId !== g.id);
+      const already = mine.some((p) => p.optionId === optionId);
+      if (already) return [...others, ...mine.filter((p) => p.optionId !== optionId)];
+      // radio (max 1) replaces; multi keeps up to max (drop the oldest over cap).
+      if (max <= 1) return [...others, { groupId: g.id, optionId }];
+      const next = [...mine, { groupId: g.id, optionId }];
+      while (next.length > max) next.shift();
+      return [...others, ...next];
+    });
+  };
+
+  // Required groups (minSelections ≥ 1) must have a pick before the line can add.
+  const unmet = groups.filter((g) => (g.minSelections ?? 0) >= 1 && !picks.some((p) => p.groupId === g.id));
+  const deltaG = picks.reduce((s, p) => {
+    const opt = groups.find((g) => g.id === p.groupId)?.options.find((o) => o.id === p.optionId);
+    return s + (opt && opt.priceDelta > 0 ? opt.priceDelta : 0);
+  }, 0);
+  const unitG = item.price + deltaG;
+
+  const addChip = (text: string) =>
+    setNotes((n) => {
+      const t = n.trim();
+      if (t.toLowerCase().includes(text.trim().toLowerCase())) return n; // no dupes
+      return t ? `${t}, ${text}` : text;
+    });
+
+  return (
+    <CoreDialog
+      open
+      onClose={onClose}
+      title={editing ? `Edit · ${item.name}` : item.name}
+      width={520}
+      footer={
+        <>
+          <button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="core-btn primary"
+            disabled={unmet.length > 0}
+            onClick={() => onSubmit(picks.length ? picks : undefined, notes.trim() || undefined, qty)}
+          >
+            {unmet.length > 0 ? `Pick ${unmet[0].label}` : editing ? `Save · ${fmtPLN(unitG * qty)}` : `Add · ${fmtPLN(unitG * qty)}`}
+          </button>
+        </>
+      }
+    >
+      <div className="core-lineeditor">
+        {groups.map((g) => {
+          const multi = (g.maxSelections ?? 1) > 1;
+          const required = (g.minSelections ?? 0) >= 1;
+          return (
+            <div key={g.id} className="core-modgroup">
+              <div className="core-modgroup-h">
+                {g.label}
+                <span className="core-modgroup-rule">{required ? "required" : "optional"}{multi ? ` · up to ${g.maxSelections}` : ""}</span>
+              </div>
+              <div className="core-modopts">
+                {g.options.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className={`core-modopt${isOn(g.id, o.id) ? " on" : ""}`}
+                    onClick={() => toggle(g, o.id)}
+                  >
+                    <span className="mo-l">{o.label}{o.flagOnKds ? <span className="mo-flag" title="Flagged on the kitchen ticket"> ★</span> : null}</span>
+                    {o.priceDelta > 0 && <span className="mo-p mono">+{zl(o.priceDelta)}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="core-modgroup">
+          <div className="core-modgroup-h">Special request<span className="core-modgroup-rule">to the kitchen</span></div>
+          <div className="core-notechips">
+            {NOTE_CHIPS.map((c) => (
+              <button key={c} type="button" className="core-notechip" onClick={() => addChip(c)}>{c}</button>
+            ))}
+            <button type="button" className="core-notechip alrg" onClick={() => addChip(ALLERGY_CHIP)}>⚠ Allergy</button>
+          </div>
+          <textarea
+            className="core-textarea"
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value.slice(0, 200))}
+            placeholder="e.g. no chili, well done — or ⚠ allergy details"
+          />
+          {notes && ALLERGY_NOTE_RE.test(notes) && (
+            <div className="core-alrg-banner">⚠ Allergy flagged — this prints emphasised on the kitchen ticket.</div>
+          )}
+        </div>
+
+        <div className="core-editor-qty">
+          <span>Quantity</span>
+          <div className="core-qstep big">
+            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Fewer">−</button>
+            <span className="q mono">{qty}</span>
+            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} aria-label="More">+</button>
+          </div>
+        </div>
+      </div>
+    </CoreDialog>
   );
 }
 

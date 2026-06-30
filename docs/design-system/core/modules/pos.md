@@ -41,11 +41,15 @@ inside the shell body: **rail · menu · ticket**.
   name, with a `.core-role` menu-engineering badge — Hero / Profit / Anchor
   / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
   `.core-tagrow` of `.core-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
-  gluten-free → `.fast`) plus a live `.core-steer-tag` pace cue (**★ make
+  gluten-free → `.fast`, plus an `.opt` **options** chip when the item has
+  `modifierGroups`) plus a live `.core-steer-tag` pace cue (**★ make
   now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
-  with the `.pp` mono price and the burgundy `.add` button. Cards **stretch to equal height per row** and the `.pf`
+  with the `.pp` mono price and the burgundy `.add` button (a `⋯` glyph when
+  the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
-  description can't make one card taller than its row-mates.
+  description can't make one card taller than its row-mates. Tapping a plain
+  card adds it straight to the check; a **customisable** card opens the line
+  editor first (see *Line editor* below).
 - **`.core-ticket`** — the open-check panel. Today it shows
   `.core-ticket-empty` (the no-open-check state).
 
@@ -75,8 +79,15 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
   renderer reads to course or flat-list the ticket.
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
-  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter and a mono line
-  price. Dine-in coursed checks group lines into `.core-course` blocks with a
+  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter, the **tappable
+  line name** (`.ln-edit`, reveals a `✎` on hover → opens the line editor) and a
+  mono line price (modifier deltas included). Under the name, `.core-line-mods`
+  renders the chosen modifiers as `.core-mod-chip` chips (a `flagOnKds` pick →
+  `.flag` amber) and the special-request note as `.core-mod-note` (amber `.alrg`
+  when it names an allergy). **Line identity** is the item + its modifier picks +
+  its note (`posLineKey`, `@/lib/pos-line`), so a plain item and a customised one
+  sit on separate rows and the stepper / re-course / edit target the right line.
+  Dine-in coursed checks group lines into `.core-course` blocks with a
   `.core-course-h` header and a per-course **Fire** button; fired courses dim
   (`.core-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
   a coursed line the grip is a `<button>` that toggles `.core-line.picking`,
@@ -126,6 +137,33 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   the fix for "voided checks reappear a few seconds later" — the bare
   fire-and-forget DELETE used to release the guard on any failure, so the 5s
   cross-till poll re-added the check the operator had just voided.
+
+## Line editor (modifiers + special request)
+
+`LineEditorDialog` (a `CoreDialog`, portaled) — opened from a customisable
+product card or by tapping a line's name (`.ln-edit`). It builds the line's
+`modifiers` + `notes` before they go on the check:
+
+- **`.core-modgroup`** per `MenuItem.modifierGroups` group — a `.core-modgroup-h`
+  header with a `.core-modgroup-rule` (required/optional · up-to-N) over a
+  `.core-modopts` grid of `.core-modopt` toggles (`.on` when picked). Radio
+  groups (`maxSelections ≤ 1`) replace; multi-select keeps up to `maxSelections`.
+  A `flagOnKds` option shows a `★`; a positive `priceDelta` shows `+zł`.
+  **Required** groups (`minSelections ≥ 1`) gate the Add button until satisfied.
+- **`.core-notechips`** — quick note chips (`NOTE_CHIPS`) plus a special
+  `.core-notechip.alrg` **⚠ Allergy** chip that prefixes the note; under them a
+  `.core-textarea` (200-char cap). When the note matches the allergy regex a
+  `.core-alrg-banner` warns it prints emphasised on the kitchen ticket.
+- **`.core-editor-qty`** — a `.core-qstep.big` quantity stepper. The footer
+  button reads **Add · zł** (or **Save · zł** when editing) with the live
+  unit×qty total including modifier deltas.
+
+The editor only ever writes the line shape (`menuItemId` + `modifiers` +
+`notes` + `quantity`); **all pricing stays server-side** — `buildOrderShape`
+re-resolves each pick against the live menu (`effectiveUnitPrice`), drops any
+option id not on that item, and adds the menu's `priceDelta`. The KDS ticket
+already renders `selectedModifiers` (`.mod` / `.mod.flag`) and the per-line
+`notes`, so a customised line and its allergy flag reach the line cook unchanged.
 
 ## Engine + API contract
 
