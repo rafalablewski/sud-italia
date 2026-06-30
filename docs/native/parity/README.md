@@ -1,12 +1,12 @@
 # Native ⇄ Web Parity Harness
 
-> **Stack note (2026-06-30):** the native **view layer is now React Native + Expo**
-> (`native/ottaviano-rn`), not SwiftUI — the SwiftUI seed was retired. The harness
-> below is unchanged in spirit and **still the source of truth**: the generators
-> now emit TypeScript (`operatorNav.generated.ts`, `tokens.generated.ts`) into the
-> RN app instead of Swift, and `npm run check:native` gates drift against it.
-> Mentions of "SwiftUI" below refer to the retired seed; read them as "the native
-> view layer".
+> **Stack note (2026-06-30):** the native **view layer is now bare React Native**
+> (`native/ottaviano-rn`; no Expo, no EAS), not SwiftUI — the SwiftUI seed was
+> retired. The harness below is unchanged in spirit and **still the source of
+> truth**: the generators now emit TypeScript (`operatorNav.generated.ts`,
+> `tokens.generated.ts`) into the RN app instead of Swift, and
+> `npm run check:native` gates drift against it. Mentions of "SwiftUI" below refer
+> to the retired seed; read them as "the native view layer".
 
 > **Goal:** OttavianoKDS (and Ottaviano) stay **1:1 with the web** — every operator
 > surface, same order, same role gates, same skin — and *can't silently drift*.
@@ -15,14 +15,14 @@
 > make the **web the single source of truth for everything upstream of the
 > pixels** — the IA, the role gates, the design tokens — and **generate** the
 > native equivalents from it, with a **CI drift gate**. The native view layer is
-> rebuilt in SwiftUI; what each screen *is* and *shows* is generated.
+> rebuilt in React Native; what each screen *is* and *shows* is generated.
 
 ## What's generated, and from where
 
 | Generated artifact | Source of truth (web) | Native presentation input |
 |---|---|---|
-| `OperatorNav.generated.swift` (the `OPERATOR_NAV` the sidebar renders) | `src/admin-v3/nav.config.ts` (`NAV_SECTIONS_V3`), `src/core/routes.ts` (`CORE_SURFACES`), `src/lib/admin-roles.ts` (`ROLE_RANK`) | `operator-nav.overlay.json` (SF Symbol · blurb · live/scaffold) |
-| `Tokens.generated.swift` (the two `Theme.Palette`s) | `src/app/themes/homepage/tokens.css` (customer), `src/app/themes/core/tokens.css` dark (operator) | — (pure web → Swift, with per-field provenance) |
+| `operatorNav.generated.ts` (the `OPERATOR_NAV` the drawer renders) | `src/admin-v3/nav.config.ts` (`NAV_SECTIONS_V3`), `src/core/routes.ts` (`CORE_SURFACES`), `src/lib/admin-roles.ts` (`ROLE_RANK`) | `operator-nav.overlay.json` (icon · blurb · live/scaffold) |
+| `tokens.generated.ts` (the two `PALETTES`) | `src/app/themes/homepage/tokens.css` (customer), `src/app/themes/core/tokens.css` dark (operator) | — (pure web → TypeScript, with per-field provenance) |
 | `operator-nav.manifest.json` | merged canonical IA (web + overlay) | — |
 | `PARITY-LEDGER.md` | the human cross-reference (surface ↔ web route ↔ role ↔ state ↔ `/api/v1` endpoint) | — |
 
@@ -56,11 +56,12 @@ files are committed — parity becomes a build invariant, not a manual audit.
 
 ## Why this lives in the backend repo
 
-The native apps ship from a separate `ottaviano-ios` repo (ARCHITECTURE §13 D),
-but the **contract is the seam**: this repo is the source of truth, so the
-generators and the gate live here where the web config does. The generated Swift
-+ JSON are committed here as the reviewable hand-off the iOS repo consumes
-(same model as `docs/native/openapi.json`).
+The native apps live in-repo at `native/ottaviano-rn` (the SwiftUI-era plan for a
+separate `ottaviano-ios` repo, ARCHITECTURE §13 D, was not carried forward), and
+the **contract is the seam**: the web is the source of truth, so the generators
+and the gate live here where the web config does. The generated TypeScript + JSON
+are committed as the reviewable artifacts the RN app consumes (same model as
+`docs/native/openapi.json`).
 
 ## The honest gaps
 

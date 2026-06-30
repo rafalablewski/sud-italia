@@ -1,5 +1,13 @@
 # Ottaviano Native — Design System Spec
 
+> **⚠️ Stack superseded (2026-06-30).** Authored for **SwiftUI** (Dynamic Type,
+> `Theme` protocol, SwiftUI previews). The apps are now **bare React Native**
+> ([`native/ottaviano-rn`](../../native/ottaviano-rn)); the live design system is
+> `src/theme/` (the generated `tokens.generated.ts` skins + `ThemeProvider`) and
+> the `src/components/ui.tsx` primitives. Read this doc for the **token philosophy,
+> the two brand skins, and accessibility gates** (all current intent); the
+> SwiftUI-specific component/API examples are illustrative, not the shipped code.
+
 > **Stage 3a.** The visual + interaction foundation both apps are built on,
 > shipped as the `DesignSystem` SwiftPM package (`Packages/OttavianoKit/DesignSystem`).
 > Swift in this doc is **specification source**, authored here and compiled in

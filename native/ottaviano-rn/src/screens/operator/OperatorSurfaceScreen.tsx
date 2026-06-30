@@ -10,6 +10,7 @@ import { DataSurface } from "@/features/operator/DataSurface";
 import { SurfaceScaffold } from "@/features/operator/SurfaceScaffold";
 import { KdsScreen } from "@/features/kds/KdsScreen";
 import { configForPath } from "@/features/operator/surfaceConfig";
+import { BESPOKE_SURFACES } from "@/features/operator/bespoke";
 import type { OperatorStackParamList } from "@/navigation/types";
 
 /**
@@ -29,11 +30,15 @@ export function OperatorSurfaceScreen() {
   const surface = findSurface(path) ?? findSurface("/admin")!;
   const config = configForPath(surface.path);
   const allowed = rank >= ROLE_RANK[surface.requiredRole];
+  // Faithful hand-built screens take precedence over the generic DataSurface.
+  const Bespoke = BESPOKE_SURFACES[surface.path];
 
   return (
     <OperatorShell active={surface}>
       {!allowed ? (
         <StateBlock kind="error" message={`Your role (${role}) can't access ${surface.label}.`} />
+      ) : Bespoke ? (
+        <Bespoke />
       ) : config.kind === "kds" ? (
         <KdsScreen />
       ) : config.kind === "orders" ? (

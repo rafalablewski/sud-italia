@@ -1,5 +1,14 @@
 # Ottaviano Native — Navigation & App-Shell Spec
 
+> **⚠️ Stack superseded (2026-06-30).** This is the most stack-specific spec: it
+> describes a **SwiftUI / SwiftPM** assembly (`@Observable` stores,
+> `NavigationSplitView`, a Swift `Router`) for a dedicated `ottaviano-ios` repo
+> that was **not built**. The shipped shell is **bare React Native** in
+> [`native/ottaviano-rn`](../../native/ottaviano-rn): React Navigation
+> (native-stack + bottom-tabs), the operator drawer `OperatorShell`, and the
+> universal `OperatorSurfaceScreen` renderer. Read this doc for **per-platform IA
+> and shell intent only**; the live contract is `native/ottaviano-rn/README.md`.
+
 > **Stage 3b.** How the two apps are assembled: the SwiftPM workspace, the
 > composition roots, dependency injection, the typed router, the per-platform
 > navigation shells, the feature-module contract, and the launch sequence.

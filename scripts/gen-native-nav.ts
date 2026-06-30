@@ -21,7 +21,7 @@
  *
  * OUTPUTS (generated — never hand-edit; the banner says so)
  *  - docs/native/parity/operator-nav.manifest.json    canonical merged IA (JSON)
- *  - native/ottaviano-ios/Sources/AppInfra/OperatorNav.generated.swift
+ *  - native/ottaviano-rn/src/nav/operatorNav.generated.ts
  *  - docs/native/parity/PARITY-LEDGER.md               human cross-reference table
  *
  * Mirrors the repo's existing gen:design-system / gen:openapi pattern: one

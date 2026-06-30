@@ -1,18 +1,22 @@
 # OttavianoKDS — on-device verification runbook
 
-> **Why this exists.** Everything upstream of the SwiftUI pixels is verified in
+> **Stack note (2026-06-30):** "SwiftUI" below is the retired seed — the app is
+> now **bare React Native** (`native/ottaviano-rn`). Read "SwiftUI pixels" as "the
+> native RN view layer"; the runbook is otherwise unchanged.
+
+> **Why this exists.** Everything upstream of the native pixels is verified in
 > the backend repo: the `/api/v1` facade is **smoke-tested live** (every admin GET
 > 200s for an appropriately-roled token; owner-only surfaces 403 a manager and
 > 200 an owner; a kitchen token is 403'd from manager surfaces), the parity gates
-> (`check:native`, `api-v1-openapi`) are green, and the Swift is consistency-checked
-> (every new endpoint method + detail/toolbar view resolves). **SwiftUI itself
+> (`check:native`, `api-v1-openapi`) are green, and the generated TS is
+> consistency-checked (every surface resolves to a renderer). **The native UI
 > can't run in the Linux container** — this is the one step that needs a Mac/iPad.
 > Walk it side-by-side with `npm run dev` (web) on a second screen.
 
 ## 0 · Setup
 1. Backend: `npm run dev` in this repo (filesystem store seeds Kraków + Warszawa).
-2. App: open the extracted `ottaviano-ios` repo in Xcode (or `xcodegen` here),
-   set `OTTAVIANO_API_BASE_URL` to your dev host's `…/api/v1`.
+2. App: build `native/ottaviano-rn` in Xcode on a Mac (XcodeGen → Pods → run; see
+   the app README), pointing the app's `/api/v1` origin at your dev host.
 3. Run **OttavianoKDS** on an iPad simulator; sign in as an **owner** (sees all 54
    surfaces) — then repeat key checks as **manager** and **kitchen** to confirm
    the rail role-gate.
@@ -57,5 +61,5 @@
 
 ---
 **Record results inline** (check the boxes, note any drift vs. the web route).
-Anything that fails here is a SwiftUI-layer bug to fix in the `ottaviano-ios`
-repo; the data/contract layer is already green in this repo's CI.
+Anything that fails here is a native view-layer bug to fix in `native/ottaviano-rn`;
+the data/contract layer is already green in this repo's CI.

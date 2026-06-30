@@ -1,8 +1,8 @@
 # Ottaviano `/api/v1` — the native facade
 
 > **Stage 2.** The versioned, host-portable API the two native apps consume.
-> Lives in **this** repo (the backend); the apps in `ottaviano-ios` depend only
-> on this contract. Verifiable here (route handlers + unit tests). Companion to
+> Lives in **this** repo (the backend); the native apps in `native/ottaviano-rn`
+> depend only on this contract. Verifiable here (route handlers + unit tests). Companion to
 > `ARCHITECTURE.md` (§2, §2.1, §5).
 
 ## Why a facade

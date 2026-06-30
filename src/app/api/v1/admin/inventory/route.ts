@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-/** A stock row joined with its ingredient name/unit, ready to render. */
+/** A stock row joined with its ingredient name/unit/cost, ready to render. */
 interface StockRowDTO {
   ingredientId: string;
   name: string;
@@ -22,6 +22,10 @@ interface StockRowDTO {
   parLevel: number;
   reorderPoint: number;
   low: boolean;
+  /** Unit cost in grosze (shared ingredient catalogue), 0 when uncosted. */
+  costPerUnit: number;
+  /** On-hand valuation in grosze (onHand × costPerUnit), rounded — mirrors web. */
+  valueGrosze: number;
   lastCountedAt: string | null;
   updatedAt: string;
 }
@@ -43,6 +47,7 @@ export async function GET(req: NextRequest) {
       .filter((s) => filter.slugs === null || filter.slugs.includes(s.locationSlug))
       .map((s) => {
         const ing = byId.get(s.ingredientId);
+        const costPerUnit = ing?.costPerUnit ?? 0;
         return {
           ingredientId: s.ingredientId,
           name: ing?.name ?? s.ingredientId,
@@ -53,12 +58,19 @@ export async function GET(req: NextRequest) {
           parLevel: s.parLevel,
           reorderPoint: s.reorderPoint,
           low: s.onHand <= s.reorderPoint,
+          costPerUnit,
+          valueGrosze: Math.round(s.onHand * costPerUnit),
           lastCountedAt: s.lastCountedAt ?? null,
           updatedAt: s.updatedAt,
         };
       });
     rows.sort((a, b) => Number(b.low) - Number(a.low) || a.name.localeCompare(b.name));
-    return apiOk(rows, { count: rows.length, lowCount: rows.filter((r) => r.low).length });
+    return apiOk(rows, {
+      count: rows.length,
+      lowCount: rows.filter((r) => r.low).length,
+      outCount: rows.filter((r) => r.onHand <= 0).length,
+      totalValueGrosze: rows.reduce((sum, r) => sum + r.valueGrosze, 0),
+    });
   } catch (err) {
     logger.error("v1 admin inventory failed", { layer: "api.v1.admin.inventory" }, err as Error);
     return apiError("internal", "Could not load inventory");

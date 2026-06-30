@@ -8,8 +8,10 @@
  * The two app skins (`Theme.ottaviano`, `Theme.kds`) were hand-transcribed hexes
  * that had already drifted from the web (`Theme.kds` used #0B0F16 / ochre while
  * the web Core skin is #100f12 / brand-red #d23a55). We make the web token CSS
- * the source of truth and GENERATE the Swift palettes, with per-field provenance,
- * so a web re-skin propagates and CI fails on divergence.
+ * the source of truth and GENERATE the RN palettes, with per-field provenance,
+ * so a web re-skin propagates and CI fails on divergence. (Originally emitted a
+ * Swift palette for the retired SwiftUI seed; now emits TypeScript for the bare-RN
+ * app — see docs/native/README.md "Stack change".)
  *
  * SOURCES OF TRUTH
  *  - src/app/themes/homepage/tokens.css  → the customer (Ottaviano) skin
@@ -17,7 +19,7 @@
  *
  * OUTPUTS (generated — never hand-edit)
  *  - docs/native/parity/design-tokens.json
- *  - native/ottaviano-ios/Sources/DesignSystem/Tokens.generated.swift
+ *  - native/ottaviano-rn/src/theme/tokens.generated.ts
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";

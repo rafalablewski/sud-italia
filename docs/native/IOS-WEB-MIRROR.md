@@ -111,12 +111,15 @@ the parity ledger, plus wiring the four hardware modules (§5). Priority stays
 operator-first (POS → remaining admin surfaces) then the customer long tail —
 the revenue-critical core before the nice-to-haves.
 
-## 8. Doc-drift note (for maintainers)
+## 8. Doc-drift cleanup (done 2026-06-30)
 
-The sibling native specs partly describe **superseded stacks**: `ARCHITECTURE.md` /
-`DESIGN-SYSTEM.md` / `APP-SHELL.md` and the header of `scripts/gen-native-tokens.ts`
-still speak of **SwiftUI / SwiftPM / `Tokens.generated.swift` / `native/ottaviano-ios`**,
-and `docs/native/README.md` says **"React Native + Expo / EAS"** — but the shipped
-app is **bare RN (no Expo, no EAS)** generating **`tokens.generated.ts`**.
-Pre-existing drift, worth a cleanup pass so the specs match the code (Rule #11
-spirit). Flagged, not silently rewritten.
+The sibling native specs described **superseded stacks** (SwiftUI / SwiftPM / Expo /
+EAS / `native/ottaviano-ios` / `*.generated.swift`). Fixed this pass: `README.md`
+and `parity/README.md` now say **bare RN, no Expo/EAS, in-repo at
+`native/ottaviano-rn`**; the `gen-native-tokens.ts` / `gen-native-nav.ts` headers
+point at the real `*.generated.ts` outputs; `ONDEVICE-VERIFICATION.md` /
+`SCREEN-AUDIT.md` / `API-V1.md` were corrected; and `ARCHITECTURE.md` /
+`DESIGN-SYSTEM.md` / `APP-SHELL.md` carry a **superseded banner** marking their
+Swift mechanics as design intent (their backend/API/IA content stays current).
+Their deep bodies are intentionally left as historical design records, not
+rewritten.

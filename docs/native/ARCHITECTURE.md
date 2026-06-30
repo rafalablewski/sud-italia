@@ -1,5 +1,15 @@
 # Ottaviano Native Platform — Architecture & Technical Specification
 
+> **⚠️ Stack superseded (2026-06-30).** This doc was authored for a **SwiftUI**
+> client (Swift 6, SwiftPM, `@Observable`, SwiftData/GRDB, `NavigationSplitView`).
+> That stack was retired; the apps are now **bare React Native 0.79.5** in
+> [`native/ottaviano-rn`](../../native/ottaviano-rn) (rendering decision: **100%
+> native, no WebView** — see [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md)). Read the
+> **backend-as-API (§2), offline-first principles (§4), networking contract (§5),
+> security (§8), and performance budgets (§9)** as current — they're stack-agnostic
+> — and the **Swift-specific mechanics (§3, §6, §7, the SwiftPM module layout) as
+> design intent**, re-expressed in RN by `native/ottaviano-rn/README.md`.
+
 > **Stage 1 of the staged rewrite.** This document is the contract everything
 > downstream is built against: design system, navigation shell, infrastructure,
 > then feature-by-feature implementation. It is written to be argued with.
