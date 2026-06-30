@@ -25,7 +25,7 @@ leaving Vercel — designed for from day one).
 | [`APP-SHELL.md`](./APP-SHELL.md) | 3b | SwiftPM package graph, DI, typed Router, per-platform shells, launch sequence, feature-module contract |
 | [`API-V1.md`](./API-V1.md) | 2 | The `/api/v1` facade: envelope, auth/token lifecycle, endpoints, OpenAPI/codegen, host-portability |
 | [`VERCEL-EXIT.md`](./VERCEL-EXIT.md) | infra | Host-migration cutover plan — portable runtime, cron/CDN/storage swaps, zero-downtime sequence |
-| [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md) | proposal | Web 1:1 mirroring: all-native vs. **embedded-WebView hybrid** trade-off, the per-surface routing rule, JS⇄native bridge, hardware/offline/theming sync, pitfalls — **[DECISION] open** |
+| [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md) | decision | Web 1:1 mirroring — **DECIDED: 100% native, no WebView.** Options compared; how native parity is held (token/IA codegen + parity ledger); the accepted maintenance cost; hardware/offline/responsive |
 
 ## Decisions (signed off 2026-06-26)
 - **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.

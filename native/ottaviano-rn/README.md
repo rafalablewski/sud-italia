@@ -69,22 +69,12 @@ Run from the **backend repo root**: `npm run gen:native` (regenerate) /
 `npm run check:native` (CI drift gate). `operatorNav.ts` and `tokens.ts` add only
 the native-presentation layer (icons, spacing/type) on top of the generated data.
 
-## Embedded web surfaces (optional, proposed — `src/web/`)
-A second parity strategy lives alongside the native screens: **render the literal
-web** inside a WKWebView for surfaces where pixel-fidelity matters more than
-offline/perf, so they need no second build and can't drift at all. Reference
-scaffolding (not yet routed into any screen):
-- `src/web/WebSurface.tsx` — a `react-native-webview` host with a native skeleton
-  + error/offline state in the brand palette and the bridge wired.
-- `src/web/bridge.ts` — the typed JS ⇄ native `window.OttavianoNative` contract
-  (print · scale · scan · push · haptics · share), with a pluggable handler
-  registry; absent hardware returns a typed `UNAVAILABLE`, never a fake.
-
-The routing rule, trade-off vs. all-native, and the full plan are in
-[`docs/native/IOS-WEB-MIRROR.md`](../../docs/native/IOS-WEB-MIRROR.md). **POS, the
-KDS wall, the live tracker, and any printer/BLE-driving screen stay native** —
-only visual, online-tolerant surfaces are candidates for a `WebSurface`. Adding
-`react-native-webview` needs a `pod install` (run on the Mac build host).
+> **This app is 100% native — no WebView.** An embedded-WebView hybrid was
+> evaluated and **rejected** (owner directive); the reasoning and what full-native
+> commits us to are recorded in
+> [`docs/native/IOS-WEB-MIRROR.md`](../../docs/native/IOS-WEB-MIRROR.md). Every
+> surface is rebuilt as native RN; web parity is held by the codegen gate
+> (tokens + IA) plus the parity ledger, never by rendering the web.
 
 ## Build
 This Linux dev container can't run an iOS build (needs macOS/Xcode) — the iOS
