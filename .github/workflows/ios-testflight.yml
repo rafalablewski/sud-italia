@@ -94,6 +94,23 @@ jobs:
         working-directory: native/ottaviano-rn/ios
         run: bundle exec pod install
 
+      - name: Pre-generate React Native codegen artifacts
+        # `xcodebuild archive` schedules the ReactCodegen target's CompileC before
+        # the "Generate Specs" script phase (whose outputs aren't declared), so the
+        # archive fails with "Build input file cannot be found:
+        # …safeareacontextJSI-generated.cpp". (A plain `xcodebuild build` happens to
+        # order it correctly, which is why the simulator CI is green.) Generating the
+        # artifacts up-front into ios/build/generated/ios makes them present before
+        # xcodebuild runs, regardless of phase ordering.
+        working-directory: native/ottaviano-rn
+        run: |
+          node node_modules/react-native/scripts/generate-codegen-artifacts.js \
+            --path . \
+            --outputPath ios \
+            --targetPlatform ios
+          echo "── generated codegen artifacts ──"
+          ls -R ios/build/generated/ios | head -50
+
       - name: Write App Store Connect API key
         # altool / xcodebuild read AuthKey_<id>.p8 from ~/.appstoreconnect/private_keys.
         run: |
