@@ -43,7 +43,7 @@ locked:
 | **Mode** | **Dark-first**, light optional. KDS board follows the theme; the fullscreen kiosk stays dark. | Night trucks + kitchen glare. Light is there for bright daytime POS. |
 | **Display type** | **Bricolage Grotesque** (all-sans, optical size) | No serif — reads as an *operating system*, not a menu. |
 | **UI / mono** | Inter (UI) · JetBrains Mono (figures) | Neutral, dense, legible at a glance across a busy line. |
-| **Brand** | Neapolitan burgundy, refined (`--brand`) | One brand red + disciplined semantics. |
+| **Brand** | **BRACE** — ember terracotta (`--brand #E86B3E`), the warm char of a wood-fired crust | Warm + appetising, not aggressive. Red stays only as the `--danger` accent. |
 | **Material** | **Flat** — 1px hairlines, crisp small shadows | No glass, no gradient, no glow. Admin owns glass; Core stays crisp. |
 | **Layout** | A single **command bar** on top + a centred **bottom surface-switcher** nav | One chrome shared by every surface; no sidebar. The command bar holds brand · a horizontally-scrolling context strip (eyebrow + the surface's view tabs + its own controls) · global controls (location · clock · **notifications bell** · theme). The primary surface switcher (POS · KDS · Orders · Guest · Service) sits as a centred pill at the very bottom (thumb-reach). |
 | **Radius** | 7 / 10 / 14 / 20 px | Softer than Admin, tighter than a consumer app. |
@@ -59,6 +59,9 @@ Canonical names:
 - **Brand** — `--brand` · `--brand-bright` · `--brand-ink` · `--brand-wash`
 - **Semantic** — `--basil` (+`-wash`) · `--amber` (+`-wash`) · `--info`
   (+`-wash`) · `--danger` (+`-wash`)
+- **Contrast inks** (text on filled accents) — `--on-accent` (dark, on the
+  light ember/saffron) · `--on-basil` (dark, on basil) · `--on-danger` (white,
+  on the one dark accent, San Marzano red)
 - **Elevation** — `--sh-1` · `--sh-2` · `--sh-pop`
 - **Type** — `--display` · `--ui` · `--mono`
 - **Radius** — `--r-sm` · `--r-md` · `--r-lg` · `--r-xl` · `--pill`

@@ -25,17 +25,17 @@ public enum GeneratedTokens {
 
     /// kds skin — generated from the web token CSS (see provenance per line).
     public static let kds = Theme.Palette(
-        accent: Color(hex: 0xD23A55),        // core --brand (web Core primary brand — replaces the pre-parity ochre accent)
-        onAccent: Color(hex: 0xFFFFFF),      // core --on-accent
-        brand: Color(hex: 0xD23A55),         // core --brand
-        surface: Color(hex: 0x100F12),       // core --bg
-        surface2: Color(hex: 0x1A191E),      // core --panel
-        line: Color(hex: 0x39383A),          // core --line-2 (rgba hairline flattened over --bg → solid)
-        textPrimary: Color(hex: 0xF4F1EC),   // core --ink
-        textSecondary: Color(hex: 0xB8B0A6), // core --ink-2
-        success: Color(hex: 0x3AA978),       // core --basil
-        warning: Color(hex: 0xD99A3C),       // core --amber
-        danger: Color(hex: 0xE2574F),        // core --danger
+        accent: Color(hex: 0xE86B3E),        // core --brand (web Core primary brand — replaces the pre-parity ochre accent)
+        onAccent: Color(hex: 0x2A160B),      // core --on-accent
+        brand: Color(hex: 0xE86B3E),         // core --brand
+        surface: Color(hex: 0x15110D),       // core --bg
+        surface2: Color(hex: 0x1F1A14),      // core --panel
+        line: Color(hex: 0x3F3A35),          // core --line-2 (rgba hairline flattened over --bg → solid)
+        textPrimary: Color(hex: 0xF8F1E7),   // core --ink
+        textSecondary: Color(hex: 0xC9BBA9), // core --ink-2
+        success: Color(hex: 0x6FB155),       // core --basil
+        warning: Color(hex: 0xE8A23C),       // core --amber
+        danger: Color(hex: 0xE5484A),        // core --danger
     )
 
     public static let ottavianoCornerRadius: CGFloat = 16

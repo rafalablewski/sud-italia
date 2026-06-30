@@ -18,11 +18,13 @@
   --mono: var(--font-core-mono, "JetBrains Mono"), ui-monospace, monospace;
 
   /* mode-independent */
-  --brand-ink: #7c172b;
-  /* contrast inks for filled accents (mode-independent — brand/danger stay
-     dark enough in both modes that white reads on them) */
-  --on-accent: #fff;
-  --on-basil: #06140d;
+  --brand-ink: #6e2a12;
+  /* contrast inks for filled accents. BRACE: the ember/basil/saffron accents are
+     LIGHT, so their text is dark (--on-accent / --on-basil). Danger (San Marzano)
+     is the one accent dark enough to carry white text → --on-danger. */
+  --on-accent: #2a160b;
+  --on-basil: #0c1a0f;
+  --on-danger: #fff4f0;
   /* loyalty tier metals (mode-independent) */
   --tier-platinum: #aab4cc; --tier-platinum-wash: rgba(180, 190, 210, .22);
   --tier-silver: #9aa0ad;   --tier-silver-wash: rgba(160, 160, 170, .2);
@@ -32,51 +34,53 @@
   --base: 200ms cubic-bezier(.3, .7, 0, 1);
 }
 
-/* DARK — default (night trucks · kitchen glare) */
+/* DARK — default (night trucks · kitchen glare). BRACE: warm espresso surfaces
+   + ember/basil/saffron accents replace the cool black + magenta-red. */
 .core,
 .core[data-theme="dark"] {
-  --bg: #100f12;
-  --panel: #1a191e;
-  --panel-2: #201e25;
-  --panel-3: #28262e;
-  --hover: #2b2933;
-  --ink: #f4f1ec;
-  --ink-2: #b8b0a6;
-  --ink-3: #857d74;
-  --line: rgba(255, 255, 255, .10);
-  --line-2: rgba(255, 255, 255, .17);
-  --brand: #d23a55;
-  --brand-bright: #e8546e;
-  --brand-wash: rgba(210, 58, 85, .16);
-  --basil: #3aa978; --basil-wash: rgba(58, 169, 120, .16);
-  --amber: #d99a3c; --amber-wash: rgba(217, 154, 60, .16);
-  --info: #5b8bd0; --info-wash: rgba(91, 139, 208, .18);
-  --danger: #e2574f; --danger-wash: rgba(226, 87, 79, .18);
+  --bg: #15110d;
+  --panel: #1f1a14;
+  --panel-2: #28211a;
+  --panel-3: #322a21;
+  --hover: #3a3026;
+  --ink: #f8f1e7;
+  --ink-2: #c9bba9;
+  --ink-3: #908172;
+  --line: rgba(255, 247, 235, .10);
+  --line-2: rgba(255, 247, 235, .18);
+  --brand: #e86b3e;
+  --brand-bright: #ff905e;
+  --brand-wash: rgba(232, 107, 62, .16);
+  --basil: #6fb155; --basil-wash: rgba(111, 177, 85, .16);
+  --amber: #e8a23c; --amber-wash: rgba(232, 162, 60, .16);
+  --info: #3fa7ce; --info-wash: rgba(63, 167, 206, .18);
+  --danger: #e5484a; --danger-wash: rgba(229, 72, 74, .18);
   --sh-1: 0 1px 2px rgba(0, 0, 0, .4);
   --sh-2: 0 6px 18px rgba(0, 0, 0, .5);
   --sh-pop: 0 20px 50px rgba(0, 0, 0, .6);
 }
 
-/* LIGHT — optional (bright daytime POS / Service) */
+/* LIGHT — optional (bright daytime POS / Service). BRACE: warm linen surfaces,
+   deepened ember/basil/saffron so they hold AA on a pale board. */
 .core[data-theme="light"] {
-  --bg: #f4f2ee;
+  --bg: #fbf5ec;
   --panel: #ffffff;
-  --panel-2: #faf8f5;
-  --panel-3: #f1eee9;
-  --hover: #f4f1ec;
-  --ink: #1c1815;
-  --ink-2: #6a625a;
-  --ink-3: #9b9389;
-  --line: rgba(28, 24, 21, .10);
-  --line-2: rgba(28, 24, 21, .16);
-  --brand: #bb2a44;
-  --brand-bright: #d23a55;
-  --brand-wash: #fbe9ec;
-  --basil: #2f7d5b; --basil-wash: #e7f3ed;
-  --amber: #c4831f; --amber-wash: #fbf0db;
-  --info: #3768b0; --info-wash: #e8eff8;
-  --danger: #cf3b33; --danger-wash: #fbe7e5;
-  --sh-1: 0 1px 2px rgba(28, 24, 21, .06);
-  --sh-2: 0 4px 14px rgba(28, 24, 21, .10), 0 1px 3px rgba(28, 24, 21, .07);
-  --sh-pop: 0 18px 48px rgba(28, 24, 21, .18);
+  --panel-2: #f7f0e6;
+  --panel-3: #efe6d9;
+  --hover: #f3eadc;
+  --ink: #241a12;
+  --ink-2: #5e5040;
+  --ink-3: #8c7c69;
+  --line: rgba(40, 26, 16, .10);
+  --line-2: rgba(40, 26, 16, .17);
+  --brand: #d85f2e;
+  --brand-bright: #e86b3e;
+  --brand-wash: #fbede3;
+  --basil: #46934f; --basil-wash: #eaf3e1;
+  --amber: #c2841c; --amber-wash: #faf0da;
+  --info: #2e86ae; --info-wash: #e6f2f7;
+  --danger: #d23b3d; --danger-wash: #fbe9e6;
+  --sh-1: 0 1px 2px rgba(40, 26, 16, .07);
+  --sh-2: 0 4px 14px rgba(40, 26, 16, .10), 0 1px 3px rgba(40, 26, 16, .08);
+  --sh-pop: 0 18px 48px rgba(40, 26, 16, .18);
 }

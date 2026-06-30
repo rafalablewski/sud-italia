@@ -317,7 +317,7 @@
 .core .core-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
 .core .core-foot-aux[data-on="true"] .core-glyph { opacity: 1; }
 .core .core-foot-aux.danger { color: var(--danger); }
-.core .core-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: var(--on-accent); }
+.core .core-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: var(--on-danger); }
 .core .core-foot-aux:disabled { opacity: .45; cursor: default; }
 .core .core-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .core .core-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .core .core-send:disabled { opacity: .45; cursor: default; }
@@ -432,7 +432,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 .core .core-toast-stack { position: fixed; left: 0; right: 0; bottom: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 80; pointer-events: none; }
 .core .core-toast { background: var(--ink); color: var(--bg); font-weight: 600; font-size: 13px; padding: 10px 16px; border-radius: var(--pill); box-shadow: var(--sh-pop); animation: core-toast-in 180ms var(--fast); }
-.core .core-toast.success { background: var(--basil); color: var(--on-basil); } .core .core-toast.danger { background: var(--danger); color: var(--on-accent); }
+.core .core-toast.success { background: var(--basil); color: var(--on-basil); } .core .core-toast.danger { background: var(--danger); color: var(--on-danger); }
 @keyframes core-toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* ============================================================
@@ -443,21 +443,23 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    Tones: queued · firing · warn · risk · late · ready.
    ============================================================ */
 .core .core-kds {
-  --bg: #0b0a0d; --panel: #141318; --panel-2: #1c1a22; --panel-3: #28262e;
-  --ink: #f4f1ec; --ink-2: #b8b0a6; --ink-3: #857d74;
-  --line: rgba(255, 255, 255, .09); --line-2: rgba(255, 255, 255, .16);
-  --kds-veil: rgba(255, 255, 255, .07); --kds-track: rgba(255, 255, 255, .10);
-  --t-firing: #5b8bd0; --t-warn: #d99a3c; --t-risk: #9b7fd6; --t-late: #e2574f; --t-ready: #3aa978; --t-queued: #857d74;
+  /* BRACE: the wall runs a touch deeper than the app's espresso so tickets lift
+     off it; warm-cream veils + the colour-blind-safe SLA tone ramp. */
+  --bg: #0f0c09; --panel: #1a1510; --panel-2: #241d16; --panel-3: #2e2620;
+  --ink: #f8f1e7; --ink-2: #c9bba9; --ink-3: #908172;
+  --line: rgba(255, 247, 235, .09); --line-2: rgba(255, 247, 235, .16);
+  --kds-veil: rgba(255, 247, 235, .07); --kds-track: rgba(255, 247, 235, .10);
+  --t-firing: #3fa7ce; --t-warn: #e8a23c; --t-risk: #9b7bd0; --t-late: #e5484a; --t-ready: #6fb155; --t-queued: #8a7c6b;
   flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); overflow: hidden;
 }
 /* light KDS — only the in-shell board (not the fullscreen kiosk, which stays a
    dark wall). Light surfaces + tones tuned for contrast on a pale board. */
 .core[data-theme="light"] .core-body .core-kds {
-  --bg: #f4f2ee; --panel: #ffffff; --panel-2: #faf8f5; --panel-3: #f1eee9;
-  --ink: #1c1815; --ink-2: #6a625a; --ink-3: #9b9389;
-  --line: rgba(28, 24, 21, .10); --line-2: rgba(28, 24, 21, .16);
-  --kds-veil: rgba(28, 24, 21, .06); --kds-track: rgba(28, 24, 21, .10);
-  --t-firing: #3768b0; --t-warn: #c4831f; --t-risk: #6f51c0; --t-late: #cf3b33; --t-ready: #2f7d5b; --t-queued: #9b9389;
+  --bg: #fbf5ec; --panel: #ffffff; --panel-2: #f7f0e6; --panel-3: #efe6d9;
+  --ink: #241a12; --ink-2: #5e5040; --ink-3: #8c7c69;
+  --line: rgba(40, 26, 16, .10); --line-2: rgba(40, 26, 16, .16);
+  --kds-veil: rgba(40, 26, 16, .06); --kds-track: rgba(40, 26, 16, .10);
+  --t-firing: #2e86ae; --t-warn: #c2841c; --t-risk: #7b5bc0; --t-late: #d23b3d; --t-ready: #3e8b4e; --t-queued: #9b8e7c;
 }
 .core .core-kds-empty { color: var(--ink-3); font-size: 12.5px; text-align: center; padding: 14px; }
 .core .core-kds-empty.pad { padding: 60px; }
@@ -494,7 +496,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ticket card */
 .core .core-tk { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--t-queued); border-radius: var(--r-md); padding: 12px 13px; }
 .core .core-tk.t-firing { border-left-color: var(--t-firing); } .core .core-tk.t-warn { border-left-color: var(--t-warn); }
-.core .core-tk.t-risk { border-left-color: var(--t-risk); } .core .core-tk.t-late { border-left-color: var(--t-late); border-color: rgba(226,87,79,.5); }
+.core .core-tk.t-risk { border-left-color: var(--t-risk); } .core .core-tk.t-late { border-left-color: var(--t-late); border-color: rgba(229,72,74,.5); }
 .core .core-tk.t-ready { border-left-color: var(--t-ready); }
 .core .core-tk-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .core .core-tk-h .id { font-family: var(--mono); font-weight: 600; font-size: 13px; }
@@ -590,12 +592,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-prow .t { margin-left: auto; font: 600 13px var(--mono); color: var(--t-queued); }
 .core .core-prow .t.tone-firing { color: var(--t-firing); } .core .core-prow .t.tone-warn { color: var(--t-warn); } .core .core-prow .t.tone-risk { color: var(--t-risk); } .core .core-prow .t.tone-late { color: var(--t-late); } .core .core-prow .t.tone-ready { color: var(--t-ready); }
 
-/* fullscreen kiosk — bare dark wall, no shell */
+/* fullscreen kiosk — bare warm-dark wall, no shell (stays dark in every theme) */
 .core .core-kiosk {
   position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column;
-  --bg: #0b0a0d; --panel: #141318; --panel-2: #1c1a22; --panel-3: #28262e;
-  --ink: #f4f1ec; --ink-2: #b8b0a6; --ink-3: #857d74;
-  --line: rgba(255,255,255,.09); --line-2: rgba(255,255,255,.16);
+  --bg: #0f0c09; --panel: #1a1510; --panel-2: #241d16; --panel-3: #2e2620;
+  --ink: #f8f1e7; --ink-2: #c9bba9; --ink-3: #908172;
+  --line: rgba(255,247,235,.09); --line-2: rgba(255,247,235,.16);
   background: var(--bg); color: var(--ink);
 }
 .core .core-kiosk-top { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; }
@@ -757,7 +759,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-gdpr { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .core .core-gdpr:hover { color: var(--ink); }
 .core .core-gdpr.danger { margin-left: 10px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
-.core .core-gdpr.danger:hover { color: var(--on-accent); }
+.core .core-gdpr.danger:hover { color: var(--on-danger); }
 .core .core-profile-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 9px; }
 .core .core-timeline { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .core .core-tl-row { background: var(--panel-2); padding: 9px 13px; display: grid; grid-template-columns: 80px 130px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
@@ -978,7 +980,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-field:last-child { margin-bottom: 0; }
 .core .core-tbl-field .core-inp { width: 100%; }
 .core .core-btn.danger { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
-.core .core-btn.danger:hover { background: var(--danger); color: var(--on-accent); }
+.core .core-btn.danger:hover { background: var(--danger); color: var(--on-danger); }
 
 /* slots */
 .core .core-slot-list { display: flex; flex-direction: column; gap: 8px; }

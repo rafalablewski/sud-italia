@@ -50,47 +50,47 @@
     },
     "kds": {
       "accent": {
-        "hex": "#d23a55",
+        "hex": "#e86b3e",
         "source": "core --brand (web Core primary brand — replaces the pre-parity ochre accent)"
       },
       "onAccent": {
-        "hex": "#ffffff",
+        "hex": "#2a160b",
         "source": "core --on-accent"
       },
       "brand": {
-        "hex": "#d23a55",
+        "hex": "#e86b3e",
         "source": "core --brand"
       },
       "surface": {
-        "hex": "#100f12",
+        "hex": "#15110d",
         "source": "core --bg"
       },
       "surface2": {
-        "hex": "#1a191e",
+        "hex": "#1f1a14",
         "source": "core --panel"
       },
       "line": {
-        "hex": "#39383a",
+        "hex": "#3f3a35",
         "source": "core --line-2 (rgba hairline flattened over --bg → solid)"
       },
       "textPrimary": {
-        "hex": "#f4f1ec",
+        "hex": "#f8f1e7",
         "source": "core --ink"
       },
       "textSecondary": {
-        "hex": "#b8b0a6",
+        "hex": "#c9bba9",
         "source": "core --ink-2"
       },
       "success": {
-        "hex": "#3aa978",
+        "hex": "#6fb155",
         "source": "core --basil"
       },
       "warning": {
-        "hex": "#d99a3c",
+        "hex": "#e8a23c",
         "source": "core --amber"
       },
       "danger": {
-        "hex": "#e2574f",
+        "hex": "#e5484a",
         "source": "core --danger"
       },
       "cornerRadius": 14

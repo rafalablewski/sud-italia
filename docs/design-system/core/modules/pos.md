@@ -44,7 +44,7 @@ inside the shell body: **rail · menu · ticket**.
   gluten-free → `.fast`, plus an `.opt` **options** chip when the item has
   `modifierGroups`) plus a live `.core-steer-tag` pace cue (**★ make
   now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
-  with the `.pp` mono price and the burgundy `.add` button (a `⋯` glyph when
+  with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
   the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates. Tapping a plain

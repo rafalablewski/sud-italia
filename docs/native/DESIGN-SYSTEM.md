@@ -51,16 +51,18 @@ theme protocol renders correctly in either app.
 > textSecondary · success · warning · danger` — plus `BrandWordmark`,
 > `TagChip`, and the primary/secondary `DSButton`. `Theme.kds` is the dark
 > operator skin carried **verbatim from the web Core theme**
-> (`src/app/themes/core/tokens.css`, dark): near-black `--bg #100f12` surface,
-> brand-red `--brand #d23a55` primary, amber/green/red status — so the operator
-> app matches the web Core surfaces 1:1.
+> (`src/app/themes/core/tokens.css`, dark) — the **BRACE** palette: warm-espresso
+> `--bg #15110D` surface, ember-terracotta `--brand #E86B3E` primary (dark
+> `--on-accent #2A160B`), basil/saffron/San-Marzano status — so the operator app
+> matches the web Core surfaces 1:1.
 >
 > **Both palettes are generated, not transcribed.** `Tokens.generated.swift`
 > (the `GeneratedTokens.ottaviano` / `.kds` palettes that `Theme` consumes) is
 > emitted from the web token CSS by `scripts/gen-native-tokens.ts`, with a
 > provenance comment per field, and CI fails on drift (`npm run check:native`).
 > See `docs/native/parity/README.md`. This is why the KDS accent is the web Core
-> brand red rather than the earlier hand-picked ochre — the web token wins.
+> brand (ember terracotta) rather than the earlier hand-picked ochre — the web
+> token wins.
 
 ---
 
