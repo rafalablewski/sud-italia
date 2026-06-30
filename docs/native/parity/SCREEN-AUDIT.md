@@ -417,7 +417,7 @@ visual + usability pass first (`OttavianoKDSApp.swift`):
   row-finder, not a metric filter). Purely additive — bar-free without `search:`.
 
 All chrome resolves through the generated web tokens (`themes/core/tokens.css` →
-`Tokens.generated.swift`); native SwiftUI is reserved for the nav container.
+`tokens.generated.ts`); native RN (React Navigation) is reserved for the nav container.
 
 ## Design-system adoption — done this pass
 
@@ -499,3 +499,21 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
 - ⏳ **Verify on-device** — the one step needing both apps running: walk KDS, POS,
   Orders, Dashboard side-by-side on a simulator vs `npm run dev` once a Mac is in
   the loop. Everything resolvable from source is resolved above.
+
+## RN bespoke surfaces — graduating from generic `DataSurface` (2026-06-30, bare RN)
+
+> Context: the prior detailed Inventory above belonged to the **retired SwiftUI
+> seed**. In the bare-RN app most surfaces render through the generic live
+> `DataSurface` (a real key/value list off `/api/v1/admin/*`); the parity upgrade
+> is rebuilding each as a **bespoke native screen** 1:1 with the web. Tracked here;
+> wired via `src/features/operator/bespoke.ts` (checked before `surfaceConfig`).
+
+- ✅ **Inventory** (`/admin/inventory`) — bespoke `Inventory.tsx` mirroring web
+  `InventoryV3` stock view: KPI rail (**inventory value · low/out · items**),
+  **In stock / Low / Out** status taxonomy + filter chips with live counts, search
+  by ingredient/category, and per-row on-hand-vs-par meter + valuation. Backed by
+  an **extended** `GET /api/v1/admin/inventory` (added `costPerUnit` + `valueGrosze`
+  per row, and `meta.outCount`/`meta.totalValueGrosze`) so the value KPI is real
+  (Rule #1). Waste·7d KPI omitted — not in this facade yet (no fabrication).
+- ⏭️ **Next candidates** (generic → bespoke): Suppliers, Purchase orders, Cash,
+  Customers — each already live via `DataSurface`, upgraded wave by wave.

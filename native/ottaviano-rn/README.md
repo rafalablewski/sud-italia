@@ -69,6 +69,13 @@ Run from the **backend repo root**: `npm run gen:native` (regenerate) /
 `npm run check:native` (CI drift gate). `operatorNav.ts` and `tokens.ts` add only
 the native-presentation layer (icons, spacing/type) on top of the generated data.
 
+> **This app is 100% native — no WebView.** An embedded-WebView hybrid was
+> evaluated and **rejected** (owner directive); the reasoning and what full-native
+> commits us to are recorded in
+> [`docs/native/IOS-WEB-MIRROR.md`](../../docs/native/IOS-WEB-MIRROR.md). Every
+> surface is rebuilt as native RN; web parity is held by the codegen gate
+> (tokens + IA) plus the parity ledger, never by rendering the web.
+
 ## Build
 This Linux dev container can't run an iOS build (needs macOS/Xcode) — the iOS
 source under `ios/` is reviewable, CI builds it. The native project is **not**
