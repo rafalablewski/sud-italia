@@ -8786,7 +8786,7 @@ function startOfWarsawDayIso(now: Date = new Date()): string {
   return new Date(wallMidnight - offsetMs).toISOString();
 }
 
-const REFUND_AUDIT_ACTIONS = ["orders.refund_full", "orders.refund_partial"];
+const REFUND_AUDIT_ACTIONS = ["orders.refund_full", "orders.refund_partial", "pos.comp"];
 
 /**
  * Sum of one actor's `manager_comp` refunds at a location since Warsaw midnight.

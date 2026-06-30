@@ -58,6 +58,23 @@ const ALLERGY_NOTE_RE = /allerg|gluten|coeliac|celiac|nut|dairy|lactose|shellfis
 const NOTE_CHIPS = ["No cheese", "Light sauce", "Extra crispy", "Well done", "On the side", "Cut in half"];
 const ALLERGY_CHIP = "⚠ ALLERGY: ";
 
+/** Tip presets (percent of the bill) offered in the tender sheet. */
+const TIP_PCTS = [0, 5, 10, 15];
+/** Comp reasons — all recorded server-side as `manager_comp` (the note carries
+ *  the specific reason), so the per-shift comp cap counts them all. */
+const COMP_REASONS = ["Kitchen error", "Manager goodwill", "Birthday", "VIP / regular", "Long wait"];
+
+/** Client tender payload sent to PATCH /api/admin/pos/orders. The server
+ *  re-derives the bill and clamps every figure — this is only a proposal. */
+type TenderInput = {
+  tipGrosze?: number;
+  compGrosze?: number;
+  compNote?: string;
+  payments?: { method: "cash" | "card"; amount: number }[];
+  cashTenderedGrosze?: number;
+  defaultMethod?: "cash" | "card";
+};
+
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
 
@@ -644,7 +661,7 @@ export function CorePos({
 
   const [tenderOpen, setTenderOpen] = useState(false);
   const pay = useCallback(
-    async (method: "Cash" | "Card") => {
+    async (tender: TenderInput, label: string) => {
       const t = getActive();
       if (!t || busyTabId) return;
       setBusyTabId(t.id);
@@ -654,7 +671,7 @@ export function CorePos({
         const { res, queued } = await durableMutate({
           url,
           method: "PATCH",
-          body: { tabId: t.id },
+          body: { tabId: t.id, tender },
           entity: `tab:${t.id}`,
           desc: `Charge · #${t.id}`,
           onReject: (s) => toast(`Charge for #${t.id} was rejected (${s})`, "danger"),
@@ -668,13 +685,20 @@ export function CorePos({
           // Offline: close the check optimistically; the outbox charges it (once,
           // under its idempotency key) when the network returns.
           closeTab();
-          return toast(`Saved offline — charges ${method} on reconnect · #${t.id}`, "default");
+          return toast(`Saved offline — charges ${label} on reconnect · #${t.id}`, "default");
         }
-        const data = (await res!.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
+        const data = (await res!.json().catch(() => ({}))) as {
+          error?: string; totalAmount?: number; tip?: number; comp?: number; change?: number;
+        };
         if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
         const amt = data.totalAmount ?? grandG(t);
         closeTab();
-        toast(`Paid ✓ #${t.id} · ${method} · ${fmtPLN(amt)}`, "success");
+        const extras = [
+          data.comp && data.comp > 0 ? `comp ${fmtPLN(data.comp)}` : "",
+          data.tip && data.tip > 0 ? `+tip ${fmtPLN(data.tip)}` : "",
+          data.change && data.change > 0 ? `change ${fmtPLN(data.change)}` : "",
+        ].filter(Boolean).join(" · ");
+        toast(`Paid ✓ #${t.id} · ${label} · ${fmtPLN(amt)}${extras ? ` · ${extras}` : ""}`, "success");
       } finally {
         setBusyTabId(null);
       }
@@ -1460,37 +1484,16 @@ export function CorePos({
       </div>
 
       {/* Tender */}
-      <CoreDialog
-        open={tenderOpen && !!active}
-        onClose={() => setTenderOpen(false)}
-        title="Take payment"
-        footer={
-          <button type="button" className="core-btn ghost" onClick={() => setTenderOpen(false)}>
-            Cancel
-          </button>
-        }
-      >
-        {active && (
-          <div className="core-tender">
-            <div className="core-tender-tot">
-              <span>Total due</span>
-              <b className="mono">{fmtPLN(grandG(active))}</b>
-            </div>
-            <p className="core-tender-note">
-              {active.name} · {CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}
-              {active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}
-            </p>
-            <div className="core-tender-pads">
-              <button type="button" className="core-pay" disabled={!!busyTabId} onClick={() => void pay("Card")}>
-                💳 Card
-              </button>
-              <button type="button" className="core-pay" disabled={!!busyTabId} onClick={() => void pay("Cash")}>
-                💵 Cash
-              </button>
-            </div>
-          </div>
-        )}
-      </CoreDialog>
+      {tenderOpen && active && (
+        <TenderDialog
+          billG={grandG(active)}
+          subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
+          covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
+          busy={!!busyTabId}
+          onClose={() => setTenderOpen(false)}
+          onCharge={(tender, label) => void pay(tender, label)}
+        />
+      )}
 
       {/* Void confirmation — only when the check has rung items */}
       <CoreDialog
@@ -1716,6 +1719,203 @@ function LineEditorDialog({
             <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} aria-label="More">+</button>
           </div>
         </div>
+      </div>
+    </CoreDialog>
+  );
+}
+
+/* ── tender sheet — tip · comp · split · cash change ────────────────────── */
+function TenderDialog({
+  billG,
+  subtitle,
+  covers,
+  busy,
+  onClose,
+  onCharge,
+}: {
+  billG: number;
+  subtitle: string;
+  covers: number;
+  busy: boolean;
+  onClose: () => void;
+  onCharge: (tender: TenderInput, label: string) => void;
+}) {
+  const [tipPct, setTipPct] = useState<number | "custom">(0);
+  const [tipCustom, setTipCustom] = useState(""); // zł text
+  const [compOpen, setCompOpen] = useState(false);
+  const [compZl, setCompZl] = useState("");
+  const [compReason, setCompReason] = useState(COMP_REASONS[0]);
+  const [splitN, setSplitN] = useState(1);
+  const [shareMethods, setShareMethods] = useState<("cash" | "card")[]>([]);
+  const [cashOpen, setCashOpen] = useState(false);
+  const [cashGiven, setCashGiven] = useState(""); // zł text
+
+  const zlToG = (s: string) => Math.round((parseFloat(s.replace(",", ".")) || 0) * 100);
+  const comp = compOpen ? Math.min(billG, Math.max(0, zlToG(compZl) || billG)) : 0;
+  const net = Math.max(0, billG - comp);
+  const tip = tipPct === "custom" ? Math.max(0, zlToG(tipCustom)) : Math.round((net * tipPct) / 100);
+  const total = net + tip;
+
+  // Even split — each share equal, the last absorbs the rounding remainder.
+  const shareOf = (i: number) => {
+    const base = Math.floor(total / splitN);
+    return i === splitN - 1 ? total - base * (splitN - 1) : base;
+  };
+  const methodFor = (i: number) => shareMethods[i] ?? "card";
+  const setMethod = (i: number, m: "cash" | "card") =>
+    setShareMethods((cur) => { const next = [...cur]; next[i] = m; return next; });
+
+  const compNote = compOpen && comp > 0 ? compReason : undefined;
+  const cashGivenG = zlToG(cashGiven);
+  const change = cashOpen ? Math.max(0, cashGivenG - total) : 0;
+
+  const chargeSingle = (method: "cash" | "card") => {
+    if (method === "cash" && !cashOpen) { setCashOpen(true); return; } // reveal change pad first
+    const tender: TenderInput = {
+      ...(tip > 0 ? { tipGrosze: tip } : {}),
+      ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      payments: [{ method, amount: total }],
+      defaultMethod: method,
+      ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
+    };
+    onCharge(tender, method === "cash" ? "Cash" : "Card");
+  };
+
+  const chargeSplit = () => {
+    const payments = Array.from({ length: splitN }, (_, i) => ({ method: methodFor(i), amount: shareOf(i) }));
+    const cashShares = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0);
+    const tender: TenderInput = {
+      ...(tip > 0 ? { tipGrosze: tip } : {}),
+      ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      payments,
+      ...(cashShares > 0 && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
+    };
+    onCharge(tender, `Split ${splitN}`);
+  };
+
+  return (
+    <CoreDialog
+      open
+      onClose={onClose}
+      title="Take payment"
+      width={520}
+      footer={<button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>}
+    >
+      <div className="core-tender">
+        <div className="core-tender-tot">
+          <span>{comp > 0 || tip > 0 ? "To collect" : "Total due"}</span>
+          <b className="mono">{fmtPLN(total)}</b>
+        </div>
+        <p className="core-tender-note">{subtitle}</p>
+        {(comp > 0 || tip > 0) && (
+          <div className="core-tender-breakdown">
+            <span>Bill {fmtPLN(billG)}</span>
+            {comp > 0 && <span className="comp">− comp {fmtPLN(comp)}</span>}
+            {tip > 0 && <span className="tip">+ tip {fmtPLN(tip)}</span>}
+          </div>
+        )}
+
+        {/* Tip */}
+        <div className="core-tender-sec">
+          <div className="core-tender-sec-h">Tip</div>
+          <div className="core-tender-chips">
+            {TIP_PCTS.map((p) => (
+              <button key={p} type="button" className={`core-tchip${tipPct === p ? " on" : ""}`} onClick={() => setTipPct(p)}>
+                {p === 0 ? "None" : `${p}%`}{p > 0 ? <span className="sub mono"> {fmtPLN(Math.round((net * p) / 100))}</span> : null}
+              </button>
+            ))}
+            <button type="button" className={`core-tchip${tipPct === "custom" ? " on" : ""}`} onClick={() => setTipPct("custom")}>Custom</button>
+            {tipPct === "custom" && (
+              <input className="core-inp tip-inp" inputMode="decimal" value={tipCustom} onChange={(e) => setTipCustom(e.target.value)} placeholder="zł" />
+            )}
+          </div>
+        </div>
+
+        {/* Comp */}
+        <div className="core-tender-sec">
+          <div className="core-tender-sec-h">
+            Comp <span className="muted">on the house</span>
+            <button type="button" className={`core-tender-toggle${compOpen ? " on" : ""}`} onClick={() => setCompOpen((v) => !v)}>
+              {compOpen ? "Remove comp" : "Comp this check"}
+            </button>
+          </div>
+          {compOpen && (
+            <div className="core-comp-body">
+              <div className="core-tender-chips">
+                {COMP_REASONS.map((r) => (
+                  <button key={r} type="button" className={`core-tchip${compReason === r ? " on" : ""}`} onClick={() => setCompReason(r)}>{r}</button>
+                ))}
+              </div>
+              <label className="core-comp-amt">
+                Amount comped
+                <input className="core-inp" inputMode="decimal" value={compZl} onChange={(e) => setCompZl(e.target.value)} placeholder={`whole bill · ${fmtPLN(billG)}`} />
+              </label>
+              <div className="core-alrg-banner" style={{ background: "var(--brand-wash)", color: "var(--brand-bright)" }}>
+                Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Split */}
+        {covers > 1 && (
+          <div className="core-tender-sec">
+            <div className="core-tender-sec-h">
+              Split evenly
+              <div className="core-qstep">
+                <button type="button" onClick={() => setSplitN((n) => Math.max(1, n - 1))} aria-label="Fewer ways">−</button>
+                <span className="q mono">{splitN === 1 ? "1" : `${splitN}×`}</span>
+                <button type="button" onClick={() => setSplitN((n) => Math.min(covers, n + 1))} aria-label="More ways">+</button>
+              </div>
+            </div>
+            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} guests)</div>}
+          </div>
+        )}
+
+        {/* Tender action */}
+        {splitN > 1 ? (
+          <>
+            <div className="core-split-rows">
+              {Array.from({ length: splitN }, (_, i) => (
+                <div key={i} className="core-split-row">
+                  <span className="sr-l">Guest {i + 1}</span>
+                  <span className="sr-a mono">{fmtPLN(shareOf(i))}</span>
+                  <div className="core-seg sm">
+                    <button className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
+                    <button className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="core-charge" disabled={busy} onClick={chargeSplit}>
+              Charge split · {fmtPLN(total)}
+            </button>
+          </>
+        ) : cashOpen ? (
+          <div className="core-cashpad">
+            <div className="core-cashpad-h">Cash given<button type="button" className="core-tender-toggle" onClick={() => setCashOpen(false)}>← Back</button></div>
+            <div className="core-tender-chips">
+              {[total, Math.ceil(total / 1000) * 1000, Math.ceil(total / 5000) * 5000, Math.ceil(total / 10000) * 10000]
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .map((v) => (
+                  <button key={v} type="button" className="core-tchip" onClick={() => setCashGiven((v / 100).toFixed(2))}>{fmtPLN(v)}</button>
+                ))}
+              <input className="core-inp tip-inp" inputMode="decimal" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="zł" autoFocus />
+            </div>
+            <div className="core-change-row">
+              <span>Change due</span>
+              <b className="mono">{fmtPLN(change)}</b>
+            </div>
+            <button type="button" className="core-charge" disabled={busy || cashGivenG < total} onClick={() => chargeSingle("cash")}>
+              {cashGivenG < total ? `Need ${fmtPLN(total)}` : `Confirm cash · change ${fmtPLN(change)}`}
+            </button>
+          </div>
+        ) : (
+          <div className="core-tender-pads">
+            <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("card")}>💳 Card</button>
+            <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("cash")}>💵 Cash</button>
+          </div>
+        )}
       </div>
     </CoreDialog>
   );

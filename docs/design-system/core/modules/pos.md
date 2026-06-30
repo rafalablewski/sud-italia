@@ -165,6 +165,32 @@ option id not on that item, and adds the menu's `priceDelta`. The KDS ticket
 already renders `selectedModifiers` (`.mod` / `.mod.flag`) and the per-line
 `notes`, so a customised line and its allergy flag reach the line cook unchanged.
 
+## Tender sheet (tip · split · comp · cash change)
+
+`TenderDialog` (a `CoreDialog`, portaled) replaces the old bare Card/Cash pad.
+It composes the tender and PATCHes it as `{ tabId, tender }`:
+
+- **Tip** — `.core-tchip` presets (None / 5 / 10 / 15 % of the net) + Custom zł.
+- **Comp** — a `.core-tender-toggle` reveals reason chips (`COMP_REASONS`) + an
+  amount (defaults to the whole bill). Recorded server-side as a single
+  `manager_comp` (the chip is the note), so it shows in Reports and counts toward
+  the per-shift comp cap (`getActorCompTotalToday`, audit action `pos.comp`).
+- **Split evenly** — a stepper up to the cover count; each guest share is an
+  equal slice (last absorbs the rounding remainder) with its own Cash/Card
+  `.core-seg.sm` toggle. `Charge split` sends one `payments[]` entry per share.
+- **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
+  quick denomination chips + a free amount, a live `.core-change-row` change-due,
+  and a Confirm gated until the cash covers the total.
+
+**Every figure is server-authoritative** (`chargeTab`, `src/lib/pos/fireTab.ts`):
+the bill comes from `buildOrderShape`; the comp is clamped to the bill and gated
+by the shared `evaluateRefundGuard` (owners bypass, others hit the per-shift comp
+cap); payments are validated to cover net due + tip or the charge 400s; cash
+change is `tendered − cash share`. The tender lands on the `Order` as
+`tipAmount` / `payments` / `compAmount` + `compReasonCode` + `compNote` /
+`cashTendered` + `changeGiven`. A bare PATCH with no `tender` still charges the
+full bill (the native `/api/v1` till is unchanged).
+
 ## Engine + API contract
 
 Real, server-resolved; **no mock data** (Rule #1). The server owns the
@@ -184,8 +210,10 @@ total and the `orderId` — the till only ever sends item ids + quantities.
   reconciled by `updatedAt` so an already-in-flight poll can't revert a
   fresher local edit.
 - **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
-- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
-  returns the authoritative `totalAmount`, closes the tab.
+- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId, tender? }` → applies the
+  tender (tip / split / comp / cash), marks `paidAt`, returns the authoritative
+  `{ totalAmount, tip, comp, change, netCollected }`, closes the tab. See
+  *Tender sheet* below.
 - **Pricing** — `getActiveComboDeals` (discount gated on `isComplete`,
   subtracted from the real total) + `getCartSuggestions`, both from
   `@/lib/upsell`; prices in grosze, formatted `27,90`.
