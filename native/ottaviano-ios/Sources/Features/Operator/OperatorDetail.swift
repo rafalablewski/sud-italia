@@ -29,8 +29,8 @@ public struct OperatorStatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(theme.space.md)
-        .background(theme.color.surface.opacity(0.5), in: RoundedRectangle(cornerRadius: theme.radius.md))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface.opacity(0.5), in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -124,14 +124,14 @@ public struct OperatorDetailSheet<Content: View>: View {
                 .background(
                     LinearGradient(colors: [theme.color.accent, theme.color.accent.opacity(0.7)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: theme.radius.lg)
+                    in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                 )
         case .icon(let name):
             Image(systemName: name)
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(theme.color.accent)
                 .frame(width: 60, height: 60)
-                .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.lg))
+                .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
         }
     }
 

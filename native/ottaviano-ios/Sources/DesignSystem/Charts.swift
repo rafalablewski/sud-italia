@@ -23,7 +23,7 @@ public struct OperatorBarChart: View {
         VStack(spacing: theme.space.sm) {
             HStack(alignment: .bottom, spacing: 5) {
                 ForEach(values.indices, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(LinearGradient(
                             colors: [theme.color.accent, theme.color.accent.opacity(0.35)],
                             startPoint: .top, endPoint: .bottom))

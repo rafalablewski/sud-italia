@@ -31,12 +31,12 @@ public struct AuthView: View {
             case .phone:
                 TextField("512 ··· ···", text: $phone)
                     .keyboardType(.phonePad).textContentType(.telephoneNumber)
-                    .padding().background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+                    .padding().background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
                 DSButton(busy ? "…" : "Send code", action: sendCode).disabled(busy || phone.count < 7)
             case .code:
                 TextField("123456", text: $code)
                     .keyboardType(.numberPad).textContentType(.oneTimeCode)
-                    .padding().background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+                    .padding().background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
                 DSButton(busy ? "…" : "Verify", action: verify).disabled(busy || code.count != 6)
                 Button("Use a different number") { step = .phone; code = ""; error = nil }
                     .font(.footnote).foregroundStyle(theme.color.textSecondary)

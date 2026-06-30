@@ -160,8 +160,8 @@ struct GuestLoyaltyTab: View {
                 Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(theme.color.textSecondary)
             }
             .padding(theme.space.md)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
-            .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }

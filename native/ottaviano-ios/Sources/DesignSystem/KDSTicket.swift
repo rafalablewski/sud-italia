@@ -114,19 +114,19 @@ public struct KDSTicket: View, Equatable {
                     Text(bumpTitle).textRole(.bodyEmphasis)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .foregroundStyle(theme.color.onAccent)
-                        .background(accent, in: RoundedRectangle(cornerRadius: theme.radius.md))
+                        .background(accent, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .sensoryFeedback(.success, trigger: order.status)
             }
         }
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
         .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2).fill(accent)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent)
                 .frame(width: 4).padding(.vertical, theme.space.xs)
         }
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(
             due.tone == .late ? theme.color.danger : .clear, lineWidth: 1.5))
         .dsAnimation(theme.motion.snappy, value: due.tone, reduceMotion: reduceMotion)
         .accessibilityElement(children: .combine)

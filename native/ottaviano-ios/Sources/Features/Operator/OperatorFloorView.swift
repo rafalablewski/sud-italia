@@ -103,7 +103,7 @@ public struct OperatorFloorView: View {
         }
         .padding(theme.space.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background((k.tier == "risk" ? theme.dangerSoft : theme.warningSoft), in: RoundedRectangle(cornerRadius: theme.radius.md))
+        .background((k.tier == "risk" ? theme.dangerSoft : theme.warningSoft), in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
     }
 
     private func kpis(_ s: FloorTwinSummary) -> some View {
@@ -160,8 +160,8 @@ public struct OperatorFloorView: View {
             .padding(theme.space.md)
             .frame(height: 92, alignment: .topLeading)
             .frame(maxWidth: .infinity)
-            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(tint.opacity(0.5), lineWidth: 1))
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(tint.opacity(0.5), lineWidth: 1))
             .overlay(alignment: .topTrailing) {
                 if store.busyTableId == t.id { ProgressView().controlSize(.mini).padding(6) }
             }
@@ -224,8 +224,8 @@ public struct OperatorFloorView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -473,8 +473,8 @@ public struct OperatorDemandView: View {
             }
         }
         .padding(theme.space.md)
-        .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.md))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     // MARK: bits
@@ -521,8 +521,8 @@ public struct OperatorDemandView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 

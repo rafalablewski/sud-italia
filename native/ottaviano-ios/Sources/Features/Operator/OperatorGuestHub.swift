@@ -155,8 +155,8 @@ private struct ConversationRow: View {
         }
         .padding(theme.space.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -278,7 +278,7 @@ private struct MessageBubble: View {
                     .foregroundStyle(m.inbound ? theme.color.textPrimary : theme.color.onAccent)
                     .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
                     .background(m.inbound ? theme.color.surface2 : tint,
-                                in: RoundedRectangle(cornerRadius: theme.radius.lg))
+                                in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
                 Text("\(m.actor) · \(waAgo(m.at))").font(.caption2).foregroundStyle(theme.color.textSecondary)
             }
             if m.inbound { Spacer(minLength: 40) }
@@ -399,8 +399,8 @@ struct GuestConciergeTab: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -629,8 +629,8 @@ struct CrmDetailSheet: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -772,7 +772,7 @@ struct GuestBookTab: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }

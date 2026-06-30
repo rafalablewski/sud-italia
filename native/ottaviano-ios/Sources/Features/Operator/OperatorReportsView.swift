@@ -177,7 +177,7 @@ public struct OperatorReportsView: View {
 
     private func legend(_ label: String, _ count: Int, _ total: Int, _ color: Color) -> some View {
         HStack(spacing: theme.space.sm) {
-            RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 11, height: 11)
+            RoundedRectangle(cornerRadius: 3, style: .continuous).fill(color).frame(width: 11, height: 11)
             Text(label).textRole(.callout).foregroundStyle(theme.color.textPrimary)
             Spacer()
             Text("\(count) · \(total > 0 ? Int(Double(count) / Double(total) * 100) : 0)%")
@@ -219,8 +219,8 @@ public struct OperatorReportsView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 

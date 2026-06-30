@@ -100,7 +100,8 @@ public struct MenuView: View {
     }
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
+        let shape = RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous)
+        return VStack(alignment: .leading, spacing: theme.space.sm) {
             BrandWordmark(subtitle: "Soci e amici", onBrand: true)
             Button { showLocations = true } label: {
                 HStack(spacing: theme.space.xs) {
@@ -115,7 +116,18 @@ public struct MenuView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(theme.space.xl)
-        .background(theme.color.brand, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+        .background {
+            // Editorial oxblood→terracotta gradient + a soft top sheen and lift,
+            // so the masthead reads as a premium header, not a flat fill.
+            LinearGradient(colors: [theme.color.brand, theme.color.accent],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .clipShape(shape)
+                .overlay(
+                    LinearGradient(colors: [.white.opacity(0.16), .clear], startPoint: .top, endPoint: .center)
+                        .clipShape(shape)
+                )
+        }
+        .dsShadow(theme.elevation.card)
         .padding(.horizontal, theme.space.lg)
     }
 
@@ -171,8 +183,9 @@ private struct MenuCard: View {
         }
         .opacity(item.available ? 1 : 0.55)
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
 
     @ViewBuilder
@@ -212,10 +225,10 @@ private struct MenuCard: View {
 private struct MenuCardSkeleton: View {
     @Environment(\.theme) private var theme
     var body: some View {
-        RoundedRectangle(cornerRadius: theme.cornerRadius)
+        RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous)
             .fill(theme.color.surface2)
             .frame(height: 84)
-            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
             .redacted(reason: .placeholder)
     }
 }

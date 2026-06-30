@@ -42,7 +42,7 @@ public struct POSKeypad: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(theme.color.accent)
-                        .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.md))
+                        .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
                         .accessibilityLabel("Exact \(MoneyText.format(amt))")
                     }
                 }
@@ -61,8 +61,8 @@ public struct POSKeypad: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.color.textPrimary)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
         .sensoryFeedback(.impact(flexibility: .rigid), trigger: grosze)
         .modifier(KeyShortcut(key: k))
         .accessibilityLabel(k == "⌫" ? "Delete" : k)

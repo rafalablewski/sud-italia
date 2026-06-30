@@ -37,7 +37,7 @@ public struct MetricExplainer: View {
 
     private func rail(_ label: String, _ icon: String, _ accent: Color, _ body: String) -> some View {
         HStack(alignment: .top, spacing: theme.space.sm) {
-            RoundedRectangle(cornerRadius: 2).fill(accent).frame(width: 3)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent).frame(width: 3)
             VStack(alignment: .leading, spacing: theme.space.xs) {
                 Label(label, systemImage: icon)
                     .textRole(.caption).fontWeight(.bold).tracking(0.4)

@@ -117,6 +117,16 @@ Elevation is **material-first** (`.regularMaterial`, `.thinMaterial`) with shado
 tokens reserved for cards that must lift off content. No 12-layer z-index stacks —
 SwiftUI compositing + `.zIndex` only where overlap is real.
 
+**Corners are always continuous (the Apple "squircle").** Every rounded surface
+uses `RoundedRectangle(cornerRadius:, style: .continuous)` — circular corners read
+subtly "off-platform" on iOS. This is enforced uniformly: there are **no**
+`RoundedRectangle(cornerRadius:)` call sites without `style: .continuous`. Borders
+default to a **hairline** (`0.5`pt) over the heavier `1`pt so cards sit flush with
+the system look. Brand "pass" surfaces (the loyalty card, the storefront masthead)
+layer a diagonal brand gradient + a faint top-edge white sheen + the `card`
+elevation shadow, the way an Apple Wallet pass reads as pressed foil rather than a
+flat fill.
+
 ### 2.4 Motion & haptics
 ```swift
 public struct MotionTokens: Sendable {
@@ -197,7 +207,10 @@ are the contracts + representative sketches; full set lives in the package.
 ### 4.1 Primitives
 - **`DSButton`** — `variant: .primary | .secondary | .tonal | .ghost | .destructive`,
   `size: .sm | .md | .lg`, loading + disabled states, 44pt min target, haptic on
-  press. Never a bare `Button` in feature code.
+  press. Never a bare `Button` in feature code. Carries **`DSPressStyle`** — the
+  Apple "alive" press: a quick spring dip in scale (`0.97`) + opacity while held,
+  Reduce-Motion-aware (the scale drops, the dim stays). `DSPressStyle` is public so
+  any branded `Button` whose label owns its background can adopt the same feel.
 - **`DSCard`** — surface + radius + optional elevation; the layout unit.
 - **`DSTag` / `DSBadge`** — status pills (uses status tokens); count badges.
 - **`DSTextField`** — themed, with label/error/affordance slots, keyboard config.

@@ -61,9 +61,9 @@ public struct DSTextField: View {
                     .foregroundStyle(theme.color.textPrimary)
             }
             .padding()
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: theme.cornerRadius)
+                RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous)
                     .strokeBorder(error == nil ? theme.color.line : theme.color.danger, lineWidth: 1)
             )
             if let error {

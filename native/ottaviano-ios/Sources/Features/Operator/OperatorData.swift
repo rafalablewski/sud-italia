@@ -294,7 +294,7 @@ private struct OptionalSearchable: ViewModifier {
 struct OperatorRowSkeleton: View {
     @Environment(\.theme) private var theme
     var body: some View {
-        RoundedRectangle(cornerRadius: 8).fill(theme.color.surface2).frame(height: 44)
+        RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.color.surface2).frame(height: 44)
             .redacted(reason: .placeholder)
     }
 }
@@ -315,7 +315,7 @@ public struct OperatorStatChip: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, theme.space.sm)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }

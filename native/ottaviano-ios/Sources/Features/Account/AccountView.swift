@@ -96,7 +96,7 @@ public struct AccountView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(theme.space.lg)
-        .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+        .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
     }
 
     private var locationsCard: some View {
@@ -229,7 +229,7 @@ private extension View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(theme.space.lg)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }

@@ -368,7 +368,7 @@ struct OperatorOrderRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: theme.space.md) {
-            RoundedRectangle(cornerRadius: 2).fill(accent).frame(width: 4)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent).frame(width: 4)
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(order.id).font(.subheadline.weight(.bold)).foregroundStyle(theme.color.textPrimary)
@@ -396,8 +396,8 @@ struct OperatorOrderRow: View {
             }
         }
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
@@ -419,8 +419,8 @@ public struct OperatorAccountView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(theme.space.lg)
-                    .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                    .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+                    .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
                 }
                 DSButton("Sign out", prominent: false) { Task { await session.signOut() } }
                 Spacer()

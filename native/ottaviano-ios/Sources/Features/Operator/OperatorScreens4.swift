@@ -169,8 +169,8 @@ public struct OperatorInsightsView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func load() async {
@@ -252,8 +252,8 @@ struct LocationKPIRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
     private func metric(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -328,7 +328,7 @@ public struct OperatorMultiLocationView: View {
                 VStack(alignment: .leading, spacing: theme.space.sm) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, r in
                         HStack(spacing: theme.space.sm) {
-                            RoundedRectangle(cornerRadius: 3).fill(palette[i % palette.count]).frame(width: 11, height: 11)
+                            RoundedRectangle(cornerRadius: 3, style: .continuous).fill(palette[i % palette.count]).frame(width: 11, height: 11)
                             Text(r.city).textRole(.callout).foregroundStyle(theme.color.textPrimary)
                             Spacer()
                             Text("\(chainRevenue > 0 ? Int(Double(r.revenue) / Double(chainRevenue) * 100) : 0)%")
@@ -377,8 +377,8 @@ public struct OperatorMultiLocationView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func load() async {
@@ -503,8 +503,8 @@ public struct OperatorWelcomeView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(theme.space.lg)
-                .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+                .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
             }
             .padding(theme.space.lg)
         }
@@ -523,8 +523,8 @@ public struct OperatorWelcomeView: View {
             Spacer()
         }
         .padding(theme.space.lg)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func bullet(_ icon: String, _ title: String, _ detail: String) -> some View {

@@ -45,8 +45,8 @@ struct KDSFleetView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func paceStat(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
@@ -90,7 +90,7 @@ struct KDSFleetView: View {
         }
         .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
         .frame(minWidth: 72, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
     }
 
     private func revenueCell(_ grosze: Int) -> some View {
@@ -100,7 +100,7 @@ struct KDSFleetView: View {
         }
         .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
         .frame(minWidth: 90, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
     }
 
     // MARK: cross-truck benchmark
@@ -126,7 +126,7 @@ struct KDSFleetView: View {
             }
         }
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
     }
 
     private func benchmarkSummary(_ b: FleetBenchmark) -> String {
@@ -205,7 +205,7 @@ struct KDSFleetView: View {
             }
         }
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
     }
 
     private func stat(_ label: String, _ value: String, _ tint: Color) -> some View {

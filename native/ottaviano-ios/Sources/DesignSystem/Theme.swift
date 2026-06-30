@@ -125,12 +125,27 @@ public struct DSButton: View {
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .foregroundStyle(prominent ? theme.color.onAccent : theme.color.accent)
                 .background {
-                    let shape = RoundedRectangle(cornerRadius: theme.cornerRadius)
+                    let shape = RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous)
                     if prominent { shape.fill(theme.color.accent) }
                     else { shape.strokeBorder(theme.color.accent, lineWidth: 1.5) }
                 }
         }
+        .buttonStyle(DSPressStyle())
         .sensoryFeedback(.impact(weight: .light), trigger: title)
+    }
+}
+
+/// The Apple "alive" press: a quick spring dip in scale + opacity while held.
+/// Honours Reduce Motion (the scale drops out, the dim stays). Reusable on any
+/// `Button` whose label already carries its own background (DSButton, chips).
+public struct DSPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.86 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.2), value: configuration.isPressed)
     }
 }
 

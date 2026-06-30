@@ -120,7 +120,7 @@ struct Avatar: View {
         Text(initials)
             .font(.caption.weight(.bold)).foregroundStyle(theme.color.accent)
             .frame(width: 36, height: 36)
-            .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.sm))
+            .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
     }
     private var initials: String {
         let parts = name.split(separator: " ").prefix(2)
@@ -673,8 +673,8 @@ public struct OperatorSlotsView: View {
                 }
             }
             .padding(theme.space.md)
-            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.md))
-            .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -714,8 +714,8 @@ public struct OperatorSlotsView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
