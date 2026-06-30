@@ -34,9 +34,12 @@ export function nextStatus(current: OrderStatus): OrderStatus | null {
 }
 
 export function fmtClock(s: number): string {
-  const abs = Math.abs(s);
-  const m = Math.floor(abs / 60);
-  const r = abs % 60;
+  // Round to whole seconds first — callers may pass a fractional seconds value
+  // (e.g. an age derived from ms / 1000), and an unfloored remainder rendered as
+  // "00:3.96099" instead of "00:04". Round so the clock reads cleanly.
+  const total = Math.round(Math.abs(s));
+  const m = Math.floor(total / 60);
+  const r = total % 60;
   const sign = s < 0 ? "-" : "";
   return `${sign}${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }

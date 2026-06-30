@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { CORE_SURFACES } from "@/core/routes";
+import { coreHref } from "@/core/routes";
 
-// The Core suite lands on the POS till.
+// Core lands on the Floor — the home base for service. Tapping a table opens
+// its check as a panel over the floor (no navigation to a separate till).
 export default function CoreIndex() {
-  redirect(CORE_SURFACES.pos);
+  redirect(coreHref("/service/floor"));
 }

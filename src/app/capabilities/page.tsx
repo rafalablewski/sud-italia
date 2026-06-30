@@ -81,11 +81,18 @@ export default async function CapabilitiesPage() {
             "Guest-placed QR table orders already surface as first-class per-table entities on the Floor (channel 'qr', with a 'QR · … to pay' chip + inline settle) and in the POS QR queue. Settling one is now a real tender, not a bare 'Mark paid': QrTenderPanel (src/core/pos/CoreQrQueue.tsx) captures method (Card/Cash), a tip preset and a cash change-due before confirming. The settle route (src/app/api/admin/pos/qr-orders/route.ts) applies the tender to the EXISTING order — no duplicate order or tab, so there is no double-charge — writing the same tipAmount / payments[] / cashTendered+changeGiven fields the POS tender uses, so a guest order and a server-rung check settle through one money model. A bare settle (no tender) still just marks it paid; the order stays the single server-owned source of truth.",
         },
         {
-          name: "Floor → till table flow (one table model)",
+          name: "KDS all-day batch rail",
+          status: "live",
+          href: "/core/kds",
+          summary:
+            "A Σ control on the KDS board (src/core/kds/CoreKds.tsx, Floor + Chef views) toggles an 'all-day' rail (.core-allday): every still-to-make item (New + Firing, not yet Ready) summed by dish across all active tickets, biggest first, with the ticket count — the line's 'make-now' batch the pizzaiolo cooks from. Derived live from the same KdsTicket stream (no mock data, Rule #1) and respects the station filter. Also tightened the ticket hierarchy (larger mono due-clock, allergen strip gets a left safety rule) and fixed fmtClock to round to whole seconds (the Oldest/Avg-age KPIs and due clocks were rendering fractional seconds like '41:3.96099').",
+        },
+        {
+          name: "Floor home — tap a table → its check opens over the floor",
           status: "live",
           href: "/core/service/floor",
           summary:
-            "The Floor map and the POS now share one table model instead of two table UIs. Every non-out-of-service tile on the Floor (src/core/service/CoreFloor.tsx) carries an 'Order →' deep-link to /core/pos?table=<id>&covers=<party|seats>. The till (CorePos) reads the param once on mount and, when the tables list has loaded, opens a dine-in check pre-assigned to that table with the party as covers — or focuses the existing open check for it instead of duplicating — then strips the query so a refresh doesn't re-open a fresh check. The Order link is always visible on touch terminals (@media hover:none) and hover-revealed on pointer devices, so the 'tap a table → build its check' flow works on the real POS hardware.",
+            "Core's IA centres on the Floor: /core (and /core/service) land on the Floor and the bottom switcher leads with it. Tapping a table opens that table's check as a docked panel OVER the floor (no navigation to a separate till): CoreFloor mounts the embedded till (<CorePos embedded initialTableId onClose>) in a .core-check-panel inside a scrim, portaled into the .core theme root so it keeps core tokens. The panel opens or focuses the table's dine-in check (party as covers) and is where build / modify / course / split / pay all happen; closing reloads the floor so pay-status and occupancy refresh. An occupied tile also has a small secondary 'Free' button to clear without opening the check. The standalone /core/pos surface still renders the same CorePos non-embedded (full shell) — one component, two mounts, so the floor map and the till are one table model, not two UIs.",
         },
         {
           name: "POS tender — tips, splits, comps & cash change",

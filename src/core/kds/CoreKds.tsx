@@ -241,6 +241,7 @@ export function CoreKds() {
   const [role, setRole] = useState<string | null>(null);
   const [kiosk, setKiosk] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
+  const [showAllDay, setShowAllDay] = useState(false);
   const [eightySixOpen, setEightySixOpen] = useState(false);
   const [recalls, setRecalls] = useState<{ orderId: string; label: string; at: number }[]>([]);
 
@@ -281,6 +282,24 @@ export function CoreKds() {
     c.late = allTickets.filter((t) => t.promisedReadyAtMs !== null && t.promisedReadyAtMs < now && t.status !== "ready").length;
     return c;
   }, [visibleByStatus, allTickets, now]);
+
+  // "All-day" — the batch the line cooks from: every still-to-make item (New +
+  // Firing, not yet Ready) summed by dish across active tickets, biggest first.
+  // Derived live from the same tickets (Rule #1, no mock data); respects the
+  // station filter via `allTickets`.
+  const allDay = useMemo(() => {
+    const agg = new Map<string, { name: string; category: string; qty: number; tickets: number }>();
+    for (const t of allTickets) {
+      if (t.status === "ready") continue;
+      for (const it of t.items) {
+        const cur = agg.get(it.name) ?? { name: it.name, category: it.categoryLabel, qty: 0, tickets: 0 };
+        cur.qty += it.quantity;
+        cur.tickets += 1;
+        agg.set(it.name, cur);
+      }
+    }
+    return [...agg.values()].sort((a, b) => b.qty - a.qty);
+  }, [allTickets]);
 
   const advance = useCallback(
     async (t: KdsTicket) => {
@@ -534,6 +553,15 @@ export function CoreKds() {
             ↩ Undo{recalls.length > 1 ? ` · ${recalls.length}` : ""}
           </button>
         )}
+        <button
+          type="button"
+          className={showAllDay ? "core-iconbtn on" : "core-iconbtn"}
+          title="All-day — batch counts per dish"
+          aria-pressed={showAllDay}
+          onClick={() => setShowAllDay((v) => !v)}
+        >
+          Σ
+        </button>
         <button type="button" className="core-iconbtn" title="Refresh now" onClick={() => refresh()}>⟳</button>
         <button type="button" className="core-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
         <button type="button" className="core-iconbtn" title={soundOn ? "Mute" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
@@ -581,6 +609,25 @@ export function CoreKds() {
                 </button>
               ))}
             </div>
+
+            {/* All-day batch rail — what the line still has to cook, biggest
+                first. Toggled by the Σ control; live from the active tickets. */}
+            {showAllDay && (
+              <div className="core-allday" role="list" aria-label="All-day batch counts">
+                <span className="core-allday-lbl">All-day</span>
+                {allDay.length === 0 ? (
+                  <span className="core-allday-empty">Nothing on the line.</span>
+                ) : (
+                  allDay.map((d) => (
+                    <span key={d.name} className="core-allday-item" role="listitem" title={`${d.qty}× ${d.name} across ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}`}>
+                      <b className="n">{d.qty}</b>
+                      <span className="nm">{d.name}</span>
+                      <span className="tk">·{d.tickets}</span>
+                    </span>
+                  ))
+                )}
+              </div>
+            )}
 
             {view === "chef" ? (
               <>

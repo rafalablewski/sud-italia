@@ -13,13 +13,21 @@ Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
   **spend / hr** · freeing ≤15m) over zoned table tiles. Each `.core-tbl2`
   is toned by state — free · seated · **freeing** (predicted ≤15m) ·
   reserved · out-of-service — and shows party / dwell / open check; hover
-  reveals a `⋯` **edit** affordance. Tap a table to **seat / clear**.
-- **Order → (`.core-tbl2-order`)** — a brand link on each non-OOS tile that
-  deep-links to the till (`/core/pos?table=<id>&covers=<party|seats>`). The POS
-  opens (or focuses, if one already exists) a **dine-in check pre-assigned to
-  that table** with the party as covers — so the floor map and the till share
-  one table model instead of two. Always shown on touch (`@media (hover:none)`),
-  hover-revealed on pointer devices.
+  reveals a `⋯` **edit** affordance.
+- **Tap a table → its check opens as a panel over the floor** — the core IA
+  move. The tile's main tap mounts the **embedded till** (`<CorePos embedded>`)
+  in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled
+  into the **`.core` theme root** (not `document.body`, so it keeps core tokens —
+  same rule as `CoreDialog`). The panel opens (or focuses) that table's dine-in
+  check with the party as covers and is where build / modify / course / split /
+  pay all happen — **no navigation to a separate till**. The panel header is
+  table-forward (back-arrow · **Table N** · party + item count + running total ·
+  QR · Done); **Esc** or the back-arrow closes it, the scrim-click dismisses, and
+  body scroll is locked while it's open. Closing reloads the
+  floor so pay-status / occupancy refresh. An occupied tile also carries a small
+  secondary **Free** button (`.core-tbl2-clear`) to clear the table without
+  opening the check. Floor is Core's **home** (`/core` and `/core/service`
+  both land here; the bottom switcher leads with **Floor**).
 - **Predictive-seating recommender** (`.core-floor-bar`): type a party size
   and `recommendSeating(twin, n)` ranks best-fit tables as `.core-fchip`
   chips — *seat* now or *~Nm* until free; click to seat directly.
