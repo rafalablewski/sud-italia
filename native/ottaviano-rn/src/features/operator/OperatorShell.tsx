@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
 import { filterNavForRole, type OperatorNavItem } from "@/nav/operatorNav";
@@ -17,14 +17,15 @@ import { filterNavForRole, type OperatorNavItem } from "@/nav/operatorNav";
 export function OperatorShell({ active, title, children }: { active: OperatorNavItem; title?: string; children: ReactNode }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const navigation = useNavigation<{ navigate: (screen: string, params: { path: string }) => void }>();
   const { role, user, logout } = useOperator();
   const [open, setOpen] = useState(false);
   const sections = filterNavForRole(role);
 
   const go = (item: OperatorNavItem) => {
     setOpen(false);
-    router.replace(`/operator/surface${item.path}` as `/operator/surface/${string}`);
+    // Same route name + new params → React Navigation updates the surface in place.
+    navigation.navigate("OperatorSurface", { path: item.path });
   };
 
   return (

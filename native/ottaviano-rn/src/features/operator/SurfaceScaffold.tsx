@@ -1,5 +1,5 @@
 import { Linking, ScrollView, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Button, Card, Muted } from "@/components/ui";
 import type { OperatorNavItem } from "@/nav/operatorNav";

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "@/lib/secureStore";
 import { apiRequest, type RequestOptions, type ApiResult } from "@/api/client";
 import { ApiError } from "@/api/envelope";
 import type { CustomerProfile, TokenPair } from "@/api/types";

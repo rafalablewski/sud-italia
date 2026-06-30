@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { apiRequest } from "@/api/client";
@@ -18,9 +18,9 @@ type Fulfillment = "takeout" | "delivery" | "dine-in";
  * estimate). Works for a guest (name + phone) or a signed-in customer (phone from
  * the token). Idempotency-Key makes a retry safe. On success → the live tracker.
  */
-export default function CartScreen() {
+export function CartScreen() {
   const { c } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<{ replace: (screen: string, params: { id: string }) => void }>();
   const cart = useCart();
   const { profile, accessToken } = useCustomer();
   const [fulfillment, setFulfillment] = useState<Fulfillment>("takeout");
@@ -59,7 +59,7 @@ export default function CartScreen() {
         idempotencyKey: `order-${cart.locationSlug}-${cart.count()}-${cart.subtotal()}`,
       });
       cart.clear();
-      router.replace(`/customer/order/${data.id}`);
+      navigation.replace("OrderTracker", { id: data.id });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not place the order");
     } finally {

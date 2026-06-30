@@ -1,17 +1,16 @@
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
 /**
  * Launcher — picks which experience to open. The single binary hosts both the
- * customer storefront (Ottaviano) and the operator console (OttavianoKDS); in a
- * two-target store build, app variants deep-link straight past this. Skinned with
- * the warm Ottaviano palette.
+ * customer storefront (Ottaviano) and the operator console (OttavianoKDS).
+ * Skinned with the warm Ottaviano palette.
  */
 function Launcher() {
   const { c } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<{ navigate: (screen: string) => void }>();
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: c.surface, paddingTop: insets.top, paddingBottom: insets.bottom, padding: 24, justifyContent: "center", gap: 28 }}>
@@ -25,7 +24,7 @@ function Launcher() {
           subtitle="Browse the menu, order and track — no account needed"
           bg={c.accent}
           fg={c.onAccent}
-          onPress={() => router.push("/customer")}
+          onPress={() => navigation.navigate("Customer")}
         />
         <Choice
           title="Staff sign-in"
@@ -33,7 +32,7 @@ function Launcher() {
           bg={c.surface2}
           fg={c.textPrimary}
           border={c.line}
-          onPress={() => router.push("/operator")}
+          onPress={() => navigation.navigate("Operator")}
         />
       </View>
     </View>
@@ -60,7 +59,7 @@ function Choice({ title, subtitle, bg, fg, border, onPress }: { title: string; s
   );
 }
 
-export default function LauncherRoute() {
+export function LaunchScreen() {
   return (
     <ThemeProvider skin="ottaviano">
       <Launcher />

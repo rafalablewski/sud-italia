@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { getLocations, getMenu } from "@/api/public";
@@ -13,9 +13,9 @@ const CATEGORY_ORDER = ["pizza", "pasta", "antipasti", "panini", "drinks", "dess
 
 /** Order tab — browse the live menu for a location and build the cart. Wired to
  *  the public `GET /locations` + `GET /menu?location=` (Rule #1, real data). */
-export default function MenuScreen() {
+export function MenuScreen() {
   const { c } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<{ navigate: (screen: string) => void }>();
   const [locations, setLocations] = useState<LocationDTO[]>([]);
   const [slug, setSlug] = useState<string | null>(null);
   const [menu, setMenu] = useState<MenuItemDTO[] | null>(null);
@@ -97,7 +97,7 @@ export default function MenuScreen() {
 
       {count > 0 && (
         <Pressable
-          onPress={() => router.push("/customer/cart")}
+          onPress={() => navigation.navigate("Cart")}
           style={({ pressed }) => ({ position: "absolute", left: 16, right: 16, bottom: 16, backgroundColor: c.brand, opacity: pressed ? 0.9 : 1, borderRadius: 16, padding: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" })}
         >
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>

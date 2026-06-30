@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "@/lib/secureStore";
 import { apiRequest, type RequestOptions, type ApiResult } from "@/api/client";
 import { ApiError } from "@/api/envelope";
 import type { TokenPair, User } from "@/api/types";
@@ -8,7 +8,7 @@ import { rankForRole, type AdminRole } from "@/nav/roles";
 /**
  * Operator (OttavianoKDS) identity — the JWT access + rotating-refresh pair from
  * `/api/v1/auth/*` (API-V1.md). The refresh token lives in the device Keychain
- * (`expo-secure-store`); the 15-min access token stays in memory. `authed()`
+ * (`react-native-keychain`); the 15-min access token stays in memory. `authed()`
  * wraps every operator request: on a 401 it rotates the refresh token once and
  * retries, so a re-scope/disable lands within one access lifetime. Role drives
  * the nav gate (filterNavForRole), exactly like the web `filterNavForRoleV3`.

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Redirect, useRouter } from "expo-router";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
@@ -10,29 +9,25 @@ import { Button, Card, Muted } from "@/components/ui";
  * Operator login — mirrors the web admin login: shared-owner password, or an
  * email-bound user with per-user password + optional TOTP. Hits
  * `POST /api/v1/auth/login` with `app: "ottaviano-kds"`. The token pair lands in
- * the Keychain; role drives the nav gate.
+ * the Keychain; on success the session flips to signed-in and the navigator swaps
+ * this screen for the Dashboard surface (no manual navigation needed).
  */
-export default function OperatorLogin() {
+export function OperatorLoginScreen() {
   const { c } = useTheme();
-  const router = useRouter();
-  const { status, login } = useOperator();
+  const { login } = useOperator();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (status === "signed-in") return <Redirect href="/operator/surface/admin" />;
-
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
       await login({ email: email.trim() || undefined, password, totp: totp.trim() || undefined });
-      router.replace("/operator/surface/admin");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Sign-in failed");
-    } finally {
       setBusy(false);
     }
   };
