@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
+import { useOperatorLocation } from "@/store/operatorLocation";
 import { formatMoney } from "@/lib/format";
-import { Card, Muted, StateBlock } from "@/components/ui";
+import { Card, Muted, Pill, StateBlock } from "@/components/ui";
 import type { OperatorNavItem } from "@/nav/operatorNav";
 import type { SurfaceConfig } from "./surfaceConfig";
 
@@ -46,20 +47,36 @@ function titleOf(row: Row, cfg: SurfaceConfig): string {
 export function DataSurface({ surface, config }: { surface: OperatorNavItem; config: SurfaceConfig }) {
   const { c } = useTheme();
   const { authed } = useOperator();
+  const needsLocation = !!config.needsLocation;
+  const { slug, locations, error: locError, setSlug, ensureLoaded } = useOperatorLocation();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // A per-location surface needs the active locations loaded before it can fetch.
+  useEffect(() => {
+    if (needsLocation) void ensureLoaded();
+  }, [needsLocation, ensureLoaded]);
+
+  // The fetch URL — scoped to the selected site when the endpoint requires it.
+  // Null while we still need a location but don't have one yet (holds at loading).
+  const url = useMemo(() => {
+    if (!config.endpoint) return null;
+    if (!needsLocation) return config.endpoint;
+    if (!slug) return null;
+    return `${config.endpoint}?location=${encodeURIComponent(slug)}`;
+  }, [config.endpoint, needsLocation, slug]);
+
   const load = useCallback(async () => {
-    if (!config.endpoint) return;
+    if (!url) return;
     try {
-      const { data } = await authed<unknown>(config.endpoint);
+      const { data } = await authed<unknown>(url);
       setRows(asRows(data));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load this surface");
     }
-  }, [authed, config.endpoint]);
+  }, [authed, url]);
 
   useEffect(() => {
     setRows(null);
@@ -73,6 +90,10 @@ export function DataSurface({ surface, config }: { surface: OperatorNavItem; con
   };
 
   if (error) return <StateBlock kind="error" message={error} />;
+  // Per-location surface still resolving which site to show.
+  if (needsLocation && !slug) {
+    return <StateBlock kind={locError ? "error" : "loading"} message={locError ?? undefined} />;
+  }
   if (!rows) return <StateBlock kind="loading" />;
 
   return (
@@ -81,6 +102,14 @@ export function DataSurface({ surface, config }: { surface: OperatorNavItem; con
       contentContainerStyle={{ padding: 14, gap: 10 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} />}
     >
+      {needsLocation && locations.length > 0 && (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 2 }}>
+          {locations.map((l) => (
+            <Pill key={l.slug} label={l.city || l.name} active={l.slug === slug} onPress={() => setSlug(l.slug)} />
+          ))}
+        </View>
+      )}
+
       <View style={{ marginBottom: 2 }}>
         <Muted>{surface.blurb}</Muted>
         <Text style={{ color: c.textSecondary, fontSize: 12, marginTop: 4 }}>
