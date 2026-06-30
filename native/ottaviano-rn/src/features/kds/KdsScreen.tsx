@@ -11,7 +11,7 @@ import { EightySixSheet } from "./EightySixSheet";
 import { useOrdersStream } from "./useOrdersStream";
 import { KDS_COLUMNS, MENU_CATEGORY_LABELS, groupByColumn, isAtRisk, isLate, nextStatus, paidAtMs } from "./kdsLogic";
 
-type View = "fleet" | "floor" | "chef";
+type KdsView = "fleet" | "floor" | "chef";
 
 /**
  * Core · Kitchen Display — the always-dark kitchen wall, wired to the live order
@@ -28,7 +28,7 @@ export function KdsScreen() {
   const { width } = useWindowDimensions();
   const wideLanes = width >= 720; // iPad → 3 lanes side by side; phone → stacked
 
-  const [view, setView] = useState<View>(isOwner ? "fleet" : "floor");
+  const [view, setView] = useState<KdsView>(isOwner ? "fleet" : "floor");
   const [station, setStation] = useState<string>("all");
   const [lane, setLane] = useState<string>("all");
   const [paused, setPaused] = useState(false);
@@ -255,15 +255,15 @@ function Header({
   isOwner,
   connected,
 }: {
-  view: View;
-  setView: (v: View) => void;
+  view: KdsView;
+  setView: (v: KdsView) => void;
   isOwner: boolean;
   connected: boolean;
 }) {
   const { c } = useTheme();
-  const tabs: { key: View; label: string }[] = [
+  const tabs: { key: KdsView; label: string }[] = [
     ...(isOwner ? [{ key: "fleet" as View, label: "Fleet" }] : []),
-    { key: "floor", label: "Floor" },
+    { key: "floor" as KdsView, label: "Floor" },
     { key: "chef", label: "Chef" },
   ];
   return (
