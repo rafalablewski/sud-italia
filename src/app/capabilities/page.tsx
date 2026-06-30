@@ -74,6 +74,13 @@ export default async function CapabilitiesPage() {
             "The till never loses a ticket or double-charges on a flaky network. Server withIdempotency(key, fn) (src/lib/store.ts) runs each POS mutation at most once per Idempotency-Key — serialized by the distributed lock, memoizing only successes with a 24h TTL — so a charge re-sent after a lost response replays its original { orderId, total } instead of taking a second payment or 404-ing on the deleted tab; applied to POST send-to-KDS + PATCH charge (pos/orders). Client idempotentFetch (src/lib/idempotentFetch.ts) attaches the key and retries transient blips (dropped connection / 5xx) with backoff; wired into POS send / fire-course / charge + the KDS bump. When the network is genuinely down, durableMutate (src/store/writeQueue.ts) parks the write in a localStorage outbox under its key, closes the check optimistically, and replays it — exactly once, FIFO per tab — on reconnect, surviving a reload; a '↻ N writes syncing' amber pill on the POS check-bar shows pending writes. Verified by idempotency.test.ts + writeQueue.core.test.ts.",
         },
         {
+          name: "Floor → till table flow (one table model)",
+          status: "live",
+          href: "/core/service/floor",
+          summary:
+            "The Floor map and the POS now share one table model instead of two table UIs. Every non-out-of-service tile on the Floor (src/core/service/CoreFloor.tsx) carries an 'Order →' deep-link to /core/pos?table=<id>&covers=<party|seats>. The till (CorePos) reads the param once on mount and, when the tables list has loaded, opens a dine-in check pre-assigned to that table with the party as covers — or focuses the existing open check for it instead of duplicating — then strips the query so a refresh doesn't re-open a fresh check. The Order link is always visible on touch terminals (@media hover:none) and hover-revealed on pointer devices, so the 'tap a table → build its check' flow works on the real POS hardware.",
+        },
+        {
           name: "POS tender — tips, splits, comps & cash change",
           status: "live",
           href: "/core/pos",

@@ -14,6 +14,12 @@ Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
   is toned by state — free · seated · **freeing** (predicted ≤15m) ·
   reserved · out-of-service — and shows party / dwell / open check; hover
   reveals a `⋯` **edit** affordance. Tap a table to **seat / clear**.
+- **Order → (`.core-tbl2-order`)** — a brand link on each non-OOS tile that
+  deep-links to the till (`/core/pos?table=<id>&covers=<party|seats>`). The POS
+  opens (or focuses, if one already exists) a **dine-in check pre-assigned to
+  that table** with the party as covers — so the floor map and the till share
+  one table model instead of two. Always shown on touch (`@media (hover:none)`),
+  hover-revealed on pointer devices.
 - **Predictive-seating recommender** (`.core-floor-bar`): type a party size
   and `recommendSeating(twin, n)` ranks best-fit tables as `.core-fchip`
   chips — *seat* now or *~Nm* until free; click to seat directly.

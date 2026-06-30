@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -369,6 +370,16 @@ export function CoreFloor() {
                         >
                           ⋯
                         </button>
+                        {t.status !== "out-of-service" && (
+                          <Link
+                            className="core-tbl2-order"
+                            href={`/core/pos?table=${encodeURIComponent(t.id)}&covers=${t.party ?? t.seats}`}
+                            title={`Open the till on a dine-in check for table ${t.number}`}
+                            aria-label={`New order for table ${t.number}`}
+                          >
+                            🧾 Order
+                          </Link>
+                        )}
                       </div>
                     );
                   })}

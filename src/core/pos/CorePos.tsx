@@ -472,7 +472,7 @@ export function CorePos({
     [pageLoc],
   );
 
-  const newTab = useCallback(async () => {
+  const newTab = useCallback(async (init?: { channel?: FulfillmentType; tableId?: string; covers?: number }) => {
     if (!pageLoc) return;
     // Derive the next default name from the highest existing "Tab N" so it never
     // collides — even after middle checks are closed (a plain counter repeats).
@@ -494,9 +494,12 @@ export function CorePos({
       id: tempId,
       locationSlug: pageLoc,
       name,
-      channel: null,
+      channel: init?.channel ?? null,
       status: "open",
       items: [],
+      tableId: init?.tableId,
+      covers: init?.covers,
+      coursed: init?.channel === "dine-in" ? true : undefined,
       sentKds: false,
       createdAt: now,
       updatedAt: now,
@@ -591,6 +594,38 @@ export function CorePos({
     };
   }, [pageLoc]);
   const tableById = useCallback((id?: string) => (id ? tables.find((t) => t.id === id) : undefined), [tables]);
+
+  // Deep-link from the Floor: `/core/pos?table=<id>&covers=<n>` opens (or focuses)
+  // a dine-in check for that table — the "tap a table → build its check" flow, so
+  // the floor map and the till share one spatial model instead of two table UIs.
+  // Read once on mount; consumed when the tables list has loaded.
+  const tableParamRef = useRef<{ id: string; covers?: number } | null | undefined>(undefined);
+  useEffect(() => {
+    if (tableParamRef.current !== undefined || typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const id = sp.get("table");
+    if (!id) { tableParamRef.current = null; return; }
+    const c = parseInt(sp.get("covers") || "", 10);
+    tableParamRef.current = { id, covers: Number.isFinite(c) ? c : undefined };
+    // Drop the query so a refresh doesn't re-open a fresh check for the table.
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  useEffect(() => {
+    const p = tableParamRef.current;
+    if (!p || tables.length === 0) return;
+    const t = tables.find((x) => x.id === p.id);
+    if (!t) return;
+    tableParamRef.current = null; // consume once, whatever the outcome
+    // Already a check on this table? Focus it instead of opening a duplicate.
+    const open = tabs.find((tb) => tb.tableId === t.id && tb.status !== "parked");
+    if (open) {
+      setActiveTabId(open.id);
+      toast(`Table ${t.number} · open check`, "default");
+      return;
+    }
+    void newTab({ channel: "dine-in", tableId: t.id, covers: p.covers ?? t.seats ?? 2 });
+    toast(`New check · Table ${t.number}`, "success");
+  }, [tables, tabs, newTab, toast]);
   const tablesByZone = useMemo(() => {
     const m = new Map<string, FloorTable[]>();
     for (const t of tables) {

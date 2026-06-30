@@ -226,6 +226,12 @@ POS uses Core's **own** kit (no `src/ui`): `CoreDialog`
 `.core` theme root. Classes: `.core-scrim` / `.core-modal*` / `.core-btn` /
 `.core-toast*`.
 
+**Deep-link from the Floor** — `/core/pos?table=<id>&covers=<n>` (the Floor's
+*Order →* link) is read once on mount: when the tables list has loaded the till
+opens a **dine-in check pre-assigned to that table** (party as covers), or
+focuses the existing open check for it instead of duplicating. The query is
+stripped via `history.replaceState` so a refresh doesn't re-open a fresh check.
+
 The **table picker** is **not** a modal — it takes over the middle (menu)
 pane (`.core-tablepick`) for a full-size, **zone-grouped** board
 (`.core-tablezone` → `.core-tablegrid.big` / `.core-tablebtn`) with a *← Back to

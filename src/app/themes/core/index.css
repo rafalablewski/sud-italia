@@ -953,6 +953,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl2-edit { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--ink-3); font-size: 14px; line-height: 1; opacity: 0; transition: opacity var(--fast), background var(--fast); }
 .core .core-tbl2-wrap:hover .core-tbl2-edit { opacity: 1; }
 .core .core-tbl2-edit:hover { background: var(--panel-3); color: var(--ink); }
+/* "Order →" deep-link to the till, pre-targeted at this table */
+.core .core-tbl2-order { position: absolute; bottom: 8px; right: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 7px; background: var(--brand); color: var(--on-accent); font-size: 11px; font-weight: 700; text-decoration: none; opacity: 0; transition: opacity var(--fast), filter var(--fast); }
+.core .core-tbl2-wrap:hover .core-tbl2-order { opacity: 1; }
+.core .core-tbl2-order:hover { filter: brightness(1.06); }
+@media (hover: none) { .core .core-tbl2-order { opacity: 1; } }
 
 /* predictive-seating recommender bar */
 .core .core-floor-bar { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
