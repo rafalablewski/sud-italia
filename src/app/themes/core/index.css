@@ -57,6 +57,9 @@
   display: grid; place-items: center; color: var(--ink-2); transition: all var(--fast); }
 .core .core-iconbtn:hover { color: var(--ink); background: var(--hover); }
 .core .core-iconbtn svg { width: 17px; height: 17px; }
+/* labelled icon-buttons (e.g. KDS "↩ Undo") widen to fit their text + read amber */
+.core .core-recall-btn { width: auto; padding: 0 11px; gap: 5px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--amber-wash); border-color: transparent; color: var(--amber); }
+.core .core-recall-btn:hover { background: var(--amber-wash); color: var(--amber); filter: brightness(1.08); }
 .core .core-clock { font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--ink); padding: 0 4px; }
 
 /* notifications bell + panel */
@@ -861,6 +864,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tpay.due { background: var(--brand-wash); color: var(--brand-bright); }
 .core .core-tpay.paid { background: var(--basil-wash); color: var(--basil); }
 .core .core-tbl2 .tnum .core-tnote { font-size: 12px; }
+/* glanceable service-note chip on the tile — allergy/dietary risk goes amber */
+.core .core-tbl2 .core-tnote-chip { margin-top: 6px; max-width: 100%; font-size: 10.5px; font-weight: 600; line-height: 1.3; padding: 2px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-tbl2 .core-tnote-chip.alrg { background: var(--amber-wash); color: var(--amber); }
 /* order lookup results + table-detail order list */
 .core .core-lookup-results { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; }
 .core .core-lookup-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); }

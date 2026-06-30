@@ -90,6 +90,8 @@ Wired 1:1 to the shared live engine:
 Fullscreen kiosk (bare wall), number-key bump (1–9), a manual `⟳`
 refresh, pause/resume, recall (`POST /api/admin/orders/{id}/recall`,
 tray persisted per location in `localStorage` so a refresh keeps the undo
-window), two opt-in chimes (bright bell on a new ticket, lower alarm the
+window) — surfaced as a labelled **`↩ Undo`** control (`.core-recall-btn`,
+amber) rather than a bare glyph, so the affordance reads at a glance; two
+opt-in chimes (bright bell on a new ticket, lower alarm the
 instant a ticket breaches SLA), and the 86 control
 (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.

@@ -68,7 +68,9 @@ The Floor board pairs the predictive twin with the table's **live orders**:
   `GET /api/admin/floor/orders` (today's active orders, grouped by `tableId`,
   tagged with channel + paid/unpaid). Unpaid → a brand `… to pay` chip
   (prefixed `QR ·` for QR-channel orders); fully paid → a basil `✓ paid` chip.
-  A `📝` glyph on the table number flags a service note. Polls every 10s.
+  A glanceable service-note chip (`.core-tnote-chip`) sits on the tile; a note
+  naming an allergy/dietary risk goes amber (`.alrg`, `⚠`) so it reads across
+  the room, not on hover. Polls every 10s.
 - **To pay KPI** — count of unpaid active orders across the floor.
 - **Order lookup** — a `⌕ Find order` box filters active orders by id, guest
   name or table number; each result shows channel + paid status with a

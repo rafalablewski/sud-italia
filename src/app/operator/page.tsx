@@ -131,9 +131,6 @@ export default async function OperatorHome() {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-neutral-500">
-        <Link href="/kitchen" className="hover:text-neutral-300">
-          Legacy kitchen display →
-        </Link>
         <Link href="/capabilities" className="hover:text-neutral-300">
           What&apos;s deployed →
         </Link>
