@@ -142,7 +142,9 @@ async function emitIos(svg: string, opaqueBg: string, appDir: string): Promise<v
 async function main(): Promise<void> {
   await emit("ottaviano", ottavianoSvg(), "#A60C22");
   await emit("kds", kdsSvg(), "#070A0F");
-  await emitIos(ottavianoSvg(), "#A60C22", "Apps/Ottaviano");
+  // iOS App Store icon — only the SwiftUI OttavianoKDS app lives at
+  // native/ottaviano-ios (operator only; "we build only SwiftUI"). The customer
+  // app's iOS icon belongs to the RN app (native/ottaviano-rn), not here.
   await emitIos(kdsSvg(), "#070A0F", "Apps/OttavianoKDS");
 }
 

@@ -1,0 +1,65 @@
+# XcodeGen spec → run `xcodegen generate` (on a Mac or in CI) to produce
+# Ottaviano.xcodeproj with the OttavianoKDS app target, depending on the local
+# OttavianoKit SwiftPM package. Authored as text so the project is fully
+# reproducible without committing a binary .xcodeproj (and without a Mac here).
+#
+# Scope: OttavianoKDS (operator) only. The customer app target was retired —
+# "we build only SwiftUI, OttavianoKDS only" (owner directive). The shared
+# OttavianoKit spine + AppFeatures (Operator + KDS) is the whole product.
+name: Ottaviano
+options:
+  bundleIdPrefix: pl.ottaviano
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  OttavianoKit:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
+    TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
+    # Release (user-facing) version.
+    MARKETING_VERSION: "0.3.0"
+    # Build number (CFBundleVersion) — a plain, monotonically increasing INTEGER,
+    # bumped +1 on every TestFlight upload. It must be strictly greater than every
+    # prior build's number, and Apple compares build numbers numerically — so a
+    # dotted "0.3.0.x" sorts BELOW the existing integer builds and TestFlight
+    # treats it as older. Integers above the current max avoid that. Source of
+    # truth here (the testflight script no longer overrides it); bump +1 each release.
+    CURRENT_PROJECT_VERSION: "52"
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+targets:
+  OttavianoKDS:
+    type: application
+    platform: iOS
+    sources:
+      - Apps/OttavianoKDS
+    dependencies:
+      - package: OttavianoKit
+        product: OttavianoKit
+      - package: OttavianoKit
+        product: AppFeatures
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.ottaviano.kds
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: OttavianoKDS
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        # iPad-first operator app: landscape primary on iPad.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown"
+
+schemes:
+  OttavianoKDS:
+    build:
+      targets:
+        OttavianoKDS: all
+    run:
+      config: Debug
