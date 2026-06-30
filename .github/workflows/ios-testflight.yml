@@ -1,62 +1,110 @@
-name: Mobile app — EAS build
+name: Mobile app — TestFlight
 
-# Builds (and optionally submits) the Expo app via EAS — the "GitHub Actions to
-# deploy" path. Triggered manually, or by pushing a commit whose message contains
-# [eas] so we can ship from a feature branch without merging. Pick the profile +
-# platform in the dispatch inputs. App Store submission is gated on a real
-# Apple credential set (EXPO_TOKEN + the EAS-managed App Store Connect key).
+# Archives one scheme of the bare React Native 0.79.5 app and uploads it to
+# TestFlight via the App Store Connect API key — the same mechanism the team's
+# prior Swift pipeline used (xcodebuild archive -> exportArchive -> altool),
+# repointed at the CocoaPods WORKSPACE. No Expo / EAS.
 #
-# Required repo secret: EXPO_TOKEN (an Expo access token with build rights).
-# Apple signing + ASC submission are configured once in EAS (eas credentials);
-# this workflow does not handle raw .p8 keys.
+# Triggered manually (pick the scheme), or by pushing to a claude/** branch with
+# a commit message containing [testflight]. A "(KDS)" marker in that message
+# selects the OttavianoKDS scheme; otherwise push defaults to Ottaviano. Manual
+# dispatch defaults to OttavianoKDS.
+#
+# Required repo secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
 on:
   workflow_dispatch:
     inputs:
-      platform:
-        description: Platform
+      scheme:
+        description: Scheme to ship
         type: choice
-        options: [ios, android, all]
-        default: ios
-      profile:
-        description: EAS build profile
-        type: choice
-        options: [preview, production]
-        default: preview
-      submit:
-        description: Submit to the store after building
-        type: boolean
-        default: false
+        options: [Ottaviano, OttavianoKDS]
+        default: OttavianoKDS
   push:
-    branches: ["claude/**", "main"]
+    branches: ["claude/**"]
+
+concurrency:
+  group: ios-testflight-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[eas]') }}
-    runs-on: ubuntu-latest
+  testflight:
+    # Manual dispatch always runs; push only when the commit message opts in.
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]') }}
+    name: Archive + upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: native/ottaviano-rn
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Resolve scheme
+        id: scheme
+        # Dispatch -> input. Push -> "(KDS)" in the message picks KDS, else Ottaviano.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SCHEME="${{ github.event.inputs.scheme }}"
+          else
+            MSG="${{ github.event.head_commit.message }}"
+            if printf '%s' "$MSG" | grep -q "(KDS)"; then
+              SCHEME="OttavianoKDS"
+            else
+              SCHEME="Ottaviano"
+            fi
+          fi
+          echo "Selected scheme: $SCHEME"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)"
+          if [ -z "$XCODE_APP" ]; then
+            echo "No Xcode 26 found in /Applications" >&2
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install JS dependencies
         run: npm install
 
-      - name: Set up EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
-      - name: EAS build
+      - name: Generate Xcode project
+        working-directory: native/ottaviano-rn/ios
+        run: xcodegen generate
+
+      - name: Install CocoaPods (bundler)
+        run: bundle install
+
+      - name: pod install
+        working-directory: native/ottaviano-rn/ios
+        run: bundle exec pod install
+
+      - name: Write App Store Connect API key
+        # altool / xcodebuild read AuthKey_<id>.p8 from ~/.appstoreconnect/private_keys.
         run: |
-          PLATFORM="${{ inputs.platform || 'ios' }}"
-          PROFILE="${{ inputs.profile || 'preview' }}"
-          SUBMIT_FLAG=""
-          if [ "${{ inputs.submit }}" = "true" ]; then SUBMIT_FLAG="--auto-submit"; fi
-          echo "Building $PLATFORM ($PROFILE) $SUBMIT_FLAG"
-          eas build --non-interactive --no-wait --platform "$PLATFORM" --profile "$PROFILE" $SUBMIT_FLAG
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Archive + export + upload to TestFlight
+        # Build number = base 60 + run_number offset, kept strictly > 51 and
+        # monotonic across runs so TestFlight always accepts the upload.
+        run: |
+          chmod +x Scripts/testflight.sh
+          BUILD_NUMBER=$(( 60 + ${{ github.run_number }} ))
+          ./Scripts/testflight.sh "${{ steps.scheme.outputs.scheme }}" "$BUILD_NUMBER"

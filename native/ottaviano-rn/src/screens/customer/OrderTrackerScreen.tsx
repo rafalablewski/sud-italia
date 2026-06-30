@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useRoute, type RouteProp } from "@react-navigation/native";
 import { ScrollView, Text, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { openSSE } from "@/api/sse";
@@ -7,6 +7,7 @@ import { useCustomer } from "@/auth/CustomerSession";
 import type { OrderDTO, OrderStatus } from "@/api/types";
 import { formatMoney } from "@/lib/format";
 import { Card, StateBlock } from "@/components/ui";
+import type { CustomerStackParamList } from "@/navigation/types";
 
 const STEPS: { status: OrderStatus; label: string }[] = [
   { status: "confirmed", label: "Confirmed" },
@@ -18,9 +19,9 @@ const STEPS: { status: OrderStatus; label: string }[] = [
 /** Live order tracker — the customer Live Activity feed. Opens the Bearer SSE
  *  `/customer/orders/:id/stream`; the operator's KDS bump propagates here through
  *  the same in-process emitter (API-V1.md). */
-export default function OrderTracker() {
+export function OrderTrackerScreen() {
   const { c } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRoute<RouteProp<CustomerStackParamList, "OrderTracker">>().params;
   const { authed, accessToken } = useCustomer();
   const [order, setOrder] = useState<OrderDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export default function OrderTracker() {
               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: done ? c.success : "transparent", borderWidth: 2, borderColor: done ? c.success : c.line, alignItems: "center", justifyContent: "center" }}>
                 {done && <Text style={{ color: "#fff", fontSize: 12, fontWeight: "900" }}>✓</Text>}
               </View>
-              <Text style={{ color: current ? c.textPrimary : done ? c.textSecondary : c.textSecondary, fontWeight: current ? "800" : "600", fontSize: 16 }}>{s.label}</Text>
+              <Text style={{ color: current ? c.textPrimary : c.textSecondary, fontWeight: current ? "800" : "600", fontSize: 16 }}>{s.label}</Text>
             </View>
           );
         })}

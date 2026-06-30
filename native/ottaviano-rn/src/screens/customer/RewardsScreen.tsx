@@ -6,7 +6,7 @@ import { Card, StatTile, StateBlock } from "@/components/ui";
 import { SignIn } from "@/features/customer/SignIn";
 
 /** Rewards tab — the loyalty card off `GET /api/v1/customer/me` (points + tier). */
-export default function RewardsScreen() {
+export function RewardsScreen() {
   const { c } = useTheme();
   const { status, profile } = useCustomer();
 

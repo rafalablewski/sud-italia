@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useCustomer } from "@/auth/CustomerSession";
@@ -11,10 +11,10 @@ import { SignIn } from "@/features/customer/SignIn";
 const ACTIVE = new Set(["pending", "confirmed", "preparing", "ready", "assigned", "picked_up"]);
 
 /** Orders tab — the customer's own order history off `GET /api/v1/customer/orders`,
- *  newest-first; tap an active order to open the live tracker. */
-export default function OrdersScreen() {
+ *  newest-first; tap an order to open the live tracker. */
+export function OrdersScreen() {
   const { c } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<{ navigate: (screen: string, params: { id: string }) => void }>();
   const { status, authed } = useCustomer();
   const [orders, setOrders] = useState<OrderDTO[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function OrdersScreen() {
       {orders.map((o) => {
         const live = ACTIVE.has(o.status);
         return (
-          <Pressable key={o.id} onPress={() => router.push(`/customer/order/${o.id}`)}>
+          <Pressable key={o.id} onPress={() => navigation.navigate("OrderTracker", { id: o.id })}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 16 }}>#{o.shortId}</Text>

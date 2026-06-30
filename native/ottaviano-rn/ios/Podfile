@@ -1,0 +1,56 @@
+# Podfile — bare React Native 0.79.5, two app targets sharing one pod set.
+#
+# Run AFTER `xcodegen generate` (project.yml -> Ottaviano.xcodeproj). pod install
+# then produces Ottaviano.xcworkspace, which is what xcodebuild must build.
+#
+# Native modules (react-native-screens, react-native-safe-area-context,
+# react-native-keychain, react-native-vector-icons / RNVectorIcons) are
+# autolinked by use_native_modules! — no manual `pod` lines needed.
+
+# Resolve react_native_pods.rb out of node_modules (supports hoisting).
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+platform :ios, '18.0'
+prepare_react_native_project!
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+# Shared definition: both targets boot the same JS bundle / native modules, so
+# they share an identical pod set. abstract_target installs the pods once and
+# both concrete targets inherit them.
+abstract_target 'OttavianoApps' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    # An absolute path to the application root (one level up from ios/).
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  # Customer app.
+  target 'Ottaviano' do
+  end
+
+  # Operator / kitchen-display app.
+  target 'OttavianoKDS' do
+  end
+
+  post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      # :ccache_enabled => true
+    )
+  end
+end

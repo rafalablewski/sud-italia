@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useCustomer } from "@/auth/CustomerSession";
@@ -9,9 +9,9 @@ import { Button, Card, Divider, Muted } from "@/components/ui";
 
 /** More tab — famiglia / locations / account (APP-SHELL §2). Account deletion +
  *  data export are mandatory for any signed-in app (Guideline 5.1.1(v)). */
-export default function MoreScreen() {
+export function MoreScreen() {
   const { c } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<{ navigate: (screen: string) => void }>();
   const { status, profile, logout, authed } = useCustomer();
   const [locations, setLocations] = useState<LocationDTO[]>([]);
 
@@ -46,7 +46,7 @@ export default function MoreScreen() {
         {status === "signed-in" ? (
           <Muted>{profile?.phone}</Muted>
         ) : (
-          <Button label="Sign in" onPress={() => router.push("/customer/rewards")} small />
+          <Button label="Sign in" onPress={() => navigation.navigate("Rewards")} small />
         )}
       </Card>
 
@@ -83,7 +83,7 @@ export default function MoreScreen() {
         )}
       </Card>
 
-      <Pressable onPress={() => router.replace("/")} style={{ alignItems: "center", paddingVertical: 8 }}>
+      <Pressable onPress={() => navigation.navigate("Launch")} style={{ alignItems: "center", paddingVertical: 8 }}>
         <Muted>Switch to staff sign-in</Muted>
       </Pressable>
     </ScrollView>
