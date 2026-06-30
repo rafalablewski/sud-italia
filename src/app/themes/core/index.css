@@ -477,6 +477,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-stn { height: 30px; padding: 0 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .core .core-stn:hover { color: var(--ink); }
 .core .core-stn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+/* all-day batch rail — the line's "make now" totals per dish */
+.core .core-allday { display: flex; align-items: center; gap: 9px; padding: 9px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; background: var(--brand-wash); }
+.core .core-allday-lbl { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; color: var(--brand-bright); flex: none; }
+.core .core-allday-empty { font-size: 12px; color: var(--ink-3); }
+.core .core-allday-item { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 11px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; flex: none; }
+.core .core-allday-item .n { font-family: var(--mono); font-weight: 700; font-size: 16px; color: var(--brand-bright); }
+.core .core-allday-item .nm { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.core .core-allday-item .tk { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
 
 /* lanes */
 .core .core-lanes { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 14px; min-height: 0; overflow: hidden; }
@@ -501,7 +509,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tk-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .core .core-tk-h .id { font-family: var(--mono); font-weight: 600; font-size: 13px; }
 .core .core-tk-h .chiplet { font-size: 10.5px; color: var(--ink-2); background: var(--kds-veil); padding: 2px 7px; border-radius: 5px; margin-left: 6px; font-family: var(--ui); }
-.core .core-tk-h .due { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--t-queued); }
+.core .core-tk-h .due { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--t-queued); }
 .core .core-tk-h .due.t-firing { color: var(--t-firing); } .core .core-tk-h .due.t-warn { color: var(--t-warn); }
 .core .core-tk-h .due.t-risk { color: var(--t-risk); } .core .core-tk-h .due.t-late { color: var(--t-late); } .core .core-tk-h .due.t-ready { color: var(--t-ready); }
 .core .core-tk-hend { display: flex; align-items: center; gap: 7px; }
@@ -519,10 +527,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tk-items .it .nm { line-height: 1.35; }
 .core .core-tk-items .it .mod { color: var(--ink-3); font-style: italic; font-size: 12px; }
 .core .core-tk-items .it .mod.flag { color: var(--t-warn); font-style: normal; font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em; }
-.core .core-tk-alrg { margin-top: 8px; font-size: 11.5px; color: var(--t-warn); background: rgba(217,154,60,.12); border: 1px solid rgba(217,154,60,.32); border-radius: 6px; padding: 5px 8px; }
+.core .core-tk-alrg { margin-top: 8px; font-size: 11.5px; font-weight: 600; color: var(--t-warn); background: rgba(232,162,60,.14); border: 1px solid rgba(232,162,60,.36); border-left: 3px solid var(--t-warn); border-radius: 6px; padding: 5px 9px; }
 .core .core-tk-note { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
 .core .core-tk-note b { color: var(--ink); font-weight: 600; margin-right: 4px; }
-.core .core-meter { height: 5px; border-radius: 3px; background: var(--kds-track); margin: 10px 0 0; overflow: hidden; }
+.core .core-meter { height: 6px; border-radius: 3px; background: var(--kds-track); margin: 10px 0 0; overflow: hidden; }
 .core .core-meter i { display: block; height: 100%; border-radius: 3px; background: var(--t-firing); }
 .core .core-meter i.t-warn { background: var(--t-warn); } .core .core-meter i.t-risk { background: var(--t-risk); }
 .core .core-meter i.t-late { background: var(--t-late); } .core .core-meter i.t-ready { background: var(--t-ready); } .core .core-meter i.t-queued { background: var(--t-queued); }
@@ -971,9 +979,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-check-panel { width: min(100%, 1120px); height: 100%; background: var(--bg); border-left: 1px solid var(--line-2);
   box-shadow: var(--sh-pop); display: flex; flex-direction: column; animation: core-slide-in var(--base); }
 .core .core-pos-embed { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); }
-.core .core-pos-embed-h { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line);
+.core .core-pos-embed-h { display: flex; align-items: center; gap: 11px; padding: 10px 16px; border-bottom: 1px solid var(--line);
   background: var(--panel); flex: none; }
-.core .core-pos-embed-h .t { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+.core .core-pos-embed-back { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--ink); font-size: 18px; line-height: 1; display: grid; place-items: center; transition: all var(--fast); }
+.core .core-pos-embed-back:hover { background: var(--hover); }
+.core .core-pos-embed-h .th { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.core .core-pos-embed-h .t { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.01em; line-height: 1.1; }
+.core .core-pos-embed-h .s { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core .core-pos-embed .core-pos { flex: 1; }
 @keyframes core-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes core-slide-in { from { transform: translateX(28px); opacity: .4; } to { transform: none; opacity: 1; } }

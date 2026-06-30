@@ -7,7 +7,8 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
   snapshots and passes them in).
 - **Embedded mode:** `<CorePos embedded initialTableId onClose>` renders the
   same check builder **without** the `CoreShell` chrome — a slim
-  `.core-pos-embed-h` header (table + QR + Close) over the identical `posBody`
+  `.core-pos-embed-h` header (a `.core-pos-embed-back` back-arrow · table-forward
+  title + party / item-count / running total · QR · Done) over the identical `posBody`
   (check-bar · rail · menu · check · all dialogs). The Floor mounts it in its
   docked check panel so "the check is never a separate place"; `initialTableId`
   opens/focuses that table's check on mount (the same path as the `?table=`

@@ -1631,13 +1631,25 @@ export function CorePos({
     return (
       <div className="core-pos-embed">
         <div className="core-pos-embed-h">
-          <div className="t">
-            {active?.name ?? "Check"}
-            {active?.tableId ? ` · Table ${tableById(active.tableId)?.number ?? "?"}` : ""}
+          <button type="button" className="core-pos-embed-back" onClick={() => onClose?.()} aria-label="Back to floor" title="Back to floor (Esc)">←</button>
+          <div className="th">
+            <div className="t">
+              {active?.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : (active?.name ?? "Check")}
+            </div>
+            <div className="s">
+              {active?.channel === "dine-in"
+                ? `Party of ${active.covers ?? 2}`
+                : active?.channel
+                  ? CHANNELS.find((c) => c.key === active.channel)?.label
+                  : "New check"}
+              {" · "}
+              {active ? active.items.reduce((n, l) => n + l.quantity, 0) : 0} items
+              {active && grandG(active) > 0 ? ` · ${fmtPLN(grandG(active))}` : ""}
+            </div>
           </div>
           <div className="core-sp" />
           <CoreQrQueue location={pageLoc} />
-          <button type="button" className="core-btn ghost sm" onClick={() => onClose?.()}>Close ✕</button>
+          <button type="button" className="core-btn ghost sm" onClick={() => onClose?.()}>Done</button>
         </div>
         {posBody}
       </div>

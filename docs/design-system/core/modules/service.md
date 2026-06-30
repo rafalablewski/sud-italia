@@ -20,7 +20,10 @@ Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
   into the **`.core` theme root** (not `document.body`, so it keeps core tokens —
   same rule as `CoreDialog`). The panel opens (or focuses) that table's dine-in
   check with the party as covers and is where build / modify / course / split /
-  pay all happen — **no navigation to a separate till**. Closing reloads the
+  pay all happen — **no navigation to a separate till**. The panel header is
+  table-forward (back-arrow · **Table N** · party + item count + running total ·
+  QR · Done); **Esc** or the back-arrow closes it, the scrim-click dismisses, and
+  body scroll is locked while it's open. Closing reloads the
   floor so pay-status / occupancy refresh. An occupied tile also carries a small
   secondary **Free** button (`.core-tbl2-clear`) to clear the table without
   opening the check. Floor is Core's **home** (`/core` and `/core/service`

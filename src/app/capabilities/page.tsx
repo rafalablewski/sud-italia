@@ -81,6 +81,13 @@ export default async function CapabilitiesPage() {
             "Guest-placed QR table orders already surface as first-class per-table entities on the Floor (channel 'qr', with a 'QR · … to pay' chip + inline settle) and in the POS QR queue. Settling one is now a real tender, not a bare 'Mark paid': QrTenderPanel (src/core/pos/CoreQrQueue.tsx) captures method (Card/Cash), a tip preset and a cash change-due before confirming. The settle route (src/app/api/admin/pos/qr-orders/route.ts) applies the tender to the EXISTING order — no duplicate order or tab, so there is no double-charge — writing the same tipAmount / payments[] / cashTendered+changeGiven fields the POS tender uses, so a guest order and a server-rung check settle through one money model. A bare settle (no tender) still just marks it paid; the order stays the single server-owned source of truth.",
         },
         {
+          name: "KDS all-day batch rail",
+          status: "live",
+          href: "/core/kds",
+          summary:
+            "A Σ control on the KDS board (src/core/kds/CoreKds.tsx, Floor + Chef views) toggles an 'all-day' rail (.core-allday): every still-to-make item (New + Firing, not yet Ready) summed by dish across all active tickets, biggest first, with the ticket count — the line's 'make-now' batch the pizzaiolo cooks from. Derived live from the same KdsTicket stream (no mock data, Rule #1) and respects the station filter. Also tightened the ticket hierarchy (larger mono due-clock, allergen strip gets a left safety rule) and fixed fmtClock to round to whole seconds (the Oldest/Avg-age KPIs and due clocks were rendering fractional seconds like '41:3.96099').",
+        },
+        {
           name: "Floor home — tap a table → its check opens over the floor",
           status: "live",
           href: "/core/service/floor",

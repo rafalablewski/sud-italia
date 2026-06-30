@@ -68,6 +68,20 @@ export function CoreFloor({
   // uses. Portaling to body would drop every `.core`-scoped style.
   const [coreRoot, setCoreRoot] = useState<Element | null>(null);
   useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
+  // Esc closes the check panel; lock body scroll while it's open so the floor
+  // behind doesn't move under the panel.
+  useEffect(() => {
+    if (!checkTable) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setCheckTable(null); void load(); } };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkTable]);
   const loc = location || activeLocations[0]?.slug || "krakow";
   const [twin, setTwin] = useState<FloorTwin | null>(null);
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);

@@ -25,6 +25,12 @@ for owners (role from `/api/admin/me`).
   from the live ticket stream; **Done/hr** and **On shift** come from
   `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
   the subbar focuses a single lane into the dense `.core-chefq` wrap.
+- **All-day rail** (`.core-allday`) — toggled by the **`Σ`** control, an
+  ember-washed strip of `.core-allday-item` chips: every still-to-make item
+  (New + Firing, not Ready) summed **by dish across all active tickets**, biggest
+  first, with the ticket count. The line's "make-now" batch — derived live from
+  the same tickets (no mock data, Rule #1) and respecting the station filter.
+  Available in Floor + Chef views.
 - **Chef** — the same tickets as a single station-filtered make-queue
   (`.core-chefq`), under a `.core-chef-depth` strip showing the cook's
   focused-station **queue depth** + **oldest** ticket (amber past 8 min)
@@ -61,8 +67,10 @@ Below, in order, the **safety-relevant** content the line needs:
   view). Each `.it` is `.q` qty + an `.it-body` (name, then `.mod`
   modifier lines — flagged picks render `.mod.flag` bold-amber — then any
   note). Items off the active station dim.
-- `.core-tk-alrg` — an amber-hairline allergen strip (`Allergens · …`,
-  deduped across the ticket). **Never dropped** — it's a safety line.
+- `.core-tk-alrg` — an amber allergen strip with a 3px left safety rule
+  (`Allergens · …`, deduped across the ticket), bold for emphasis. **Never
+  dropped** — it's a safety line. (The toned **due** clock in the header is the
+  big mono figure cooks track from.)
 - `.core-tk-note` — the order's special instructions (`Note …`).
 
 Then a `.core-meter` cook-time bar and a `.core-bump` button. SLA **tone**
@@ -93,5 +101,5 @@ tray persisted per location in `localStorage` so a refresh keeps the undo
 window) — surfaced as a labelled **`↩ Undo`** control (`.core-recall-btn`,
 amber) rather than a bare glyph, so the affordance reads at a glance; two
 opt-in chimes (bright bell on a new ticket, lower alarm the
-instant a ticket breaches SLA), and the 86 control
-(`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.
+instant a ticket breaches SLA), the **`Σ` all-day** toggle (`.core-allday`), and
+the 86 control (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.
