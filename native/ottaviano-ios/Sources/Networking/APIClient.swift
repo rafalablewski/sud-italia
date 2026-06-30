@@ -582,6 +582,21 @@ public extension Endpoint {
         return Endpoint<CrmPointsResult>(.post, "admin/customers/\(phonePathDigits(phone))/points", body: body, requiresAuth: true)
     }
 
+    // Guest hub — Inbox (WhatsApp) + Concierge (MCP), completing /core/guest parity.
+    static func adminWhatsAppInbox() -> Endpoint<WaInbox> {
+        Endpoint<WaInbox>(.get, "admin/whatsapp", requiresAuth: true)
+    }
+    static func adminWhatsAppThread(phone: String, limit: Int = 100) -> Endpoint<WaThread> {
+        Endpoint<WaThread>(.get, "admin/whatsapp/\(phonePathDigits(phone))", query: ["limit": String(limit)], requiresAuth: true)
+    }
+    static func adminWhatsAppSend(phone: String, body text: String) -> Endpoint<WaSendResult> {
+        let body = try? JSONEncoder().encode(["body": text])
+        return Endpoint<WaSendResult>(.post, "admin/whatsapp/\(phonePathDigits(phone))/message", body: body, requiresAuth: true)
+    }
+    static func adminConcierge() -> Endpoint<ConciergeInfo> {
+        Endpoint<ConciergeInfo>(.get, "admin/concierge", requiresAuth: true)
+    }
+
     // Demand Exchange (Service · Demand tab).
     static func adminDemandBoard(location: String, date: String? = nil) -> Endpoint<DemandBoardWrapper> {
         var q = ["location": location]; if let date { q["date"] = date }

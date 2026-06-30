@@ -110,6 +110,8 @@
 
 ## /api/v1/admin coverage
 
-43 admin endpoints. Endpoints **not** yet mapped to a surface in this generator (review):
+45 admin endpoints. Endpoints **not** yet mapped to a surface in this generator (review):
 
+- `/api/v1/admin/concierge`
 - `/api/v1/admin/demand-exchange`
+- `/api/v1/admin/whatsapp`

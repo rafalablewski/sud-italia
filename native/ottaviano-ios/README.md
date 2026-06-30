@@ -83,6 +83,11 @@ ships the matching native screen with real data. Live today:
 - **Operator (wave 10):** **Agent HQ** — the autonomous-agent command center:
   live fleet KPIs, the agent roster with today's spend, and the activity
   timeline (`getResolvedAgentConfigs` + `getAgentFleetStats` + `listAgentEvents`).
+- **Operator (wave 11):** **Guest hub at full five-tab parity** — the **Inbox**
+  (live WhatsApp conversation list off `/api/v1/admin/whatsapp`, transcript thread
+  + operator reply over `…/:phone` + `…/:phone/message`) and **Concierge** (the MCP
+  capability layer + exposure off `/api/v1/admin/concierge`) tabs join the existing
+  Guests/Loyalty/Book, closing the two last CORE sub-tabs (mirrors `guestTabs.ts`).
 
 **52 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data — the
 honest data-backed maximum. The **only** 2 not mirrored are **SOC 2 controls**

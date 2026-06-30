@@ -1,34 +1,406 @@
 import SwiftUI
 import OttavianoKit
 
-/// Guest — the native twin of web `/core/guest`: a Loyalty + Guests (CRM) + Book
-/// hub. Loyalty is the enrolment roster; Guests is the CRM with a full profile
-/// (lifetime, points, consent, notes); Book is the slot+table booking console.
-/// All real data off `/api/v1/admin/*` (Rule #1).
+/// Guest — the native twin of web `/core/guest`, now at full five-tab parity:
+/// **Inbox** (live WhatsApp conversations + operator reply), **Guests** (the CRM
+/// with a full profile), **Loyalty** (the enrolment roster), **Concierge** (the
+/// MCP capability layer an agent reaches) and **Book** (the slot+table booking
+/// console). Tab order mirrors the web subbar (`guestTabs.ts`). All real data off
+/// `/api/v1/admin/*` (Rule #1).
 public struct OperatorGuestView: View {
     @Environment(\.theme) private var theme
-    @State private var tab: GuestTab = .loyalty
+    @State private var tab: GuestTab = .inbox
     private let api: APIClient
     public init(api: APIClient) { self.api = api }
-    enum GuestTab: Hashable { case loyalty, crm, book }
+    enum GuestTab: Hashable { case inbox, crm, loyalty, concierge, book }
 
     public var body: some View {
         VStack(spacing: 0) {
-            DSSegmented($tab, options: [(value: .loyalty, label: "Loyalty"),
+            DSSegmented($tab, options: [(value: .inbox, label: "Inbox"),
                                         (value: .crm, label: "Guests"),
+                                        (value: .loyalty, label: "Loyalty"),
+                                        (value: .concierge, label: "Concierge"),
                                         (value: .book, label: "Book")])
                 .padding(.horizontal, theme.space.lg).padding(.vertical, theme.space.sm)
                 .background(theme.color.surface)
             Divider().overlay(theme.color.line)
             switch tab {
-            case .loyalty: GuestLoyaltyTab(api: api)
+            case .inbox: GuestInboxTab(api: api)
             case .crm: GuestCRMTab(api: api)
+            case .loyalty: GuestLoyaltyTab(api: api)
+            case .concierge: GuestConciergeTab(api: api)
             case .book: GuestBookTab(api: api)
             }
         }
         .background(theme.color.surface)
         .navigationTitle("Guest")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Inbox (live WhatsApp conversations)
+
+/// Relative "time-ago" label for a WhatsApp timestamp (web `clock`/`fmtAgo`
+/// analogue). Now-relative, so it lives in the view layer (not KDSClock).
+private func waAgo(_ iso: String) -> String {
+    guard let ms = KDSClock.parseMs(iso) else { return "" }
+    let secs = max(0, Date().timeIntervalSince1970 - ms / 1000)
+    if secs < 60 { return "now" }
+    if secs < 3600 { return "\(Int(secs / 60))m" }
+    if secs < 86400 { return "\(Int(secs / 3600))h" }
+    return "\(Int(secs / 86400))d"
+}
+
+@MainActor
+@Observable
+final class GuestInboxStore {
+    var inbox: WaInbox?
+    var loading = true
+    var error: String?
+    private let api: APIClient
+    init(api: APIClient) { self.api = api }
+
+    var conversations: [WaConversation] { inbox?.conversations ?? [] }
+
+    func load() async {
+        loading = inbox == nil
+        do { inbox = try await api.send(.adminWhatsAppInbox()); error = nil }
+        catch let e as APIError { if inbox == nil { error = OperatorListLoader<Int>.message(e) } }
+        catch { if inbox == nil { self.error = "Something went wrong" } }
+        loading = false
+    }
+}
+
+/// Guest → Inbox — the WhatsApp conversation list (live sessions overlaid on
+/// historic transcripts), with a derived channel KPI strip. Tapping a row opens
+/// the transcript thread + operator reply composer. Mirrors web `CoreInbox`.
+struct GuestInboxTab: View {
+    @Environment(\.theme) private var theme
+    @State private var store: GuestInboxStore
+    @State private var selected: WaConversation?
+    private let api: APIClient
+    init(api: APIClient) { self.api = api; _store = State(initialValue: GuestInboxStore(api: api)) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.lg) {
+                if let m = store.inbox?.metrics { kpis(m) }
+                if store.loading && store.inbox == nil {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl)
+                } else if let error = store.error, store.inbox == nil {
+                    ContentUnavailableView("Couldn't load the inbox", systemImage: "bubble.left.and.exclamationmark.bubble.right", description: Text(error))
+                } else if store.conversations.isEmpty {
+                    ContentUnavailableView("No conversations yet", systemImage: "bubble.left.and.bubble.right",
+                                           description: Text("WhatsApp chats appear here as guests message the truck."))
+                        .padding(.top, theme.space.xl)
+                } else {
+                    VStack(spacing: theme.space.sm) {
+                        ForEach(store.conversations) { c in
+                            Button { selected = c } label: { ConversationRow(c: c) }.buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(theme.space.lg)
+        }
+        .background(theme.color.surface)
+        .task { await store.load() }
+        .refreshable { await store.load() }
+        .sheet(item: $selected) { c in
+            GuestThreadSheet(conversation: c, api: api, onSent: { Task { await store.load() } })
+        }
+    }
+
+    private func kpis(_ m: WaMetricsLite) -> some View {
+        HStack(spacing: theme.space.sm) {
+            OperatorStatChip("Chats", "\(m.totalConversations)", tint: theme.color.accent)
+            OperatorStatChip("Live", "\(m.activeSessions)", tint: theme.color.success)
+            OperatorStatChip("To pay", "\(m.awaitingPayment)", tint: theme.color.warning)
+            OperatorStatChip("Conv 7d", "\(Int((m.conversionRateLast7d * 100).rounded()))%", tint: theme.color.textPrimary)
+        }
+    }
+}
+
+private struct ConversationRow: View {
+    @Environment(\.theme) private var theme
+    let c: WaConversation
+
+    var body: some View {
+        HStack(spacing: theme.space.sm) {
+            Avatar(name: c.customerName ?? c.phone)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: theme.space.xs) {
+                    Text(c.customerName ?? c.phone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                    if c.hasActiveSession {
+                        Text("LIVE").font(.caption2.weight(.bold)).foregroundStyle(theme.color.success)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(theme.color.success.opacity(0.16), in: Capsule())
+                    }
+                }
+                Text(c.lastBody.isEmpty ? "—" : c.lastBody).textRole(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+                if c.cartCount > 0 || c.pendingPaymentUrl != nil {
+                    HStack(spacing: theme.space.xs) {
+                        if c.cartCount > 0 {
+                            Label("\(c.cartCount) in cart · \(MoneyText.format(c.cartSubtotalGrosze))", systemImage: "cart")
+                                .font(.caption2).foregroundStyle(theme.color.textSecondary)
+                        }
+                        if c.pendingPaymentUrl != nil {
+                            Label("awaiting pay", systemImage: "creditcard").font(.caption2).foregroundStyle(theme.color.warning)
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: theme.space.sm)
+            Text(waAgo(c.lastAt)).font(.caption2).monospacedDigit().foregroundStyle(theme.color.textSecondary)
+        }
+        .padding(theme.space.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+}
+
+@MainActor
+@Observable
+final class GuestThreadStore {
+    var messages: [WaThreadMessage] = []
+    var loading = true
+    var sending = false
+    var toast: String?
+    let phone: String
+    private let api: APIClient
+    init(phone: String, api: APIClient) { self.phone = phone; self.api = api }
+
+    func load() async {
+        do { messages = try await api.send(.adminWhatsAppThread(phone: phone)).messages }
+        catch { /* keep prior on refresh */ }
+        loading = false
+    }
+    func send(_ text: String) async {
+        sending = true
+        defer { sending = false }
+        do {
+            _ = try await api.send(.adminWhatsAppSend(phone: phone, body: text))
+            await load()
+            toast = "Sent"
+        } catch let e as APIError {
+            // Outside Meta's 24h window or provider unconfigured → the facade
+            // 503s; surface the real reason rather than faking a delivery.
+            toast = OperatorListLoader<Int>.message(e)
+        } catch { toast = "Couldn't send" }
+    }
+}
+
+/// The transcript thread + operator reply composer for one guest.
+struct GuestThreadSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    @State private var store: GuestThreadStore
+    @State private var draft = ""
+    private let conversation: WaConversation
+    private let onSent: () -> Void
+
+    init(conversation: WaConversation, api: APIClient, onSent: @escaping () -> Void) {
+        self.conversation = conversation
+        self.onSent = onSent
+        _store = State(initialValue: GuestThreadStore(phone: conversation.phone, api: api))
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: theme.space.sm) {
+                        if store.loading && store.messages.isEmpty {
+                            ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl)
+                        } else if store.messages.isEmpty {
+                            Text("No messages in this thread.").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                                .frame(maxWidth: .infinity).padding(.top, theme.space.xl)
+                        } else {
+                            ForEach(store.messages) { m in MessageBubble(m: m) }
+                        }
+                    }
+                    .padding(theme.space.lg)
+                }
+                Divider().overlay(theme.color.line)
+                composer
+            }
+            .background(theme.color.surface)
+            .navigationTitle(conversation.customerName ?? conversation.phone)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            .task { await store.load() }
+            .presentationDetents([.large])
+            .dsToast(Binding(get: { store.toast }, set: { store.toast = $0 }))
+            .onChange(of: store.toast) { _, v in if v == "Sent" { onSent() } }
+        }
+    }
+
+    private var composer: some View {
+        HStack(spacing: theme.space.sm) {
+            TextField("Reply…", text: $draft, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(1...4)
+            Button {
+                let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !t.isEmpty else { return }
+                draft = ""
+                Task { await store.send(t) }
+            } label: {
+                Image(systemName: "paperplane.fill").font(.body.weight(.semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(store.sending || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(theme.space.md)
+        .background(theme.color.surface)
+    }
+}
+
+private struct MessageBubble: View {
+    @Environment(\.theme) private var theme
+    let m: WaThreadMessage
+
+    private var tint: Color {
+        switch m.actor {
+        case "operator": return theme.color.accent
+        case "bot": return theme.color.success
+        case "system": return theme.color.textSecondary
+        default: return theme.color.surface2
+        }
+    }
+
+    var body: some View {
+        HStack {
+            if !m.inbound { Spacer(minLength: 40) }
+            VStack(alignment: m.inbound ? .leading : .trailing, spacing: 2) {
+                Text(m.body).textRole(.callout)
+                    .foregroundStyle(m.inbound ? theme.color.textPrimary : theme.color.onAccent)
+                    .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+                    .background(m.inbound ? theme.color.surface2 : tint,
+                                in: RoundedRectangle(cornerRadius: theme.radius.lg))
+                Text("\(m.actor) · \(waAgo(m.at))").font(.caption2).foregroundStyle(theme.color.textSecondary)
+            }
+            if m.inbound { Spacer(minLength: 40) }
+        }
+    }
+}
+
+// MARK: - Concierge (MCP capability layer)
+
+@MainActor
+@Observable
+final class GuestConciergeStore {
+    var info: ConciergeInfo?
+    var loading = true
+    var error: String?
+    private let api: APIClient
+    init(api: APIClient) { self.api = api }
+
+    func load() async {
+        loading = info == nil
+        do { info = try await api.send(.adminConcierge()); error = nil }
+        catch let e as APIError { if info == nil { error = OperatorListLoader<Int>.message(e) } }
+        catch { if info == nil { self.error = "Something went wrong" } }
+        loading = false
+    }
+}
+
+/// Guest → Concierge — the MCP capability layer an external agent (or the
+/// WhatsApp bot) reaches, with each capability's live/hidden exposure and the two
+/// transports. Read-only mirror of web `CoreConcierge` (exposure is toggled on
+/// the web, where the public `/api/agent` endpoint reads the same store).
+struct GuestConciergeTab: View {
+    @Environment(\.theme) private var theme
+    @State private var store: GuestConciergeStore
+    private let api: APIClient
+    init(api: APIClient) { self.api = api; _store = State(initialValue: GuestConciergeStore(api: api)) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.lg) {
+                if store.loading && store.info == nil {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xxl)
+                } else if let error = store.error, store.info == nil {
+                    ContentUnavailableView("Couldn't load concierge", systemImage: "sparkles", description: Text(error))
+                } else if let info = store.info {
+                    kpis(info)
+                    transportsCard(info)
+                    capabilitiesCard(info)
+                }
+            }
+            .padding(theme.space.lg)
+        }
+        .background(theme.color.surface)
+        .task { await store.load() }
+        .refreshable { await store.load() }
+    }
+
+    private func kpis(_ info: ConciergeInfo) -> some View {
+        HStack(spacing: theme.space.sm) {
+            OperatorStatChip("Live", "\(info.liveCount)/\(info.totalCount)", tint: theme.color.accent)
+            OperatorStatChip("WhatsApp", info.whatsAppConfigured ? "On" : "Off",
+                             tint: info.whatsAppConfigured ? theme.color.success : theme.color.textSecondary)
+        }
+    }
+
+    private func transportsCard(_ info: ConciergeInfo) -> some View {
+        card("Transports") {
+            VStack(alignment: .leading, spacing: theme.space.sm) {
+                transportRow("MCP · HTTP read API", info.endpoints.httpReadApi, live: true)
+                transportRow("WhatsApp webhook", info.endpoints.whatsAppWebhook, live: info.whatsAppConfigured)
+            }
+        }
+    }
+
+    private func transportRow(_ title: String, _ path: String, live: Bool) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                Text(path).font(.caption.monospaced()).foregroundStyle(theme.color.textSecondary)
+            }
+            Spacer()
+            Text(live ? "Live" : "Off").font(.caption2.weight(.bold))
+                .foregroundStyle(live ? theme.color.success : theme.color.textSecondary)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background((live ? theme.color.success : theme.color.textSecondary).opacity(0.16), in: Capsule())
+        }
+    }
+
+    private func capabilitiesCard(_ info: ConciergeInfo) -> some View {
+        card("MCP capabilities") {
+            VStack(spacing: theme.space.sm) {
+                ForEach(info.capabilities) { cap in
+                    HStack(alignment: .top, spacing: theme.space.sm) {
+                        Text(cap.kind).font(.caption2.weight(.bold)).textCase(.uppercase)
+                            .foregroundStyle(cap.kind == "tool" ? theme.color.accent : theme.color.warning)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background((cap.kind == "tool" ? theme.color.accent : theme.color.warning).opacity(0.14), in: Capsule())
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(cap.label).font(.subheadline.weight(.semibold).monospaced()).foregroundStyle(theme.color.textPrimary)
+                            Text(cap.desc).textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                            Text(cap.transport).font(.caption2).foregroundStyle(theme.color.textSecondary)
+                        }
+                        Spacer(minLength: theme.space.sm)
+                        Circle().fill(cap.exposed ? theme.color.success : theme.color.textSecondary.opacity(0.4))
+                            .frame(width: 10, height: 10)
+                            .accessibilityLabel(cap.exposed ? "Exposed" : "Hidden")
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+            Text(title.uppercased()).textRole(.caption).fontWeight(.bold).foregroundStyle(theme.color.textSecondary)
+            content()
+        }
+        .padding(theme.space.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }
 
