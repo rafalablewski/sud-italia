@@ -573,6 +573,7 @@
     "campaigns",
     "cash",
     "compliance",
+    "concierge",
     "corporate",
     "customers",
     "demand-exchange",
@@ -606,10 +607,13 @@
     "surveys",
     "tasks",
     "users",
-    "waste"
+    "waste",
+    "whatsapp"
   ],
   "unmappedV1AdminEndpoints": [
-    "demand-exchange"
+    "concierge",
+    "demand-exchange",
+    "whatsapp"
   ],
   "counts": {
     "sections": 10,

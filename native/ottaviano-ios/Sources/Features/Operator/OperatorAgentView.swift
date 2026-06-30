@@ -106,8 +106,8 @@ public struct OperatorAgentView: View {
                 .font(.subheadline)
                 .foregroundStyle(mine ? theme.color.onAccent : theme.color.textPrimary)
                 .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
-                .background(mine ? theme.color.accent : theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: mine ? 0 : 1))
+                .background(mine ? theme.color.accent : theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: mine ? 0 : 1))
                 .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
             if !mine { Spacer(minLength: 40) }
         }
@@ -119,8 +119,8 @@ public struct OperatorAgentView: View {
             TextField("Ask the agent…", text: $draft, axis: .vertical)
                 .lineLimit(1...4)
                 .padding(theme.space.sm)
-                .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+                .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
             Button {
                 let text = draft; draft = ""
                 Task { await store.send(text) }

@@ -294,7 +294,7 @@ private struct OptionalSearchable: ViewModifier {
 struct OperatorRowSkeleton: View {
     @Environment(\.theme) private var theme
     var body: some View {
-        RoundedRectangle(cornerRadius: 8).fill(theme.color.surface2).frame(height: 44)
+        RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.color.surface2).frame(height: 44)
             .redacted(reason: .placeholder)
     }
 }
@@ -311,11 +311,17 @@ public struct OperatorStatChip: View {
     public var body: some View {
         VStack(spacing: 2) {
             Text(value).font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(tint)
+                .minimumScaleFactor(0.6).lineLimit(1) // big-number KPIs survive larger Dynamic Type
             Text(label).font(.caption2).foregroundStyle(theme.color.textSecondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, theme.space.sm)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
+        // One VoiceOver element that reads "Chats, 12" instead of two stray nodes.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
     }
 }

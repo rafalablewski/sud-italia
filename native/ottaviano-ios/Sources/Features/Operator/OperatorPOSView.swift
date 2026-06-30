@@ -495,8 +495,8 @@ public struct OperatorPOSView: View {
             .padding(theme.space.md)
             .frame(height: 96, alignment: .topLeading)
             .frame(maxWidth: .infinity)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg)
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                 .strokeBorder(qty > 0 ? theme.color.accent : theme.color.line, lineWidth: qty > 0 ? 1.5 : 1))
         }
         .buttonStyle(.plain)
@@ -717,7 +717,7 @@ private struct POSCheckPanel: View {
                     Label("Earns points", systemImage: "gift.fill").textRole(.caption).foregroundStyle(theme.color.accent)
                 }
                 .padding(theme.space.sm)
-                .background(theme.successSoft, in: RoundedRectangle(cornerRadius: theme.radius.md))
+                .background(theme.successSoft, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
             } else {
                 Button {
                     memberNameInput = store.memberName ?? ""
@@ -727,7 +727,7 @@ private struct POSCheckPanel: View {
                     Label("Add member", systemImage: "person.badge.plus")
                         .textRole(.callout).foregroundStyle(theme.color.accent)
                         .frame(maxWidth: .infinity, minHeight: 36)
-                        .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.md))
+                        .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
@@ -832,11 +832,15 @@ private struct POSCheckPanel: View {
 
     private func stepBtn(_ icon: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.footnote.weight(.bold)).frame(width: 30, height: 30)
+            Image(systemName: icon).font(.footnote.weight(.bold)).frame(width: 32, height: 32)
                 .foregroundStyle(theme.color.accent)
                 .background(theme.color.surface, in: Circle())
                 .overlay(Circle().strokeBorder(theme.color.line, lineWidth: 1))
-        }.buttonStyle(.plain)
+                .frame(width: 44, height: 44)        // 44pt hit target around the 32pt glyph
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(icon == "plus" ? "Increase quantity" : "Decrease quantity")
     }
 
     // MARK: cross-sell

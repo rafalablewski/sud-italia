@@ -198,6 +198,16 @@ public extension Endpoint {
         Endpoint<PaymentIntentDTO>(.post, "orders/\(orderID)/payment-intent", requiresAuth: true)
     }
 
+    // Account data & privacy — self-serve export (GDPR Art. 15) + delete (Art. 17,
+    // Apple App Store 5.1.1(v)). Both act on the token's own phone (subject).
+    static func customerExport() -> Endpoint<CustomerDataExport> {
+        Endpoint<CustomerDataExport>(.get, "customer/account/export", requiresAuth: true)
+    }
+    static func customerDeleteAccount() -> Endpoint<AccountDeleteResult> {
+        let body = try? JSONEncoder().encode(["confirm": true])
+        return Endpoint<AccountDeleteResult>(.delete, "customer/account", body: body, requiresAuth: true)
+    }
+
     // Operator admin reads (OttavianoKDS) — mirror the web /admin/* data over the
     // bearer-authed, role-gated /api/v1/admin facade. `location` scopes to a site.
     static func adminCustomers() -> Endpoint<[AdminCustomer]> {
@@ -491,6 +501,7 @@ private struct CreateHandoverBody: Encodable {
 }
 
 private struct AgentTurnBody: Encodable { let message: String; let conversationId: String? }
+private struct SetConciergeExposureBody: Encodable { let capability: String; let exposed: Bool }
 
 /// Body for `POST /api/v1/admin/pos/order`.
 public struct PosOrderBody: Encodable, Sendable {
@@ -580,6 +591,27 @@ public extension Endpoint {
     static func adminAdjustPoints(phone: String, delta: Int, reason: String? = nil) -> Endpoint<CrmPointsResult> {
         let body = try? JSONEncoder().encode(AdjustPointsBody(delta: delta, reason: reason))
         return Endpoint<CrmPointsResult>(.post, "admin/customers/\(phonePathDigits(phone))/points", body: body, requiresAuth: true)
+    }
+
+    // Guest hub — Inbox (WhatsApp) + Concierge (MCP), completing /core/guest parity.
+    static func adminWhatsAppInbox() -> Endpoint<WaInbox> {
+        Endpoint<WaInbox>(.get, "admin/whatsapp", requiresAuth: true)
+    }
+    static func adminWhatsAppThread(phone: String, limit: Int = 100) -> Endpoint<WaThread> {
+        Endpoint<WaThread>(.get, "admin/whatsapp/\(phonePathDigits(phone))", query: ["limit": String(limit)], requiresAuth: true)
+    }
+    static func adminWhatsAppSend(phone: String, body text: String) -> Endpoint<WaSendResult> {
+        let body = try? JSONEncoder().encode(["body": text])
+        return Endpoint<WaSendResult>(.post, "admin/whatsapp/\(phonePathDigits(phone))/message", body: body, requiresAuth: true)
+    }
+    static func adminConcierge() -> Endpoint<ConciergeInfo> {
+        Endpoint<ConciergeInfo>(.get, "admin/concierge", requiresAuth: true)
+    }
+    /// Flip one MCP capability's exposure to agents (manager+). Returns the full
+    /// refreshed capability list so the app reconciles from the server.
+    static func adminSetConciergeExposure(capability: String, exposed: Bool) -> Endpoint<ConciergeInfo> {
+        let body = try? JSONEncoder().encode(SetConciergeExposureBody(capability: capability, exposed: exposed))
+        return Endpoint<ConciergeInfo>(.patch, "admin/concierge", body: body, requiresAuth: true)
     }
 
     // Demand Exchange (Service · Demand tab).

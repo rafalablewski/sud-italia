@@ -381,12 +381,12 @@ public struct OperatorComparisonColumns: View {
     }
 
     private func bar(_ frac: Double, color: Color) -> some View {
-        RoundedRectangle(cornerRadius: 3).fill(color)
+        RoundedRectangle(cornerRadius: 3, style: .continuous).fill(color)
             .frame(width: 14, height: max(3, CGFloat(frac) * height))
     }
     private func legendDot(_ color: Color, _ label: String) -> some View {
         HStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 10, height: 10)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).frame(width: 10, height: 10)
             Text(label).textRole(.caption).foregroundStyle(theme.color.textSecondary)
         }
     }
@@ -412,7 +412,7 @@ public struct OperatorHourBars: View {
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(bars, id: \.hour) { b in
                     let isPeak = b.hour == peak && b.value > 0
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(isPeak ? theme.color.warning : theme.color.accent.opacity(0.55))
                         .frame(maxWidth: .infinity)
                         .frame(height: max(2, CGFloat(b.value / maxV) * height))
@@ -474,10 +474,10 @@ public struct OperatorHeatGrid: View {
                             .font(.caption2.weight(.semibold)).monospacedDigit()
                             .foregroundStyle(theme.color.textPrimary)
                             .frame(maxWidth: .infinity, minHeight: 30)
-                            .background(color(for: v.value, mag: mag), in: RoundedRectangle(cornerRadius: 4))
+                            .background(color(for: v.value, mag: mag), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
                             .overlay {
                                 if isBase {
-                                    RoundedRectangle(cornerRadius: 4)
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
                                         .strokeBorder(theme.color.textPrimary, lineWidth: 1.5)
                                 }
                             }
@@ -533,7 +533,7 @@ public struct OperatorWaterfall: View {
                         Spacer(minLength: 0)
                         Text(valueFormat(step.amount)).font(.caption2.weight(.semibold)).monospacedDigit()
                             .foregroundStyle(theme.color.textSecondary).lineLimit(1).minimumScaleFactor(0.6)
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .fill(fill(for: step))
                             .frame(height: max(3, layout[idx].barHeight))
                             .padding(.top, layout[idx].topGap)
@@ -652,18 +652,22 @@ public struct DSSegmented<Value: Hashable>: View {
                 let active = opt.value == selection
                 Button { selection = opt.value } label: {
                     Text(opt.label).textRole(.caption).fontWeight(.semibold)
-                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .lineLimit(1).minimumScaleFactor(0.75) // long labels (e.g. "Concierge") shrink, never truncate
+                        .frame(maxWidth: .infinity, minHeight: 36) // finger-friendly segment (gloved operators)
+                        .padding(.vertical, 6)
                         .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
                         .background(active ? theme.color.accent : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: theme.radius.sm))
+                                    in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+                        .contentShape(Rectangle()) // whole segment is the hit area, not just the glyphs
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(opt.label)
                 .accessibilityAddTraits(active ? [.isSelected, .isButton] : .isButton)
             }
         }
         .padding(3)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.md).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
         .sensoryFeedback(.selection, trigger: selection)
     }
 }
@@ -765,7 +769,7 @@ public struct OperatorScatter: View {
                 }
             }
             .frame(height: height)
-            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.sm))
+            .background(theme.color.surface, in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
             HStack {
                 Text("← \(xLabel) →").textRole(.caption).foregroundStyle(theme.color.textSecondary)
                 Spacer()

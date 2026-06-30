@@ -137,7 +137,7 @@ struct OperatorRootView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(theme.color.onAccent)
                     .frame(width: 44, height: 44)
-                    .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.radius.md))
+                    .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(session.user?.name ?? "OttavianoKDS")
                         .textRole(.bodyEmphasis).foregroundStyle(theme.color.textPrimary)
@@ -155,8 +155,8 @@ struct OperatorRootView: View {
             }
             .padding(theme.space.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Account — signed in as \(session.user?.name ?? "operator"), \(role.displayName)")
@@ -294,7 +294,7 @@ struct OperatorNavRow: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(theme.color.accent)
                 .frame(width: 28, height: 28)
-                .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.sm))
+                .background(theme.color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
             Text(item.label).textRole(.body).foregroundStyle(theme.color.textPrimary)
             Spacer(minLength: 0)
             if item.kind == .scaffold {

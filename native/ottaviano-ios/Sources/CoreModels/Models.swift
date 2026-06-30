@@ -36,6 +36,34 @@ public struct Location: Codable, Sendable, Identifiable {
     public let currency: String
 }
 
+// MARK: - Account data & privacy (GDPR Art. 15/17 · Apple 5.1.1(v))
+
+/// A single order line in the self-serve data export. Lightweight + tolerant
+/// (only the fields the app renders are required) so it decodes cleanly off the
+/// server's full domain `Order` blob without coupling to its every field.
+public struct ExportOrder: Codable, Sendable, Identifiable {
+    public let id: String
+    public let createdAt: String?
+    public let status: String?
+    public let totalAmount: Grosze?
+    public let locationSlug: String?
+}
+
+/// `GET /api/v1/customer/account/export` — the signed-in guest's own data (DSAR).
+public struct CustomerDataExport: Codable, Sendable {
+    public let phone: String
+    public let exportedAt: String
+    public let orders: [ExportOrder]
+}
+
+/// `DELETE /api/v1/customer/account` — the erasure receipt.
+public struct AccountDeleteResult: Codable, Sendable {
+    public let deleted: Bool
+    public let redactedOrders: Int
+    public let removedLoyaltyMember: Bool
+    public let revokedSessions: Int
+}
+
 public struct MenuItem: Codable, Sendable, Identifiable {
     public let id: String
     public let name: String

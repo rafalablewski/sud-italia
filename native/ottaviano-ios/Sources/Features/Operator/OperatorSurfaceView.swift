@@ -35,7 +35,7 @@ public struct OperatorSurfaceView: View {
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(theme.color.accent)
                 .frame(width: 52, height: 52)
-                .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+                .background(theme.color.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.label).font(.title2.weight(.bold)).foregroundStyle(theme.color.textPrimary)
                 Text(item.id).font(.caption.monospaced()).foregroundStyle(theme.color.textSecondary)
@@ -92,7 +92,7 @@ private extension View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(theme.space.lg)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
-            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius).strokeBorder(theme.color.line, lineWidth: 1))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 }

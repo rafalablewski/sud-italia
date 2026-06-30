@@ -33,14 +33,19 @@ public struct LoyaltyCardView: View {
 
     private var card: some View {
         let p = session.profile
+        // A Wallet-style pass: a warm Tuscan gradient (terracotta → oxblood), a
+        // soft lift off the page, and a faint top sheen for the "pressed-foil"
+        // depth Apple passes have.
+        let shape = RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous)
         return VStack(alignment: .leading, spacing: theme.space.md) {
-            HStack {
-                Text("Ottaviano").font(.title2.weight(.bold))
+            HStack(alignment: .firstTextBaseline) {
+                Text("Ottaviano").font(.system(.title2, design: .serif).weight(.bold))
                 Spacer()
                 Text((p?.tier ?? "bronze").capitalized)
                     .font(.caption.weight(.bold))
                     .padding(.horizontal, theme.space.sm).padding(.vertical, 4)
-                    .background(.white.opacity(0.2), in: Capsule())
+                    .background(.white.opacity(0.22), in: Capsule())
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
             }
             Spacer(minLength: theme.space.xl)
             Text("\(p?.points ?? 0)").textRole(.displayXL).monospacedDigit()
@@ -50,8 +55,18 @@ public struct LoyaltyCardView: View {
         }
         .foregroundStyle(theme.color.onAccent)
         .padding(theme.space.xl)
-        .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
-        .background(theme.color.accent, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+        .frame(maxWidth: .infinity, minHeight: 210, alignment: .leading)
+        .background {
+            LinearGradient(colors: [theme.color.accent, theme.color.brand],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .clipShape(shape)
+                .overlay(
+                    LinearGradient(colors: [.white.opacity(0.18), .clear], startPoint: .top, endPoint: .center)
+                        .clipShape(shape)
+                )
+        }
+        .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+        .dsShadow(theme.elevation.card)
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
@@ -61,6 +76,7 @@ public struct LoyaltyCardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(theme.space.md)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.cornerRadius))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 0.5))
     }
 }

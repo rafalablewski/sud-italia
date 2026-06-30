@@ -20,7 +20,7 @@ public struct DSCard<Content: View>: View {
         content()
             .padding(theme.space.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
             .overlay(alignment: .leading) { accentEdge }
             // .clear / 0 keeps the type stable when not elevated (no branch).
             .shadow(
@@ -33,7 +33,7 @@ public struct DSCard<Content: View>: View {
 
     @ViewBuilder private var accentEdge: some View {
         if let accent {
-            RoundedRectangle(cornerRadius: 2).fill(accent)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent)
                 .frame(width: 4).padding(.vertical, theme.space.xs)
         }
     }

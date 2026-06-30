@@ -82,7 +82,7 @@ public struct OperatorAgentHQView: View {
                     VStack(alignment: .leading, spacing: theme.space.xs) {
                         ForEach(Array(spenders.prefix(4).enumerated()), id: \.element.id) { i, a in
                             HStack(spacing: 5) {
-                                RoundedRectangle(cornerRadius: 2).fill(palette[i % palette.count]).frame(width: 9, height: 9)
+                                RoundedRectangle(cornerRadius: 2, style: .continuous).fill(palette[i % palette.count]).frame(width: 9, height: 9)
                                 Text(a.name).textRole(.caption).foregroundStyle(theme.color.textPrimary).lineLimit(1)
                             }
                         }
@@ -166,8 +166,8 @@ public struct OperatorAgentHQView: View {
         }
         .padding(theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg).strokeBorder(theme.color.line, lineWidth: 1))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func load() async {

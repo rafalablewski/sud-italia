@@ -55,4 +55,20 @@ public final class CustomerSession {
         profile = nil
         state = .signedOut
     }
+
+    /// Fetch the signed-in guest's own data for a portable export (GDPR Art. 15).
+    public func exportData() async throws -> CustomerDataExport {
+        try await api.send(.customerExport())
+    }
+
+    /// Self-serve account deletion (GDPR Art. 17 · Apple App Store 5.1.1(v)). The
+    /// server erases the guest's data and revokes every session; we then drop the
+    /// local tokens so the app returns to the signed-out shell.
+    public func deleteAccount() async throws -> AccountDeleteResult {
+        let result = try await api.send(.customerDeleteAccount())
+        await tokens.clear()
+        profile = nil
+        state = .signedOut
+        return result
+    }
 }

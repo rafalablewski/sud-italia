@@ -256,7 +256,7 @@ public struct KDSBoardView: View {
         }
         .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
         .frame(minWidth: 72, alignment: .leading)
-        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md))
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
     }
 
     // MARK: station + lane controls

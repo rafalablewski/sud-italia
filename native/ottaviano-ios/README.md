@@ -83,6 +83,11 @@ ships the matching native screen with real data. Live today:
 - **Operator (wave 10):** **Agent HQ** — the autonomous-agent command center:
   live fleet KPIs, the agent roster with today's spend, and the activity
   timeline (`getResolvedAgentConfigs` + `getAgentFleetStats` + `listAgentEvents`).
+- **Operator (wave 11):** **Guest hub at full five-tab parity** — the **Inbox**
+  (live WhatsApp conversation list off `/api/v1/admin/whatsapp`, transcript thread
+  + operator reply over `…/:phone` + `…/:phone/message`) and **Concierge** (the MCP
+  capability layer + exposure off `/api/v1/admin/concierge`) tabs join the existing
+  Guests/Loyalty/Book, closing the two last CORE sub-tabs (mirrors `guestTabs.ts`).
 
 **52 of 54 operator surfaces are now live** on real `/api/v1/admin/*` data — the
 honest data-backed maximum. The **only** 2 not mirrored are **SOC 2 controls**
@@ -91,6 +96,24 @@ source, so mirroring them in Swift would duplicate the Rule #9 source of truth
 and drift — they remain honest parity scaffolds by design. Also pending: Stripe
 PaymentSheet (endpoint wired; SDK added in the extracted repo) and offline
 persistence (GRDB/SwiftData).
+
+## App Store submission readiness
+Tracked here so a submission isn't blocked on a surprise. **Done:** in-app
+**account deletion + data export** for the customer app (Guideline 5.1.1(v) is
+mandatory for any app with sign-in — `DELETE`/`GET /api/v1/customer/account[/export]`,
+own-data-only, session-revoking, audited; surfaced on the More tab), and a
+**`PrivacyInfo.xcprivacy`** for each app (truthful: no tracking, no
+required-reason APIs — Keychain + URLSession only — name/email/phone/purchase
+collected for app functionality). **Still required before a real submission**
+(can't be done from this Linux container — they need Xcode/a Mac): (1) the app
+must actually **compile + run** (this tree is a reviewable SwiftPM seed, not a
+green build — see the top of this README); (2) **Stripe PaymentSheet** must be
+live so customer checkout completes (else a 2.1 "incomplete" rejection); (3) the
+operator app (**OttavianoKDS**) is an internal staff tool — Apple typically
+routes those to **Apple Business Manager (custom/unlisted app)**, not the public
+App Store (4.2/4.3), and a public submission needs a **working demo login** in
+the review notes; (4) App Store Connect metadata: privacy nutrition label (mirror
+the manifest), screenshots, support/marketing URLs.
 
 ## Codegen — replace CoreModels with generated types
 `CoreModels/Models.swift` is a hand-written stand-in so the sample is

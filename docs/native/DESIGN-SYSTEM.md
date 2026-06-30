@@ -117,6 +117,16 @@ Elevation is **material-first** (`.regularMaterial`, `.thinMaterial`) with shado
 tokens reserved for cards that must lift off content. No 12-layer z-index stacks —
 SwiftUI compositing + `.zIndex` only where overlap is real.
 
+**Corners are always continuous (the Apple "squircle").** Every rounded surface
+uses `RoundedRectangle(cornerRadius:, style: .continuous)` — circular corners read
+subtly "off-platform" on iOS. This is enforced uniformly: there are **no**
+`RoundedRectangle(cornerRadius:)` call sites without `style: .continuous`. Borders
+default to a **hairline** (`0.5`pt) over the heavier `1`pt so cards sit flush with
+the system look. Brand "pass" surfaces (the loyalty card, the storefront masthead)
+layer a diagonal brand gradient + a faint top-edge white sheen + the `card`
+elevation shadow, the way an Apple Wallet pass reads as pressed foil rather than a
+flat fill.
+
 ### 2.4 Motion & haptics
 ```swift
 public struct MotionTokens: Sendable {
@@ -197,7 +207,10 @@ are the contracts + representative sketches; full set lives in the package.
 ### 4.1 Primitives
 - **`DSButton`** — `variant: .primary | .secondary | .tonal | .ghost | .destructive`,
   `size: .sm | .md | .lg`, loading + disabled states, 44pt min target, haptic on
-  press. Never a bare `Button` in feature code.
+  press. Never a bare `Button` in feature code. Carries **`DSPressStyle`** — the
+  Apple "alive" press: a quick spring dip in scale (`0.97`) + opacity while held,
+  Reduce-Motion-aware (the scale drops, the dim stays). `DSPressStyle` is public so
+  any branded `Button` whose label owns its background can adopt the same feel.
 - **`DSCard`** — surface + radius + optional elevation; the layout unit.
 - **`DSTag` / `DSBadge`** — status pills (uses status tokens); count badges.
 - **`DSTextField`** — themed, with label/error/affordance slots, keyboard config.
@@ -321,6 +334,24 @@ A screen is **not done** until:
   and **Full Keyboard Access** (critical for iPad POS).
 - Color is never the *only* signal — KDS states carry an icon/label too (color-blind
   line cooks exist).
+
+**CORE (front-of-house) is the highest-stakes accessibility surface — used under
+pressure, often eyes-off or one-handed. The shared CORE substrate bakes this in so
+every Core screen inherits it:**
+- **`KDSTicket`** speaks the **whole ticket** as one VoiceOver phrase — id · channel ·
+  tone · due · *every line with its flagged modifiers + notes* · allergens · guest
+  note — so a low-vision cook hears *what to make*, not just "order A-204". The
+  **Bump** control is a *separate* element (its own label + hint + `DSPressStyle`),
+  ≥48pt, never folded into the ticket's combined label.
+- **`OperatorStatChip`** (every Core KPI strip) reads as one element — label as the
+  a11y label, the number as the a11y value ("Chats, 12") — and its big number
+  shrinks (`minimumScaleFactor`) instead of clipping at large Dynamic Type.
+- **`DSSegmented`** (the Guest/Service hub switchers) has a full-segment hit area
+  (`contentShape`, ≥36pt), per-segment labels + the `.isSelected` trait, and labels
+  that scale-to-fit rather than truncate ("Concierge").
+- Every tappable glyph carries a **≥44pt hit target** even when the visual is
+  smaller (e.g. the POS qty steppers expand a 32pt circle to a 44pt target via an
+  outer frame + `contentShape`).
 
 ---
 

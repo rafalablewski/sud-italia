@@ -1626,6 +1626,13 @@ export default async function CapabilitiesPage() {
           href: "/admin/customers",
           summary: "Anonymises the customer + records the request in the audit log for reidentification trails.",
         },
+        {
+          name: "Customer self-serve account deletion + export (Ottaviano app)",
+          status: "live",
+          href: "/api/v1/openapi.json",
+          summary:
+            "The native customer app lets a signed-in guest delete their own account and export their own data from the More tab — Apple App Store Guideline 5.1.1(v) (in-app account deletion is mandatory for any app with sign-in) + GDPR Art. 15/17. DELETE /api/v1/customer/account (token subject = phone, so a guest can only erase their OWN record; requires confirm:true) reuses the same deleteCustomerData the operator GDPR tool runs (orders/feedback identity-redacted so JPK totals stay intact, notes + loyalty row removed, deterministic tombstone), then revokes every refresh token for the phone (revokeApiRefreshTokensForUser) so the account is signed out of all devices, and audit-logs account.delete.self. GET /api/v1/customer/account/export returns the guest's own DSAR blob (orders/notes/feedback/loyalty), audited account.export.self. Verified live: delete needs a customer token (401) + confirm:true (422), revokes the session (post-delete refresh → 401), and export is own-data-only.",
+        },
       ],
     },
     {

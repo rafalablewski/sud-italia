@@ -230,7 +230,8 @@ proxy over existing store logic; backend typechecks clean) + native screens:
   banner, zone-grouped status-toned table tiles with party / dwell / predicted-free
   / open-check, tap-to-seat/clear, table detail (service note, turns). Location
   picker off `/locations`. Two five-section ⓘ.
-- **Guest → hub** (`OperatorGuestView` now segments Loyalty | Guests | Book):
+- **Guest → hub** (`OperatorGuestView` now segments **Inbox | Guests | Loyalty |
+  Concierge | Book** — full five-tab parity with the web subbar `guestTabs.ts`):
   - **Guests (CRM)** — roster (filters/sorts) → rich profile off
     `/api/v1/admin/customers/:phone`: lifetime/orders/avg/points stat band, recent
     orders, **points adjust**, **SMS/email consent toggles**, and **notes**
@@ -241,11 +242,41 @@ proxy over existing store logic; backend typechecks clean) + native screens:
     override; list + cancel upcoming bookings. Reuses the shared `createBooking`.
 - POS **member-attach** + **QR queue** shipped in the prior pass (existing endpoints).
 
+### Guest → Inbox + Concierge — the last two CORE tabs (this pass) ✅
+The two Guest sub-tabs previously listed as honest gaps are now live, on thin
+`/api/v1` proxies over the existing WhatsApp + concierge stores (backend
+typechecks clean; **verified live** against `npm run dev`).
+- **Inbox** (`GuestInboxTab`, mirrors web `CoreInbox` / `/core/guest/inbox`) —
+  `GET /api/v1/admin/whatsapp` returns the **merged conversation list** (live
+  WhatsApp sessions overlaid on historic transcript heads — a 1:1 port of the web
+  `mergeConversations`) plus a derived channel **KPI strip** (chats · live ·
+  to-pay · 7-day conversion), in one call. Tapping a row opens the **transcript
+  thread** (`GET /api/v1/admin/whatsapp/:phone`) with chat bubbles (actor-toned,
+  inbound/outbound) and an **operator reply composer** (`POST …/:phone/message`).
+  The reply only delivers inside Meta's 24-hour window; outside it (or with the
+  provider unconfigured) the facade returns `service_unavailable` and the app
+  surfaces the real reason rather than faking a send (Rule #1). Audited like the
+  web path. *Verified:* merge overlays a live session's cart/pending-pay onto its
+  head; empty phone → 422; conversion KPI computes (1 paid / 2 inbound → 50%).
+- **Concierge** (`GuestConciergeTab`, mirrors web `CoreConcierge` /
+  `/core/guest/concierge`) — `GET /api/v1/admin/concierge` (manager+) returns the
+  six **MCP capabilities** from the same `CAPABILITY_META` + `getConciergeSettings`
+  the web page and the public `/api/agent/:capability` endpoint read, with each
+  capability's live/hidden **exposure**, the two **transports** (HTTP read API +
+  WhatsApp webhook), and the `whatsAppConfigured` flag. Now a **full write surface**:
+  `PATCH /api/v1/admin/concierge` ({ capability, exposed }, manager+, audited
+  `concierge.exposure.set`) flips a capability live — the native tab renders a real
+  per-capability **`Toggle`** (optimistic, reverts on failure, VoiceOver switch with
+  label/value/hint), so hiding `place_order` takes it offline for agents instantly,
+  exactly like the web. No secrets are ever returned; provider tokens stay in env.
+  *Verified live:* toggle hides/restores + `liveCount` tracks; unknown capability →
+  422, missing `exposed` → 422, no token → 401.
+
 **Honest scope note.** Still deliberately deferred (need endpoints/data not yet
-present, or genuinely new server logic): the **WhatsApp Guest Inbox**,
-**Concierge/MCP**, **Slots Demand-Exchange** (forecast + tier levers), and **POS
-split-bill** (splitting an order into N checks — no server function exists). These
-remain honest gaps rather than mocked surfaces (Rule #1).
+present, or genuinely new server logic): the **POS split-bill** (splitting an order
+into N checks — no server function exists). These remain honest gaps rather than
+mocked surfaces (Rule #1). (Slots **Demand-Exchange** is now live — Service hub
+**Floor | Slots | Demand**, off `/api/v1/admin/demand-exchange`.)
 
 ---
 
