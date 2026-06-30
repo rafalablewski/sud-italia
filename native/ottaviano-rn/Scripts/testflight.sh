@@ -52,7 +52,11 @@ if [ ! -d "$WORKSPACE" ]; then
   exit 1
 fi
 
-BUILD_DIR="$IOS_DIR/build"
+# NOTE: do NOT use "$IOS_DIR/build" here — React Native's codegen writes the
+# third-party JSI specs to ios/build/generated/ios during `pod install`, so
+# wiping ios/build deletes them and the archive fails with "Build input file
+# cannot be found: …safeareacontextJSI-generated.cpp". Use a separate scratch dir.
+BUILD_DIR="$IOS_DIR/tf-archive"
 ARCHIVE_PATH="$BUILD_DIR/${SCHEME}.xcarchive"
 EXPORT_DIR="$BUILD_DIR/${SCHEME}-export"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
