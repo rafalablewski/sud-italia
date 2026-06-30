@@ -19,6 +19,15 @@ interface QrOrderRow {
 }
 
 const fmtPLN = (g: number) => `${(g / 100).toFixed(2)} zł`;
+const QR_TIP_PCTS = [0, 5, 10, 15];
+
+/** Tender for settling a guest QR order — the same money model as a POS check,
+ *  scoped to a single payment (tip + method + cash change). */
+type QrTender = {
+  tipGrosze?: number;
+  method: "cash" | "card";
+  cashTenderedGrosze?: number;
+};
 const ago = (iso: string) => {
   const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
   return m < 1 ? "just now" : `${m}m ago`;
@@ -35,6 +44,7 @@ export function CoreQrQueue({ location }: { location: string }) {
   const [orders, setOrders] = useState<QrOrderRow[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [settleFor, setSettleFor] = useState<string | null>(null);
   const [view, setView] = useState<"orders" | "qr">("orders");
   const [tableInput, setTableInput] = useState("");
   const toast = useCoreToast();
@@ -78,16 +88,18 @@ export function CoreQrQueue({ location }: { location: string }) {
 
   usePolling(load, 8000, { enabled: !!location });
 
-  const settle = async (id: string) => {
+  const settle = async (id: string, tender?: QrTender) => {
     setBusy(id);
     try {
       const r = await fetch(`/api/admin/pos/qr-orders?location=${location}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: id, action: "settle" }),
+        body: JSON.stringify({ orderId: id, action: "settle", ...(tender ? { tender } : {}) }),
       });
       if (r.ok) {
-        toast("QR order settled", "success");
+        const tip = tender?.tipGrosze ? ` · +tip ${fmtPLN(tender.tipGrosze)}` : "";
+        toast(`QR order settled${tip}`, "success");
+        setSettleFor(null);
         await load();
       } else {
         toast("Could not settle order", "danger");
@@ -180,12 +192,20 @@ export function CoreQrQueue({ location }: { location: string }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{ago(o.createdAt)}</span>
                     <strong className="mono" style={{ marginLeft: "auto", fontSize: 15 }}>{fmtPLN(o.totalAmount)}</strong>
-                    {!o.paid && (
-                      <button type="button" className="core-charge" style={{ height: 36, padding: "0 16px" }} disabled={busy === o.id} onClick={() => settle(o.id)}>
-                        {busy === o.id ? "…" : "Mark paid"}
+                    {!o.paid && settleFor !== o.id && (
+                      <button type="button" className="core-charge" style={{ height: 36, padding: "0 16px" }} disabled={busy === o.id} onClick={() => setSettleFor(o.id)}>
+                        {busy === o.id ? "…" : "Take payment"}
                       </button>
                     )}
                   </div>
+                  {!o.paid && settleFor === o.id && (
+                    <QrTenderPanel
+                      total={o.totalAmount}
+                      busy={busy === o.id}
+                      onCancel={() => setSettleFor(null)}
+                      onConfirm={(tender) => void settle(o.id, tender)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -193,5 +213,77 @@ export function CoreQrQueue({ location }: { location: string }) {
         </CoreDialog>
       )}
     </>
+  );
+}
+
+/** Inline tender for a guest QR order — method, tip, and cash change-due. Mirrors
+ *  the POS tender sheet's money model, scoped to a single payment (the order is
+ *  already on the kitchen line, so there is no split/comp here). */
+function QrTenderPanel({
+  total,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  total: number;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (tender: QrTender) => void;
+}) {
+  const [method, setMethod] = useState<"cash" | "card">("card");
+  const [tipPct, setTipPct] = useState(0);
+  const [cashGiven, setCashGiven] = useState("");
+  const tip = Math.round((total * tipPct) / 100);
+  const due = total + tip;
+  const cashGivenG = Math.round((parseFloat(cashGiven.replace(",", ".")) || 0) * 100);
+  const change = method === "cash" ? Math.max(0, cashGivenG - due) : 0;
+  const shortCash = method === "cash" && cashGivenG > 0 && cashGivenG < due;
+
+  return (
+    <div className="core-qr-tender">
+      <div className="core-tender-chips">
+        <div className="core-seg sm">
+          <button type="button" className={method === "card" ? "on" : ""} onClick={() => setMethod("card")}>💳 Card</button>
+          <button type="button" className={method === "cash" ? "on" : ""} onClick={() => setMethod("cash")}>💵 Cash</button>
+        </div>
+      </div>
+      <div className="core-tender-chips" style={{ marginTop: 8 }}>
+        <span style={{ fontSize: 11.5, color: "var(--ink-3)", alignSelf: "center" }}>Tip</span>
+        {QR_TIP_PCTS.map((p) => (
+          <button key={p} type="button" className={`core-tchip${tipPct === p ? " on" : ""}`} onClick={() => setTipPct(p)}>
+            {p === 0 ? "None" : `${p}%`}
+          </button>
+        ))}
+      </div>
+      {method === "cash" && (
+        <div className="core-tender-chips" style={{ marginTop: 8 }}>
+          {[due, Math.ceil(due / 1000) * 1000, Math.ceil(due / 5000) * 5000]
+            .filter((v, i, a) => a.indexOf(v) === i)
+            .map((v) => (
+              <button key={v} type="button" className="core-tchip" onClick={() => setCashGiven((v / 100).toFixed(2))}>{fmtPLN(v)}</button>
+            ))}
+          <input className="core-inp tip-inp" inputMode="decimal" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="cash zł" />
+          {change > 0 && <span style={{ alignSelf: "center", fontSize: 12, fontWeight: 600, color: "var(--basil)" }}>change {fmtPLN(change)}</span>}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button type="button" className="core-btn ghost" onClick={onCancel}>Cancel</button>
+        <button
+          type="button"
+          className="core-charge"
+          style={{ flex: 1, height: 38 }}
+          disabled={busy || shortCash}
+          onClick={() =>
+            onConfirm({
+              method,
+              ...(tip > 0 ? { tipGrosze: tip } : {}),
+              ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
+            })
+          }
+        >
+          {busy ? "…" : shortCash ? `Need ${fmtPLN(due)}` : `Settle ${fmtPLN(due)}`}
+        </button>
+      </div>
+    </div>
   );
 }

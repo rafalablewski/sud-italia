@@ -261,10 +261,15 @@ Park) surfaces the dine-in orders guests placed by scanning a table QR
 every 8s; the pill goes `on` and shows an "N to pay" count when any are
 unpaid. Opening it lists each order in a `CoreDialog` — table number,
 guest, party size, line items, elapsed time, total and a paid/unpaid·status
-chip. **Mark paid** (`.core-charge`) posts `{ orderId, action: "settle" }`,
-which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
-(status → `confirmed`). The order stays the single source of truth — no
-duplicate tab is created, mirroring how the POS already owns totals
+chip. **Take payment** expands an inline `QrTenderPanel` (`.core-qr-tender`) —
+method (Card/Cash), tip presets, and a cash change-due — and **Settle** posts
+`{ orderId, action: "settle", tender }`. The route applies the tender to the
+**existing** order (no duplicate order/tab, so no double-charge): it sets
+`paidAt`, fires a still-pending demo-mode order to the kitchen (status →
+`confirmed`), and writes the same `tipAmount` / `payments` / `cashTendered` +
+`changeGiven` fields the POS tender uses, so a guest order settles through the
+same money model as a server-rung check. A bare settle (no `tender`) still just
+marks it paid. The order stays the single source of truth — totals owned
 server-side.
 
 The same dialog's **Print table QR** tab generates a printable per-table QR

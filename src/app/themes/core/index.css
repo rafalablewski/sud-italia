@@ -402,6 +402,8 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-cashpad-h .core-tender-toggle { margin-left: auto; }
 .core .core-change-row { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-md); background: var(--basil-wash); }
 .core .core-change-row span { font-size: 12.5px; color: var(--basil); font-weight: 600; } .core .core-change-row b { font-size: 22px; color: var(--basil); }
+/* inline tender for a guest QR order (settle with tip + method + change) */
+.core .core-qr-tender { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
 
 .core .core-tablegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 9px; }
 /* in-pane (middle) table picker — full-size, zone-grouped, readable */
