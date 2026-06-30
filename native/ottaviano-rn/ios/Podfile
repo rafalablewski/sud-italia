@@ -15,6 +15,16 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 platform :ios, '18.0'
+
+# Build on the LEGACY architecture. RN 0.79 defaults the New Architecture ON, but
+# its codegen for third-party JSI specs (react-native-screens /
+# react-native-safe-area-context) races during `xcodebuild archive` — the Release
+# archive fails with "Build input file cannot be found: …rnscreensJSI-generated.cpp".
+# Old arch is fully supported in 0.79 and solid for all our native modules. Set the
+# env BEFORE prepare_react_native_project! / use_react_native! read it. Override by
+# exporting RCT_NEW_ARCH_ENABLED=1 if/when we revisit Fabric.
+ENV['RCT_NEW_ARCH_ENABLED'] ||= '0'
+
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
