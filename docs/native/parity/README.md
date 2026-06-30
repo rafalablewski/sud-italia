@@ -1,5 +1,13 @@
 # Native ⇄ Web Parity Harness
 
+> **Stack note (2026-06-30):** the native **view layer is now React Native + Expo**
+> (`native/ottaviano-rn`), not SwiftUI — the SwiftUI seed was retired. The harness
+> below is unchanged in spirit and **still the source of truth**: the generators
+> now emit TypeScript (`operatorNav.generated.ts`, `tokens.generated.ts`) into the
+> RN app instead of Swift, and `npm run check:native` gates drift against it.
+> Mentions of "SwiftUI" below refer to the retired seed; read them as "the native
+> view layer".
+
 > **Goal:** OttavianoKDS (and Ottaviano) stay **1:1 with the web** — every operator
 > surface, same order, same role gates, same skin — and *can't silently drift*.
 > You cannot literally share a React/Tailwind component with SwiftUI, and we
