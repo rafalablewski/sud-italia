@@ -97,9 +97,20 @@ function Gly({ children }: { children: ReactNode }) {
 export function CorePos({
   menusByLocation,
   upsellByLocation,
+  embedded = false,
+  initialTableId,
+  onClose,
 }: {
   menusByLocation: Record<string, MenuItem[]>;
   upsellByLocation: Record<string, UpsellConfig | null>;
+  /** Mounted inside the Floor's check panel (no CoreShell chrome) rather than as
+   *  the standalone /core/pos surface. */
+  embedded?: boolean;
+  /** Open (or focus) this table's dine-in check on mount — the Floor passes the
+   *  tapped table so the check opens over the floor with no navigation. */
+  initialTableId?: string;
+  /** Close the embedded panel (back to the floor). */
+  onClose?: () => void;
 }) {
   const { location } = useLocation();
   const toast = useCoreToast();
@@ -601,7 +612,10 @@ export function CorePos({
   // Read once on mount; consumed when the tables list has loaded.
   const tableParamRef = useRef<{ id: string; covers?: number } | null | undefined>(undefined);
   useEffect(() => {
-    if (tableParamRef.current !== undefined || typeof window === "undefined") return;
+    if (tableParamRef.current !== undefined) return;
+    // Embedded on the Floor: the tapped table is handed in directly.
+    if (initialTableId) { tableParamRef.current = { id: initialTableId }; return; }
+    if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const id = sp.get("table");
     if (!id) { tableParamRef.current = null; return; }
@@ -609,7 +623,7 @@ export function CorePos({
     tableParamRef.current = { id, covers: Number.isFinite(c) ? c : undefined };
     // Drop the query so a refresh doesn't re-open a fresh check for the table.
     window.history.replaceState(null, "", window.location.pathname);
-  }, []);
+  }, [initialTableId]);
   useEffect(() => {
     const p = tableParamRef.current;
     if (!p || tables.length === 0) return;
@@ -1144,27 +1158,8 @@ export function CorePos({
     );
   };
 
-  return (
-    <CoreShell
-      eyebrow="Point of Sale · Till 1"
-      tabs={[
-        { label: "Order", active: true },
-        {
-          label: "Tender",
-          onClick: () => (active && active.items.length > 0 ? setTenderOpen(true) : toast("Add items first")),
-        },
-      ]}
-      subRight={
-        <>
-          <CoreQrQueue location={pageLoc} />
-          {active?.channel && <span className="core-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
-          {active?.status === "parked" && <span className="core-chip on" style={{ height: 32 }}>▣ Held</span>}
-          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
-            {kiosk ? "✕" : "⛶"}
-          </button>
-        </>
-      }
-    >
+  const posBody = (
+    <>
       {/* open-check bar — spans the full width, above the panes */}
       <div className="core-checkbar">
         {pendingWrites > 0 && (
@@ -1625,6 +1620,52 @@ export function CorePos({
           }}
         />
       )}
+    </>
+  );
+
+  // Embedded on the Floor: render the check builder in a bare panel (no Core
+  // shell), with a slim header carrying the table + a Close. Everything else —
+  // build / modify / course / split / pay — lives in the same body as the
+  // standalone till, so the check is "never a separate place".
+  if (embedded) {
+    return (
+      <div className="core-pos-embed">
+        <div className="core-pos-embed-h">
+          <div className="t">
+            {active?.name ?? "Check"}
+            {active?.tableId ? ` · Table ${tableById(active.tableId)?.number ?? "?"}` : ""}
+          </div>
+          <div className="core-sp" />
+          <CoreQrQueue location={pageLoc} />
+          <button type="button" className="core-btn ghost sm" onClick={() => onClose?.()}>Close ✕</button>
+        </div>
+        {posBody}
+      </div>
+    );
+  }
+
+  return (
+    <CoreShell
+      eyebrow="Point of Sale · Till 1"
+      tabs={[
+        { label: "Order", active: true },
+        {
+          label: "Tender",
+          onClick: () => (active && active.items.length > 0 ? setTenderOpen(true) : toast("Add items first")),
+        },
+      ]}
+      subRight={
+        <>
+          <CoreQrQueue location={pageLoc} />
+          {active?.channel && <span className="core-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
+          {active?.status === "parked" && <span className="core-chip on" style={{ height: 32 }}>▣ Held</span>}
+          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
+            {kiosk ? "✕" : "⛶"}
+          </button>
+        </>
+      }
+    >
+      {posBody}
     </CoreShell>
   );
 }

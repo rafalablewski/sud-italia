@@ -47,12 +47,15 @@ const ICON: Record<string, ReactNode> = {
   ),
 };
 
+// Floor leads — it's Core's home base (tap a table → its check opens over the
+// floor). POS stays as the standalone till; KDS is the kitchen lens; Guest the
+// relationship surface.
 const SURFACES: { key: keyof typeof ICON; href: string; label: string }[] = [
+  { key: "service", href: CORE_SURFACES.service, label: "Floor" },
   { key: "pos", href: CORE_SURFACES.pos, label: "POS" },
   { key: "kds", href: CORE_SURFACES.kds, label: "KDS" },
   { key: "orders", href: CORE_SURFACES.orders, label: "Orders" },
   { key: "guest", href: CORE_SURFACES.guest, label: "Guest" },
-  { key: "service", href: CORE_SURFACES.service, label: "Service" },
 ];
 
 export function CoreNav() {

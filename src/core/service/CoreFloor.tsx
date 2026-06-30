@@ -1,14 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
+import { CorePos } from "@/core/pos/CorePos";
 import { recommendSeating, type FloorTwin, type TwinTableRow } from "@/lib/floor-twin";
-import type { FloorTable, TableStatus } from "@/data/types";
+import type { FloorTable, MenuItem, TableStatus } from "@/data/types";
+import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 
 interface Kitchen {
@@ -50,9 +52,22 @@ const CHANNEL_LABEL: Record<string, string> = { web: "Web", whatsapp: "WhatsApp"
  * predictive-seating recommender and a table editor — all in the core flat
  * language with its own core- UI.
  */
-export function CoreFloor() {
+export function CoreFloor({
+  menusByLocation,
+  upsellByLocation,
+}: {
+  menusByLocation: Record<string, MenuItem[]>;
+  upsellByLocation: Record<string, UpsellConfig | null>;
+}) {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
+  // The table whose check is open over the floor (the docked check panel).
+  const [checkTable, setCheckTable] = useState<TwinTableRow | null>(null);
+  // Portal target = the `.core` theme root (NOT document.body) so the panel and
+  // the embedded till inherit the core tokens/fonts — the same pattern CoreDialog
+  // uses. Portaling to body would drop every `.core`-scoped style.
+  const [coreRoot, setCoreRoot] = useState<Element | null>(null);
+  useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
   const loc = location || activeLocations[0]?.slug || "krakow";
   const [twin, setTwin] = useState<FloorTwin | null>(null);
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
@@ -336,9 +351,9 @@ export function CoreFloor() {
                       <div key={t.id} className="core-tbl2-wrap">
                         <button
                           className={`core-tbl2 ${st.cls}`}
-                          onClick={() => act(t)}
-                          disabled={acting === t.id || t.status === "out-of-service"}
-                          title={t.status === "out-of-service" ? "Out of service" : t.occupied ? "Clear table" : "Seat table"}
+                          onClick={() => t.status !== "out-of-service" && setCheckTable(t)}
+                          disabled={t.status === "out-of-service"}
+                          title={t.status === "out-of-service" ? "Out of service" : `Open Table ${t.number}'s check`}
                         >
                           <span className="tnum">{t.number}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
@@ -370,15 +385,17 @@ export function CoreFloor() {
                         >
                           ⋯
                         </button>
-                        {t.status !== "out-of-service" && (
-                          <Link
-                            className="core-tbl2-order"
-                            href={`/core/pos?table=${encodeURIComponent(t.id)}&covers=${t.party ?? t.seats}`}
-                            title={`Open the till on a dine-in check for table ${t.number}`}
-                            aria-label={`New order for table ${t.number}`}
+                        {t.occupied && (
+                          <button
+                            type="button"
+                            className="core-tbl2-clear"
+                            disabled={acting === t.id}
+                            onClick={(e) => { e.stopPropagation(); act(t); }}
+                            title={`Free table ${t.number}`}
+                            aria-label={`Free table ${t.number}`}
                           >
-                            🧾 Order
-                          </Link>
+                            {acting === t.id ? "…" : "Free"}
+                          </button>
                         )}
                       </div>
                     );
@@ -403,6 +420,30 @@ export function CoreFloor() {
           void load();
         }}
       />
+
+      {/* The check, docked over the floor — tap a table and its check opens here
+          (no navigation). Build / modify / course / split / pay all live in the
+          embedded till. Portaled to <body> so the fixed panel escapes any
+          stacking context (Rule #4). */}
+      {checkTable && coreRoot && createPortal(
+        <div
+          className="core-check-overlay"
+          role="dialog"
+          aria-label={`Table ${checkTable.number} check`}
+          onClick={(e) => { if (e.target === e.currentTarget) setCheckTable(null); }}
+        >
+          <div className="core-check-panel">
+            <CorePos
+              embedded
+              menusByLocation={menusByLocation}
+              upsellByLocation={upsellByLocation}
+              initialTableId={checkTable.id}
+              onClose={() => { setCheckTable(null); void load(); }}
+            />
+          </div>
+        </div>,
+        coreRoot,
+      )}
     </CoreShell>
   );
 }

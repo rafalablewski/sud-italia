@@ -958,10 +958,27 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl2-wrap:hover .core-tbl2-edit { opacity: 1; }
 .core .core-tbl2-edit:hover { background: var(--panel-3); color: var(--ink); }
 /* "Order →" deep-link to the till, pre-targeted at this table */
-.core .core-tbl2-order { position: absolute; bottom: 8px; right: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 7px; background: var(--brand); color: var(--on-accent); font-size: 11px; font-weight: 700; text-decoration: none; opacity: 0; transition: opacity var(--fast), filter var(--fast); }
-.core .core-tbl2-wrap:hover .core-tbl2-order { opacity: 1; }
-.core .core-tbl2-order:hover { filter: brightness(1.06); }
-@media (hover: none) { .core .core-tbl2-order { opacity: 1; } }
+/* secondary "Free" action on an occupied tile (main tap opens the check) */
+.core .core-tbl2-clear { position: absolute; bottom: 8px; right: 8px; padding: 4px 9px; border-radius: 7px; background: var(--panel-3); border: 1px solid var(--line-2); color: var(--ink-2); font-size: 10.5px; font-weight: 700; opacity: 0; transition: opacity var(--fast), all var(--fast); }
+.core .core-tbl2-wrap:hover .core-tbl2-clear { opacity: 1; }
+.core .core-tbl2-clear:hover { background: var(--danger); border-color: transparent; color: var(--on-danger); }
+.core .core-tbl2-clear:disabled { opacity: .5; }
+@media (hover: none) { .core .core-tbl2-clear { opacity: 1; } }
+
+/* ---------- the check, docked over the floor (tap a table → its check) ---------- */
+.core .core-check-overlay { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: flex-end;
+  background: rgba(8, 6, 4, .55); backdrop-filter: blur(2px); animation: core-fade var(--fast); }
+.core .core-check-panel { width: min(100%, 1120px); height: 100%; background: var(--bg); border-left: 1px solid var(--line-2);
+  box-shadow: var(--sh-pop); display: flex; flex-direction: column; animation: core-slide-in var(--base); }
+.core .core-pos-embed { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); }
+.core .core-pos-embed-h { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line);
+  background: var(--panel); flex: none; }
+.core .core-pos-embed-h .t { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+.core .core-pos-embed .core-pos { flex: 1; }
+@keyframes core-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes core-slide-in { from { transform: translateX(28px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (max-width: 720px) { .core .core-check-panel { width: 100%; border-left: none; } }
+@media (prefers-reduced-motion: reduce) { .core .core-check-overlay, .core .core-check-panel { animation: none; } }
 
 /* predictive-seating recommender bar */
 .core .core-floor-bar { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
