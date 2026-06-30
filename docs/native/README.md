@@ -4,21 +4,31 @@ The staged rewrite of the customer + operator experience into two native apps,
 keeping this repo's backend as a versioned, **host-portable** API (the business is
 leaving Vercel — designed for from day one).
 
-> **⚠️ Stack change (2026-06-30): SwiftUI retired → bare React Native.** The two
-> apps are now built in **bare React Native 0.79.5 (no Expo, no EAS)**, living in
+> **⚠️ Stack change (2026-06-30, later): OttavianoKDS → SwiftUI.** "We build only
+> SwiftUI" (owner directive) — so the **operator app is now native SwiftUI** again,
+> restored at **[`native/ottaviano-ios`](../../native/ottaviano-ios)** and scoped to
+> **OttavianoKDS only**. Its colours are **generated from the current web Core
+> (BRACE) theme** (`gen-native-tokens.ts` → `Tokens.generated.swift`) and its IA
+> from the web admin nav (`gen-native-nav.ts` → `OperatorNav.generated.swift`), so
+> the Swift skin can't drift from the web. The **Swift-specific** specs below
+> (SwiftPM graph in `APP-SHELL.md`, Swift codegen, `@Observable`) are **live again
+> for OttavianoKDS**. The native parity gate (`npm run check:native`) now emits and
+> checks **both** the Swift artifacts (operator app) and the TypeScript artifacts
+> (the RN app, which still holds the **customer** experience). The earlier RN-only
+> note below stays for the customer-app context.
+>
+> **⚠️ Stack change (2026-06-30): SwiftUI retired → bare React Native.** *(Now
+> partially superseded — see the note above: OttavianoKDS returned to SwiftUI.)*
+> The apps were rebuilt in **bare React Native 0.79.5 (no Expo, no EAS)**, living in
 > this repo at **[`native/ottaviano-rn`](../../native/ottaviano-rn)** — one
 > TypeScript codebase, shared with the web, built with the team's own Xcode
 > pipeline (**XcodeGen + CocoaPods + xcodebuild**), shipped via **GitHub Actions**
-> or **Xcode Cloud**. The SwiftUI seed (`native/ottaviano-ios`) has been
-> **deleted**. The rendering decision is **100% native — no WebView** (see
+> or **Xcode Cloud**. The rendering decision is **100% native — no WebView** (see
 > [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md)). The specs below stay valid where
 > they describe the **backend + the API contract + the IA/design intent** (which
-> the RN apps mirror 1:1); the **Swift-specific** parts (SwiftPM graph in
-> `APP-SHELL.md`, Swift codegen, `@Observable`/SwiftData, the `ottaviano-ios`
-> extraction decision) are **superseded** by `native/ottaviano-rn/README.md`. The
-> `/api/v1` facade, the design tokens, and the operator IA are unchanged — they
-> are still generated from the web source and now feed the RN app (the native
-> parity gate, `npm run check:native`, repointed at `native/ottaviano-rn`).
+> both native apps mirror 1:1). The `/api/v1` facade, the design tokens, and the
+> operator IA are generated from the web source and feed both the SwiftUI operator
+> app and the RN customer app.
 
 ## Documents
 | Doc | Stage | What it locks down |
