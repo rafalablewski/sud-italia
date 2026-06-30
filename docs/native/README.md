@@ -1,13 +1,21 @@
 # Ottaviano Native Platform — spec set
 
-The staged rewrite of the customer + operator experience into two native SwiftUI
-apps, keeping this repo's backend as a versioned, **host-portable** API (the
-business is leaving Vercel — designed for from day one).
+The staged rewrite of the customer + operator experience into two native apps,
+keeping this repo's backend as a versioned, **host-portable** API (the business is
+leaving Vercel — designed for from day one).
 
-> **Why specs, not Swift, in this repo:** SwiftUI/iOS can't compile or run in the
-> web dev container (Linux). These documents are the durable, reviewable
-> artifacts; the Swift apps live in the dedicated **`ottaviano-ios`** repo and are
-> built in Xcode on a Mac. See `ARCHITECTURE.md` §0.
+> **⚠️ Stack change (2026-06-30): SwiftUI retired → React Native (Expo).** The two
+> apps are now built in **React Native + Expo + expo-router**, living in this repo
+> at **[`native/ottaviano-rn`](../../native/ottaviano-rn)** — one TypeScript
+> codebase, shared with the web, buildable via **GitHub Actions (EAS)** or
+> **Xcode**. The SwiftUI seed (`native/ottaviano-ios`) has been **deleted**. The
+> specs below stay valid where they describe the **backend + the API contract +
+> the IA/design intent** (which the RN apps mirror 1:1); the **Swift-specific**
+> parts (SwiftPM graph in `APP-SHELL.md`, Swift codegen, the `ottaviano-ios`
+> extraction decision) are superseded by `native/ottaviano-rn/README.md`. The
+> `/api/v1` facade, the design tokens, and the operator IA are unchanged — they
+> are still generated from the web source and now feed the RN app (the native
+> parity gate, `npm run check:native`, repointed at `native/ottaviano-rn`).
 
 ## Documents
 | Doc | Stage | What it locks down |

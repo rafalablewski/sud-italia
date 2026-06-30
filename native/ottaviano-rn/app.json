@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Ottaviano",
+    "slug": "ottaviano-rn",
+    "version": "0.1.0",
+    "orientation": "default",
+    "scheme": "ottaviano",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "pl.ottaviano.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "pl.ottaviano.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://sud-italia.vercel.app/api/v1"
+    }
+  }
+}
