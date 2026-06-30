@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
+import type { MenuItemDTO } from "@/api/types";
 
 /** Navigation param lists — the React Navigation analogue of the old expo-router
  *  file routes. The operator surfaces are a single `OperatorSurface` screen keyed
@@ -13,6 +14,7 @@ export type CustomerTabParamList = {
 
 export type CustomerStackParamList = {
   Tabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
+  ItemDetail: { item: MenuItemDTO; locationSlug: string };
   Cart: undefined;
   OrderTracker: { id: string };
 };

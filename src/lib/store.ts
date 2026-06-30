@@ -4189,7 +4189,7 @@ function seedLiveWidgetsFromLegacy(legacy?: Record<string, boolean>): LiveWidget
   }));
 }
 
-const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
+export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   tiers: {
     bronze: { label: "Bronze", threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
     silver: { label: "Silver", threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },

@@ -61,6 +61,41 @@ export interface LocationDTO {
   teamLead: string | null;
 }
 
+/** Per-serving macros (back-of-pack label) — mirrors web `NutritionInfo`. */
+export interface NutritionInfo {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar?: number;
+  fiber?: number;
+  sodium?: number;
+}
+
+/** One pickable modifier option (crust, extra topping). `priceDelta` grosze. */
+export interface ModifierOption {
+  id: string;
+  label: string;
+  priceDelta: number;
+  flagOnKds?: boolean;
+}
+
+/** A modifier group on a dish. `maxSelections === 1` → radio, else checkbox;
+ *  `minSelections >= 1` → required (the picker pre-seeds the first option). */
+export interface ModifierGroup {
+  id: string;
+  label: string;
+  minSelections?: number;
+  maxSelections?: number;
+  options: ModifierOption[];
+}
+
+/** A chosen option on a cart line — sent verbatim to `POST /orders`. */
+export interface SelectedModifier {
+  groupId: string;
+  optionId: string;
+}
+
 export interface MenuItemDTO {
   id: string;
   name: string;
@@ -73,17 +108,65 @@ export interface MenuItemDTO {
   available: boolean;
   menuRole: string | null;
   allergens: string[];
-  nutrition: unknown;
+  nutrition: NutritionInfo | null;
   prepTimeMinutes: number | null;
   isLimited: boolean;
   deliveryOnly: boolean;
-  modifierGroups: unknown[];
+  modifierGroups: ModifierGroup[];
   disclosures: {
     halalStatus: string | null;
     nutriGrade: string | null;
     containsPork: boolean;
     containsAlcohol: boolean;
   };
+}
+
+// ── Storefront programme config (GET /api/v1/settings/public) ───────────────
+
+export interface LoyaltyTierConfig {
+  label: string;
+  threshold: number;
+  multiplier: number;
+  perks: string[];
+}
+
+export interface ComboDealDTO {
+  id: string;
+  name: string;
+  description: string;
+  categories: string[];
+  discountPercent: number;
+  minItems: number;
+  requiredItems: { suffix: string; label: string }[];
+}
+
+export interface PublicSettingsDTO {
+  loyalty: {
+    pointsPerCurrencyUnit: number;
+    tiers: {
+      bronze: LoyaltyTierConfig;
+      silver: LoyaltyTierConfig;
+      gold: LoyaltyTierConfig;
+      platinum: LoyaltyTierConfig;
+    };
+    rewards: { id: string; name: string; pointsCost: number; description: string }[];
+    referral: { referrerPoints: number; refereeDiscountGrosze: number } | null;
+  };
+  combos: ComboDealDTO[];
+  speedGuarantee: { active: boolean; maxMinutes: number; guaranteeText: string };
+  delivery: { fee: number; freeThresholdGrosze: number };
+  minOrderGrosze: number;
+  tipPresets: number[];
+}
+
+/** A cross-sell chip (POST /api/v1/upsell) — a real menu item + reason copy. */
+export interface UpsellSuggestionDTO {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  reason: string;
 }
 
 export interface OrderLineModifier {

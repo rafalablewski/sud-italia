@@ -298,6 +298,94 @@ export const FleetBoardSchema = z.object({
   tiles: z.array(FleetTileSchema),
 });
 
+// ── Storefront (customer) — cross-sell + public programme config ───────────
+
+/** Cross-sell request — the cart's location + the item ids already in it.
+ *  Public (no auth): the storefront's "complete your meal" rail is the same
+ *  zero-friction surface a guest sees on web (Rule #6). */
+export const UpsellRequestSchema = z.object({
+  locationSlug: z.string(),
+  itemIds: z.array(z.string()).min(1),
+});
+
+/** One cross-sell suggestion — a real menu item plus the brand-voice reason
+ *  copy from the storefront `getCartSuggestions` engine (CLAUDE upsell rule:
+ *  pizza/pasta always get espresso + dessert). */
+export const UpsellSuggestionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  price: z.number().int().describe("Minor units (grosze)"),
+  category: z.string(),
+  reason: z.string().describe("Brand-voice chip subtitle, e.g. \"Pizzaiolo's fav\""),
+});
+
+/** A loyalty tier rung as shipped to customer surfaces (label/threshold/
+ *  multiplier/perks) — the operator's `/core/guest/loyalty` edits land here. */
+export const LoyaltyTierConfigSchema = z.object({
+  label: z.string(),
+  threshold: z.number().int().describe("Lifetime points required to reach this tier"),
+  multiplier: z.number().describe("Points-earning multiplier at this tier"),
+  perks: z.array(z.string()),
+});
+
+/** A storefront combo deal (auto-applied discount) — the same
+ *  `DEFAULT_COMBO_DEALS` ladder the web menu + cart read, so the native
+ *  cart's combo banner discounts the real total (CLAUDE rule #8). */
+export const ComboDealSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  categories: z.array(z.string()),
+  discountPercent: z.number().int(),
+  minItems: z.number().int(),
+  requiredItems: z.array(z.object({ suffix: z.string(), label: z.string() })),
+});
+
+/** Public programme config — the single read the customer app makes to drive
+ *  the Rewards tier ladder + rewards catalogue + referral card, the menu's
+ *  speed-guarantee + combos, and the cart's delivery/tip/min-order math.
+ *  Operator-tuned (`/admin/settings`, `/core/guest/loyalty`) so edits land
+ *  without an App Store release. No operator internals — customer copy only. */
+export const PublicSettingsSchema = z.object({
+  loyalty: z.object({
+    /** Base points earned per 1 PLN spent, before the tier multiplier. */
+    pointsPerCurrencyUnit: z.number().describe("Points per 1 PLN (Rule: 1 pt/zł)"),
+    tiers: z.object({
+      bronze: LoyaltyTierConfigSchema,
+      silver: LoyaltyTierConfigSchema,
+      gold: LoyaltyTierConfigSchema,
+      platinum: LoyaltyTierConfigSchema,
+    }),
+    rewards: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        pointsCost: z.number().int(),
+        description: z.string(),
+      }),
+    ),
+    referral: z
+      .object({
+        referrerPoints: z.number().int(),
+        refereeDiscountGrosze: z.number().int(),
+      })
+      .nullable(),
+  }),
+  combos: z.array(ComboDealSchema),
+  speedGuarantee: z.object({
+    active: z.boolean(),
+    maxMinutes: z.number().int(),
+    guaranteeText: z.string(),
+  }),
+  delivery: z.object({
+    fee: z.number().int().describe("Flat delivery fee, grosze"),
+    freeThresholdGrosze: z.number().int().describe("Cart subtotal for free delivery"),
+  }),
+  minOrderGrosze: z.number().int().describe("Minimum food subtotal, 0 = no minimum"),
+  tipPresets: z.array(z.number()).describe("Suggested tip fractions, e.g. 0.1 = 10%"),
+});
+
 /** A floor table for the POS dine-in table picker (read-only over v1). */
 export const FloorTableSchema = z.object({
   id: z.string(),
@@ -325,6 +413,10 @@ export type FleetStationDTO = z.infer<typeof FleetStationSchema>;
 export type FleetTileDTO = z.infer<typeof FleetTileSchema>;
 export type FleetBoardDTO = z.infer<typeof FleetBoardSchema>;
 export type FloorTableDTO = z.infer<typeof FloorTableSchema>;
+export type UpsellRequestBody = z.infer<typeof UpsellRequestSchema>;
+export type UpsellSuggestionDTO = z.infer<typeof UpsellSuggestionSchema>;
+export type ComboDealDTO = z.infer<typeof ComboDealSchema>;
+export type PublicSettingsDTO = z.infer<typeof PublicSettingsSchema>;
 
 // ── Registry → drives OpenAPI components.schemas with shared $refs ─────────
 
@@ -343,3 +435,6 @@ apiRegistry.add(FleetStationSchema, { id: "FleetStation" });
 apiRegistry.add(FleetTileSchema, { id: "FleetTile" });
 apiRegistry.add(FleetBoardSchema, { id: "FleetBoard" });
 apiRegistry.add(FloorTableSchema, { id: "FloorTable" });
+apiRegistry.add(UpsellSuggestionSchema, { id: "UpsellSuggestion" });
+apiRegistry.add(ComboDealSchema, { id: "ComboDeal" });
+apiRegistry.add(PublicSettingsSchema, { id: "PublicSettings" });

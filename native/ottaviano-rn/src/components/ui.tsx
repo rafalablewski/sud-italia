@@ -58,15 +58,20 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => ({
         backgroundColor: bg,
         opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
         borderRadius: radius.md,
         borderWidth: variant === "ghost" ? StyleSheet.hairlineWidth : 0,
         borderColor: c.line,
-        paddingVertical: small ? 8 : 13,
+        paddingVertical: small ? 10 : 14,
         paddingHorizontal: small ? 14 : 18,
+        minHeight: small ? 40 : 48, // ≥44pt comfortable tap target
         alignItems: "center",
+        justifyContent: "center",
       })}
     >
       <Text style={{ color: fg, fontWeight: "700", fontSize: small ? 14 : 15 }}>{label}</Text>
@@ -91,13 +96,17 @@ export function Pill({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole={onPress ? "button" : "text"}
+      accessibilityState={onPress ? { selected: !!active } : undefined}
+      accessibilityLabel={label}
       style={{
         backgroundColor: active ? c.accent : "transparent",
         borderColor: active ? c.accent : c.line,
         borderWidth: StyleSheet.hairlineWidth,
         borderRadius: radius.pill,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 13,
+        minHeight: 36,
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
@@ -167,4 +176,136 @@ export function StateBlock({ kind, message }: { kind: "loading" | "empty" | "err
 export function Divider() {
   const { c } = useTheme();
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginVertical: 8 }} />;
+}
+
+/** A small inline label chip (dietary / allergen / badge). Non-interactive,
+ *  exposed to assistive tech as text. */
+export function Badge({
+  label,
+  tone = "default",
+  filled,
+}: {
+  label: string;
+  tone?: "default" | "ok" | "warn" | "danger" | "brand";
+  filled?: boolean;
+}) {
+  const { c, radius } = useTheme();
+  const color =
+    tone === "ok" ? c.success : tone === "warn" ? c.warning : tone === "danger" ? c.danger : tone === "brand" ? c.brand : c.textSecondary;
+  return (
+    <View
+      accessibilityRole="text"
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        backgroundColor: filled ? color : "transparent",
+        borderColor: color,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderRadius: radius.pill,
+        paddingVertical: 3,
+        paddingHorizontal: 9,
+      }}
+    >
+      <Text style={{ color: filled ? "#fff" : color, fontSize: 11.5, fontWeight: "700", letterSpacing: 0.2 }}>{label}</Text>
+    </View>
+  );
+}
+
+/** A horizontal segmented control (fulfilment toggle, tabs). Accessible:
+ *  each segment is a radio in a radiogroup. */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { value: T; label: string; sub?: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  label?: string;
+}) {
+  const { c, radius } = useTheme();
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel={label} style={{ flexDirection: "row", gap: 8 }}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={o.label}
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingVertical: 11,
+              minHeight: 48,
+              borderRadius: radius.md,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: on ? c.accent : c.line,
+              backgroundColor: on ? c.accent : "transparent",
+            }}
+          >
+            <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "700", fontSize: 14 }}>{o.label}</Text>
+            {o.sub ? <Text style={{ color: on ? c.onAccent : c.textSecondary, fontSize: 11, marginTop: 1 }}>{o.sub}</Text> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Quantity stepper (− n +) with proper a11y adjustable semantics. */
+export function Stepper({
+  value,
+  onChange,
+  min = 0,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  label?: string;
+}) {
+  const { c, radius } = useTheme();
+  const Btn = ({ glyph, to, a11y }: { glyph: string; to: number; a11y: string }) => (
+    <Pressable
+      onPress={() => onChange(to)}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      style={{ width: 36, height: 36, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: c.surface }}
+    >
+      <Text style={{ color: c.accent, fontSize: 22, fontWeight: "800", lineHeight: 24 }}>{glyph}</Text>
+    </Pressable>
+  );
+  return (
+    <View
+      accessibilityLabel={label}
+      style={{ flexDirection: "row", alignItems: "center", gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.pill, padding: 2 }}
+    >
+      <Btn glyph="−" to={Math.max(min, value - 1)} a11y="Decrease" />
+      <Text style={{ color: c.textPrimary, fontWeight: "800", minWidth: 22, textAlign: "center", fontVariant: ["tabular-nums"] }}>{value}</Text>
+      <Btn glyph="＋" to={value + 1} a11y="Increase" />
+    </View>
+  );
+}
+
+/** A thin progress rail (loyalty tier, combo progress, delivery threshold). */
+export function ProgressBar({ fraction, tone = "accent" }: { fraction: number; tone?: "accent" | "success" | "warning" }) {
+  const { c, radius } = useTheme();
+  const fill = tone === "success" ? c.success : tone === "warning" ? c.warning : c.accent;
+  const pct = Math.max(0, Math.min(1, fraction));
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
+      style={{ height: 8, borderRadius: radius.pill, backgroundColor: c.surface, overflow: "hidden" }}
+    >
+      <View style={{ width: `${pct * 100}%`, height: "100%", backgroundColor: fill, borderRadius: radius.pill }} />
+    </View>
+  );
 }

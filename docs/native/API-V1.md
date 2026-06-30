@@ -68,6 +68,8 @@ the secret. Signing secret: `API_JWT_SECRET` → falls back to
 | POST | `/api/v1/orders/:id/payment-intent` | optional (customer) | **Stripe PaymentIntent** (Apple Pay/cards); server-priced; idempotent per order |
 | GET | `/api/v1/locations` | none | active locations (curated DTO) |
 | GET | `/api/v1/menu?location=<slug>` | none | menu; prices in **grosze** |
+| GET | `/api/v1/settings/public` | none | storefront programme config — loyalty ladder + rewards + referral, combos, speed-guarantee, delivery/tip/min-order |
+| POST | `/api/v1/upsell` | none | cross-sell "complete your meal" rail for a cart (`{ locationSlug, itemIds }`) |
 | GET | `/api/v1/orders` | Bearer | operator board, newest-first, scope-filtered, capped |
 | GET | `/api/v1/orders/:id` | Bearer | order detail (scope-checked) |
 | PATCH | `/api/v1/orders/:id` | Bearer | status bump (KDS); **idempotent** (no-op at target) |
@@ -113,6 +115,30 @@ the **live tracker** (the order-tracker / Live Activity feed, APP-SHELL §5.2):
 Bearer-header SSE, ownership-checked, emitting `{ order }` on every status change.
 The operator's KDS bump (`PATCH /orders/:id`) propagates to the customer's
 tracker through the same in-process emitter — verified end-to-end.
+
+### Storefront programme config + cross-sell (customer parity)
+Two **additive, public** reads bring the customer app to web-storefront parity
+without a parallel identity or any operator internals (Rule #6 zero-friction):
+
+**`GET /api/v1/settings/public`** is the single programme read the app makes —
+the loyalty **tier ladder** (label/threshold/multiplier/perks), the active
+**rewards catalogue**, the give-get **referral** mechanics, the **combo-deal**
+ladder (`DEFAULT_COMBO_DEALS`, the same source the web menu reads), the
+**speed-guarantee** banner, and the **delivery fee / free-delivery threshold /
+min-order / tip-preset** money config. Every value maps from the live
+`getLoyaltySettings()` / `getSettings()` store the operator writes to (Rule #1),
+so a loyalty or combo edit lands in the app with no App Store release. It powers
+the Rewards screen's tier roadmap + rewards grid + referral card, the menu's
+speed banner + combo previews, and the cart's combo discount (which must subtract
+from the real total — Rule #8) + delivery/tip/min-order math.
+
+**`POST /api/v1/upsell`** (`{ locationSlug, itemIds }`) runs the storefront
+`getCartSuggestions` engine over the live menu — the customer twin of the staff
+`…/admin/pos/suggestions` panel — returning the four-slot espresso → tiramisù →
+garlic-bread → limonata "complete your meal" rail for the cart + post-order
+surfaces (the CLAUDE upsell rule). Locked to the published `PublicSettings` /
+`UpsellSuggestion` / `ComboDeal` Zod schemas; unit-tested in
+`tests/api-v1-storefront.test.ts`.
 
 ### Payment (Stripe PaymentIntent + Apple Pay)
 `POST /orders/:id/payment-intent` creates a Stripe **PaymentIntent** for the

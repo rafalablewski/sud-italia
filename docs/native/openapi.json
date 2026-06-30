@@ -1146,6 +1146,386 @@
           "notes"
         ],
         "additionalProperties": false
+      },
+      "UpsellSuggestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minor units (grosze)"
+          },
+          "category": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Brand-voice chip subtitle, e.g. \"Pizzaiolo's fav\""
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "price",
+          "category",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "ComboDeal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "discountPercent": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "minItems": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "requiredItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "suffix": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "suffix",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "categories",
+          "discountPercent",
+          "minItems",
+          "requiredItems"
+        ],
+        "additionalProperties": false
+      },
+      "PublicSettings": {
+        "type": "object",
+        "properties": {
+          "loyalty": {
+            "type": "object",
+            "properties": {
+              "pointsPerCurrencyUnit": {
+                "type": "number",
+                "description": "Points per 1 PLN (Rule: 1 pt/zł)"
+              },
+              "tiers": {
+                "type": "object",
+                "properties": {
+                  "bronze": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "threshold": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Lifetime points required to reach this tier"
+                      },
+                      "multiplier": {
+                        "type": "number",
+                        "description": "Points-earning multiplier at this tier"
+                      },
+                      "perks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "threshold",
+                      "multiplier",
+                      "perks"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "silver": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "threshold": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Lifetime points required to reach this tier"
+                      },
+                      "multiplier": {
+                        "type": "number",
+                        "description": "Points-earning multiplier at this tier"
+                      },
+                      "perks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "threshold",
+                      "multiplier",
+                      "perks"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "gold": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "threshold": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Lifetime points required to reach this tier"
+                      },
+                      "multiplier": {
+                        "type": "number",
+                        "description": "Points-earning multiplier at this tier"
+                      },
+                      "perks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "threshold",
+                      "multiplier",
+                      "perks"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "platinum": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "threshold": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Lifetime points required to reach this tier"
+                      },
+                      "multiplier": {
+                        "type": "number",
+                        "description": "Points-earning multiplier at this tier"
+                      },
+                      "perks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "threshold",
+                      "multiplier",
+                      "perks"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "bronze",
+                  "silver",
+                  "gold",
+                  "platinum"
+                ],
+                "additionalProperties": false
+              },
+              "rewards": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "pointsCost": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "pointsCost",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "referral": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "referrerPoints": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "refereeDiscountGrosze": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "referrerPoints",
+                      "refereeDiscountGrosze"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "pointsPerCurrencyUnit",
+              "tiers",
+              "rewards",
+              "referral"
+            ],
+            "additionalProperties": false
+          },
+          "combos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboDeal"
+            }
+          },
+          "speedGuarantee": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "maxMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "guaranteeText": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "active",
+              "maxMinutes",
+              "guaranteeText"
+            ],
+            "additionalProperties": false
+          },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "fee": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Flat delivery fee, grosze"
+              },
+              "freeThresholdGrosze": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Cart subtotal for free delivery"
+              }
+            },
+            "required": [
+              "fee",
+              "freeThresholdGrosze"
+            ],
+            "additionalProperties": false
+          },
+          "minOrderGrosze": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minimum food subtotal, 0 = no minimum"
+          },
+          "tipPresets": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Suggested tip fractions, e.g. 0.1 = 10%"
+          }
+        },
+        "required": [
+          "loyalty",
+          "combos",
+          "speedGuarantee",
+          "delivery",
+          "minOrderGrosze",
+          "tipPresets"
+        ],
+        "additionalProperties": false
       }
     }
   },
@@ -1805,6 +2185,125 @@
             }
           },
           "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/public": {
+      "get": {
+        "summary": "Public storefront programme config (public)",
+        "description": "Loyalty tier ladder + rewards catalogue + referral, the combo-deal ladder, and the speed-guarantee / delivery / tip / min-order config the customer app's Menu, Cart and Rewards surfaces read. Operator-tuned; ships customer copy only.",
+        "responses": {
+          "200": {
+            "description": "Public settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PublicSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upsell": {
+      "post": {
+        "summary": "Cross-sell suggestions for a cart (public)",
+        "description": "Runs the storefront getCartSuggestions engine over the live menu — the customer twin of the staff POS suggestions panel. Body `{ locationSlug, itemIds }`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locationSlug": {
+                    "type": "string"
+                  },
+                  "itemIds": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "locationSlug",
+                  "itemIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UpsellSuggestion"
+                      }
+                    },
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Error envelope",
             "content": {
               "application/json": {

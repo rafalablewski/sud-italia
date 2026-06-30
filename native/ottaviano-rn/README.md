@@ -25,21 +25,29 @@ src/
               + OperatorNavigator (Login ⇄ Surface, session-gated) + types
   screens/
     LaunchScreen.tsx              launcher → customer | operator
-    customer/  Menu · Cart (→ POST /api/v1/orders) · OrderTracker (SSE)
-               · Rewards · Orders · More
+    customer/  Menu (search · category tabs · open-now · combos) · ItemDetail
+               (modifier picker · allergens · nutrition) · Cart (modifiers ·
+               cross-sell · combo · tip · fulfilment/address/party → POST
+               /api/v1/orders) · OrderTracker (SSE · ETA · points) · Rewards
+               (tier roadmap · catalogue · referral) · Orders (active/past ·
+               reorder) · More
     operator/  OperatorLoginScreen · OperatorSurfaceScreen (universal renderer)
   api/        client (envelope + bearer + rotating refresh), sse (XHR), types, public, config
   auth/       OperatorSession + CustomerSession (Keychain refresh, refresh-on-401)
   theme/      tokens (generated from web CSS) + ThemeProvider (two skins)
   nav/        roles + operatorNav (generated structure + icon map + role filter)
-  components/ ui primitives (Card, Button, Pill, StatTile, …)
+  components/ ui primitives (Card, Button, Pill, SegmentedControl, Stepper,
+              Badge, ProgressBar, StatTile, …) + customer/ (MenuItemCard,
+              ModifierPicker, CrossSellRail, ComboBanner, DishMeta)
   features/
     kds/      KdsScreen + TicketCard + Fleet + EightySixSheet + useOrdersStream + kdsLogic
     operator/ OperatorShell (slide-in drawer) + Dashboard + OrdersBoard + DataSurface
               + SurfaceScaffold + surfaceConfig
     customer/ SignIn (phone OTP)
-  store/      cart (zustand)
-  lib/        format (money/clock) + secureStore (Keychain wrapper)
+  store/      cart (lines keyed by item+modifiers; tip/fulfilment/address/party) +
+              settings (public programme config) — both zustand
+  lib/        format (money/clock) + menu (modifier math · diet · open-now) +
+              loyalty (tier ladder) + combos (deal eval) + secureStore
 ```
 
 Navigation is **React Navigation** (native-stack + bottom-tabs); the operator
@@ -47,10 +55,24 @@ drawer is a custom slide-in `Modal` (`OperatorShell`), so no gesture-handler /
 reanimated is needed. Secure storage is `react-native-keychain`; icons are
 `react-native-vector-icons` (MaterialCommunityIcons).
 
-## What's live in this first cut
-- **Customer:** full order path (menu → cart → server-priced `POST /orders` →
-  live SSE tracker), Rewards (loyalty card), Orders history, account
-  delete/export. Stripe PaymentSheet is the next step (endpoint is wired).
+## What's live
+- **Customer (web-storefront parity):** the **Order** tab is the full menu —
+  search, `All` + per-category tabs, a live **open-now** pill (off the location's
+  hours), an operator-set **speed-guarantee** banner and **combo** previews; its
+  cards open a real **item-detail** sheet (allergens, bilingual nutrition
+  readout, and a **modifier picker** — radio/checkbox, required-gated off
+  `MenuItem.modifierGroups`, with a live re-quoting paybar). The **Cart** is the
+  whole checkout: modifier-keyed lines + per-line notes, the **cross-sell**
+  pairing rail (`POST /upsell`), a **combo banner** that subtracts the real
+  saving (Rule #8), a **tip** picker, a fulfilment toggle revealing a delivery
+  **address** or a dine-in **party** stepper, the **loyalty earn preview** +
+  min-order gate, then a server-priced `POST /orders` carrying the chosen
+  modifiers / tip / address / party. The **tracker** adds an ETA card, fulfilment
+  chip, points-earned and share; **Orders** splits Active⇄Past with one-tap
+  **Reorder**; **Rewards** is the tier card with live progress, the full tier
+  **roadmap**, the **rewards catalogue** (affordable vs locked) and **referral**
+  terms — all off `GET /settings/public`. Programme config is never hardcoded
+  (Rule #1). Stripe PaymentSheet is the next step (endpoint is wired).
 - **Operator:** the full 54-surface shell with a role-filtered drawer; the
   **Kitchen Display** at depth (live lanes, Floor/Chef/Fleet, bump/recall/86,
   all-day, station filter); the **Orders board** (SSE) and **Dashboard/Reports**

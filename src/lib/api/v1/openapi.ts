@@ -9,6 +9,7 @@ import {
   CustomerAuthRequestSchema,
   CustomerAuthVerifySchema,
   OrderCreateSchema,
+  UpsellRequestSchema,
 } from "./schemas";
 
 /**
@@ -224,6 +225,31 @@ export function buildOpenApiDocument(): JsonObject {
             "200": dataResponse("Menu items", { type: "array", items: ref("MenuItem") }, true),
             "400": ERROR_RESPONSE,
             "404": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/settings/public": {
+        get: {
+          summary: "Public storefront programme config (public)",
+          description:
+            "Loyalty tier ladder + rewards catalogue + referral, the combo-deal ladder, and the speed-guarantee / delivery / tip / min-order config the customer app's Menu, Cart and Rewards surfaces read. Operator-tuned; ships customer copy only.",
+          responses: {
+            "200": dataResponse("Public settings", ref("PublicSettings")),
+            "500": ERROR_RESPONSE,
+          },
+        },
+      },
+      "/upsell": {
+        post: {
+          summary: "Cross-sell suggestions for a cart (public)",
+          description:
+            "Runs the storefront getCartSuggestions engine over the live menu — the customer twin of the staff POS suggestions panel. Body `{ locationSlug, itemIds }`.",
+          requestBody: jsonBody(UpsellRequestSchema),
+          responses: {
+            "200": dataResponse("Suggestions", { type: "array", items: ref("UpsellSuggestion") }, true),
+            "400": ERROR_RESPONSE,
+            "404": ERROR_RESPONSE,
+            "422": ERROR_RESPONSE,
           },
         },
       },
