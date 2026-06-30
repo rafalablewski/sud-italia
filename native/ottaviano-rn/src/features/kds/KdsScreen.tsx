@@ -262,9 +262,9 @@ function Header({
 }) {
   const { c } = useTheme();
   const tabs: { key: KdsView; label: string }[] = [
-    ...(isOwner ? [{ key: "fleet" as View, label: "Fleet" }] : []),
-    { key: "floor" as KdsView, label: "Floor" },
-    { key: "chef", label: "Chef" },
+    ...(isOwner ? [{ key: "fleet" as const, label: "Fleet" }] : []),
+    { key: "floor" as const, label: "Floor" },
+    { key: "chef" as const, label: "Chef" },
   ];
   return (
     <View style={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: 4, flexDirection: "row", alignItems: "center", gap: 10 }}>
