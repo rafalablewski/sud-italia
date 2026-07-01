@@ -8,6 +8,7 @@ import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext"
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
+import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { CorePos } from "@/core/pos/CorePos";
 import { recommendSeating, type FloorTwin, type TwinTableRow } from "@/lib/floor-twin";
 import type { FloorTable, MenuItem, TableStatus } from "@/data/types";
@@ -135,6 +136,16 @@ export function CoreFloor({
     }
     return m;
   }, [orders]);
+
+  // Live "food up" — the same order stream the KDS bumps into. When a table's
+  // ticket hits `ready`, its tile pulses so the server sees food's up without
+  // walking the pass (the cross-surface half of the redesign's event spine).
+  const { orders: liveOrders } = useAdminOrdersStream(location);
+  const foodUpTables = useMemo(() => {
+    const s = new Set<string>();
+    for (const o of liveOrders) if (o.tableId && o.status === "ready") s.add(o.tableId);
+    return s;
+  }, [liveOrders]);
 
   const settle = async (orderId: string) => {
     if (settling) return;
@@ -419,13 +430,16 @@ export function CoreFloor({
                     const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
                     const hasQr = tOrders.some((o) => o.channel === "qr");
                     const isFocus = selected?.kind === "table" && selected.id === t.id;
+                    const foodUp = foodUpTables.has(t.id);
                     const allergy = !!t.notes && ALLERGY_RE.test(t.notes);
                     // Capacity-sized tiles — a 6-top reads bigger than a deuce.
                     const sizeCls = t.seats >= 6 ? "sz-lg" : t.seats >= 4 ? "sz-md" : "sz-sm";
                     // At most ONE glance-fact beyond number+covers and the status
                     // line — the single most urgent thing needing a human, in
                     // priority order (allergy → unpaid → note → paid → open check).
-                    const urgent = allergy ? (
+                    const urgent = foodUp ? (
+                      <span className="core-tfoodup">🔔 Food up</span>
+                    ) : allergy ? (
                       <span className="core-tnote-chip alrg" title={t.notes}>⚠ {t.notes}</span>
                     ) : tUnpaid.length > 0 ? (
                       <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
@@ -441,7 +455,7 @@ export function CoreFloor({
                     return (
                       <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
                         <button
-                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}`}
+                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}`}
                           onClick={(e) => {
                             // Tap blooms the state-aware radial AND feeds the
                             // dock (so the check follows across lenses on tap).
