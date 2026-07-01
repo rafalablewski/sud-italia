@@ -548,9 +548,30 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tk-items .it .nm { line-height: 1.35; }
 .core .core-tk-items .it .mod { color: var(--ink-3); font-style: italic; font-size: 12px; }
 .core .core-tk-items .it .mod.flag { color: var(--t-warn); font-style: normal; font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em; }
-.core .core-tk-alrg { margin-top: 8px; font-size: 11.5px; font-weight: 600; color: var(--t-warn); background: rgba(232,162,60,.14); border: 1px solid rgba(232,162,60,.36); border-left: 3px solid var(--t-warn); border-radius: 6px; padding: 5px 9px; }
+/* Allergens are the one thing that must never be missed — large + danger red,
+   never dropped, never dimmed in dense mode (see .core-kds.dense below). */
+.core .core-tk-alrg { margin-top: 8px; font-size: 13.5px; font-weight: 800; letter-spacing: .01em; color: var(--t-late); background: rgba(229,72,74,.16); border: 1px solid rgba(229,72,74,.5); border-left: 4px solid var(--t-late); border-radius: 6px; padding: 7px 11px; }
 .core .core-tk-note { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
 .core .core-tk-note b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+/* held courses — present but not fired; dimmed with a ⊘ so the line knows they
+   exist without them cluttering the active items. */
+.core .core-tk-course.held { color: var(--ink-3); opacity: .72; }
+/* whole card = bump target (one wet hand); long-press = recall a step. */
+.core .core-tk.bumpable { cursor: pointer; transition: transform 120ms var(--fast), box-shadow 120ms var(--fast); }
+.core .core-tk.bumpable:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
+.core .core-tk.bumpable:active { transform: scale(.997); }
+/* pressure-adaptive density — when the line tips to risk the board compacts:
+   drop notes + non-safety modifier descriptions, tighten spacing (targets stay
+   44px), and run a pulsing danger rail across the top. Allergens + flagged mods
+   are safety and stay. */
+@keyframes core-risk-rail { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+.core .core-kds.dense { position: relative; }
+.core .core-kds.dense::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--t-late); box-shadow: 0 0 12px var(--t-late); animation: core-risk-rail 1.3s ease-in-out infinite; z-index: 5; }
+.core .core-kds.dense .core-lane-b { gap: 7px; }
+.core .core-kds.dense .core-tk { padding: 8px 10px; }
+.core .core-kds.dense .core-tk-note { display: none; }
+.core .core-kds.dense .core-tk-items .it .mod:not(.flag) { display: none; }
+@media (prefers-reduced-motion: reduce) { .core .core-kds.dense::before { animation: none; opacity: .9; } }
 .core .core-meter { height: 6px; border-radius: 3px; background: var(--kds-track); margin: 10px 0 0; overflow: hidden; }
 .core .core-meter i { display: block; height: 100%; border-radius: 3px; background: var(--t-firing); }
 .core .core-meter i.t-warn { background: var(--t-warn); } .core .core-meter i.t-risk { background: var(--t-risk); }

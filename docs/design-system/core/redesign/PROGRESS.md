@@ -23,7 +23,7 @@ Last updated: **2026-07-01** — sketches phase.
 | 5 | `<ContextDock>` (peek→expand, shared across lenses) | ☑ | **Shipped:** `SelectionContext` + `CoreDock`, wired from **Floor tile**, **POS active check** (standalone only), **KDS ticket header**. **Peek→expand** shows the captured line items (no fetch — each lens hands over what it has). POS auto-refreshes on its poll; Floor/KDS are snapshots until re-tapped. Additive / no-op default — zero regression. Build + 343 tests green. |
 | 6 | Floor lens (tiles + Twin urgency + radial actions) | ☐ | |
 | 7 | Line lens (POS) on the shared dock | ☐ | |
-| 8 | Pass lens (KDS) + pressure-adaptive density | ☐ | |
+| 8 | Pass lens (KDS) + pressure-adaptive density | ◐ | **Shipped:** whole-card bump + long-press recall (`.core-tk.bumpable`, `prevStatus`), **SLA-urgency column sort** (`groupTicketsByColumn(…, nowMs)` — tone → slack → age), **large danger-red allergens** (never dimmed), held courses dimmed with ⊘, and **pressure-adaptive density** (`.core-kds.dense` on live risk tier — compacts cards, keeps safety, pulsing top rail). Verified live (allergen + dense screenshotted), 343 tests green. **Course auto-fire-next** deferred to milestone 10 (coursing/W4). |
 | 9 | Book lens (timeline + live conflict) | ☐ | |
 | 10 | `<CourseSpine>` + fire-moment upsell | ☐ | |
 | 10a | **Deep-dive: Order & item detail** | ☑ | POS `LineEditorDialog` already covered modifiers/notes/comp/void; added the read-only declared-allergen row to match the sketch. |
