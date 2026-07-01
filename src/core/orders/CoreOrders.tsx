@@ -159,6 +159,10 @@ export function CoreOrders() {
       }))}
     >
       <div className="core-guest-inbox">
+        <div className="core-sectionhead">
+          <h1>Orders</h1>
+          <span className="sub">{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</span>
+        </div>
         <div className="core-kpi-strip">
           <div className="k"><div className="kl">Orders today</div><div className="kv mono">{kpi.today}</div></div>
           <div className="k"><div className="kl">Current</div><div className="kv mono">{kpi.current}</div></div>

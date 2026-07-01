@@ -355,6 +355,10 @@ export function CoreFloor({
       }
     >
       <div className="core-guest-inbox">
+        <div className="core-sectionhead">
+          <h1>Service · Floor</h1>
+          <span className="sub">{location} · {s ? `${s.seated} of ${s.totalTables} seated` : "live floor"}</span>
+        </div>
         <div className="core-kpi-strip">
           <div className="k"><div className="kl">Covers seated</div><div className="kv mono">{s ? `${s.seated} / ${s.totalTables}` : "—"}</div></div>
           <div className="k"><div className="kl">Occupancy</div><div className="kv mono">{s ? `${Math.round(s.occupancyPct)}%` : "—"}</div></div>
