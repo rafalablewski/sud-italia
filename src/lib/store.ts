@@ -1825,6 +1825,58 @@ export async function bulkAppendOrders(orders: Order[]): Promise<void> {
   }
 }
 
+/**
+ * Assign (or clear) a delivery driver on an order. Mirrors updateOrderStatus'
+ * DB-first + kv-fallback shape. The `assigned_driver_id` column + both row
+ * mappers already exist, so this only sets the field; it emits an order event
+ * so live boards (dispatch / KDS) refresh.
+ */
+export async function assignOrderDriver(id: string, driverId: string | null): Promise<Order | null> {
+  const db = await getDomainDb();
+  let updated: Order | null = null;
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .update(ordersTable)
+        .set({ assignedDriverId: driverId, updatedAt: new Date() })
+        .where(eq(ordersTable.id, id))
+        .returning();
+      if (rows.length === 1) {
+        updated = rowToOrder(rows[0]);
+        void mirrorOrderToKvStore(updated);
+      }
+    } catch (err) {
+      logger.warn(
+        "assignOrderDriver DB update failed; falling back to kv path",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
+  if (!updated) {
+    updated = await withLock("orders.json", async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const index = orders.findIndex((o) => o.id === id);
+      if (index === -1) return null;
+      orders[index].assignedDriverId = driverId ?? undefined;
+      await writeJSON("orders.json", orders);
+      await dualWriteOrder(orders[index]);
+      return orders[index];
+    });
+  }
+  if (updated) {
+    bumpAnalyticsVersion();
+    emitOrderEvent({
+      kind: "status_changed",
+      orderId: updated.id,
+      locationSlug: updated.locationSlug,
+      status: updated.status,
+    });
+  }
+  return updated;
+}
+
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
   // DB-first path: single UPDATE on the orders table, no global lock. The
   // kv_store mirror still updates under a per-location lock so two trucks
