@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
@@ -672,13 +673,13 @@ export function CoreKds() {
         >
           Σ
         </button>
-        <button type="button" className="core-iconbtn" title="Refresh now" onClick={() => refresh()}>⟳</button>
+        <button type="button" className="core-iconbtn" title="Refresh now" aria-label="Refresh now" onClick={() => refresh()}><RefreshIcon /></button>
         <button type="button" className="core-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
-        <button type="button" className="core-iconbtn" title={soundOn ? "Mute" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
-          {soundOn ? "🔔" : "🔕"}
+        <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
+          <SoundIcon muted={!soundOn} />
         </button>
-        <button type="button" className="core-iconbtn" title={paused ? "Resume" : "Pause"} onClick={() => setPaused((p) => !p)}>
-          {paused ? "▶" : "❚❚"}
+        <button type="button" className="core-iconbtn" title={paused ? "Resume" : "Pause"} aria-label={paused ? "Resume auto-refresh" : "Pause auto-refresh"} onClick={() => setPaused((p) => !p)}>
+          <PauseIcon paused={paused} />
         </button>
       </>
     );
@@ -805,7 +806,7 @@ export function CoreKds() {
         <>
           {controls}
           {view !== "fleet" && (
-            <button type="button" className="core-iconbtn" title="Fullscreen kiosk" onClick={toggleKiosk}>⛶</button>
+            <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
           )}
         </>
       }

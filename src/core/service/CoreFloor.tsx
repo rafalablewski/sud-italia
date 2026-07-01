@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -348,7 +349,7 @@ export function CoreFloor({
       tabs={serviceTabs("floor")}
       subRight={
         <>
-          <button type="button" className="core-iconbtn" title="Refresh" onClick={() => void load()}>⟳</button>
+          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
           <button type="button" className="core-btn primary sm" onClick={() => setEditing("new")}>+ Add table</button>
         </>
       }

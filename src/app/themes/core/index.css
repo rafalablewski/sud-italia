@@ -66,8 +66,24 @@
 
 .core .cm-sp { flex: 1 1 auto; min-width: 8px; }
 
-/* surface's own controls (subRight) — surface tools, live pill, primary action */
-.core .cm-surf { display: flex; align-items: center; gap: 6px; flex: none; }
+/* surface's own controls (subRight) — surface tools, live pill, primary action.
+   Every tool button here (and in .cm-right) shares ONE flush terminal icon
+   style so QR · fullscreen · refresh · bell · theme all read as one family:
+   transparent, 32px tall, mono, hover → basil. Icon-only buttons stay 32px
+   square; labelled ones (KDS 86 / Σ / QR count) grow. The amber recall button
+   keeps its own emphasis (excluded). */
+.core .cm-surf { display: flex; align-items: center; gap: 4px; flex: none; }
+.core .core-bar .cm-surf .core-iconbtn:not(.core-recall-btn),
+.core .core-bar .cm-right .core-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 32px; min-width: 32px; padding: 0 7px; border-radius: 6px;
+  background: transparent; border: 0; color: var(--ink-2);
+  font-family: var(--mono); font-size: 12.5px; }
+.core .core-bar .cm-surf .core-iconbtn:not(.core-recall-btn):hover,
+.core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--basil); }
+.core .core-bar .cm-surf .core-iconbtn.on { background: var(--basil-wash); color: var(--basil); }
+.core .core-bar .cm-surf .core-iconbtn svg,
+.core .core-bar .cm-right .core-iconbtn svg { width: 16px; height: 16px; }
 
 /* ⌘K launcher chip */
 .core .cm-k { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 12px; font-family: var(--mono);
@@ -87,10 +103,9 @@
 .core .cm-tel-loc:hover .val { color: var(--brand-bright); }
 .core .cm-tel-clock { color: var(--basil); font-weight: 600; font-family: var(--mono); }
 
-/* global right tools — bell + theme as flush terminal icon buttons */
+/* global right tools — bell + theme; share the flush terminal icon style
+   defined with the .cm-surf tools above (one family across the whole bar). */
 .core .cm-right { display: flex; align-items: center; gap: 3px; flex: none; }
-.core .core-bar .cm-right .core-iconbtn { width: 32px; height: 32px; border-radius: 6px; background: transparent; border: 0; color: var(--ink-2); }
-.core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--basil); }
 
 .core .core-switch { display: flex; gap: 3px; margin: 0; background: var(--panel-3); padding: 4px; border-radius: var(--pill); border: 1px solid var(--line); }
 .core .core-switch a { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: var(--pill);

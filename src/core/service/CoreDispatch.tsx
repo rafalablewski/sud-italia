@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { serviceTabs } from "./serviceTabs";
@@ -109,8 +110,8 @@ export function CoreDispatch() {
       eyebrow="Service · Dispatch"
       tabs={serviceTabs("dispatch")}
       subRight={
-        <button type="button" className="core-iconbtn" title="Refresh" onClick={() => void load()}>
-          ⟳
+        <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
+          <RefreshIcon />
         </button>
       }
     >

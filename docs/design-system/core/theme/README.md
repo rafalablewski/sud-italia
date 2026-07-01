@@ -72,7 +72,16 @@ surface's own controls · ⌘K launcher · telemetry cluster · global tools.
   swipe-scroll; `.on` = a `--basil` chip with a basil inset ring.
 - **`.cm-sp`** — the flex spacer that pushes the tail cluster right.
 - **`.cm-surf`** — wraps the surface's own controls (`subRight` — surface
-  tools, a live pill, a primary action).
+  tools, a live pill, a primary action). Every `.core-iconbtn` inside the bar
+  (both `.cm-surf` and `.cm-right`) shares **one** flush terminal style — 32px
+  tall, transparent, mono, hover → `--basil` — so QR · fullscreen · refresh ·
+  bell · theme all read as one family. Icon-only tools stay a 32px square;
+  labelled ones (KDS `86` / `Σ`, the QR count) grow; the amber `.core-recall-btn`
+  keeps its own emphasis (excluded). The shared SVG glyphs (QR · expand ·
+  refresh · sound · pause) come from
+  [`src/core/shell/toolIcons.tsx`](../../../src/core/shell/toolIcons.tsx) — one
+  24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
+  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.)
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
   `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
@@ -89,8 +98,9 @@ surface's own controls · ⌘K launcher · telemetry cluster · global tools.
 
 - **`.core-chip`** — pill (surface status flags, a `Dine-in` flag, the Orders
   channel tag). `.dot` = a small status dot. `.on` = filled brand (active toggle).
-- **`.core-iconbtn`** — 34px square icon button (theme toggle, fullscreen);
-  reskinned to a flush 32px terminal button inside `.cm-right`.
+- **`.core-iconbtn`** — 34px square icon button (the default outside the bar —
+  KDS lane toolbar, inbox conversation actions); reskinned to a flush 32px
+  terminal button inside the command bar (`.cm-surf` / `.cm-right`, above).
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the

@@ -7,6 +7,7 @@ import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { useSelection } from "@/core/shell/SelectionContext";
+import { ExpandIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { CoreQrQueue } from "@/core/pos/CoreQrQueue";
@@ -1817,8 +1818,8 @@ export function CorePos({
           <CoreQrQueue location={pageLoc} />
           {active?.channel && <span className="core-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
           {active?.status === "parked" && <span className="core-chip on" style={{ height: 32 }}>▣ Held</span>}
-          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
-            {kiosk ? "✕" : "⛶"}
+          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} aria-label={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
+            <ExpandIcon />
           </button>
         </>
       }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -151,7 +152,7 @@ export function CoreOrders() {
   return (
     <CoreShell
       eyebrow="Orders · live & history"
-      subRight={<button type="button" className="core-iconbtn" title="Refresh" onClick={() => void load()}>⟳</button>}
+      subRight={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
     >
       <div className="core-guest-inbox">
         <div className="core-kpi-strip">
