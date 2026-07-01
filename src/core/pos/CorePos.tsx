@@ -742,12 +742,17 @@ export function CorePos({
   );
 
   const [tenderOpen, setTenderOpen] = useState(false);
+  // Bumped on a rejected charge → the open tender sheet shakes + stays put so
+  // the operator can retry on the same (failed) tender (recoverable, not a
+  // dead-end).
+  const [payErrorNonce, setPayErrorNonce] = useState(0);
   const pay = useCallback(
     async (tender: TenderInput, label: string) => {
       const t = getActive();
       if (!t || busyTabId) return;
       setBusyTabId(t.id);
-      setTenderOpen(false);
+      // Keep the tender sheet OPEN during the request — on reject it shakes and
+      // stays for a retry; it closes only on success (or when queued offline).
       try {
         const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
         const { res, queued } = await durableMutate({
@@ -766,14 +771,20 @@ export function CorePos({
         if (queued) {
           // Offline: close the check optimistically; the outbox charges it (once,
           // under its idempotency key) when the network returns.
+          setTenderOpen(false);
           closeTab();
           return toast(`Saved offline — charges ${label} on reconnect · #${t.id}`, "default");
         }
         const data = (await res!.json().catch(() => ({}))) as {
           error?: string; totalAmount?: number; tip?: number; comp?: number; change?: number;
         };
-        if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
+        if (!res!.ok) {
+          // Recoverable: shake the still-open sheet and invite another tender.
+          setPayErrorNonce((n) => n + 1);
+          return toast(`${data.error || "Payment declined"} — try another tender?`, "danger");
+        }
         const amt = data.totalAmount ?? grandG(t);
+        setTenderOpen(false);
         closeTab();
         const extras = [
           data.comp && data.comp > 0 ? `comp ${fmtPLN(data.comp)}` : "",
@@ -1648,6 +1659,7 @@ export function CorePos({
         <TenderDialog
           billG={grandG(active)}
           location={pageLoc}
+          errorNonce={payErrorNonce}
           subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
           covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
           busy={!!busyTabId}
@@ -1976,6 +1988,7 @@ function LineEditorDialog({
 function TenderDialog({
   billG,
   location,
+  errorNonce,
   subtitle,
   covers,
   busy,
@@ -1984,12 +1997,22 @@ function TenderDialog({
 }: {
   billG: number;
   location: string;
+  errorNonce: number;
   subtitle: string;
   covers: number;
   busy: boolean;
   onClose: () => void;
   onCharge: (tender: TenderInput, label: string) => void;
 }) {
+  // Directional shake on a rejected charge (see payErrorNonce) — a brief,
+  // reduced-motion-guarded nudge that says "that tender didn't take, try again".
+  const [shake, setShake] = useState(false);
+  useEffect(() => {
+    if (errorNonce === 0) return;
+    setShake(true);
+    const id = setTimeout(() => setShake(false), 450);
+    return () => clearTimeout(id);
+  }, [errorNonce]);
   const [tipPct, setTipPct] = useState<number | "custom">(0);
   const [tipCustom, setTipCustom] = useState(""); // zł text
   const [compOpen, setCompOpen] = useState(false);
@@ -2079,7 +2102,7 @@ function TenderDialog({
       width={520}
       footer={<button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>}
     >
-      <div className="core-tender">
+      <div className={`core-tender${shake ? " shake" : ""}`}>
         <div className="core-tender-tot">
           <span>{comp > 0 || tip > 0 ? "To collect" : "Total due"}</span>
           <b className="mono">{fmtPLN(total)}</b>

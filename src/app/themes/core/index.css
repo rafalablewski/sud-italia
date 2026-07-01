@@ -389,6 +389,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-btn.primary:hover { background: var(--brand-bright); }
 .core .core-btn.ghost { background: transparent; border-color: var(--line); }
 
+/* recoverable-reject nudge — a rejected charge shakes the still-open sheet. */
+@keyframes core-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+.core .core-tender.shake { animation: core-shake 420ms cubic-bezier(.36,.07,.19,.97); }
+@media (prefers-reduced-motion: reduce) { .core .core-tender.shake { animation: none; } }
 .core .core-tender-tot { display: flex; align-items: baseline; justify-content: space-between; }
 .core .core-tender-tot span { font-size: 13px; color: var(--ink-2); } .core .core-tender-tot b { font-size: 28px; font-weight: 700; }
 .core .core-tender-note { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
