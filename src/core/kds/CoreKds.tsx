@@ -955,6 +955,10 @@ function FleetWall({ fleet, now, onDrill }: { fleet: FleetWire | null; now: numb
   const tot = fleet.totals;
   return (
     <div className="core-fleet">
+      <div className="core-sectionhead">
+        <h1>KDS · Fleet</h1>
+        <span className="sub">cross-truck · live kitchen atlas</span>
+      </div>
       <div className="core-fleet-kpi">
         <div className="kc"><div className="l">Active</div><div className="v">{tot.active}</div><div className="s">{tot.ready} ready for expo</div></div>
         <div className="kc"><div className="l">At risk</div><div className="v warn">{tot.risk}</div><div className="s">predicted miss</div></div>

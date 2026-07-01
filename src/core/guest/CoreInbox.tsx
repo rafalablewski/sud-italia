@@ -824,6 +824,10 @@ export function CoreInbox() {
       }
     >
       <div className="core-guest-inbox">
+        <div className="core-sectionhead">
+          <h1>Guest · Inbox</h1>
+          <span className="sub">WhatsApp · live conversations</span>
+        </div>
         {kpis.length > 0 && (
           <div className="core-kpi-strip">
             {kpis.map((k) => (
