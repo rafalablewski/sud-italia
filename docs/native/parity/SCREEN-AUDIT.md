@@ -39,6 +39,13 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   collapses to one column), a **Chef** make-queue mode (station queue, oldest-first
   + depth header), a **multi-entry recall tray** (`KDSStore.liveRecents`, 10-min,
   via `POST /api/v1/orders/:id/recall`), and a **pause/resume** SSE control.
+- **Shipped — Service OS redesign parity (this pass):** the web Core "Liquid Glass /
+  Service OS" interaction pass carried onto the native Pass. `KDSTicket` now shows
+  **held courses as per-course `⊘` chips** (fire-later at a glance) and promotes the
+  **allergen line to a filled danger callout** (web `.core-tk-alrg` large-danger,
+  icon + colour). The board gains a **line-pressure banner** (`KDSBoardView.pressureBanner`)
+  — the native twin of the web `PressureBadge`, tiered calm/busy/slammed off the live
+  board's late + at-risk counts and oldest age (Rule #1 — derived, never faked).
 - **Shipped — Fleet + floor-ops (this pass):** the two facade feeds landed.
   - **Fleet (owner atlas)** — `GET /api/v1/admin/kds/fleet` (owner; pure mappers in
     `fleet-dto.ts`, unit-tested) + a native **`KDSFleetView`** (owner-gated view
