@@ -1342,8 +1342,72 @@ export function CorePos({
     );
   };
 
+  // Live stat strip — the dense-console KPI row over the menu. EVERY figure is
+  // derived from the till's real, live state (Rule #1): open checks, seated
+  // covers, value to collect vs total open value, fired-to-kitchen count, and
+  // the live pace read (server steering plan). No fetch, no invented numbers —
+  // the same state the ticket + rail already show. (Declared here, after the
+  // steering plan is in scope.)
+  const posStats = useMemo(() => {
+    const live = tabs.filter((t) => t.status !== "parked");
+    const covers = live.filter((t) => t.channel === "dine-in").reduce((s, t) => s + (t.covers ?? 0), 0);
+    const dineIn = live.filter((t) => t.channel === "dine-in").length;
+    const readyValue = tabs.filter((t) => t.status === "pay").reduce((s, t) => s + grandG(t), 0);
+    const inKitchen = tabs.filter((t) => t.sentKds).length;
+    const avg = live.length ? Math.round(railSummary.openValue / live.length) : 0;
+    const util = steer?.bottleneck ? Math.round((steer.bottleneck.util ?? 0) * 100) : 0;
+    const paceTier = steer?.active ? (steer.bottleneck?.tier ?? "warn") : "calm";
+    return { covers, dineIn, readyValue, inKitchen, avg, util, paceTier };
+  }, [tabs, grandG, railSummary.openValue, steer]);
+
   const posBody = (
     <>
+      {/* surface section header — dense-console page title + context sub */}
+      <div className="core-sectionhead">
+        <h1>POS · Order</h1>
+        <span className="sub">{pageLoc} · dine-in service</span>
+        <div className="core-sp" />
+        <span className="sub">Till · {CHANNELS.find((c) => c.key === active?.channel)?.label ?? "dinner service"}</span>
+      </div>
+
+      {/* live stat strip — the dense-console KPI row, every figure from real
+          till state (Rule #1): open checks · covers · to pay · open value ·
+          pace · avg check. Matches the mockup's `.statstrip`. */}
+      <div className="core-statstrip" role="group" aria-label="Till metrics">
+        <div className="cell">
+          <span className="lab">Open checks</span>
+          <span className="val">{railSummary.count}</span>
+          <span className="delta">{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Covers seated</span>
+          <span className="val basil">{posStats.covers}</span>
+          <span className="delta">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">To pay</span>
+          <span className={railSummary.ready > 0 ? "val amber" : "val"}>{railSummary.ready}</span>
+          <span className={railSummary.ready > 0 ? "delta warn" : "delta"}>{fmtPLN(posStats.readyValue)}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Open value</span>
+          <span className="val brand">{zl(railSummary.openValue)}<small> zł</small></span>
+          <span className="delta">avg {zl(posStats.avg)} zł</span>
+        </div>
+        <div className="cell">
+          <span className="lab">In kitchen</span>
+          <span className={posStats.inKitchen > 0 ? "val info" : "val"}>{posStats.inKitchen}</span>
+          <span className="delta">fired {posStats.inKitchen === 1 ? "check" : "checks"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Pace</span>
+          <span className={`val ${posStats.paceTier === "calm" ? "basil" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "danger" : "amber"}`}>
+            {steer?.active ? `${posStats.util}%` : "Clear"}
+          </span>
+          <span className="delta">{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
+        </div>
+      </div>
+
       {/* open-check bar — spans the full width, above the panes */}
       <div className="core-checkbar">
         {pendingWrites > 0 && (

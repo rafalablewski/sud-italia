@@ -19,8 +19,22 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 
 ## Layout
 
-A full-width **open-check bar** (`.core-checkbar`) over a three-column grid
-inside the shell body: **rail · menu · ticket**.
+The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
++ an uppercase-mono `<location> · dine-in service` sub, with a right-aligned
+`Till · <channel>` context tag) over the **`.core-statstrip`** — the
+dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
+over a three-column grid inside the shell body: **rail · menu · ticket**.
+
+- **`.core-statstrip`** — a hairline-divided glass panel of six live cells
+  (label · big mono value · colour-coded delta), every figure derived from the
+  till's **real, live state** (Rule #1 — no fetch, no invented numbers, the same
+  state the rail + ticket already show): **Open checks** (count · N parked) ·
+  **Covers seated** (dine-in covers · N dine-in checks) · **To pay** (ready
+  count · zł outstanding) · **Open value** (total open zł · avg check) ·
+  **In kitchen** (fired-check count) · **Pace** (the live server steering-plan
+  bottleneck util %, or "Clear" · bottleneck label). Toned by `--basil` /
+  `--amber` / `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
+  visual is documented in the theme README ("Stat strip").
 
 - **`.core-checkbar`** — spans the whole width above the panes (so it sits
   over the menu's steering banner): an optional `.core-sync-pill`, then the

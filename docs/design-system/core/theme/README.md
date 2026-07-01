@@ -114,11 +114,21 @@ surface toolbar.
   flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
-- **Stat strip** — ONE look across every surface: KDS's `.core-kpi` and the
-  Service/Guest `.core-kpi-strip` are hairline-divided columns with an uppercase
-  mono `.kl` label and a big **mono tabular** `.kv` number (optional
-  `.core-kpi-sub` sub-line). Same component language everywhere — a KDS KPI, a
-  Floor KPI and a Loyalty KPI read identically.
+- **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
+  Service/Guest `.core-kpi-strip` and POS's `.core-statstrip` are hairline-
+  divided columns with an uppercase mono label and a big **mono tabular** value.
+  Same component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI
+  read identically.
+  - **`.core-statstrip`** — the dense-console variant used at the top of a
+    surface body (POS): a bordered glass panel of `.cell`s, each an uppercase
+    mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/`.basil`/
+    `.amber`/`.info`/`.danger`, optional `<small>` unit), and a colour-coded
+    `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber). Divider is a
+    `.cell + .cell::before` hairline. Every figure MUST be real surface data
+    (Rule #1). Matches the mockup's `.statstrip`.
+- **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
+  beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
+  context tag. Sits under the sub-toolbar, over the stat strip.
 - **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
   for the working controls the bar omits (Slots' view filters + date, Book's
   date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the

@@ -254,6 +254,33 @@
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 
+/* ---- surface section header (title + sub) — the dense-console page head ----
+   A big grotesk surface title beside an uppercase mono sub, matching the
+   mockup's `.sectionhead`. Sits at the top of a surface body, under the
+   sub-toolbar, over the stat strip. */
+.core .core-sectionhead { display: flex; align-items: baseline; gap: 12px; padding: 12px 16px 2px; flex-wrap: wrap; flex: none; }
+.core .core-sectionhead h1, .core .core-sectionhead h2 { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.015em; line-height: 1.1; }
+.core .core-sectionhead .sub { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.core .core-sectionhead .core-sp { flex: 1; }
+
+/* ---- unified surface stat strip — the dense-console KPI row -----------------
+   Hairline-divided cells over a glass panel: an uppercase mono label, a big
+   MONO tabular value (accent-toned), and a colour-coded delta line. Wired to
+   REAL surface data (Rule #1) — the shared visual language for POS's live
+   metrics, matching the mockup's `.statstrip`. See docs → theme "Stat strip". */
+.core .core-statstrip { display: flex; align-items: stretch; margin: 10px 16px 6px; flex: none; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
+.core .core-statstrip .cell { flex: 1; min-width: 0; padding: 9px 13px; position: relative; display: flex; flex-direction: column; gap: 3px; }
+.core .core-statstrip .cell + .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+.core .core-statstrip .lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-statstrip .val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 600; color: var(--ink); line-height: 1.02; letter-spacing: -.01em; }
+.core .core-statstrip .val small { font-size: 11px; color: var(--ink-3); font-weight: 400; }
+.core .core-statstrip .val.brand { color: var(--brand-bright); } .core .core-statstrip .val.basil { color: var(--basil); }
+.core .core-statstrip .val.amber { color: var(--amber); } .core .core-statstrip .val.danger { color: var(--danger); } .core .core-statstrip .val.info { color: var(--info); }
+.core .core-statstrip .delta { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-statstrip .delta.up { color: var(--basil); } .core .core-statstrip .delta.dn { color: var(--danger); } .core .core-statstrip .delta.warn { color: var(--amber); }
+@media (max-width: 900px) { .core .core-statstrip { flex-wrap: wrap; } .core .core-statstrip .cell { flex: 1 0 33%; } }
+
 /* ============================================================
    POS surface
    ============================================================ */
