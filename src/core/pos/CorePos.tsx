@@ -875,8 +875,11 @@ export function CorePos({
       amountDue: t.status === "pay",
       note: t.customerName || undefined,
       href: "/core/pos",
+      items: cartOf(t)
+        .slice(0, 24)
+        .map((ci) => ({ label: ci.menuItem.name, qty: ci.quantity, note: ci.notes })),
     });
-  }, [embedded, activeTabId, tabs, grandG, select]);
+  }, [embedded, activeTabId, tabs, grandG, cartOf, select]);
 
   const active = getActive();
   // Writes parked in the durable outbox (offline). Drives the "syncing" pill so

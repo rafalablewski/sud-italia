@@ -20,7 +20,7 @@ Last updated: **2026-07-01** — sketches phase.
 | 3 | **Sign-off gate** — user accepts sketches | ☑ | Approved; glass + responsive + parity locked |
 | 3b | Liquid-glass material foundation (Core skin) | ☑ | `themes/core/skins/liquid-glass.css`, default skin, frosts all surfaces; KDS wall stays dark. Build green. |
 | 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ◐ | Bottom-nav lens switch exists; command bar reused |
-| 5 | `<ContextDock>` (peek→expand, shared across lenses) | ◐ | **Shipped v2:** `SelectionContext` + `CoreDock`, now wired from **Floor tile**, **POS active check** (standalone till only), and **KDS ticket header**. All additive / no-op default — zero regression. Build + 343 tests green. Next: peek→expand (open full check inline), live refresh via orders stream. |
+| 5 | `<ContextDock>` (peek→expand, shared across lenses) | ☑ | **Shipped:** `SelectionContext` + `CoreDock`, wired from **Floor tile**, **POS active check** (standalone only), **KDS ticket header**. **Peek→expand** shows the captured line items (no fetch — each lens hands over what it has). POS auto-refreshes on its poll; Floor/KDS are snapshots until re-tapped. Additive / no-op default — zero regression. Build + 343 tests green. |
 | 6 | Floor lens (tiles + Twin urgency + radial actions) | ☐ | |
 | 7 | Line lens (POS) on the shared dock | ☐ | |
 | 8 | Pass lens (KDS) + pressure-adaptive density | ☐ | |

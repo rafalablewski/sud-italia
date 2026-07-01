@@ -37,6 +37,9 @@ export interface CoreSelection {
   allergy?: boolean;
   /** where "Open" jumps to */
   href?: string;
+  /** line items captured at select time — shown when the dock is expanded.
+   *  The setting surface already has these in hand, so the dock never fetches. */
+  items?: { label: string; qty: number; note?: string }[];
 }
 
 interface SelectionCtx {

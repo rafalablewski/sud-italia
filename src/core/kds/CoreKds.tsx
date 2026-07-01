@@ -186,6 +186,7 @@ const TicketCard = memo(function TicketCard({
             statusCls: t.status === "ready" ? "available" : atRisk ? "freeing" : "booked",
             note: t.specialInstructions || undefined,
             href: "/core/kds",
+            items: t.items.slice(0, 24).map((i) => ({ label: i.name, qty: i.quantity, note: i.notes })),
           });
         }}
         style={{ cursor: "pointer" }}
