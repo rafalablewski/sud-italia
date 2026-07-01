@@ -43,18 +43,28 @@
   --sh-pop: 0 24px 60px -14px rgba(0, 0, 0, .7);
   /* reusable glass materials for the skin-scoped rules below */
   --lg-blur: blur(22px) saturate(175%);
-  --lg-fill: linear-gradient(150deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03) 55%, rgba(255, 255, 255, .015));
-  --lg-fill-hi: linear-gradient(150deg, rgba(255, 255, 255, .19), rgba(255, 255, 255, .05));
-  --lg-rim: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .22);
+  --lg-fill: linear-gradient(150deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .04) 55%, rgba(255, 255, 255, .02));
+  --lg-fill-hi: linear-gradient(150deg, rgba(255, 255, 255, .21), rgba(255, 255, 255, .06));
+  /* specular sheen — the diagonal top-left highlight that sells "glass".
+     A BACKGROUND layer (not an overlay), so it paints under the card text
+     and never washes it out. Fades to transparent by 44% so only the top
+     corner lights up, matching the redesign sketches' .glass::after. */
+  --lg-sheen: linear-gradient(150deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04) 30%, transparent 44%);
+  --lg-rim: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 -1px 0 rgba(0, 0, 0, .22);
   --lg-float: 0 18px 50px -14px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .4);
 
-  /* ambient aurora — sits behind every child; the frosted panels refract it */
+  /* ambient aurora — sits behind every child; the frosted panels refract it.
+     Punchy corner blooms PLUS a soft central ember wash so cards scrolling
+     down the middle column always have colour to refract (not just the
+     corners — that's what made the un-occluded skin still read as flat). */
   background:
-    radial-gradient(60% 50% at 12% 8%, rgba(232, 107, 62, .22), transparent 60%),
-    radial-gradient(55% 55% at 88% 92%, rgba(84, 188, 224, .17), transparent 60%),
-    radial-gradient(50% 45% at 72% 18%, rgba(240, 173, 70, .13), transparent 55%),
-    radial-gradient(60% 60% at 28% 88%, rgba(125, 196, 100, .11), transparent 60%),
+    radial-gradient(70% 55% at 10% 4%, rgba(232, 107, 62, .34), transparent 62%),
+    radial-gradient(65% 60% at 92% 96%, rgba(84, 188, 224, .27), transparent 62%),
+    radial-gradient(55% 45% at 80% 12%, rgba(240, 173, 70, .22), transparent 58%),
+    radial-gradient(60% 55% at 20% 92%, rgba(125, 196, 100, .18), transparent 60%),
+    radial-gradient(95% 80% at 50% 42%, rgba(232, 107, 62, .11), transparent 72%),
     var(--bg);
+  background-attachment: fixed;
 }
 
 /* ---------- palette → glass tokens (LIGHT — bright daytime POS) ---------- */
@@ -102,6 +112,23 @@
 }
 .core[data-skin="liquid-glass"] .core-body { background: transparent; }
 
+/* ---------- let the aurora through ----------
+   The base theme fills its scroll/content containers with an OPAQUE
+   `var(--bg)` (POS menu grid, embedded POS, guest thread, capability
+   inspector, the bottom-nav band). Painted on top of the root aurora,
+   they bury it — so the frosted panels above have only flat black to
+   refract and the whole skin collapses to the dark base look. Drop those
+   fills to transparent so the aurora reaches the glass. The KDS wall
+   (`.core-kds`) and fullscreen kiosk (`.core-kiosk`) are deliberately
+   excluded — they stay a dark wall (skins.md rule 2). */
+.core[data-skin="liquid-glass"] .core-menu,
+.core[data-skin="liquid-glass"] .core-pos-embed,
+.core[data-skin="liquid-glass"] .core-thread,
+.core[data-skin="liquid-glass"] .core-cap-inspect,
+.core[data-skin="liquid-glass"] .core-bottomnav {
+  background: transparent;
+}
+
 /* ---------- surface primitives → glass ---------- */
 .core[data-skin="liquid-glass"] .core-prod,
 .core[data-skin="liquid-glass"] .core-ticket,
@@ -113,7 +140,7 @@
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
 }
 .core[data-skin="liquid-glass"] .core-prod {
-  background: var(--lg-fill);
+  background: var(--lg-sheen), var(--lg-fill);
   box-shadow: var(--lg-rim);
   transition: transform var(--base), box-shadow var(--base), border-color var(--base);
 }
@@ -124,7 +151,7 @@
 }
 .core[data-skin="liquid-glass"] .core-ticket,
 .core[data-skin="liquid-glass"] .core-check-panel {
-  background: var(--lg-fill);
+  background: var(--lg-sheen), var(--lg-fill);
   box-shadow: var(--lg-float), var(--lg-rim);
 }
 .core[data-skin="liquid-glass"] .core-btn { box-shadow: var(--lg-rim); }
@@ -138,7 +165,7 @@
 .core[data-skin="liquid-glass"] .core-fleet-bench,
 .core[data-skin="liquid-glass"] .core-book-side,
 .core[data-skin="liquid-glass"] .core-slot {
-  background: var(--lg-fill);
+  background: var(--lg-sheen), var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   box-shadow: var(--lg-float), var(--lg-rim);
 }
