@@ -94,6 +94,23 @@ wire types then track the server automatically (ARCHITECTURE §5).
 3. `xcodebuild build -scheme OttavianoKDS -destination 'generic/platform=iOS Simulator'`
    (CI: `.github/workflows/ios-swift.yml`; TestFlight: `ios-swift-testflight.yml`).
 
+## Versioning & TestFlight (sole owner of pl.ottaviano.kds)
+`MARKETING_VERSION` + `CURRENT_PROJECT_VERSION` live in `project.yml` and are
+committed (not overridden from CI) so every upload is deterministic + reviewable.
+Bump `CURRENT_PROJECT_VERSION` on every TestFlight upload — Apple sorts builds by
+`(version, build)`, so a build number that isn't strictly higher than the latest
+sorts *underneath* it and testers are never offered the update.
+
+This app **is the only pipeline that may upload the bundle id `pl.ottaviano.kds`.**
+The React Native app once shipped an `OttavianoKDS` scheme into the same App Store
+Connect record and numbered its builds `60 + run_number`, so an RN dispatch landed
+at build 203 and buried the SwiftUI build (61) — testers never saw the SwiftUI
+update. That is fixed: the marketing version was bumped to sort this build on top,
+the build number set above the RN max, and the RN TestFlight workflow
+(`ios-testflight.yml`) was pinned to the customer `Ottaviano` scheme so it can no
+longer touch `pl.ottaviano.kds`. Keep it that way — never re-add a KDS scheme to
+the RN pipeline.
+
 ## Targets
 iOS 18+ deployment (built with the latest SDK), Swift 6 (strict concurrency).
 iPad-first operator app; universal (iPhone + iPad).

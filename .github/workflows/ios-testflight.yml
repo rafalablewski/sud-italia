@@ -1,24 +1,23 @@
 name: Mobile app — TestFlight
 
-# Archives one scheme of the bare React Native 0.79.5 app and uploads it to
-# TestFlight via the App Store Connect API key — the same mechanism the team's
-# prior Swift pipeline used (xcodebuild archive -> exportArchive -> altool),
-# repointed at the CocoaPods WORKSPACE. No Expo / EAS.
+# Archives the bare React Native 0.79.5 CUSTOMER app (Ottaviano / pl.ottaviano)
+# and uploads it to TestFlight via the App Store Connect API key (xcodebuild
+# archive -> exportArchive -> altool against the CocoaPods WORKSPACE). No Expo.
 #
-# Triggered manually (pick the scheme), or by pushing to a claude/** branch with
-# a commit message containing [testflight]. A "(KDS)" marker in that message
-# selects the OttavianoKDS scheme; otherwise push defaults to Ottaviano. Manual
-# dispatch defaults to OttavianoKDS.
+# SCOPE: customer app ONLY. The OttavianoKDS operator app is now native SwiftUI
+# (native/ottaviano-ios, workflow ios-swift-testflight.yml) and is the SOLE owner
+# of the bundle id pl.ottaviano.kds. This RN pipeline used to be able to ship the
+# RN OttavianoKDS scheme too — and because it numbered builds `60 + run_number`,
+# a dispatch (run #143 = build 203) landed ABOVE the SwiftUI build in the shared
+# pl.ottaviano.kds record and buried it, so testers never saw the SwiftUI update.
+# To stop the leapfrogging for good this workflow is pinned to the Ottaviano
+# (customer) scheme and can no longer archive/upload pl.ottaviano.kds.
 #
-# Required repo secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
+# Triggered manually, or by pushing to a claude/** branch with a commit message
+# containing [testflight]. Required repo secrets: ASC_KEY_ID, ASC_ISSUER_ID,
+# ASC_KEY_P8.
 on:
   workflow_dispatch:
-    inputs:
-      scheme:
-        description: Scheme to ship
-        type: choice
-        options: [Ottaviano, OttavianoKDS]
-        default: OttavianoKDS
   push:
     branches: ["claude/**"]
 
@@ -45,18 +44,11 @@ jobs:
 
       - name: Resolve scheme
         id: scheme
-        # Dispatch -> input. Push -> "(KDS)" in the message picks KDS, else Ottaviano.
+        # Customer app only. OttavianoKDS (pl.ottaviano.kds) ships from the
+        # SwiftUI pipeline (ios-swift-testflight.yml) — this workflow must never
+        # upload that bundle id again, so the scheme is hard-pinned to Ottaviano.
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SCHEME="${{ github.event.inputs.scheme }}"
-          else
-            MSG="${{ github.event.head_commit.message }}"
-            if printf '%s' "$MSG" | grep -q "(KDS)"; then
-              SCHEME="OttavianoKDS"
-            else
-              SCHEME="Ottaviano"
-            fi
-          fi
+          SCHEME="Ottaviano"
           echo "Selected scheme: $SCHEME"
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
 

@@ -23,20 +23,29 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
-    # Release (user-facing) version.
-    MARKETING_VERSION: "0.3.0"
+    # Release (user-facing) version. Bumped 0.3.0 → 0.4.0 so this SwiftUI build
+    # sorts ABOVE every prior 0.3.0 build by VERSION — TestFlight orders builds by
+    # (version, build), and a higher marketing version wins regardless of build
+    # number. This makes the SwiftUI operator app the unambiguous "latest" testers
+    # see even if a stray 0.3.0 upload lingers in the shared record.
+    MARKETING_VERSION: "0.4.0"
     # Build number (CFBundleVersion) — a plain, monotonically increasing INTEGER,
-    # bumped +1 on every TestFlight upload. It must be strictly greater than every
-    # prior build's number, and Apple compares build numbers numerically — so a
-    # lower integer sorts BELOW existing builds and TestFlight treats it as older.
-    # CRITICAL: this app shares the bundle id pl.ottaviano.kds with the React
-    # Native OttavianoKDS target (native/ottaviano-rn), so its builds land in the
-    # SAME App Store Connect record. The RN pipeline reached build 60, so build 52
-    # sorted underneath it and never became the "latest" testers see. This is set
-    # ABOVE the RN max so the SwiftUI build is unambiguously the newest. (Fix the
-    # collision for good by retiring the RN KDS TestFlight target — only one
-    # pipeline should own pl.ottaviano.kds.)
-    CURRENT_PROJECT_VERSION: "61"
+    # bumped on every TestFlight upload. It must be strictly greater than every
+    # prior build's number, and Apple compares build numbers numerically — a lower
+    # integer sorts BELOW existing builds and TestFlight treats it as older.
+    # HISTORY OF THIS COLLISION: this app shares the bundle id pl.ottaviano.kds
+    # with the React Native OttavianoKDS scheme (native/ottaviano-rn), so both
+    # land in the SAME App Store Connect record. The RN TestFlight workflow set
+    # its build number to `60 + github.run_number`, so an RN KDS upload (dispatch
+    # run #143) landed at build 203 at 0.3.0 — while the SwiftUI fix in #222 only
+    # bumped to 61. 61 < 203, so the SwiftUI build stayed BURIED and testers were
+    # never offered it. Fixed for good two ways: (1) this build number is set well
+    # ABOVE the RN max (203) AND the marketing version is bumped so version sorts
+    # it on top regardless; (2) the RN TestFlight workflow (ios-testflight.yml) is
+    # now customer-only (Ottaviano / pl.ottaviano) and can no longer upload
+    # pl.ottaviano.kds, so nothing else ever leapfrogs this record again — the
+    # SwiftUI pipeline is the sole owner of pl.ottaviano.kds.
+    CURRENT_PROJECT_VERSION: "210"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 targets:
