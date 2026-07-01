@@ -58,6 +58,18 @@ The command bar is the **"Command"** terminal chrome — one all-monospace row,
 left→right: traffic lights · shell prompt · view-tab chips · spacer · the
 surface's own controls · ⌘K launcher · telemetry cluster · global tools.
 
+**Bar contract — keep it minimal.** The bar carries only what the "14 —
+Command" mockup gives each surface: the prompt, the view tabs, a *short* set of
+surface tool icons, an optional primary action, an optional live pill, then the
+global cluster. Per surface: **POS** = QR + fullscreen · **KDS** = *nothing*
+(board-only) · **Orders** = refresh · **Service** = refresh + a primary
+(Floor "Add table", Slots "New") · **Guest** = the 3 inbox tools + WhatsApp-live.
+Anything heavier — KDS's lane filter + board actions, POS's channel/held flags,
+Slots' view filters + date, Book's date — lives **on the surface**, not the
+chrome (see `.core-kds-toolbar` / `.core-surf-toolbar` below). When you add a
+control, ask "does the mockup put this in the bar?" — if not, it goes in a
+surface toolbar.
+
 - **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
   `--panel` row with a `--line` bottom hairline.
 - **`.cm-lights`** — decorative macOS traffic-light chrome; the three dots are
@@ -81,10 +93,10 @@ surface's own controls · ⌘K launcher · telemetry cluster · global tools.
   refresh · sound · pause) come from
   [`src/core/shell/toolIcons.tsx`](../../../src/core/shell/toolIcons.tsx) — one
   24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
-  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.) The rest of
-  `.cm-surf` speaks terminal too: `.core-seg` filters (KDS lanes · Slots range)
-  and `.core-chip` status flags go mono/lowercase with a `--basil` active
-  state, and `.core-inp` date pickers get the mono terminal field.
+  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.) In-bar
+  `.core-chip` status flags (the Guest concierge live pill) go mono too. Heavier
+  controls — segmented filters, date pickers — are NOT in the bar; they live in
+  a `.core-surf-toolbar` on the surface body.
 - **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
   a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. The
   mockup's `cm-primary`, tokenised.
@@ -99,6 +111,13 @@ surface's own controls · ⌘K launcher · telemetry cluster · global tools.
   flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
+- **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
+  for the working controls the bar omits (Slots' view filters + date, Book's
+  date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the
+  surface, not the global chrome.
+- **`.core-kds-toolbar`** — the KDS board's own toolbar (lane filter left,
+  board actions + fullscreen right, split by `.core-kds-tb-sp`) — because the
+  KDS command bar carries no tools.
 
 ### Global-action primitives
 

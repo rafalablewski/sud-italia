@@ -85,13 +85,10 @@
 .core .core-bar .cm-surf .core-iconbtn svg,
 .core .core-bar .cm-right .core-iconbtn svg { width: 16px; height: 16px; }
 /* the rest of the surface's own controls also speak terminal: segmented
-   filters (KDS lanes · Slots range), status chips, and date inputs all go mono
-   so the whole .cm-surf strip reads as one language. */
-.core .core-bar .cm-surf .core-seg { font-family: var(--mono); background: var(--panel-2); }
-.core .core-bar .cm-surf .core-seg button { font-family: var(--mono); font-size: 11.5px; text-transform: lowercase; }
-.core .core-bar .cm-surf .core-seg button.on { color: var(--basil); }
+   status chips (the Guest concierge live pill) go mono so the whole .cm-surf
+   strip reads as one language. Heavier controls (segmented filters, date
+   inputs) live on the surface, not the bar — see .core-surf-toolbar. */
 .core .core-bar .cm-surf .core-chip { font-family: var(--mono); font-size: 11.5px; }
-.core .core-bar .cm-surf .core-inp { font-family: var(--mono); font-size: 12px; height: 32px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 0 9px; }
 /* primary surface action — the mockup's cm-primary: a basil-outlined mono
    pill with a leading plus (Service "add table" / "new"). */
 .core .core-bar .cm-primary { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
@@ -236,6 +233,13 @@
 /* ---------- body shell ---------- */
 .core .core-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
+/* surface sub-toolbar — a thin control strip at the TOP of a surface body, for
+   the working controls the "Command" bar deliberately omits (Slots' view
+   filters + date, Book's date). Distinct from the command bar: it belongs to
+   the surface, not the global chrome. */
+.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
 /* ============================================================
    POS surface
    ============================================================ */
@@ -334,6 +338,9 @@
 .core .core-th-name:hover { border-color: var(--line); }
 .core .core-th-name:focus { outline: none; border-color: var(--brand); background: var(--panel-2); }
 .core .core-thead .th-s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; padding-left: 6px; }
+/* "Held" flag on a parked check — relocated here from the command bar (the
+   mockup keeps POS bar tools to qr + fullscreen only). */
+.core .core-thead .core-th-held { height: 24px; flex: none; font-size: 11px; padding: 0 9px; }
 /* dine-in kitchen-timing toggle */
 .core .core-timing { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; }
 .core .core-timing-l { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
@@ -615,6 +622,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 }
 .core .core-kds-empty { color: var(--ink-3); font-size: 12.5px; text-align: center; padding: 14px; }
 .core .core-kds-empty.pad { padding: 60px; }
+
+/* board toolbar — the lane filter + board actions the command bar deliberately
+   omits (mockup: KDS carries no bar tools). Sits at the top of the board. */
+.core .core-kds-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
 
 /* KPI band */
 .core .core-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }

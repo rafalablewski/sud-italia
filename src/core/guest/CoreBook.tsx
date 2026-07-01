@@ -156,9 +156,14 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     <CoreShell
       eyebrow={standalone ? "Book" : "Guest Engagement"}
       tabs={standalone ? undefined : guestTabs("book")}
-      subRight={<input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />}
     >
       <div className="core-book">
+        {/* Date picker lives on the surface — the mockup's guest command bar
+            carries the inbox tools + WhatsApp-live only, no date field. */}
+        <div className="core-surf-toolbar">
+          <span className="core-surf-tb-lbl">Day</span>
+          <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
+        </div>
         {/* timeline — tables (rows) × hours (cols); drag a block to reassign,
             overlaps hatch red live via findReservationConflicts */}
         <div className="core-book-timeline">

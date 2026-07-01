@@ -288,7 +288,15 @@ export function CoreSlots() {
       eyebrow="Service · Floor & Slots"
       tabs={serviceTabs("slots")}
       subRight={
-        <>
+        tab === "manage" ? (
+          <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
+        ) : undefined
+      }
+    >
+      <div className="core-guest-inbox">
+        {/* View filters + date live on the surface, not the command bar
+            (mockup: Service bar tools = refresh + primary only). */}
+        <div className="core-surf-toolbar">
           <div className="core-seg">
             <button className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
             <button className={tab === "demand" ? "on" : ""} onClick={() => setTab("demand")}>Demand</button>
@@ -299,14 +307,9 @@ export function CoreSlots() {
               <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
             </div>
           )}
-          {tab === "manage" && (
-            <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
-          )}
+          <div className="core-sp" />
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
-        </>
-      }
-    >
-      <div className="core-guest-inbox">
+        </div>
         {tab === "manage" ? (
           <>
             <div className="core-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>

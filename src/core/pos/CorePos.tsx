@@ -1429,6 +1429,7 @@ export function CorePos({
                     {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
                   </div>
                 </div>
+                {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}
                 {tabPromiseSec > 0 && (
                   <span className={`core-tabpromise ${steer?.bottleneck?.tier ?? "calm"}`} title="Estimated kitchen ready time for this check">
                     ready {promiseMin(tabPromiseSec)}
@@ -1816,8 +1817,6 @@ export function CorePos({
       subRight={
         <>
           <CoreQrQueue location={pageLoc} />
-          {active?.channel && <span className="core-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
-          {active?.status === "parked" && <span className="core-chip on" style={{ height: 32 }}>▣ Held</span>}
           <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} aria-label={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
             <ExpandIcon />
           </button>

@@ -641,19 +641,26 @@ export function CoreKds() {
     />
   );
 
-  const controls =
+  // The board's own controls. Per the "Command" mockup the KDS command bar
+  // carries NO surface tools (just the prompt + Fleet/Floor/Chef tabs), so the
+  // lane filter + action buttons live on the board itself — as a toolbar row
+  // in-shell, and inline in the fullscreen kiosk top strip.
+  const laneFilter =
+    view === "fleet" ? null : (
+      <div className="core-seg">
+        <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
+          All <b>{counts.all}</b>
+        </button>
+        {KDS_COLUMNS.map((c) => (
+          <button key={c.id} className={lane === c.id ? "on" : ""} onClick={() => setLane(c.id)}>
+            {c.label.split(" ")[0]} <b>{counts[c.id]}</b>
+          </button>
+        ))}
+      </div>
+    );
+  const boardActions =
     view === "fleet" ? null : (
       <>
-        <div className="core-seg">
-          <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
-            All <b>{counts.all}</b>
-          </button>
-          {KDS_COLUMNS.map((c) => (
-            <button key={c.id} className={lane === c.id ? "on" : ""} onClick={() => setLane(c.id)}>
-              {c.label.split(" ")[0]} <b>{counts[c.id]}</b>
-            </button>
-          ))}
-        </div>
         {recalls.length > 0 && (
           <button
             type="button"
@@ -683,6 +690,15 @@ export function CoreKds() {
         </button>
       </>
     );
+  // Kiosk top keeps them inline (no fullscreen-enter button there — the top
+  // strip has its own Exit control).
+  const controls =
+    view === "fleet" ? null : (
+      <>
+        {laneFilter}
+        {boardActions}
+      </>
+    );
 
   const overlays = (
     <EightySix location={location || ""} open={eightySixOpen} onClose={() => setEightySixOpen(false)} />
@@ -694,6 +710,15 @@ export function CoreKds() {
           <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
         ) : (
           <>
+            {/* Board toolbar — the lane filter + board actions the mockup keeps
+                OUT of the command bar. Fullscreen-enter lives here too. */}
+            <div className="core-kds-toolbar">
+              {laneFilter}
+              <div className="core-kds-tb-sp" />
+              {boardActions}
+              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+            </div>
+
             <div className="core-kpi">
               <div className="k"><div className="kl">Open</div><div className="kv">{counts.all}</div></div>
               <div className="k"><div className="kl">New</div><div className="kv">{counts.confirmed}</div></div>
@@ -798,19 +823,7 @@ export function CoreKds() {
   }
 
   return (
-    <CoreShell
-      eyebrow={`Kitchen Display · ${location || "all restaurants"}`}
-      tabs={tabs}
-      bleed
-      subRight={
-        <>
-          {controls}
-          {view !== "fleet" && (
-            <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
-          )}
-        </>
-      }
-    >
+    <CoreShell eyebrow={`Kitchen Display · ${location || "all restaurants"}`} tabs={tabs} bleed>
       {board}
       {overlays}
     </CoreShell>
