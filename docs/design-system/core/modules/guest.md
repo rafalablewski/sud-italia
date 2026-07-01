@@ -79,6 +79,17 @@ The guest engagement hub. `/core/guest`.
 
 ## Book (`/core/guest/book`) — wired
 
-`src/core/guest/CoreBook.tsx` (shared with Service). Pick a dine-in slot (`.core-pk`) + party size, then a table — live fit/conflict via the pure `findReservationConflicts` (booked/too-small tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and confirm. Today's bookings on the right with cancel. Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST /api/admin/booking`; cancel `DELETE /api/admin/floor/reservations`.
+`src/core/guest/CoreBook.tsx` (shared with Service). Tops the lens with a
+**timeline-over-tables grid** (`.core-book-timeline` — tables as rows,
+11:00–23:00 as columns): reservation **blocks** are positioned by time/duration,
+**overlaps hatch red** live (`.core-tl-block.conflict`, one
+`findReservationConflicts` pass per booking), and a block **drags to another
+table row to reassign** (HTML5 drag → the reservations `POST` upsert with
+`override`, so the conflict check re-runs on the result). Below: pick a dine-in
+slot (`.core-pk`) + party size, then a table — live fit/conflict (booked/too-small
+tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
+confirm. Today's bookings on the right with cancel. Engine: `GET
+/api/admin/{slots,floor/tables,floor/reservations}`; create `POST
+/api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
 
 The whole Guest hub is wired to the live engine.

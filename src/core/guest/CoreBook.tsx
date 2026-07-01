@@ -131,6 +131,27 @@ export function CoreBook() {
     }
   };
 
+  // --- Timeline (tables × hours) ---------------------------------------
+  const OPEN = 11 * 60, CLOSE = 23 * 60, SPAN = CLOSE - OPEN;
+  const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+  const hours = Array.from({ length: (CLOSE - OPEN) / 60 + 1 }, (_, i) => 11 + i);
+  const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
+  const conflictIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of dayRes) if (findReservationConflicts(reservations, r).length) s.add(r.id);
+    return s;
+  }, [dayRes, reservations]);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const reassign = async (r: Reservation, newTableId: string) => {
+    if (r.tableId === newTableId) return;
+    const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, tableId: newTableId, customerName: r.customerName, customerPhone: r.customerPhone, partySize: r.partySize, date: r.date, time: r.time, durationMin: r.durationMin ?? DURATION_MIN, status: r.status, override: true }),
+    });
+    if (res.ok) { toast(`Moved ${r.customerName} → table ${tableLabel(newTableId)}`, "success"); await load(); }
+    else toast("Could not move booking", "danger");
+  };
+
   return (
     <CoreShell
       eyebrow="Guest Engagement"
@@ -138,6 +159,52 @@ export function CoreBook() {
       subRight={<input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />}
     >
       <div className="core-book">
+        {/* timeline — tables (rows) × hours (cols); drag a block to reassign,
+            overlaps hatch red live via findReservationConflicts */}
+        <div className="core-book-timeline">
+          <div className="core-tl-head">
+            <div className="core-tl-corner">Tables ↓ · Hours →</div>
+            <div className="core-tl-hours">
+              {hours.map((h) => <div key={h} className="core-tl-hr">{h}:00</div>)}
+            </div>
+          </div>
+          <div className="core-tl-body">
+            {tables.length === 0 ? (
+              <div className="core-ctx-empty pad">No tables configured.</div>
+            ) : (
+              tables.map((t) => (
+                <div
+                  key={t.id}
+                  className="core-tl-row"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { const r = dayRes.find((x) => x.id === dragId); if (r) void reassign(r, t.id); setDragId(null); }}
+                >
+                  <div className="core-tl-label">{t.number}<span className="s">{t.seats}p</span></div>
+                  <div className="core-tl-track">
+                    {hours.slice(0, -1).map((h) => <div key={h} className="core-tl-cell" />)}
+                    {dayRes.filter((r) => r.tableId === t.id).map((r) => {
+                      const left = Math.max(0, ((toMin(r.time) - OPEN) / SPAN) * 100);
+                      const width = Math.max(4, Math.min(100 - left, ((r.durationMin ?? DURATION_MIN) / SPAN) * 100));
+                      return (
+                        <div
+                          key={r.id}
+                          draggable
+                          className={`core-tl-block${conflictIds.has(r.id) ? " conflict" : ""}`}
+                          style={{ left: `${left}%`, width: `${width}%` }}
+                          onDragStart={() => setDragId(r.id)}
+                          title={`${r.customerName} · ${r.partySize}p · ${r.time}${conflictIds.has(r.id) ? " · CONFLICT" : ""}`}
+                        >
+                          <b>{r.customerName}</b><span>{r.partySize}p · {r.time}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* form */}
         <div className="core-book-form">
           <h4 className="core-profile-h">Dine-in slot</h4>
