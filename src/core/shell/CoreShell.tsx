@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CoreNav } from "./CoreNav";
 import { CoreClock, CoreThemeToggle, CoreLocationChip } from "./CoreChrome";
 import { CoreNotificationsBell } from "./CoreNotificationsBell";
+import { CoreDock } from "./CoreDock";
 
 export interface CoreTab {
   label: string;
@@ -78,6 +79,11 @@ export function CoreShell({
       </header>
 
       <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+
+      {/* Persistent Context Dock — the selected entity's check, following the
+          operator across every lens. Renders null until something is selected
+          (additive; see SelectionContext / CoreDock). */}
+      <CoreDock />
 
       {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
       <div className="core-bottomnav">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { useSelection } from "@/core/shell/SelectionContext";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -60,6 +61,7 @@ export function CoreFloor({
   upsellByLocation: Record<string, UpsellConfig | null>;
 }) {
   const toast = useCoreToast();
+  const { select } = useSelection();
   const { location, activeLocations } = useLocation();
   // The table whose check is open over the floor (the docked check panel).
   const [checkTable, setCheckTable] = useState<TwinTableRow | null>(null);
@@ -365,7 +367,33 @@ export function CoreFloor({
                       <div key={t.id} className="core-tbl2-wrap">
                         <button
                           className={`core-tbl2 ${st.cls}`}
-                          onClick={() => t.status !== "out-of-service" && setCheckTable(t)}
+                          onClick={() => {
+                            if (t.status === "out-of-service") return;
+                            setCheckTable(t);
+                            // Also pin it to the persistent Context Dock so the
+                            // check follows across lenses (additive — the check
+                            // panel above is unchanged).
+                            select({
+                              kind: "table",
+                              id: t.id,
+                              label: `Table ${t.number}`,
+                              sub: `${t.party ? `${t.party} / ${t.seats}` : `${t.seats}`} covers · ${zone}`,
+                              status: st.label,
+                              statusCls: st.cls,
+                              amount:
+                                tUnpaid.length > 0
+                                  ? `${zl2(tDue)} to pay`
+                                  : tOrders.length > 0
+                                    ? "✓ paid"
+                                    : t.openCheckGrosze
+                                      ? `${zl0(t.openCheckGrosze)} open`
+                                      : undefined,
+                              amountDue: tUnpaid.length > 0,
+                              note: t.notes || undefined,
+                              allergy: t.notes ? ALLERGY_RE.test(t.notes) : false,
+                              href: "/core/service/floor",
+                            });
+                          }}
                           disabled={t.status === "out-of-service"}
                           title={t.status === "out-of-service" ? "Out of service" : `Open Table ${t.number}'s check`}
                         >

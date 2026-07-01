@@ -19,8 +19,8 @@ Last updated: **2026-07-01** — sketches phase.
 | 2c | Deep-dive sketches (order detail · guest journey · service/handoff · booking/delivery) | ☑ | 4 more `service-os-*.html` in glass + responsive |
 | 3 | **Sign-off gate** — user accepts sketches | ☑ | Approved; glass + responsive + parity locked |
 | 3b | Liquid-glass material foundation (Core skin) | ☑ | `themes/core/skins/liquid-glass.css`, default skin, frosts all surfaces; KDS wall stays dark. Build green. |
-| 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ◐ | Highest-leverage first build |
-| 5 | `<ContextDock>` (peek→expand, shared across lenses) | ☐ | The spine |
+| 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ◐ | Bottom-nav lens switch exists; command bar reused |
+| 5 | `<ContextDock>` (peek→expand, shared across lenses) | ◐ | **Shipped v1:** `SelectionContext` + `CoreDock` in the shell, wired from Floor tile tap. Additive/no-op default — zero regression. Build+343 tests green. Next: wire POS tabs + KDS cards, peek→expand, live refresh. |
 | 6 | Floor lens (tiles + Twin urgency + radial actions) | ☐ | |
 | 7 | Line lens (POS) on the shared dock | ☐ | |
 | 8 | Pass lens (KDS) + pressure-adaptive density | ☐ | |
