@@ -40,9 +40,10 @@ inside the shell body: **rail · menu · ticket**.
   reconnect — the visible end of the Phase 2b durable-queue path.
 
 - **`.core-rail.core-rail-icons`** — the category rail, **pure icon-only**
-  (collapsed, 72px): each category is a 54px `.core-cat` icon button (glyph
-  from `CAT_ICON` in `CorePos.tsx`) with the label as a `title`/`aria-label`
-  tooltip. A **★ Popular** chip first when present (`.core-cat.pop`, ember
+  (collapsed, 56px): each category is a 44px boxed `.core-cat` icon button
+  (glyph from `CAT_ICON` in `CorePos.tsx`, `--panel-2` fill + hairline, ember
+  `.on`, count as a corner badge that sits just outside the box) with the label
+  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present (`.core-cat.pop`, ember
   fill, the default landing category) — frequency-ranked top items for the
   current daypart from `GET /api/admin/pos/popular` (real orders, Rule #1;
   hidden when empty) — then an **All** chip (stacks every category as
@@ -51,8 +52,10 @@ inside the shell body: **rail · menu · ticket**.
   active location's menu, with a live item count as a corner badge (`.n`) and,
   when steering is active, a `.core-cat-promise` per-category ETA (`~Nm` from
   `promiseSecondsByCategory`). `.on` = the selected category (filled ink).
-- **`.core-menu` / `.core-menu-grid`** — auto-fill grid of `.core-prod` cards.
-  Each card is **text-forward** (no photo dependency): `.pn` (display
+- **`.core-menu` / `.core-menu-grid`** — a dense auto-fill grid
+  (`minmax(178px,1fr)`, 8px gutters) of compact `.core-prod` cards (78px min,
+  `r-sm`, 9/10 padding — the dense-console density). Each card is
+  **text-forward** (no photo dependency): `.pn` (display
   name, with a `.core-role` menu-engineering badge — Hero / Profit / Anchor
   / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
   `.core-tagrow` of `.core-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
