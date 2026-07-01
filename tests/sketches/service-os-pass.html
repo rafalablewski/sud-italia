@@ -109,6 +109,33 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-sm
 .legend{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:11px;color:var(--ink-3);background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:var(--rim);border-radius:var(--pill);padding:8px 20px;box-shadow:var(--float),var(--inset);z-index:60}
 .legend b{color:var(--ink-2)}
 .legend .sw{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+/* ═══════════ RESPONSIVE — web ⇄ mobile-app parity ═══════════ */
+@media(max-width:1100px){
+  .lanes{grid-template-columns:repeat(2,1fr)}
+  .lanes .lane:nth-child(4){display:none}
+  .kpis{flex-wrap:wrap}
+}
+@media(max-width:640px){
+  html,body{overflow:auto}
+  .wall{height:auto;min-height:100vh;padding:10px 10px 70px}
+  .caption{font-size:11px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* top band stacks: brand row, then scrollable KPI + station strips */
+  .kbar{flex-wrap:wrap;gap:10px;padding:11px}
+  .kbrand{flex-basis:100%}
+  .kpis{flex-wrap:nowrap;overflow-x:auto;width:100%;margin-left:0;padding-bottom:2px}
+  .kpi{flex:0 0 auto;min-width:88px}
+  .stations{flex-wrap:nowrap;overflow-x:auto;width:100%;margin-left:0}
+  .st{flex:0 0 auto}
+  .tier{margin-left:0;width:100%;justify-content:center}
+  /* lanes → swipeable carousel, one lane per screen */
+  .lanes{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px}
+  .lanes .lane{flex:0 0 86%;scroll-snap-align:start}
+  .lanes .lane:nth-child(4){display:flex}    /* recall lane back on phone */
+  .li{font-size:15px}                         /* legible on the line */
+  .bump{padding:13px}                         /* 44px+ bump target */
+  .legend{flex-wrap:wrap;justify-content:center;gap:10px;max-width:94vw;bottom:8px}
+}
 </style>
 </head>
 <body>

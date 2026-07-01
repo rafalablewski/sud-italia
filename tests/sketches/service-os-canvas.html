@@ -217,6 +217,59 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-sm
 .upsell b{color:var(--brand-bright)}
 .upsell .add{margin-left:auto;font-size:12px;font-weight:800;color:var(--on-accent);background:linear-gradient(150deg,var(--brand-bright),var(--brand));padding:7px 14px;border-radius:var(--pill);cursor:pointer;box-shadow:0 6px 18px -4px var(--brand)}
 .hint{font-size:11px;color:var(--ink-3);text-align:center;padding:8px 0 12px}
+
+/* ═══════════ RESPONSIVE — web ⇄ mobile-app parity ═══════════ */
+/* tablet */
+@media(max-width:1024px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .search{max-width:200px}
+  .pchip:nth-of-type(2),.pchip:nth-of-type(3){display:none}
+  .pos{grid-template-columns:140px 1fr}
+}
+/* phone — the native-app form factor */
+@media(max-width:640px){
+  html,body{overflow:auto}
+  .app{height:auto;min-height:100vh;padding:10px 10px 0;gap:10px}
+  .caption{font-size:11px;padding:6px 12px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* command bar: brand + scope + avatar; search drops to its own row */
+  .cmd{flex-wrap:wrap;gap:9px;padding:9px 11px}
+  .brand{font-size:15px}
+  .who span:not(.avatar){display:none}
+  .search{order:9;flex-basis:100%;max-width:none}
+  .pressure{gap:6px}
+  .pchip{padding:6px 10px}
+  .body{flex-direction:column}
+  /* lens rail → fixed bottom TAB BAR (thumb zone) */
+  .rail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;flex:0 0 auto;flex-direction:row;justify-content:space-around;height:64px;padding:6px;z-index:45;border-radius:var(--r-xl)}
+  .rl{flex:1;height:52px;width:auto;min-width:0}
+  .rl svg{width:21px;height:21px}
+  .rl .ind{display:none}
+  .rl:last-child{display:none}      /* hide 'More' gear on phone */
+  .railspace{display:none}
+  /* canvas scrolls; clear the fixed dock + tab bar */
+  .canvas{overflow:visible;padding-bottom:250px}
+  .lenshead h1{font-size:22px}
+  .lenshead .seg{display:none}
+  .grid{grid-template-columns:repeat(2,1fr);gap:11px}
+  .tile{min-height:116px}
+  .pos{grid-template-columns:1fr;gap:12px}
+  .catrail{flex-direction:row;overflow-x:auto;padding:6px;gap:6px}
+  .cat{white-space:nowrap;padding:9px 13px}
+  .prods{grid-template-columns:repeat(2,1fr)}
+  .cols{grid-template-columns:1fr;gap:12px}
+  .tl{overflow-x:auto}
+  .tl .tlrow{min-width:640px}
+  /* Context Dock → bottom sheet, sits above the tab bar */
+  .dock{position:fixed;left:8px;right:8px;bottom:80px;z-index:44;max-height:52vh;overflow:auto}
+  .upsell{margin-top:12px;font-size:12px}
+  .dockbar{flex-wrap:wrap;gap:12px;padding:12px 16px}
+  .dockbar .dt{font-size:15px}
+  .spine{order:9;flex-basis:100%;overflow-x:auto;padding-bottom:2px}
+  .crs{flex:0 0 auto}
+  .dockbar .total{margin-left:0;font-size:19px}
+  .btn{flex:1;padding:14px 16px}    /* full-width 44px+ targets */
+  .hint{display:none}
+}
 </style>
 </head>
 <body>

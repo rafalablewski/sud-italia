@@ -142,6 +142,25 @@ h2.sec{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink
 .toast{margin-top:16px;border-radius:var(--r-md);padding:13px 16px;display:flex;align-items:center;gap:11px;font-size:13px;background:linear-gradient(150deg,rgba(125,196,100,.28),rgba(125,196,100,.08));border:1px solid rgba(125,196,100,.4);box-shadow:0 0 30px -10px var(--basil)}
 .toast .ok{width:26px;height:26px;border-radius:50%;background:linear-gradient(150deg,#93d47a,var(--basil));color:var(--on-basil);display:grid;place-items:center;font-weight:800;box-shadow:0 0 12px var(--basil)}
 .toast b{color:var(--basil)}
+
+/* ═══════════ RESPONSIVE — web ⇄ mobile-app parity ═══════════ */
+@media(max-width:640px){
+  .stage{padding:16px;gap:22px}
+  .caption{font-size:11px}
+  .sheeth{padding:16px}
+  .sheeth .t{font-size:18px}
+  .sheeth .grab{font-size:20px}
+  .splitwrap{grid-template-columns:1fr;gap:11px}       /* one split card per row */
+  .card .amt{font-size:22px}
+  .presets{gap:6px;padding:14px 16px}
+  .pre{padding:9px 15px}
+  .settle{padding:14px 20px;width:100%;margin-left:0}
+  .sheetf{flex-wrap:wrap;gap:12px}
+  .tips .tip{padding:14px 0}                            /* 44px+ tap targets */
+  .key{padding:16px 0}
+  /* phone frame fills width, keeps aspect */
+  .phone{height:auto;aspect-ratio:390/745;max-width:400px;margin:0 auto}
+}
 </style>
 </head>
 <body>
