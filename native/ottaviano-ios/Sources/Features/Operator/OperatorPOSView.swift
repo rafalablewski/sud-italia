@@ -234,6 +234,29 @@ public final class OperatorPOSStore {
         } catch { return "Something went wrong" }
     }
 
+    // ── Comp-cap status (tender-sheet meter). Real per-shift audit total for the
+    //    acting operator (Rule #1) — the server still enforces the cap in chargeTab.
+    public private(set) var compStatus: CompStatus?
+    public func loadCompStatus() async {
+        compStatus = try? await api.send(.posCompStatus(location: location))
+    }
+
+    /// Charge the current tab with a tender breakdown (tip / split / comp / cash /
+    /// manager-PIN override). Returns the settled result (for the receipt: change +
+    /// comp) or an error string; clears the till on success. The server re-derives
+    /// the bill and clamps every amount — this only carries intent.
+    public func chargeCurrentTab(tender: PosTenderBody) async -> (result: TabChargeResult?, error: String?) {
+        guard let id = currentTabID else { return (nil, "No open tab") }
+        do {
+            let r = try await api.send(.posTabCharge(id: id, location: location, tender: tender))
+            clear(); await refreshTabs()
+            return (r, nil)
+        } catch let e as APIError {
+            if case .api(_, let m, _) = e { return (nil, m) }
+            return (nil, "You appear to be offline")
+        } catch { return (nil, "Something went wrong") }
+    }
+
     /// Charge the current tab (settle + close). Clears the till on success.
     public func chargeCurrentTab() async -> String? {
         guard let id = currentTabID else { return "No open tab" }
@@ -661,6 +684,7 @@ private struct POSCheckPanel: View {
     @State private var showAddMember = false
     @State private var memberNameInput = ""
     @State private var memberPhoneInput = ""
+    @State private var showTender = false
     private enum DiscKind: Hashable { case none, percent, amount }
 
     private var hasTab: Bool { store.currentTabID != nil }
@@ -688,6 +712,7 @@ private struct POSCheckPanel: View {
         }
         .background(theme.color.surface2)
         .task(id: store.currentTabID) { syncFromStore(); await store.loadTables() }
+        .sheet(isPresented: $showTender) { TenderSheet(store: store, message: $message) }
         .alert("Add member", isPresented: $showAddMember) {
             TextField("Name", text: $memberNameInput)
             TextField("Phone", text: $memberPhoneInput)
@@ -943,7 +968,7 @@ private struct POSCheckPanel: View {
                     }
                     .buttonStyle(.bordered).disabled(!channelReady || store.isEmpty)
                 }
-                DSButton("Charge") { Task { message = await store.chargeCurrentTab() ?? "Charged" } }
+                DSButton("Charge") { showTender = true }
                     .disabled(!channelReady || store.isEmpty)
                     .opacity(channelReady && !store.isEmpty ? 1 : 0.5)
             }
@@ -1104,5 +1129,358 @@ private struct QROrdersSheet: View {
             }
             .task { await store.loadQrOrders() }
         }
+    }
+}
+
+/// The tender sheet — web `/core/pos` TenderDialog parity: tip presets, an even
+/// or by-item split, a manager comp with a per-shift comp-cap meter + inline
+/// manager-PIN override, and cash change. The server (chargeTab) re-derives the
+/// bill and clamps every amount — this only carries intent (Rule #1). Amounts are
+/// grosze; złoty is formatted once via MoneyText.
+private struct TenderSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let store: OperatorPOSStore
+    @Binding var message: String?
+
+    @State private var tipPct = 0            // 0 = no tip; -1 = custom
+    @State private var tipCustom = ""
+    @State private var method: PayMethod = .card
+    @State private var cash: Grosze = 0
+    @State private var splitMode: SplitMode = .none
+    @State private var ways = 2
+    @State private var payerOf: [String: Int] = [:]
+    @State private var comp: Grosze = 0
+    @State private var compCustom = ""
+    @State private var compReason: String?
+    @State private var compPin = ""
+    @State private var charging = false
+    @State private var result: TabChargeResult?
+    @State private var error: String?
+
+    private enum PayMethod: Hashable { case card, cash }
+    private enum SplitMode: Hashable { case none, even, item }
+    private let compReasons = ["Quality", "Wait", "Goodwill", "Error"]
+    private let tipPresets = [0, 5, 10, 15]
+
+    // ── Derived money (client preview; server is authoritative) ─────────────────
+    private var bill: Grosze { store.totalAfterDiscount }
+    private var tip: Grosze {
+        tipPct < 0 ? grosze(from: tipCustom) : Int((Double(bill) * Double(tipPct) / 100).rounded())
+    }
+    private var netDue: Grosze { max(0, bill - comp) }
+    private var target: Grosze { netDue + tip }
+
+    private var compToday: Grosze { store.compStatus?.compTodayGrosze ?? 0 }
+    private var cap: Grosze { store.compStatus?.capGrosze ?? 0 }
+    private var singleMax: Grosze { store.compStatus?.singleMaxGrosze ?? 0 }
+    private var bypasses: Bool { store.compStatus?.bypasses ?? false }
+    /// The proposed comp breaches the per-shift cap or the single-comp ceiling —
+    /// the same gate the server enforces. Owners bypass. Reveals the PIN field.
+    private var overCap: Bool {
+        guard comp > 0, !bypasses else { return false }
+        if singleMax > 0 && comp > singleMax { return true }
+        if cap > 0 && compToday + comp > cap { return true }
+        return false
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let result { receipt(result) } else { form }
+            }
+            .navigationTitle("Charge")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .task { await store.loadCompStatus() }
+        }
+    }
+
+    // MARK: form
+
+    private var form: some View {
+        Form {
+            billSection
+            tipSection
+            splitSection
+            compSection
+            paymentSection
+            if let error { Section { Text(error).font(.footnote).foregroundStyle(theme.color.danger) } }
+            Section {
+                DSButton(charging ? "Charging…" : "Charge \(MoneyText.format(target))") { Task { await charge() } }
+                    .disabled(chargeDisabled)
+            }
+        }
+    }
+
+    private var billSection: some View {
+        Section("Bill") {
+            row("Subtotal", store.total)
+            if store.discountAmount > 0 { row("Discount", -store.discountAmount) }
+            if tip > 0 { row("Tip", tip) }
+            if comp > 0 { row("Comp", -comp) }
+            HStack { Text("Due").font(.headline); Spacer(); MoneyText(target).font(.headline) }
+                .foregroundStyle(theme.color.textPrimary)
+        }
+    }
+
+    private var tipSection: some View {
+        Section("Tip") {
+            Picker("Tip", selection: $tipPct) {
+                ForEach(tipPresets, id: \.self) { p in Text(p == 0 ? "None" : "\(p)%").tag(p) }
+                Text("Custom").tag(-1)
+            }
+            .pickerStyle(.segmented)
+            if tipPct < 0 {
+                HStack {
+                    Text("zł").foregroundStyle(theme.color.textSecondary)
+                    TextField("0.00", text: $tipCustom).keyboardType(.decimalPad)
+                }
+            }
+        }
+    }
+
+    private var splitSection: some View {
+        Section("Split") {
+            Picker("Split", selection: $splitMode) {
+                Text("Single").tag(SplitMode.none)
+                Text("Even").tag(SplitMode.even)
+                Text("By item").tag(SplitMode.item)
+            }
+            .pickerStyle(.segmented)
+            if splitMode != .none {
+                Stepper("\(ways) ways", value: $ways, in: 2...6)
+                    .onChange(of: ways) { _, _ in clampPayers() }
+            }
+            if splitMode == .even {
+                let each = ways > 0 ? target / ways : target
+                Text("≈ \(MoneyText.format(each)) each")
+                    .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+            }
+            if splitMode == .item {
+                ForEach(store.ticketLines, id: \.item.id) { line in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("\(line.qty)× \(line.item.name)").font(.subheadline).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                            Spacer()
+                            MoneyText(line.item.price * line.qty).font(.caption).foregroundStyle(theme.color.textSecondary)
+                        }
+                        Picker("Guest", selection: payerBinding(line.item.id)) {
+                            ForEach(Array(1...ways), id: \.self) { g in Text("G\(g)").tag(g) }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    .padding(.vertical, 2)
+                }
+                ForEach(itemPreview()) { p in
+                    Text("Guest \(p.id) · \(MoneyText.format(p.amount))")
+                        .textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var compSection: some View {
+        Section("Comp (manager)") {
+            HStack(spacing: theme.space.sm) {
+                ForEach([500, 1000, 2000, 5000], id: \.self) { amt in
+                    Button {
+                        comp = comp == amt ? 0 : amt; compCustom = ""
+                    } label: {
+                        Text(MoneyText.format(amt)).font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .foregroundStyle(comp == amt ? theme.color.onAccent : theme.color.accent)
+                            .background(comp == amt ? theme.color.accent : theme.color.accent.opacity(0.14), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+                if comp > 0 { Button("Clear", role: .destructive) { comp = 0; compCustom = ""; compReason = nil }.font(.caption) }
+            }
+            HStack {
+                Text("Custom zł").foregroundStyle(theme.color.textSecondary)
+                TextField("0.00", text: $compCustom).keyboardType(.decimalPad)
+                    .onChange(of: compCustom) { _, v in let g = grosze(from: v); if g > 0 { comp = g } }
+            }
+            if comp > 0 {
+                Picker("Reason", selection: $compReason) {
+                    Text("Pick…").tag(String?.none)
+                    ForEach(compReasons, id: \.self) { r in Text(r).tag(String?.some(r)) }
+                }
+                compMeter
+                if overCap {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Over the comp cap — a manager PIN authorises it", systemImage: "lock.shield")
+                            .textRole(.caption).foregroundStyle(theme.color.warning)
+                        SecureField("Manager PIN", text: $compPin).keyboardType(.numberPad).textContentType(.oneTimeCode)
+                    }
+                }
+            }
+        }
+    }
+
+    private var compMeter: some View {
+        let running = compToday + comp
+        let frac = cap > 0 ? min(1, Double(running) / Double(cap)) : 0
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Shift comp").textRole(.caption).foregroundStyle(theme.color.textSecondary)
+                Spacer()
+                Text(cap > 0 ? "\(MoneyText.format(running)) / \(MoneyText.format(cap))" : MoneyText.format(running))
+                    .textRole(.caption).monospacedDigit()
+                    .foregroundStyle(overCap ? theme.color.danger : theme.color.textSecondary)
+            }
+            if cap > 0 {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(theme.color.line.opacity(0.5))
+                        Capsule().fill(overCap ? theme.color.danger : theme.color.success)
+                            .frame(width: max(0, geo.size.width * frac))
+                    }
+                }
+                .frame(height: 5)
+            }
+            if bypasses { Text("Your role bypasses the cap").textRole(.caption).foregroundStyle(theme.color.textSecondary) }
+        }
+    }
+
+    private var paymentSection: some View {
+        Section("Payment") {
+            Picker("Method", selection: $method) {
+                Text("Card").tag(PayMethod.card)
+                Text("Cash").tag(PayMethod.cash)
+            }
+            .pickerStyle(.segmented)
+            if method == .cash && splitMode == .none {
+                POSKeypad(grosze: $cash)
+                HStack {
+                    Text("Change due").foregroundStyle(theme.color.textSecondary)
+                    Spacer()
+                    MoneyText(max(0, cash - target)).font(.headline)
+                        .foregroundStyle(cash >= target ? theme.color.success : theme.color.textSecondary)
+                }
+            }
+        }
+    }
+
+    // MARK: receipt
+
+    private func receipt(_ r: TabChargeResult) -> some View {
+        VStack(spacing: theme.space.lg) {
+            Spacer()
+            Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(theme.color.success)
+            Text("Charged").font(.title3.weight(.bold)).foregroundStyle(theme.color.textPrimary)
+            VStack(spacing: 4) {
+                receiptRow("Total", r.totalAmount)
+                if let t = r.tip, t > 0 { receiptRow("Tip", t) }
+                if let c = r.comp, c > 0 { receiptRow("Comp", c) }
+                if let n = r.netCollected { receiptRow("Collected", n) }
+                if let ch = r.change, ch > 0 { receiptRow("Change due", ch) }
+            }
+            .padding(theme.space.lg)
+            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+            DSButton("Done") { dismiss() }.padding(.horizontal, theme.space.xxl)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private func receiptRow(_ label: String, _ amount: Grosze) -> some View {
+        HStack {
+            Text(label).foregroundStyle(theme.color.textSecondary)
+            Spacer()
+            MoneyText(amount).foregroundStyle(theme.color.textPrimary)
+        }
+        .font(.subheadline)
+        .frame(minWidth: 200)
+    }
+
+    // MARK: actions + helpers
+
+    private var chargeDisabled: Bool {
+        if charging || target <= 0 { return true }
+        if comp > 0 && compReason == nil { return true }
+        if overCap && compPin.trimmingCharacters(in: .whitespaces).isEmpty { return true }
+        if method == .cash && splitMode == .none && cash < target { return true }
+        return false
+    }
+
+    private func charge() async {
+        charging = true; error = nil
+        let tender = PosTenderBody(
+            tipGrosze: tip > 0 ? tip : nil,
+            compGrosze: comp > 0 ? comp : nil,
+            compNote: comp > 0 ? compReason : nil,
+            payments: buildPayments(),
+            cashTenderedGrosze: (method == .cash && splitMode == .none && cash > 0) ? cash : nil,
+            defaultMethod: method == .cash ? "cash" : "card",
+            compOverridePin: (overCap && !compPin.isEmpty) ? compPin : nil
+        )
+        let r = await store.chargeCurrentTab(tender: tender)
+        charging = false
+        if let res = r.result { result = res; message = "Charged" } else { error = r.error }
+    }
+
+    private func buildPayments() -> [PosPaymentBody]? {
+        guard target > 0 else { return nil }
+        let m = method == .cash ? "cash" : "card"
+        switch splitMode {
+        case .none: return nil    // server records a single payment of the net due
+        case .even: return evenLegs(count: ways, total: target, method: m)
+        case .item: return itemLegs(method: m)
+        }
+    }
+
+    private func evenLegs(count: Int, total: Grosze, method: String) -> [PosPaymentBody] {
+        guard count > 1 else { return [PosPaymentBody(method: method, amount: total)] }
+        let base = total / count
+        var legs = Array(repeating: base, count: count)
+        legs[count - 1] += total - base * count     // remainder on the last leg
+        return legs.map { PosPaymentBody(method: method, amount: $0) }
+    }
+
+    private func itemLegs(method: String) -> [PosPaymentBody] {
+        // Per-guest raw subtotal (list prices), scaled so the legs sum to `target`
+        // exactly — reconciles tip/discount/comp; the server clamps regardless.
+        var subtotal = Array(repeating: 0, count: ways)
+        for line in store.ticketLines {
+            let idx = min(max(0, (payerOf[line.item.id] ?? 1) - 1), ways - 1)
+            subtotal[idx] += line.item.price * line.qty
+        }
+        let sum = subtotal.reduce(0, +)
+        guard sum > 0 else { return evenLegs(count: ways, total: target, method: method) }
+        var legs = subtotal.map { Int((Double(target) * Double($0) / Double(sum)).rounded()) }
+        if let last = legs.indices.last { legs[last] += target - legs.reduce(0, +) }
+        return legs.filter { $0 > 0 }.map { PosPaymentBody(method: method, amount: $0) }
+    }
+
+    private struct SplitPreview: Identifiable { let id: Int; let amount: Grosze }
+    private func itemPreview() -> [SplitPreview] {
+        itemLegs(method: "card").enumerated().map { SplitPreview(id: $0.offset + 1, amount: $0.element.amount) }
+    }
+
+    private func payerBinding(_ id: String) -> Binding<Int> {
+        Binding(get: { payerOf[id] ?? 1 }, set: { payerOf[id] = $0 })
+    }
+
+    private func clampPayers() {
+        for (k, v) in payerOf where v > ways { payerOf[k] = ways }
+    }
+
+    private func row(_ label: String, _ amount: Grosze) -> some View {
+        HStack {
+            Text(label).foregroundStyle(theme.color.textSecondary)
+            Spacer()
+            MoneyText(amount).foregroundStyle(theme.color.textPrimary)
+        }
+        .font(.subheadline)
+    }
+
+    /// Parse a złoty string ("12.50" / "12,50") → grosze. Empty / invalid = 0.
+    private func grosze(from s: String) -> Grosze {
+        let raw = s.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespaces)
+        guard let v = Double(raw), v > 0 else { return 0 }
+        return Int((v * 100).rounded())
     }
 }

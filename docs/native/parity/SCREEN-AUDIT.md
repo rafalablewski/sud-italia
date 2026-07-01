@@ -98,10 +98,17 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped — table assignment (this pass):** `GET /api/v1/admin/floor/tables`
   (staff+, read-only twin of web `/api/admin/floor/tables`) + a native table
   picker in `CheckSheet` (dine-in) that seats the check (`tableId`).
-- **Honest gaps (not faked — Rule #1):** **Tender method** (Cash/Card) on a *tab*
-  charge — the counter sale captures it (`POSKeypad`), the tab charge settles
-  without recording the method. (Still *not* split-bill — the web does coursing,
-  not bill-splitting.)
+- **Shipped — Tender & comp (Service OS parity, this pass):** the tab **Charge**
+  now opens a native **`TenderSheet`** — the twin of the web `/core/pos`
+  TenderDialog: **tip** presets (+ custom), an **even** or **by-item split**
+  (payments reconcile to the server target), **Card/Cash** with a `POSKeypad`
+  change-due, and a **manager comp** (reason chips Quality/Wait/Goodwill/Error) with
+  a live **per-shift comp-cap meter** and an inline **manager-PIN override** when the
+  comp breaches the cap. Backend: the v1 `pos/tabs/:id/charge` route now parses the
+  tender (tip/comp/split/cash/PIN) and passes the acting **actor + role** to the
+  shared `chargeTab` (one comp-cap gate, web + native); a new
+  `GET /api/v1/admin/pos/comp-status` backs the meter (real audit total, Rule #1).
+  This closes the earlier tender-method gap **and** adds bill-splitting.
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
