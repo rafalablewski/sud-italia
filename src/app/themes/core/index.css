@@ -181,24 +181,38 @@
 .core .core-notif-msg { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
 .core .core-notif-time { flex: 0 0 auto; font-size: 11px; color: var(--ink-3); }
 
-/* ---------- Lens Rail (left) ----------
-   The Service OS lens switcher: a left, icon-only rail (60px) that expands on
-   hover to reveal labels. It sits inside `.core-main`, beside the Canvas, so it
-   spans the full body height under the Command Bar. Switching lens keeps the
-   selected entity in focus (SelectionContext) — you change the VIEW, not the app. */
+/* ---------- Lens Rail (left) — `.core-lens` (CoreNav) ----------
+   The Service OS lens switcher: a left, icon-only rail (60px) collapsed by
+   default. It expands to labels ONLY when the operator PINS it (a click on
+   `.core-lens-pin` adds `.open`) — never on hover, so a stray cursor never
+   shoves the Canvas; the pinned choice persists (localStorage). It sits inside
+   `.core-main`, beside the Canvas, spanning the full body height under the
+   Command Bar. Switching lens keeps the selected entity in focus
+   (SelectionContext) — you change the VIEW, not the app. Distinct from the POS
+   category `.core-rail` below. */
 .core .core-main { flex: 1; min-height: 0; display: flex; }
-.core .core-rail { flex: none; width: 60px; display: flex; flex-direction: column; gap: 4px;
+.core .core-lens { flex: none; width: 60px; display: flex; flex-direction: column; gap: 4px;
   padding: 10px 8px; background: var(--panel); border-right: 1px solid var(--line);
   overflow: hidden; z-index: 6; transition: width var(--fast); }
-@media (hover: hover) { .core .core-rail:hover { width: 196px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); } }
-.core .core-rail a { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px; flex: none;
+.core .core-lens.open { width: 196px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); }
+/* pin toggle at the top of the rail — collapses/expands (and persists) */
+.core .core-lens-pin { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 11px; margin-bottom: 4px;
+  flex: none; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--ink-3); cursor: pointer; transition: color var(--fast), background var(--fast); }
+.core .core-lens-pin:hover { color: var(--ink); background: var(--panel-3); }
+.core .core-lens-pin svg { width: 18px; height: 18px; flex: none; }
+.core .core-lens-pin span { white-space: nowrap; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+  opacity: 0; transition: opacity var(--fast); }
+.core .core-lens.open .core-lens-pin { color: var(--brand-bright); }
+.core .core-lens.open .core-lens-pin span { opacity: 1; }
+.core .core-lens a { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px; flex: none;
   border-radius: var(--pill); color: var(--ink-2); transition: background var(--fast), color var(--fast); }
-.core .core-rail a svg { width: 22px; height: 22px; flex: none; opacity: .78; }
-.core .core-rail a span { white-space: nowrap; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity var(--fast); }
-@media (hover: hover) { .core .core-rail:hover a span { opacity: 1; } }
-.core .core-rail a:hover { background: var(--panel-3); color: var(--ink); }
-.core .core-rail a.on { background: var(--panel-2); color: var(--ink); box-shadow: var(--sh-1); }
-.core .core-rail a.on svg { opacity: 1; color: var(--brand); }
+.core .core-lens a svg { width: 22px; height: 22px; flex: none; opacity: .78; }
+.core .core-lens a span { white-space: nowrap; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity var(--fast); }
+.core .core-lens.open a span { opacity: 1; }
+.core .core-lens a:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-lens a.on { background: var(--panel-2); color: var(--ink); box-shadow: var(--sh-1); }
+.core .core-lens a.on svg { opacity: 1; color: var(--brand); }
 .core .core-tabs { display: flex; gap: 2px; }
 .core .core-tabs a, .core .core-tabs button { height: 30px; padding: 0 13px; border-radius: 8px; font-weight: 550; font-size: 13px; color: var(--ink-2); transition: all var(--fast); display: inline-flex; align-items: center; }
 .core .core-tabs a:hover, .core .core-tabs button:hover { background: var(--hover); color: var(--ink); }
@@ -1365,10 +1379,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 }
 
 @media (max-width: 560px) {
-  /* On a phone the Lens Rail stays icon-only (no hover to expand); keep it
-     narrow so the Canvas gets the width. */
-  .core .core-rail { width: 52px; padding: 8px 6px; }
-  .core .core-rail a span { display: none; }
+  /* On a phone the Lens Rail stays a narrow icon rail so the Canvas gets the
+     width; the pin toggle still expands it (to a slimmer 176px). */
+  .core .core-lens { width: 52px; padding: 8px 6px; }
+  .core .core-lens.open { width: 176px; }
 }
 
 @media (max-width: 480px) {

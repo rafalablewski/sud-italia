@@ -186,7 +186,7 @@ its whole surface.
 ## Chrome — command bar + left Lens Rail
 
 `CoreShell` renders the **"Command"** terminal command bar on top and the
-**left Lens Rail** (`CoreNav`, `.core-rail`) down the side — no brand
+**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — no brand
 wordmark, no second subbar row, no bottom switcher:
 
 - **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
@@ -195,10 +195,14 @@ wordmark, no second subbar row, no bottom switcher:
   `.cm-sp` (spacer) · `.cm-surf` (the surface's own `subRight` controls) ·
   `.cm-k` (⌘K launcher) · `.cm-tel` (risk · loc · clock telemetry) · `.cm-right`
   (bell · theme). Only `.cm-tabs` scrolls; everything else is `flex:none`.
-- **`.core-rail`** — the icon-only 60px Lens Rail (expands to labels on hover)
-  that switches the four room lenses (Floor · Line · Pass · Book). It sits
-  inside `.core-main`, beside the Canvas, so it spans the full body height under
-  the command bar. Orders + Guest are cross-cutting surfaces reached from ⌘K.
+- **`.core-lens`** — the icon-only 60px Lens Rail that switches the four room
+  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
+  Collapsed by default; it expands to labels only when **pinned** — a click on
+  the `.core-lens-pin` toggle adds `.open` — never on hover, so a stray cursor
+  never shoves the Canvas. The pinned choice persists (localStorage,
+  `core-lens-pinned`). It sits inside `.core-main`, beside the Canvas, spanning
+  the full body height under the command bar. Distinct from the POS category
+  `.core-rail`. Orders + Guest are cross-cutting surfaces reached from ⌘K.
 
 ## Responsive — tablet & phone
 
@@ -210,7 +214,7 @@ Core runs on iPads and phones, not only desktop. Breakpoints at the end of
 | **≤1100** (tablet landscape) | Command bar sheds the low-priority `loc` telemetry (`.cm-tel-loc`); POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
 | **≤900** (tablet portrait) | Command bar drops the decorative traffic lights + dividers (`.cm-lights` / `.cm-div`) and collapses the ⌘K launcher to just its chip (`.cm-k-label` hidden); POS panes `148 · 1fr · 296`. |
 | **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
-| **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail (no hover-expand). |
+| **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail; the pin toggle still expands it (to a slimmer 176px). |
 | **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
 
 The POS ticket is **never hidden** on small screens (the old behaviour) —
