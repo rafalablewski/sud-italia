@@ -858,10 +858,13 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    (not always-dark like KDS).
    ============================================================ */
 .core .core-guest-inbox { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Shared stat strip — one look across every surface (KDS `.core-kpi`, Service
+   + Guest `.core-kpi-strip`): hairline-divided columns, an uppercase mono
+   label, and a big MONO tabular number. Fixes the KDS-vs-Service mismatch. */
 .core .core-kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
-.core .core-kpi-strip .k { background: var(--panel); padding: 10px 16px; }
-.core .core-kpi-strip .kl { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-.core .core-kpi-strip .kv { font-weight: 600; font-size: 19px; margin-top: 2px; }
+.core .core-kpi-strip .k { background: var(--panel); padding: 11px 16px; }
+.core .core-kpi-strip .kl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.core .core-kpi-strip .kv { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 21px; margin-top: 3px; }
 
 .core .core-inbox { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px 1fr 300px; }
 

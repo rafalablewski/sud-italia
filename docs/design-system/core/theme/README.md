@@ -114,6 +114,11 @@ surface toolbar.
   flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
+- **Stat strip** — ONE look across every surface: KDS's `.core-kpi` and the
+  Service/Guest `.core-kpi-strip` are hairline-divided columns with an uppercase
+  mono `.kl` label and a big **mono tabular** `.kv` number (optional
+  `.core-kpi-sub` sub-line). Same component language everywhere — a KDS KPI, a
+  Floor KPI and a Loyalty KPI read identically.
 - **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
   for the working controls the bar omits (Slots' view filters + date, Book's
   date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the
