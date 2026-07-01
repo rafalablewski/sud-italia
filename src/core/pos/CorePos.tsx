@@ -972,6 +972,15 @@ export function CorePos({
     .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
+  // Smart-default fire: the earliest course that has lines and isn't fired yet.
+  // A coursed check's primary action fires THIS (Starters first) instead of the
+  // whole check, so the common case is a single confirm; held courses follow.
+  const nextUnfiredCourse = useMemo(() => {
+    if (!active || !isCoursed) return null;
+    const fired = new Set(active.firedCourses ?? []);
+    const present = new Set(active.items.map((l) => courseOf(l)));
+    return POS_COURSE_ORDER.find((c) => present.has(c) && !fired.has(c)) ?? null;
+  }, [active, isCoursed]);
 
   // Combo-completion offer — a partially-matched deal one or two items short.
   const combo = active ? comboOf(active) : null;
@@ -1566,10 +1575,17 @@ export function CorePos({
                 </div>
                 <div className="core-foot-actions">
                   {!active.sentKds && (
-                    <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
-                      <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
-                      Send to KDS
-                    </button>
+                    nextUnfiredCourse ? (
+                      <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void fireCourse(nextUnfiredCourse)} title="Fires the earliest un-fired course; later courses stay held">
+                        <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
+                        Fire {POS_COURSE_LABELS[nextUnfiredCourse]} →
+                      </button>
+                    ) : (
+                      <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
+                        <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
+                        Send to KDS
+                      </button>
+                    )
                   )}
                   <button
                     type="button"
