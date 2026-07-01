@@ -274,7 +274,7 @@ export function CoreFloor({
     // free or reserved — bookable/seatable
     return [
       { label: "Seat", icon: "＋", primary: true, on: () => act(t) },
-      { label: "Reserve", icon: "📅", on: () => location.assign("/core/guest/book") },
+      { label: "Reserve", icon: "📅", on: () => window.location.assign("/core/guest/book") },
       { label: "Edit", icon: "⋯", on: () => setEditing(t) },
     ];
   };
