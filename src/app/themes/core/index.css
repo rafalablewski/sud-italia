@@ -164,6 +164,11 @@
 .core .core-prod.sold-out .add { background: var(--panel-3); color: var(--ink-3); }
 .core .core-tagrow { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; min-height: 20px; }
 .core .core-tag.off { background: rgba(229,72,74,.16); color: var(--t-late); font-weight: 700; }
+/* ★ Popular / Smart category chip — ember-accented so the zero-scroll
+   first category reads as special (frequency-driven, current daypart). */
+.core .core-cat.pop:not(.on) { color: var(--brand-bright); }
+.core .core-cat.pop.on { background: linear-gradient(150deg, var(--brand-bright), var(--brand)); color: var(--on-accent); }
+.core .core-cat.pop.on .n { opacity: .8; }
 .core .core-tag { font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
 .core .core-tag.veg { background: var(--basil-wash); color: var(--basil); }
 .core .core-tag.hot { background: var(--brand-wash); color: var(--brand); }

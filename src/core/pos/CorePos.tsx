@@ -135,8 +135,34 @@ export function CorePos({
     const present = new Set(menu.filter((m) => m.available).map((m) => m.category));
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [menu]);
-  const [cat, setCat] = useState<MenuCategory | "all" | null>(null);
-  const activeCat = cat && (cat === "all" || categories.includes(cat)) ? cat : categories[0] ?? null;
+  // ★ Popular / Smart — top item ids by real order frequency for the current
+  // daypart (server-computed). Shown as the FIRST category so the ~8 SKUs that
+  // are the bulk of taps are zero-scroll. Empty → the chip is simply hidden.
+  const [popularIds, setPopularIds] = useState<string[]>([]);
+  const loadPopular = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/pos/popular?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = (await res.json()) as { popular?: string[] };
+      setPopularIds(d.popular ?? []);
+    } catch {
+      /* non-fatal — the till just drops the Popular chip */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadPopular();
+  }, [loadPopular]);
+  // Popular items present on THIS menu, most-ordered first (ids the menu knows).
+  const popularItems = useMemo(
+    () => popularIds.map((id) => menu.find((m) => m.id === id)).filter((m): m is MenuItem => !!m),
+    [popularIds, menu],
+  );
+  const hasPopular = popularItems.length > 0;
+  const [cat, setCat] = useState<MenuCategory | "all" | "popular" | null>(null);
+  const catValid = (c: typeof cat) =>
+    c && (c === "all" || (c === "popular" && hasPopular) || (c !== "popular" && categories.includes(c)));
+  const activeCat = catValid(cat) ? cat : hasPopular ? "popular" : categories[0] ?? null;
 
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
@@ -935,7 +961,13 @@ export function CorePos({
   const channelMenu = menu.filter(isAvail);
   // grid list — channel-appropriate incl. sold-out; available first, 86'd sunk.
   const gridSource = menu.filter(channelOk);
-  const items = (activeCat === "all" ? gridSource : gridSource.filter((m) => m.category === activeCat))
+  const items = (
+    activeCat === "popular"
+      ? popularItems.filter(channelOk)
+      : activeCat === "all"
+        ? gridSource
+        : gridSource.filter((m) => m.category === activeCat)
+  )
     .slice()
     .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
@@ -1255,6 +1287,12 @@ export function CorePos({
         {/* category rail */}
         <aside className="core-rail">
           <div className="lbl">Menu</div>
+          {hasPopular && (
+            <button type="button" className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"} onClick={() => setCat("popular")}>
+              ★ Popular
+              <span className="n">{popularItems.filter(channelOk).length}</span>
+            </button>
+          )}
           <button type="button" className={activeCat === "all" ? "core-cat on" : "core-cat"} onClick={() => setCat("all")}>
             All
             <span className="n">{channelMenu.length}</span>

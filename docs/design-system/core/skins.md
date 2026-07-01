@@ -50,6 +50,13 @@ it will stick without being overridden on mount.
 - **Reset specificity.** Redefine tokens, don't re-declare component
   classes, so the `:where()` reset and the `.core .core-foo` component
   rules keep working (see `theme/README.md`).
+- **Watch for surface tokens used as *text* colours.** A few base rules use
+  a *surface* token as a label colour on an inverted fill —
+  `.core-cat.on { color: var(--panel) }` (dark-on-cream in Core Dark). A
+  skin that makes that surface token translucent (glass) turns the label
+  invisible. `liquid-glass` pins these back (`.core-cat.on:not(.pop) { color:
+  var(--bg) }`). When a token flips from opaque→translucent, grep base for
+  it used as `color:` and re-anchor those.
 - **An aurora skin must un-paint the base's opaque scroll containers.**
   The `liquid-glass` skin paints its ambient aurora on the `.core` root
   and makes panels translucent so they refract it. But the base theme

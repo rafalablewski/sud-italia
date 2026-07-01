@@ -112,6 +112,14 @@
 }
 .core[data-skin="liquid-glass"] .core-body { background: transparent; }
 
+/* Active category chip legibility. The base uses `color: var(--panel)` for the
+   label on the cream `.on` fill (dark-on-cream in Core Dark). This skin makes
+   --panel a translucent white, which would render the active label invisible —
+   so pin it to the readable ink-inverse here. The ★ Popular chip keeps its own
+   ember fill (base rule), hence `:not(.pop)`. */
+.core[data-skin="liquid-glass"] .core-cat.on:not(.pop),
+.core[data-skin="liquid-glass"] .core-cat.on:not(.pop) .core-cat-promise { color: var(--bg); }
+
 /* ---------- let the aurora through ----------
    The base theme fills its scroll/content containers with an OPAQUE
    `var(--bg)` (POS menu grid, embedded POS, guest thread, capability

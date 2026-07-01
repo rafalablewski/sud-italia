@@ -39,7 +39,11 @@ inside the shell body: **rail · menu · ticket**.
   tells staff a send/charge made offline is saved and will land on
   reconnect — the visible end of the Phase 2b durable-queue path.
 
-- **`.core-rail`** — the category rail. An **All** chip (stacks every
+- **`.core-rail`** — the category rail. A **★ Popular** chip first when
+  present (`.core-cat.pop`, ember fill, the default landing category) —
+  frequency-ranked top items for the current daypart from
+  `GET /api/admin/pos/popular` (real orders, Rule #1; hidden when empty) —
+  then an **All** chip (stacks every
   category as `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over
   the per-category `.core-cat` buttons — each lists only categories present
   on the active location's menu, with a live item count (`.n`) and, when
