@@ -23,19 +23,15 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: T4WC9M8Y3S # Ottaviano Apple Developer team (public id, not a secret)
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (universal)
-    # Release (user-facing) version.
-    MARKETING_VERSION: "0.3.0"
-    # Build number (CFBundleVersion) — a plain, monotonically increasing INTEGER,
-    # bumped +1 on every TestFlight upload. It must be strictly greater than every
-    # prior build's number, and Apple compares build numbers numerically — so a
-    # lower integer sorts BELOW existing builds and TestFlight treats it as older.
-    # CRITICAL: this app shares the bundle id pl.ottaviano.kds with the React
-    # Native OttavianoKDS target (native/ottaviano-rn), so its builds land in the
-    # SAME App Store Connect record. The RN pipeline reached build 60, so build 52
-    # sorted underneath it and never became the "latest" testers see. This is set
-    # ABOVE the RN max so the SwiftUI build is unambiguously the newest. (Fix the
-    # collision for good by retiring the RN KDS TestFlight target — only one
-    # pipeline should own pl.ottaviano.kds.)
+    # Release (user-facing) version. TestFlight never offers an OLDER marketing
+    # version, so this must be >= whatever testers already have (the app is on
+    # 0.4.0; shipping 0.3.0 showed "no update"). Bump this for a user-facing release.
+    MARKETING_VERSION: "0.4.0"
+    # Build number (CFBundleVersion) — AUTO-INCREMENTED in CI: Scripts/testflight.sh
+    # overrides this with epoch seconds on every archive, so each upload is strictly
+    # greater than the last (and above the shared-bundle-id RN pipeline's old max of
+    # 60) without anyone remembering to bump it. This committed value is only the
+    # local-build fallback; it is NOT what CI uploads.
     CURRENT_PROJECT_VERSION: "62"
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
