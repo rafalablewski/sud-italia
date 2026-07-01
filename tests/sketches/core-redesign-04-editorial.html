@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Core — Editorial Redesign 04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --ui:"Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+
+  --bg:#15110d; --panel:#1f1a14; --panel-2:#28211a; --panel-3:#322a21; --hover:#3a3026;
+  --ink:#f8f1e7; --ink-2:#c9bba9; --ink-3:#908172;
+  --line:rgba(255,247,235,.10); --line-2:rgba(255,247,235,.18);
+  --brand:#e86b3e; --brand-bright:#ff905e; --brand-wash:rgba(232,107,62,.16); --on-accent:#2a160b;
+  --basil:#6fb155; --basil-wash:rgba(111,177,85,.16); --on-basil:#0c1a0f;
+  --amber:#e8a23c; --amber-wash:rgba(232,162,60,.16); --info:#3fa7ce; --danger:#e5484a; --danger-wash:rgba(229,72,74,.18);
+
+  --r-sm:7px; --r-md:10px; --r-lg:14px; --r-xl:20px; --pill:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+body{line-height:1.45}
+::selection{background:var(--brand-wash);color:var(--ink)}
+svg{display:block}
+
+/* ---------- caption ---------- */
+.cap{
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);padding:6px 0;display:flex;align-items:center;gap:8px;
+}
+.cap::before{content:"//";color:var(--brand);}
+.cap b{color:var(--basil);font-weight:600}
+
+/* ---------- eyebrow section head ---------- */
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);}
+.sechead{margin:0 0 14px}
+.sechead .row{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
+.sechead h2{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em;color:var(--ink)}
+.sechead .rule{height:1px;background:var(--line);margin-top:8px}
+
+/* ============================================================= COMMAND BAR */
+.cmdbar{
+  height:46px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:0 14px;font-family:var(--mono);font-size:12px;
+  position:sticky;top:0;z-index:40;
+}
+.lights{display:flex;gap:7px;align-items:center}
+.lights span{width:11px;height:11px;border-radius:50%}
+.lights .r{background:var(--danger)} .lights .a{background:var(--amber)} .lights .g{background:var(--basil)}
+.prompt{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.prompt .c-core{color:var(--basil);font-weight:600}
+.prompt .c-arrow{color:var(--ink-3)}
+.prompt .c-cmd{color:var(--ink)}
+.caret{width:8px;height:15px;background:var(--basil);display:inline-block;animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.vtabs{display:flex;gap:5px;margin-left:6px}
+.vtab{font-size:11px;color:var(--ink-3);padding:4px 9px;border-radius:var(--r-sm);text-transform:lowercase;letter-spacing:.02em;cursor:pointer;border:1px solid transparent}
+.vtab.on{background:var(--basil-wash);box-shadow:inset 0 0 0 1px var(--basil);color:var(--ink)}
+.spacer{flex:1}
+.ticon{width:30px;height:30px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-3);cursor:pointer}
+.ticon:hover{background:var(--panel-2);color:var(--ink-2)}
+.kchip{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-3);border:1px solid var(--line);padding:5px 9px;border-radius:var(--r-sm);cursor:pointer}
+.kchip kbd{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ink-2);font-size:10px}
+.telemetry{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+.telemetry .dot{color:var(--ink-3)}
+.telemetry .amb{color:var(--amber);font-weight:600}
+.telemetry .bas{color:var(--basil);font-weight:600}
+.bell{position:relative}
+.bell .badge{position:absolute;top:-2px;right:-2px;background:var(--basil);color:var(--on-basil);font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:var(--pill);display:grid;place-items:center;padding:0 3px;font-family:var(--mono)}
+
+/* ============================================================= SHELL LAYOUT */
+.shell{display:flex;min-height:calc(100vh - 46px)}
+
+/* ---------- LENS RAIL ---------- */
+.lensrail{
+  width:64px;background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:stretch;padding:10px 0;gap:4px;flex-shrink:0;
+  transition:width .18s ease;position:relative;
+}
+#lenspin:checked ~ .shell .lensrail{width:194px}
+.lenspin{
+  height:38px;margin:0 10px 6px;border:1px solid var(--line);border-radius:var(--r-sm);
+  display:flex;align-items:center;gap:10px;padding:0 11px;cursor:pointer;color:var(--ink-3);
+  background:var(--panel-2);
+}
+.lenspin:hover{color:var(--ink-2);border-color:var(--line-2)}
+.lenspin .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;opacity:0;transition:opacity .15s;display:none}
+#lenspin:checked ~ .shell .lenspin .lbl{opacity:1;display:block}
+#lenspin:checked ~ .shell .lenspin .pinarrow{transform:rotate(180deg)}
+.lenspin .pinarrow{transition:transform .18s;flex-shrink:0}
+.lensitem{
+  display:flex;align-items:center;gap:13px;margin:0 10px;height:46px;padding:0 12px;border-radius:var(--r-md);
+  color:var(--ink-3);cursor:pointer;text-decoration:none;position:relative;
+}
+.lensitem svg{flex-shrink:0}
+.lensitem:hover{background:var(--panel-2);color:var(--ink-2)}
+.lensitem.on{background:var(--basil-wash);color:var(--ink);box-shadow:inset 0 0 0 1px var(--basil)}
+.lensitem.on::before{content:"";position:absolute;left:-10px;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--basil)}
+.lensitem .lname{font-size:13.5px;font-weight:600;white-space:nowrap;opacity:0;display:none}
+#lenspin:checked ~ .shell .lensitem .lname{opacity:1;display:block}
+.lenshint{margin-top:auto;padding:0 12px;font-family:var(--mono);font-size:8.5px;line-height:1.5;letter-spacing:.04em;color:var(--ink-3);text-align:center;opacity:.7}
+#lenspin:checked ~ .shell .lenshint{text-align:left;padding:0 14px}
+
+/* ---------- CANVAS ---------- */
+.canvas{flex:1;min-width:0;padding:20px 26px 90px;overflow-x:hidden}
+.surface{margin-bottom:34px}
+
+/* ============================================================= POS */
+.pos{display:grid;grid-template-columns:56px 1fr 372px;gap:18px;align-items:start}
+
+/* category icon rail */
+.catrail{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.catitem{
+  width:44px;padding:8px 0 6px;border-radius:var(--r-md);display:flex;flex-direction:column;align-items:center;gap:4px;
+  color:var(--ink-3);cursor:pointer;position:relative;
+}
+.catitem:hover{background:var(--panel-2);color:var(--ink-2)}
+.catitem.on{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px var(--brand)}
+.catitem .cnt{font-family:var(--mono);font-size:9px;font-weight:600;line-height:1;color:var(--ink-3)}
+.catitem.on .cnt{color:var(--brand-bright)}
+
+/* menu grid */
+.menugrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mcard{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px 14px;
+  display:flex;flex-direction:column;gap:8px;min-height:132px;transition:border-color .15s,transform .12s;
+}
+.mcard:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.mcard .mname{font-family:var(--display);font-weight:700;font-size:16.5px;letter-spacing:-.01em;color:var(--ink)}
+.mcard .mdesc{font-size:12px;color:var(--ink-3);line-height:1.4;flex:1}
+.mcard .mtags{display:flex;gap:5px}
+.tag{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.05em;padding:2px 6px;border-radius:var(--r-sm);border:1px solid var(--line-2);color:var(--ink-2)}
+.tag.v{color:var(--basil);border-color:var(--basil-wash);background:var(--basil-wash)}
+.tag.gf{color:var(--amber);border-color:var(--amber-wash);background:var(--amber-wash)}
+.mfoot{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+.mprice{font-family:var(--display);font-weight:600;font-size:16px;color:var(--ink)}
+.mprice .z{font-family:var(--ui);font-size:11px;color:var(--ink-3);font-weight:500;margin-left:2px}
+.addbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);display:grid;place-items:center;cursor:pointer;font-size:18px;line-height:1;transition:all .12s}
+.addbtn:hover{background:var(--brand);border-color:var(--brand);color:var(--on-accent);transform:scale(1.05)}
+
+/* order / ticket panel */
+.ticket{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 18px 16px;
+  display:flex;flex-direction:column;gap:16px;position:sticky;top:66px;
+}
+.tk-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tk-name{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.02em}
+.tk-name small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:400;margin-bottom:2px}
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line-2);border-radius:var(--pill);overflow:hidden}
+.stepper button{width:30px;height:30px;background:var(--panel-2);color:var(--ink-2);border:none;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.stepper button:hover{background:var(--hover);color:var(--ink)}
+.stepper .val{min-width:34px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600}
+.stepper small{font-family:var(--mono);font-size:8px;color:var(--ink-3);display:block;letter-spacing:.1em}
+
+.assignbtn{width:100%;border:1px dashed var(--line-2);background:transparent;color:var(--ink-2);border-radius:var(--r-md);padding:9px;font-family:var(--ui);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.assignbtn:hover{border-color:var(--brand);color:var(--brand-bright)}
+
+.fieldlabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+
+/* segmented control (SHARED) */
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-md);padding:3px;gap:3px}
+.seg button{flex:1;border:none;background:transparent;color:var(--ink-3);font-family:var(--ui);font-size:12px;font-weight:600;padding:7px 6px;border-radius:calc(var(--r-md) - 3px);cursor:pointer;transition:all .12s}
+.seg button:hover{color:var(--ink-2)}
+.seg button.on{background:var(--brand);color:var(--on-accent)}
+.seg.basil button.on{background:var(--basil);color:var(--on-basil)}
+
+.lines{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+.line{display:flex;align-items:flex-start;gap:12px;padding:9px 4px}
+.line .lq{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand-bright);min-width:22px}
+.line .lmid{flex:1}
+.line .lname{font-size:13.5px;font-weight:600;color:var(--ink)}
+.line .lmod{font-size:11px;color:var(--ink-3);margin-top:1px}
+.line .lp{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+
+.totals{display:flex;flex-direction:column;gap:7px}
+.trow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2)}
+.trow.grand{margin-top:4px;padding-top:10px;border-top:1px solid var(--line)}
+.trow.grand .tl{font-family:var(--display);font-weight:700;font-size:16px;color:var(--ink)}
+.trow.grand .tv{font-family:var(--display);font-weight:700;font-size:20px;color:var(--ink)}
+.trow .tv{font-family:var(--mono)}
+
+.charge{width:100%;background:var(--brand);color:var(--on-accent);border:none;border-radius:var(--r-md);padding:15px;font-family:var(--ui);font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 20px -8px var(--brand)}
+.charge:hover{background:var(--brand-bright)}
+.charge .amt{font-family:var(--mono)}
+
+/* ============================================================= STAT STRIP (SHARED) */
+.strip{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  display:grid;padding:18px 8px;
+}
+.strip.pos7{grid-template-columns:repeat(7,1fr)}
+.strip.svc4{grid-template-columns:repeat(4,1fr)}
+.stat{padding:0 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.stat:last-child{border-right:none}
+.stat .se{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.stat .sv{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:-.03em;line-height:.95;color:var(--ink)}
+.stat .sv small{font-size:14px;color:var(--ink-3);font-weight:500;letter-spacing:0}
+.stat.c-amber .sv{color:var(--amber)} .stat.c-danger .sv{color:var(--danger)}
+.stat.c-basil .sv{color:var(--basil)} .stat.c-info .sv{color:var(--info)}
+
+/* ============================================================= KDS lanes */
+.lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.lane{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px}
+.lane-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.lane-h .lh-t{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.lane-h .lh-c{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--pill)}
+.lane.new .lh-c{background:var(--panel-3);color:var(--ink-2)}
+.lane.firing .lh-c{background:var(--info);color:var(--bg)}
+.lane.ready .lh-c{background:var(--basil);color:var(--on-basil)}
+.tkt{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;border-left:3px solid var(--line-2)}
+.lane.firing .tkt{border-left-color:var(--info)}
+.lane.new .tkt{border-left-color:var(--amber)}
+.lane.ready .tkt{border-left-color:var(--basil)}
+.tkt-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.tkt-h .tt{font-family:var(--display);font-weight:700;font-size:15px}
+.tkt-h .timer{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 7px;border-radius:var(--r-sm)}
+.timer.info{background:var(--panel-3);color:var(--info)}
+.timer.warn{background:var(--amber-wash);color:var(--amber)}
+.timer.late{background:var(--danger-wash);color:var(--danger)}
+.timer.ok{background:var(--basil-wash);color:var(--basil)}
+.tkt-items{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.tkt-items li{list-style:none;font-size:12.5px;color:var(--ink-2);display:flex;gap:8px}
+.tkt-items li b{color:var(--ink);font-family:var(--mono);font-size:11px}
+.bump{width:100%;border:1px solid var(--line-2);background:var(--panel-3);color:var(--ink);border-radius:var(--r-sm);padding:8px;font-family:var(--ui);font-size:12px;font-weight:600;cursor:pointer}
+.bump:hover{background:var(--basil);color:var(--on-basil);border-color:var(--basil)}
+.lane.ready .bump{background:var(--basil-wash);color:var(--basil);border-color:var(--basil)}
+.lane.ready .bump:hover{background:var(--basil);color:var(--on-basil)}
+
+/* ============================================================= SERVICE */
+.svc-tabs{display:flex;gap:6px;margin-bottom:14px}
+.svc-tab{font-family:var(--ui);font-size:13px;font-weight:600;color:var(--ink-3);padding:9px 16px;border-radius:var(--r-md);border:1px solid transparent;cursor:pointer;background:var(--panel);border:1px solid var(--line)}
+.svc-tab:hover{color:var(--ink-2);border-color:var(--line-2)}
+.svc-tab.on{background:var(--brand-wash);color:var(--brand-bright);border-color:var(--brand)}
+.floorgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.ttile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 12px;display:flex;flex-direction:column;gap:5px;position:relative;overflow:hidden}
+.ttile::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+.ttile.open::after{background:var(--basil)}
+.ttile.seated::after{background:var(--brand)}
+.ttile.bill::after{background:var(--amber)}
+.ttile.dirty::after{background:var(--ink-3)}
+.ttile .tn{font-family:var(--display);font-weight:700;font-size:18px}
+.ttile .tmeta{font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.04em}
+.ttile .tstatus{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-top:2px}
+.tstatus.open{color:var(--basil)} .tstatus.seated{color:var(--brand-bright)}
+.tstatus.bill{color:var(--amber)} .tstatus.dirty{color:var(--ink-3)}
+
+.peeks{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.peek{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px}
+.peek h4{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.peek .sameframe{font-family:var(--mono);font-size:9px;color:var(--basil);letter-spacing:.06em;margin-bottom:12px}
+.slotrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.slotrow:last-child{border-bottom:none}
+.slotrow .st{font-family:var(--mono);color:var(--ink-2)}
+.slotbar{flex:1;height:6px;background:var(--panel-3);border-radius:var(--pill);margin:0 12px;overflow:hidden}
+.slotbar i{display:block;height:100%;background:var(--brand);border-radius:var(--pill)}
+.slotrow .sc{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.disprow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.disprow:last-child{border-bottom:none}
+.disprow .rider{width:28px;height:28px;border-radius:50%;background:var(--brand-wash);color:var(--brand-bright);display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700}
+.disprow .dmid{flex:1}
+.disprow .dn{font-size:12.5px;font-weight:600;color:var(--ink)}
+.disprow .dm{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.disprow .dstat{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:var(--pill)}
+.dstat.route{background:var(--info);color:var(--bg)} .dstat.wait{background:var(--amber-wash);color:var(--amber)}
+
+/* ============================================================= WHAT CHANGED legend */
+.legend{
+  position:fixed;right:16px;bottom:16px;z-index:50;width:264px;
+  background:var(--panel-2);border:1px solid var(--line-2);border-radius:var(--r-lg);
+  box-shadow:0 18px 50px -12px rgba(0,0,0,.7);overflow:hidden;
+}
+.legend summary{
+  list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:var(--panel-3);
+}
+.legend summary::-webkit-details-marker{display:none}
+.legend summary .tri{transition:transform .18s}
+.legend[open] summary .tri{transform:rotate(90deg)}
+.legend ol{list-style:none;padding:8px 14px 14px;counter-reset:l}
+.legend li{counter-increment:l;font-size:11.5px;color:var(--ink-2);padding:6px 0;padding-left:26px;position:relative;line-height:1.35;border-bottom:1px solid var(--line)}
+.legend li:last-child{border-bottom:none}
+.legend li::before{content:counter(l);position:absolute;left:0;top:6px;width:18px;height:18px;border-radius:50%;background:var(--brand-wash);color:var(--brand-bright);font-family:var(--mono);font-size:10px;font-weight:700;display:grid;place-items:center}
+
+.pagehead{padding:20px 26px 4px}
+.pagehead .k{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.pagehead h1{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;margin-top:4px}
+.pagehead p{font-size:13px;color:var(--ink-3);max-width:640px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<!-- ============ COMMAND BAR ============ -->
+<div class="cmdbar">
+  <div class="lights"><span class="r"></span><span class="a"></span><span class="g"></span></div>
+  <div class="prompt">
+    <span class="c-core">core</span><span class="c-arrow">❯</span><span class="c-cmd">pos:order</span>
+    <span class="caret"></span>
+  </div>
+  <div class="vtabs">
+    <span class="vtab on">order</span>
+    <span class="vtab">tabs</span>
+    <span class="vtab">pay</span>
+    <span class="vtab">refund</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="ticon" title="Layout">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><line x1="6.5" y1="2.5" x2="6.5" y2="13.5"/></svg>
+  </div>
+  <div class="ticon" title="Refresh">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M13 8a5 5 0 1 1-1.5-3.5"/><path d="M13 2.5V5h-2.5"/></svg>
+  </div>
+  <div class="kchip"><span>search</span><kbd>⌘K</kbd></div>
+  <div class="telemetry">
+    <span>risk&nbsp;<span class="amb">3</span></span><span class="dot">·</span>
+    <span>loc krakow</span><span class="dot">·</span>
+    <span class="bas">16:16</span>
+  </div>
+  <div class="ticon bell" title="Alerts">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 6.5a4 4 0 0 1 8 0c0 3 1 4 1 4H3s1-1 1-4Z"/><path d="M6.5 13a1.6 1.6 0 0 0 3 0"/></svg>
+    <span class="badge">3</span>
+  </div>
+  <div class="ticon" title="Theme">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"/></svg>
+  </div>
+</div>
+
+<!-- checkbox hack drives lens-rail expansion -->
+<input type="checkbox" id="lenspin" hidden />
+
+<div class="shell">
+
+  <!-- ============ LENS RAIL ============ -->
+  <nav class="lensrail">
+    <label class="lenspin" for="lenspin" title="Pin / expand rail">
+      <span class="pinarrow">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3l5 5-5 5"/></svg>
+      </span>
+      <span class="lbl">Collapse</span>
+    </label>
+
+    <a class="lensitem" title="Floor">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 13a8 8 0 0 1 16 0"/><line x1="3" y1="13" x2="21" y2="13"/><line x1="12" y1="13" x2="12" y2="20"/><circle cx="12" cy="4.5" r="1"/></svg>
+      <span class="lname">Floor</span>
+    </a>
+    <a class="lensitem on" title="POS">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="6.5" y1="14.5" x2="10" y2="14.5"/></svg>
+      <span class="lname">POS</span>
+    </a>
+    <a class="lensitem" title="KDS">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/><path d="M7 8h10M7 11h6"/></svg>
+      <span class="lname">KDS</span>
+    </a>
+    <a class="lensitem" title="Book">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/></svg>
+      <span class="lname">Book</span>
+    </a>
+
+    <div class="lenshint">click ▸<br>to expand<br>not hover</div>
+  </nav>
+
+  <!-- ============ CANVAS ============ -->
+  <main class="canvas">
+
+    <div class="pagehead" style="padding:0 0 18px">
+      <div class="k">Core · Operator OS · Editorial 04</div>
+      <h1>POS — Order</h1>
+      <p>One canvas, six fixes. Each surface below opens with a mono eyebrow mapping it to the change it demonstrates. Kraków, dinner service, 16:16.</p>
+    </div>
+
+    <!-- ---------- POS SURFACE ---------- -->
+    <section class="surface">
+      <div class="cap">FIX <b>#1</b> icon-only category rail · FIX <b>#6</b> redesigned order section · FIX <b>#5</b> old name "POS"</div>
+      <div class="sechead"><div class="row"><span class="eyebrow">Point of Sale · Active Check</span></div><div class="rule"></div></div>
+
+      <div class="pos">
+
+        <!-- category icon rail -->
+        <div class="catrail">
+          <div class="catitem on" title="Popular">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L4 8.7l6-.7z"/></svg>
+            <span class="cnt">11</span>
+          </div>
+          <div class="catitem" title="All items">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            <span class="cnt">23</span>
+          </div>
+          <div class="catitem" title="Pizza">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 3 20l9-2 9 2Z"/><circle cx="10" cy="12" r="1" fill="currentColor"/><circle cx="14" cy="15" r="1" fill="currentColor"/><circle cx="11" cy="16" r="1" fill="currentColor"/></svg>
+            <span class="cnt">8</span>
+          </div>
+          <div class="catitem" title="Pasta">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h16"/><path d="M6 20c0-6 2-11 6-11s6 5 6 11"/><path d="M9 9V4M12 9V3M15 9V4"/></svg>
+            <span class="cnt">4</span>
+          </div>
+          <div class="catitem" title="Antipasti">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="cnt">5</span>
+          </div>
+          <div class="catitem" title="Panini">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 9a8 4 0 0 1 16 0Z"/><path d="M4 9v3a8 4 0 0 0 16 0V9"/><path d="M7 11h10"/></svg>
+            <span class="cnt">2</span>
+          </div>
+          <div class="catitem" title="Desserts">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 21h14l-1-9H6Z"/><path d="M12 12V7"/><circle cx="12" cy="5" r="1.6"/></svg>
+            <span class="cnt">3</span>
+          </div>
+          <div class="catitem" title="Drinks">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4h12l-1.5 16h-9Z"/><path d="M6.5 9h11"/></svg>
+            <span class="cnt">2</span>
+          </div>
+        </div>
+
+        <!-- menu grid -->
+        <div class="menugrid">
+          <div class="mcard">
+            <div class="mname">Margherita</div>
+            <div class="mdesc">San Marzano, fior di latte, basil, EVOO.</div>
+            <div class="mtags"><span class="tag v">V</span></div>
+            <div class="mfoot"><div class="mprice">38<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mname">Diavola</div>
+            <div class="mdesc">Spicy salame, chilli, mozzarella, tomato.</div>
+            <div class="mtags"></div>
+            <div class="mfoot"><div class="mprice">46<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mname">Tartufo</div>
+            <div class="mdesc">Truffle cream, mushroom, mozzarella, thyme.</div>
+            <div class="mtags"><span class="tag v">V</span></div>
+            <div class="mfoot"><div class="mprice">54<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mname">Bufala DOP</div>
+            <div class="mdesc">Buffalo mozzarella, tomato, basil, olive oil.</div>
+            <div class="mtags"><span class="tag v">V</span></div>
+            <div class="mfoot"><div class="mprice">52<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mname">Cacio e Pepe</div>
+            <div class="mdesc">Pecorino, black pepper, tonnarelli.</div>
+            <div class="mtags"><span class="tag v">V</span></div>
+            <div class="mfoot"><div class="mprice">44<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+          <div class="mcard">
+            <div class="mname">Marinara GF</div>
+            <div class="mdesc">Tomato, garlic, oregano — gluten-free base.</div>
+            <div class="mtags"><span class="tag v">VG</span><span class="tag gf">GF</span></div>
+            <div class="mfoot"><div class="mprice">36<span class="z">zł</span></div><button class="addbtn">+</button></div>
+          </div>
+        </div>
+
+        <!-- order / ticket panel -->
+        <aside class="ticket">
+          <div class="tk-head">
+            <div class="tk-name"><small>Open check</small>Tab 4</div>
+            <div class="stepper">
+              <button>−</button>
+              <div class="val">2<small>COVERS</small></div>
+              <button>+</button>
+            </div>
+          </div>
+
+          <button class="assignbtn">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M8 5.5v5M5.5 8h5"/></svg>
+            Assign table
+          </button>
+
+          <div>
+            <div class="fieldlabel">Channel</div>
+            <div class="seg">
+              <button class="on">Dine-in</button>
+              <button>Takeaway</button>
+              <button>Delivery</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="fieldlabel">Kitchen timing</div>
+            <div class="seg basil">
+              <button class="on">Coursed</button>
+              <button>All together</button>
+            </div>
+          </div>
+
+          <div class="lines">
+            <div class="line">
+              <span class="lq">1×</span>
+              <div class="lmid"><div class="lname">Tartufo</div><div class="lmod">extra truffle · well done</div></div>
+              <span class="lp">54 zł</span>
+            </div>
+            <div class="line">
+              <span class="lq">2×</span>
+              <div class="lmid"><div class="lname">Margherita</div><div class="lmod">no basil · 1 half-cut</div></div>
+              <span class="lp">76 zł</span>
+            </div>
+            <div class="line">
+              <span class="lq">2×</span>
+              <div class="lmid"><div class="lname">Aperol Spritz</div><div class="lmod">—</div></div>
+              <span class="lp">44 zł</span>
+            </div>
+          </div>
+
+          <div class="totals">
+            <div class="trow"><span class="tl">Subtotal</span><span class="tv">174,00 zł</span></div>
+            <div class="trow"><span class="tl">VAT 8%</span><span class="tv">13,92 zł</span></div>
+            <div class="trow grand"><span class="tl">Total</span><span class="tv">187,92 zł</span></div>
+          </div>
+
+          <button class="charge"><span>Charge</span><span class="amt">187,92 zł</span></button>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ---------- KDS SURFACE ---------- -->
+    <section class="surface">
+      <div class="cap">FIX <b>#3</b> unified KDS KPI strip (same component as POS/Service) · FIX <b>#5</b> old name "KDS"</div>
+      <div class="sechead"><div class="row"><span class="eyebrow">Kitchen Display · Live Board</span></div><div class="rule"></div></div>
+
+      <div class="strip pos7" style="margin-bottom:16px">
+        <div class="stat"><span class="se">Active</span><span class="sv">14</span></div>
+        <div class="stat c-amber"><span class="se">At risk</span><span class="sv">3</span></div>
+        <div class="stat c-danger"><span class="se">Late</span><span class="sv">1</span></div>
+        <div class="stat c-basil"><span class="se">Ready</span><span class="sv">5</span></div>
+        <div class="stat"><span class="se">Throughput</span><span class="sv">41<small>/hr</small></span></div>
+        <div class="stat"><span class="se">Covers</span><span class="sv">63<small>/hr</small></span></div>
+        <div class="stat"><span class="se">Revenue</span><span class="sv">2.4<small>k zł/hr</small></span></div>
+      </div>
+
+      <div class="lanes">
+        <div class="lane new">
+          <div class="lane-h"><span class="lh-t">New</span><span class="lh-c">4</span></div>
+          <div class="tkt">
+            <div class="tkt-h"><span class="tt">Tab 7 · T12</span><span class="timer warn">2:40</span></div>
+            <ul class="tkt-items">
+              <li><b>2×</b> Diavola</li>
+              <li><b>1×</b> Marinara GF</li>
+              <li><b>1×</b> Burrata antipasto</li>
+            </ul>
+            <button class="bump">Start firing</button>
+          </div>
+        </div>
+        <div class="lane firing">
+          <div class="lane-h"><span class="lh-t">Firing</span><span class="lh-c">6</span></div>
+          <div class="tkt">
+            <div class="tkt-h"><span class="tt">Tab 3 · T05</span><span class="timer info">4:12</span></div>
+            <ul class="tkt-items">
+              <li><b>1×</b> Tartufo</li>
+              <li><b>2×</b> Margherita</li>
+              <li><b>1×</b> Cacio e Pepe</li>
+            </ul>
+            <button class="bump">Bump to pass</button>
+          </div>
+        </div>
+        <div class="lane ready">
+          <div class="lane-h"><span class="lh-t">Ready</span><span class="lh-c">5</span></div>
+          <div class="tkt">
+            <div class="tkt-h"><span class="tt">Tab 9 · T18</span><span class="timer ok">0:35</span></div>
+            <ul class="tkt-items">
+              <li><b>2×</b> Bufala DOP</li>
+              <li><b>1×</b> Tiramisù</li>
+            </ul>
+            <button class="bump">Hand to runner</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- SERVICE SURFACE ---------- -->
+    <section class="surface">
+      <div class="cap">FIX <b>#4</b> Floor / Slots / Dispatch share identical chrome + stat strip + panel language</div>
+      <div class="sechead"><div class="row"><span class="eyebrow">Service · Front of House</span></div><div class="rule"></div></div>
+
+      <div class="svc-tabs">
+        <div class="svc-tab on">Floor</div>
+        <div class="svc-tab">Slots</div>
+        <div class="svc-tab">Dispatch</div>
+      </div>
+
+      <div class="strip svc4" style="margin-bottom:16px">
+        <div class="stat c-basil"><span class="se">Tables open</span><span class="sv">6</span></div>
+        <div class="stat"><span class="se">Seated</span><span class="sv">11</span></div>
+        <div class="stat c-amber"><span class="se">Awaiting bill</span><span class="sv">2</span></div>
+        <div class="stat"><span class="se">Avg dwell</span><span class="sv">64<small>min</small></span></div>
+      </div>
+
+      <div class="floorgrid">
+        <div class="ttile seated"><span class="tn">T01</span><span class="tmeta">2 covers · 22m</span><span class="tstatus seated">Seated</span></div>
+        <div class="ttile seated"><span class="tn">T03</span><span class="tmeta">4 covers · 48m</span><span class="tstatus seated">Seated</span></div>
+        <div class="ttile bill"><span class="tn">T05</span><span class="tmeta">2 covers · 71m</span><span class="tstatus bill">Bill</span></div>
+        <div class="ttile open"><span class="tn">T07</span><span class="tmeta">— · 4 seats</span><span class="tstatus open">Open</span></div>
+        <div class="ttile seated"><span class="tn">T09</span><span class="tmeta">3 covers · 15m</span><span class="tstatus seated">Seated</span></div>
+        <div class="ttile dirty"><span class="tn">T11</span><span class="tmeta">reset needed</span><span class="tstatus dirty">Dirty</span></div>
+        <div class="ttile seated"><span class="tn">T12</span><span class="tmeta">4 covers · 8m</span><span class="tstatus seated">Seated</span></div>
+        <div class="ttile open"><span class="tn">T14</span><span class="tmeta">— · 2 seats</span><span class="tstatus open">Open</span></div>
+        <div class="ttile bill"><span class="tn">T15</span><span class="tmeta">6 covers · 92m</span><span class="tstatus bill">Bill</span></div>
+        <div class="ttile open"><span class="tn">T16</span><span class="tmeta">— · 6 seats</span><span class="tstatus open">Open</span></div>
+        <div class="ttile seated"><span class="tn">T18</span><span class="tmeta">2 covers · 34m</span><span class="tstatus seated">Seated</span></div>
+        <div class="ttile open"><span class="tn">T20</span><span class="tmeta">— · 4 seats</span><span class="tstatus open">Open</span></div>
+      </div>
+
+      <div class="peeks">
+        <div class="peek">
+          <h4>Slots · same frame</h4>
+          <div class="sameframe">▸ reuses the identical panel + stat strip</div>
+          <div class="slotrow"><span class="st">18:30</span><div class="slotbar"><i style="width:82%"></i></div><span class="sc">28/34</span></div>
+          <div class="slotrow"><span class="st">19:00</span><div class="slotbar"><i style="width:97%"></i></div><span class="sc">33/34</span></div>
+          <div class="slotrow"><span class="st">19:30</span><div class="slotbar"><i style="width:64%"></i></div><span class="sc">22/34</span></div>
+          <div class="slotrow"><span class="st">20:00</span><div class="slotbar"><i style="width:41%"></i></div><span class="sc">14/34</span></div>
+        </div>
+        <div class="peek">
+          <h4>Dispatch · same frame</h4>
+          <div class="sameframe">▸ reuses the identical panel + stat strip</div>
+          <div class="disprow"><span class="rider">MK</span><div class="dmid"><div class="dn">Order #4821 · Kazimierz</div><div class="dm">2 pizzas · 3.1 km · ETA 14m</div></div><span class="dstat route">En route</span></div>
+          <div class="disprow"><span class="rider">PT</span><div class="dmid"><div class="dn">Order #4823 · Stare Miasto</div><div class="dm">1 pizza · 1.4 km · ETA 8m</div></div><span class="dstat route">En route</span></div>
+          <div class="disprow"><span class="rider">—</span><div class="dmid"><div class="dn">Order #4825 · Podgórze</div><div class="dm">3 pizzas · awaiting rider</div></div><span class="dstat wait">Unassigned</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ WHAT CHANGED LEGEND ============ -->
+<details class="legend" open>
+  <summary>What changed <span class="tri"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></span></summary>
+  <ol>
+    <li>Icon-only category menu rail (was wide text list)</li>
+    <li>Lens rail expands on <b style="color:var(--basil)">click</b>, not hover</li>
+    <li>Unified KDS KPI strip — same stat component everywhere</li>
+    <li>Floor / Slots / Dispatch share one frame</li>
+    <li>Old names kept: POS &amp; KDS (not Line/Pass)</li>
+    <li>Redesigned order / ticket section</li>
+  </ol>
+</details>
+
+</body>
+</html>
