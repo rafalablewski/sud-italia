@@ -1115,6 +1115,8 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 @keyframes core-foodup { 0%,100% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,0); } 50% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,.3); } }
 .core .core-tbl2.food-up { border-left-color: var(--basil); animation: core-foodup 1.3s ease-in-out infinite; }
 .core .core-tfoodup { align-self: stretch; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--on-basil); background: linear-gradient(150deg, #93d47a, var(--basil)); border-radius: 6px; padding: 3px 8px; text-align: center; }
+/* a QR order the guest placed at this table — the "fourth renderer" on the floor. */
+.core .core-tguest { align-self: stretch; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--info); background: rgba(84,188,224,.16); border: 1px solid rgba(84,188,224,.4); border-radius: 6px; padding: 3px 8px; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .core .core-tbl2.food-up { animation: none; box-shadow: 0 0 0 2px var(--basil); } }
 /* RadialActions — a table tap blooms state-aware verbs at the finger. */
 .core .core-radial-scrim { position: fixed; inset: 0; z-index: 200; }

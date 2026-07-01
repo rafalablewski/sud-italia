@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -146,6 +146,28 @@ export function CoreFloor({
     for (const o of liveOrders) if (o.tableId && o.status === "ready") s.add(o.tableId);
     return s;
   }, [liveOrders]);
+
+  // Guest-ordered tables — a QR order the guest placed at a table, still active
+  // (the "fourth renderer" contributing to the floor). The tile flags it and,
+  // when a NEW one lands, the server gets a soft toast to review & fire.
+  const guestOrderedTables = useMemo(() => {
+    const s = new Set<string>();
+    for (const o of liveOrders) if (o.channel === "qr" && o.tableId && o.status !== "completed" && o.status !== "cancelled") s.add(o.tableId);
+    return s;
+  }, [liveOrders]);
+  const prevGuest = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const prev = prevGuest.current;
+    if (prev) {
+      for (const id of guestOrderedTables) {
+        if (!prev.has(id)) {
+          const num = twin?.tables.find((t) => t.id === id)?.number ?? "?";
+          toast(`T${num} — guest ordered · review & fire`, "default");
+        }
+      }
+    }
+    prevGuest.current = new Set(guestOrderedTables);
+  }, [guestOrderedTables, twin, toast]);
 
   const settle = async (orderId: string) => {
     if (settling) return;
@@ -431,6 +453,7 @@ export function CoreFloor({
                     const hasQr = tOrders.some((o) => o.channel === "qr");
                     const isFocus = selected?.kind === "table" && selected.id === t.id;
                     const foodUp = foodUpTables.has(t.id);
+                    const guestOrdered = guestOrderedTables.has(t.id);
                     const allergy = !!t.notes && ALLERGY_RE.test(t.notes);
                     // Capacity-sized tiles — a 6-top reads bigger than a deuce.
                     const sizeCls = t.seats >= 6 ? "sz-lg" : t.seats >= 4 ? "sz-md" : "sz-sm";
@@ -439,6 +462,8 @@ export function CoreFloor({
                     // priority order (allergy → unpaid → note → paid → open check).
                     const urgent = foodUp ? (
                       <span className="core-tfoodup">🔔 Food up</span>
+                    ) : guestOrdered ? (
+                      <span className="core-tguest">🛎 Guest ordered</span>
                     ) : allergy ? (
                       <span className="core-tnote-chip alrg" title={t.notes}>⚠ {t.notes}</span>
                     ) : tUnpaid.length > 0 ? (
