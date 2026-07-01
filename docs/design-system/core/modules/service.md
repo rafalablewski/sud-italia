@@ -23,7 +23,7 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   focus is visible on the Floor even after it was picked on another lens.
 - **Tap a table → a state-aware RadialActions bloom** (`.core-radial`,
   portaled to the `.core` root per Rule #4) offers 3-4 verbs for that table's
-  state (seated → Open check · Free · Edit; free/reserved → Seat · Reserve ·
+  state (seated → Open check · Move · Free · Edit; free/reserved → Seat · Reserve ·
   Edit; out-of-service → Restore · Edit). The tap also feeds the Context Dock.
   Zones are filterable via `.core-zonetabs` (All + one chip per zone).
 - **Open check → the check opens as a panel over the floor** — the core IA

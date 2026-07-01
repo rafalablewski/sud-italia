@@ -245,12 +245,29 @@ export function CoreFloor({
   };
   // Contextual radial — a table tap blooms 3-4 verbs relevant to its state.
   const [radial, setRadial] = useState<{ table: TwinTableRow; x: number; y: number } | null>(null);
+  // Move mode — after "Move", the next tapped table is the destination.
+  const [moveFrom, setMoveFrom] = useState<TwinTableRow | null>(null);
+  const startMove = (t: TwinTableRow) => { setMoveFrom(t); toast(`Move Table ${t.number} — tap the destination table`, "default"); };
+  const doMove = async (from: TwinTableRow, to: TwinTableRow) => {
+    setMoveFrom(null);
+    if (from.id === to.id) return;
+    setActing(to.id);
+    try {
+      const res = await fetch(`/api/admin/floor-twin?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move", tableId: from.id, toTableId: to.id }),
+      });
+      if (res.ok) { toast(`Moved Table ${from.number} → Table ${to.number}`, "success"); await load(); }
+      else { const j = await res.json().catch(() => ({})); toast(j.error || "Could not move", "danger"); }
+    } finally { setActing(null); }
+  };
   const radialVerbs = (t: TwinTableRow): { label: string; icon: string; primary?: boolean; on: () => void }[] => {
     if (t.status === "out-of-service")
       return [{ label: "Restore", icon: "↻", primary: true, on: () => setEditing(t) }, { label: "Edit", icon: "⋯", on: () => setEditing(t) }];
     if (t.occupied)
       return [
         { label: "Open check", icon: "🧾", primary: true, on: () => openCheck(t) },
+        { label: "Move", icon: "⇄", on: () => startMove(t) },
         { label: "Free", icon: "✓", on: () => act(t) },
         { label: "Edit", icon: "⋯", on: () => setEditing(t) },
       ];
@@ -480,8 +497,10 @@ export function CoreFloor({
                     return (
                       <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
                         <button
-                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}`}
+                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}${moveFrom?.id === t.id ? " is-moving" : ""}`}
                           onClick={(e) => {
+                            // In move mode, the next tap is the destination.
+                            if (moveFrom) { void doMove(moveFrom, t); return; }
                             // Tap blooms the state-aware radial AND feeds the
                             // dock (so the check follows across lenses on tap).
                             select(buildSelection(t));

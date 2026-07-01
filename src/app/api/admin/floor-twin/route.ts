@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAdmin } from "@/lib/api-middleware";
-import { getFloorEvents, getOrders, getTables, saveTable } from "@/lib/store";
+import { getFloorEvents, getOrders, getTables, saveTable, updateOrder } from "@/lib/store";
 import { buildFloorTwin } from "@/lib/floor-twin";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
@@ -66,7 +66,12 @@ export const GET = withAdmin(
   },
 );
 
-const ActionSchema = z.object({ action: z.enum(["seat", "clear"]), tableId: z.string().min(1) });
+const ActionSchema = z.object({
+  action: z.enum(["seat", "clear", "move"]),
+  tableId: z.string().min(1),
+  /** Destination table for a move (the party + its open check go here). */
+  toTableId: z.string().min(1).optional(),
+});
 
 /**
  * Seat / clear a table from the Twin — the predictive-seating act. Flips the
@@ -81,8 +86,25 @@ export const POST = withAdmin(
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid body", issues: parsed.error.issues }, { status: 400 });
     }
-    const table = (await getTables(locationSlug)).find((t) => t.id === parsed.data.tableId);
+    const tables = await getTables(locationSlug);
+    const table = tables.find((t) => t.id === parsed.data.tableId);
     if (!table) return NextResponse.json({ error: "table not found" }, { status: 404 });
+
+    // Move — relocate a seated party (and its open dine-in check) to another
+    // table: reassign the source table's active orders, free the source, seat
+    // the target. The check follows the party; the Twin re-derives dwell.
+    if (parsed.data.action === "move") {
+      const target = parsed.data.toTableId ? tables.find((t) => t.id === parsed.data.toTableId) : undefined;
+      if (!target) return NextResponse.json({ error: "target table not found" }, { status: 404 });
+      if (target.id === table.id) return NextResponse.json({ error: "same table" }, { status: 400 });
+      if (target.status === "out-of-service") return NextResponse.json({ error: "target out of service" }, { status: 400 });
+      const orders = await getOrders(locationSlug);
+      const moving = orders.filter((o) => o.tableId === table.id && !o.simulated && o.status !== "completed" && o.status !== "cancelled");
+      for (const o of moving) await updateOrder(o.id, { tableId: target.id });
+      await saveTable({ ...table, status: "available" });
+      await saveTable({ ...target, status: "seated" });
+      return NextResponse.json({ ok: true, action: "move", moved: moving.length, from: table.id, to: target.id });
+    }
 
     const status = parsed.data.action === "seat" ? "seated" : "available";
     await saveTable({ ...table, status }); // logs the seat/clear transition
