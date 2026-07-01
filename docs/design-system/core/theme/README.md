@@ -123,12 +123,16 @@ surface toolbar.
   component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
   identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
-    surface body (POS): a bordered glass panel of `.cell`s, each an uppercase
-    mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/`.basil`/
-    `.amber`/`.info`/`.danger`, optional `<small>` unit), and a colour-coded
-    `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber). Divider is a
-    `.cell + .cell::before` hairline. Every figure MUST be real surface data
-    (Rule #1). Matches the mockup's `.statstrip`.
+    surface body (POS, **Floor**): a bordered glass panel of `.cell`s, each an
+    uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
+    `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
+    colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
+    Divider is a `.cell + .cell::before` hairline. Every figure MUST be real
+    surface data (Rule #1). Matches the mockup's `.statstrip`.
+- **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
+  uppercase mono `CORE — SURFACE · … · liquid glass · [context]`, with `b`
+  basil and a `.fix` ember pill for the location/mode tag. Sits directly above
+  the `.core-sectionhead` (Floor).
 - **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
   beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
   context tag. Sits under the sub-toolbar, over the stat strip.

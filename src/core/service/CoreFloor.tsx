@@ -197,8 +197,6 @@ export function CoreFloor({
     ).slice(0, 8);
   }, [lookup, orders]);
 
-  const unpaidCount = useMemo(() => orders.filter((o) => !o.paid).length, [orders]);
-
   const post = async (action: "seat" | "clear", tableId: string, number: string) => {
     if (acting) return;
     setActing(tableId);
@@ -334,6 +332,20 @@ export function CoreFloor({
   }, [twin]);
 
   const s = twin?.summary;
+  // Live derived counts for the dense-console stat strip — all from real floor
+  // + order state (Rule #1): free tables, free four-tops, tables on an unpaid
+  // bill, złoty still to clear, and seated covers.
+  const floorStats = useMemo(() => {
+    const tbls = twin?.tables ?? [];
+    let free = 0, freeFourtops = 0, billing = 0, dueGrosze = 0, covers = 0;
+    for (const t of tbls) {
+      const tUnpaid = (ordersByTable.get(t.id) ?? []).filter((o) => !o.paid);
+      if (tUnpaid.length > 0) { billing++; dueGrosze += tUnpaid.reduce((a, o) => a + o.totalAmount, 0); }
+      if (t.occupied) covers += t.party ?? t.seats;
+      else if (t.status === "available") { free++; if (t.seats >= 4) freeFourtops++; }
+    }
+    return { free, freeFourtops, billing, dueGrosze, covers };
+  }, [twin, ordersByTable]);
   const stateOf = (t: TwinTableRow): { cls: string; label: string } => {
     if (t.status === "out-of-service") return { cls: "oos", label: "Out of service" };
     if (t.occupied && t.predictedFreeInMin != null && t.predictedFreeInMin <= 15)
@@ -355,17 +367,46 @@ export function CoreFloor({
       }
     >
       <div className="core-guest-inbox">
+        <div className="core-crumb">
+          CORE — SERVICE · FLOOR · <b>liquid glass</b> · <span className="fix">{location} · dine-in</span>
+        </div>
         <div className="core-sectionhead">
           <h1>Service · Floor</h1>
-          <span className="sub">{location} · {s ? `${s.seated} of ${s.totalTables} seated` : "live floor"}</span>
+          <span className="sub">{s ? `${s.totalTables} tables` : "live floor"}{zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}</span>
         </div>
-        <div className="core-kpi-strip">
-          <div className="k"><div className="kl">Covers seated</div><div className="kv mono">{s ? `${s.seated} / ${s.totalTables}` : "—"}</div></div>
-          <div className="k"><div className="kl">Occupancy</div><div className="kv mono">{s ? `${Math.round(s.occupancyPct)}%` : "—"}</div></div>
-          <div className="k"><div className="kl">Turn time</div><div className="kv mono">{s?.medianTurnMin != null ? `${s.medianTurnMin}m` : "—"}</div></div>
-          <div className="k"><div className="kl">Spend / hr</div><div className="kv mono">{s?.spendVelocityPerHourGrosze != null ? zl0(s.spendVelocityPerHourGrosze) : "—"}</div></div>
-          <div className="k"><div className="kl">Freeing ≤15m</div><div className="kv mono">{s?.freeingSoon15 ?? "—"}</div></div>
-          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={unpaidCount > 0 ? { color: "var(--brand-bright)" } : undefined}>{unpaidCount || "—"}</div></div>
+        {/* dense-console stat strip — every figure from live floor state (Rule #1):
+            seated · free · on bill · covers · occupancy · spend velocity. */}
+        <div className="core-statstrip" role="group" aria-label="Floor metrics">
+          <div className="cell">
+            <span className="lab">Seated</span>
+            <span className="val info">{s ? s.seated : "—"}</span>
+            <span className="delta">{s ? `of ${s.totalTables} tables` : ""}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Free</span>
+            <span className="val basil">{twin ? floorStats.free : "—"}</span>
+            <span className="delta">{twin ? `${floorStats.freeFourtops} four-top${floorStats.freeFourtops === 1 ? "" : "s"}` : ""}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">On bill</span>
+            <span className={floorStats.billing > 0 ? "val amber" : "val"}>{twin ? floorStats.billing : "—"}</span>
+            <span className="delta">{floorStats.dueGrosze > 0 ? `${zl0(floorStats.dueGrosze)} to clear` : "settled"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Covers</span>
+            <span className="val">{twin ? floorStats.covers : "—"}</span>
+            <span className="delta">{s ? `${s.seated} table${s.seated === 1 ? "" : "s"} seated` : ""}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Occupancy</span>
+            <span className="val">{s ? <>{Math.round(s.occupancyPct)}<small>%</small></> : "—"}</span>
+            <span className="delta">{s?.freeingSoon15 ? `${s.freeingSoon15} freeing ≤15m` : "steady"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Spend / hr</span>
+            <span className="val brand">{s?.spendVelocityPerHourGrosze != null ? zl0(s.spendVelocityPerHourGrosze) : "—"}</span>
+            <span className="delta">{s?.medianTurnMin != null ? `${s.medianTurnMin}m turn` : "live"}</span>
+          </div>
         </div>
 
         <div className="core-floor-bar">
@@ -405,9 +446,18 @@ export function CoreFloor({
         )}
 
         {kitchen && kitchen.tier !== "calm" && (
-          <div className={`core-bottleneck ${kitchen.tier}`}>
-            <span className="dot" />
-            Kitchen {kitchen.tier === "risk" ? "at risk" : "warming"} — {kitchen.label ?? "a station"} at {Math.round(kitchen.util)}% · pace the seating
+          <div className={`core-bottleneck ${kitchen.tier}`} role="status">
+            <span className="bn-ic" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+              </svg>
+            </span>
+            <span className="bn-msg">
+              <b>{kitchen.label ?? "Kitchen"} {kitchen.tier === "risk" ? "backed up" : "warming"}</b> — {Math.round(kitchen.util)}% loaded
+              <span className="rec"> · seat new covers toward <em>a calmer station</em> and pace the floor</span>
+            </span>
+            <span className="bn-tag">bottleneck</span>
+            <button type="button" className="bn-act" onClick={() => setParty(String(Math.max(2, partyN)))}>Pace seating</button>
           </div>
         )}
 
@@ -477,8 +527,28 @@ export function CoreFloor({
                     const foodUp = foodUpTables.has(t.id);
                     const guestOrdered = guestOrderedTables.has(t.id);
                     const allergy = !!t.notes && ALLERGY_RE.test(t.notes);
-                    // Capacity-sized tiles — a 6-top reads bigger than a deuce.
-                    const sizeCls = t.seats >= 6 ? "sz-lg" : t.seats >= 4 ? "sz-md" : "sz-sm";
+                    // Mockup tile state: an unpaid bill promotes a seated table to
+                    // the amber "billing" accent; otherwise the twin's state class.
+                    const billing = tUnpaid.length > 0;
+                    const mockCls = billing ? "billing" : st.cls;
+                    const statusText =
+                      t.status === "out-of-service" ? "out of service"
+                      : billing ? "billing"
+                      : st.cls === "freeing" ? "freeing"
+                      : t.occupied ? "seated"
+                      : t.status === "reserved" ? "reserved"
+                      : "free";
+                    const coversLine = t.occupied ? `${t.party ?? t.seats} covers` : `${t.seats}-top`;
+                    const dwellLine =
+                      t.occupied ? (t.elapsedMin != null ? `${t.elapsedMin} min` : "open")
+                      : t.status === "reserved" ? "reserved"
+                      : t.status === "out-of-service" ? "out of service"
+                      : "open";
+                    const checkLine = billing
+                      ? { amt: zl2(tDue), tag: "on bill" }
+                      : t.occupied && t.openCheckGrosze
+                        ? { amt: zl0(t.openCheckGrosze), tag: "open" }
+                        : null;
                     // At most ONE glance-fact beyond number+covers and the status
                     // line — the single most urgent thing needing a human, in
                     // priority order (allergy → unpaid → note → paid → open check).
@@ -496,13 +566,11 @@ export function CoreFloor({
                       <span className="core-tnote-chip" title={t.notes}>📝 {t.notes}</span>
                     ) : tOrders.length > 0 ? (
                       <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
-                    ) : t.openCheckGrosze ? (
-                      <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
                     ) : null;
                     return (
-                      <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
+                      <div key={t.id} className="core-tbl2-wrap">
                         <button
-                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}${moveFrom?.id === t.id ? " is-moving" : ""}`}
+                          className={`core-tbl2 ${mockCls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}${moveFrom?.id === t.id ? " is-moving" : ""}`}
                           onClick={(e) => {
                             // In move mode, the next tap is the destination.
                             if (moveFrom) { void doMove(moveFrom, t); return; }
@@ -514,9 +582,13 @@ export function CoreFloor({
                           }}
                           title={`Table ${t.number} — actions`}
                         >
-                          <span className="tnum">{t.number}</span>
-                          <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
-                          <span className={`tst ${st.cls}`}>● {st.label}</span>
+                          <span className="thead">
+                            <span className="tnum">{t.number}</span>
+                            <span className="tstat"><span className="dot" /><span className="tst">{statusText}</span></span>
+                          </span>
+                          <span className="tcap">{coversLine}</span>
+                          <span className="tdwell">{dwellLine}</span>
+                          {checkLine && <span className="tchk">{checkLine.amt} <small>{checkLine.tag}</small></span>}
                           {urgent}
                         </button>
                         <button

@@ -6,18 +6,27 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
 ## Floor (`/core/service/floor`) — wired
 
 - **Live code:** `src/core/service/CoreFloor.tsx`.
-- **Theme:** `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2`
-  (+ `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-floor-bar` / `.core-fchip` ·
-  `.core-tbl-field` · `.core-bottleneck` in `themes/core/index.css`.
-- The live room: a 5-up KPI strip (covers seated · occupancy · turn time ·
-  **spend / hr** · freeing ≤15m) over zoned table tiles. Each `.core-tbl2`
-  is toned by state — free · seated · **freeing** (predicted ≤15m) ·
-  reserved · out-of-service. Tiles are **capacity-sized**
-  (`.core-tbl2-wrap.sz-md` / `.sz-lg` — a 6-top spans two columns and stands
-  taller with a bigger numeral) and carry **≤3 glance-facts**: number +
-  covers, the status/dwell line, and a **single most-urgent chip** chosen by
-  priority (allergy → unpaid → note → paid → open check) rather than stacking
-  them all. Hover reveals a `⋯` **edit** affordance. The tile of the **cross-lens selected
+- **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead` ·
+  `.core-statstrip` · `.core-floor` / `.core-zone-h` / `.core-tables` /
+  `.core-tbl2` (+ `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-floor-bar` /
+  `.core-fchip` · `.core-tbl-field` · `.core-bottleneck` in
+  `themes/core/index.css`.
+- The live room, in the **dense-console** language (1:1 with
+  `tests/sketches/core-pages/04-service-floor.html`): a `.core-crumb`
+  breadcrumb (`CORE — SERVICE · FLOOR · liquid glass · [loc · dine-in]`), a
+  `.core-sectionhead`, then a **6-up `.core-statstrip`** — **seated · free · on
+  bill · covers · occupancy · spend / hr** — every figure from live floor +
+  order state (Rule #1; the value colours read info/basil/amber/brand and each
+  cell carries a mono delta). Tiles are **landscape `.core-tbl2` cards** with a
+  state-tinted left accent rail (`--accent`): **free** = basil · **seated** =
+  info · **billing** (a table carrying an unpaid order) = amber · **freeing**
+  (predicted ≤15m) = amber · **reserved** muted · **out-of-service** faded.
+  Each tile reads a big table number + a lowercase status dot on the top row,
+  then a covers line (`N covers` / `N-top`), a dwell line (`N min` / `open` /
+  `reserved`), an optional check line (`zł` + `open`/`on bill`), and a **single
+  most-urgent chip** chosen by priority (food-up → guest-ordered → allergy →
+  unpaid → note → paid) rather than stacking them all. Hover reveals a `⋯`
+  **edit** affordance. The tile of the **cross-lens selected
   table** rings + ember-pulses via `.core-tbl2.is-focus` (shared
   `@keyframes core-focus-pulse`, reduced-motion-guarded) — so the entity in
   focus is visible on the Floor even after it was picked on another lens.
@@ -46,8 +55,10 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
 - **Table CRUD**: *+ Add table* (subbar) / the per-tile `⋯` opens the
   `TableDialog` (core `CoreDialog`, portaled) — number · seats · zone
   · status, with delete.
-- The **kitchen-bottleneck banner** (`.core-bottleneck`) fires when the KDS
-  engine reports a strained station.
+- The **kitchen-bottleneck banner** (`.core-bottleneck`, dense-console card:
+  `.bn-ic` icon chip · `.bn-msg` with a seating recommendation · `.bn-tag` ·
+  `.bn-act` route action) fires when the KDS engine reports a strained
+  station — amber at `warn`, danger-red at `risk`.
 - **Engine:** `GET /api/admin/floor-twin?location=` → `{ twin, kitchen }`
   (visibility-aware 15s `usePolling`; create/edit/delete merge optimistically
   into the twin so a tile never blanks until the refetch lands); seat/clear =

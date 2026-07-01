@@ -1216,9 +1216,30 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ============================================================
    Service · Floor + Slots
    ============================================================ */
-.core .core-bottleneck { display: flex; align-items: center; gap: 9px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; flex: none; border-bottom: 1px solid var(--line); }
-.core .core-bottleneck.warn { background: var(--amber-wash); color: var(--amber); } .core .core-bottleneck.risk { background: var(--danger-wash); color: var(--danger); }
-.core .core-bottleneck .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+/* Kitchen-bottleneck banner — dense-console card (mockup `.bottleneck`): an
+   icon chip, a message with a seating recommendation, a state tag, and a
+   one-tap route action. Amber at warn, danger-red at risk. */
+.core .core-bottleneck { display: flex; align-items: center; gap: 12px; margin: 0 16px 12px; padding: 10px 14px; border-radius: var(--r-md); font-size: 12px; font-weight: 400; flex: none; }
+.core .core-bottleneck.warn { background: var(--amber-wash); border: 1px solid rgba(240,173,70,.45); box-shadow: inset 0 0 0 1px rgba(240,173,70,.15); }
+.core .core-bottleneck.risk { background: var(--danger-wash); border: 1px solid rgba(255,90,92,.45); box-shadow: inset 0 0 0 1px rgba(255,90,92,.15); }
+.core .core-bottleneck .bn-ic { flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--r-sm); display: grid; place-items: center; }
+.core .core-bottleneck.warn .bn-ic { color: var(--amber); background: rgba(240,173,70,.14); box-shadow: inset 0 0 0 1px rgba(240,173,70,.4); }
+.core .core-bottleneck.risk .bn-ic { color: var(--danger); background: rgba(255,90,92,.14); box-shadow: inset 0 0 0 1px rgba(255,90,92,.4); }
+.core .core-bottleneck .bn-msg { flex: 1; min-width: 0; font-size: 12px; color: var(--ink); line-height: 1.35; }
+.core .core-bottleneck.warn .bn-msg b { color: var(--amber); font-weight: 600; }
+.core .core-bottleneck.risk .bn-msg b { color: var(--danger); font-weight: 600; }
+.core .core-bottleneck .bn-msg .rec { color: var(--ink-2); }
+.core .core-bottleneck .bn-msg .rec em { color: var(--basil); font-style: normal; font-weight: 600; }
+.core .core-bottleneck .bn-tag { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; border-radius: var(--pill); padding: 3px 9px; white-space: nowrap; }
+.core .core-bottleneck.warn .bn-tag { color: var(--amber); border: 1px solid rgba(240,173,70,.4); background: rgba(240,173,70,.1); }
+.core .core-bottleneck.risk .bn-tag { color: var(--danger); border: 1px solid rgba(255,90,92,.4); background: rgba(255,90,92,.1); }
+.core .core-bottleneck .bn-act { font-family: var(--mono); font-size: 10px; color: var(--on-accent); border: 0; border-radius: var(--pill); padding: 5px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.core .core-bottleneck.warn .bn-act { background: var(--amber); } .core .core-bottleneck.risk .bn-act { background: var(--danger); color: #fff; }
+.core .core-bottleneck .bn-act:hover { filter: brightness(1.06); }
+/* Dense-console breadcrumb line (mockup `.cap`) — sits above the section head. */
+.core .core-crumb { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--ink-3); text-transform: uppercase; padding: 12px 16px 0; display: flex; gap: 8px; align-items: center; flex: none; }
+.core .core-crumb b { color: var(--basil); font-weight: 600; }
+.core .core-crumb .fix { color: var(--brand-bright); border: 1px solid var(--line-2); padding: 1px 7px; border-radius: var(--pill); font-size: 9px; background: var(--brand-wash); }
 
 .core .core-floor { flex: 1; overflow-y: auto; padding: 18px; }
 /* zone filter tabs — jump the floor to one zone (Terrace/Main/Bar/…). */
@@ -1229,16 +1250,30 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-ztab .n { font-family: var(--mono); font-size: 11px; opacity: .7; }
 .core .core-zone-h { display: flex; align-items: baseline; gap: 10px; margin: 6px 2px 12px; }
 .core .core-zone-h .zt { font-family: var(--display); font-weight: 600; font-size: 15px; }
-.core .core-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 14px; margin-bottom: 24px; }
-.core .core-tbl2 { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--basil); border-radius: var(--r-lg); padding: 15px 16px; text-align: left; box-shadow: var(--sh-1); transition: transform var(--fast), box-shadow var(--fast), border-color var(--fast); }
-.core .core-tbl2:hover { border-color: var(--line-2); box-shadow: var(--sh-2); transform: translateY(-2px); }
+/* Dense-console floor tiles — landscape cards (mockup `.tbl`): a big table
+   number + status dot top row, then covers · dwell · check, with a left accent
+   rail tinted by state (free=basil, seated=info, billing/freeing=amber). */
+.core .core-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.core .core-tbl2 { --accent: var(--line-2); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px 14px 13px 16px; text-align: left; box-shadow: var(--sh-1); transition: transform var(--fast), box-shadow var(--fast), border-color var(--fast); }
+.core .core-tbl2::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+.core .core-tbl2:hover { border-color: var(--line-2); box-shadow: var(--sh-2); transform: translateY(-3px); }
 .core .core-tbl2:disabled { cursor: default; }
-.core .core-tbl2.seated { border-left-color: var(--brand); } .core .core-tbl2.freeing { border-left-color: var(--amber); } .core .core-tbl2.booked { border-left-color: var(--info); } .core .core-tbl2.oos { opacity: .45; border-left-color: var(--ink-3); }
-.core .core-tbl2 .tnum { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; }
-.core .core-tbl2 .tcap { font-size: 11px; color: var(--ink-3); }
-.core .core-tbl2 .tst { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--basil-wash); color: var(--basil); }
-.core .core-tbl2 .tst.seated { background: var(--brand-wash); color: var(--brand-bright); } .core .core-tbl2 .tst.freeing { background: var(--amber-wash); color: var(--amber); } .core .core-tbl2 .tst.booked { background: var(--info-wash); color: var(--info); } .core .core-tbl2 .tst.oos { background: var(--panel-3); color: var(--ink-3); }
-.core .core-tbl2 .tinfo { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+.core .core-tbl2 .thead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.core .core-tbl2 .tnum { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1; letter-spacing: -.02em; }
+.core .core-tbl2 .tstat { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.core .core-tbl2 .tstat .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+.core .core-tbl2 .tst { font-family: var(--mono); font-size: 9.5px; text-transform: lowercase; letter-spacing: .04em; color: var(--ink-3); background: none; padding: 0; border-radius: 0; margin: 0; font-weight: 400; }
+.core .core-tbl2 .tcap { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-top: 11px; }
+.core .core-tbl2 .tdwell { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+.core .core-tbl2 .tchk { font-family: var(--mono); font-size: 13px; color: var(--ink); font-weight: 600; margin-top: 8px; }
+.core .core-tbl2 .tchk small { color: var(--ink-3); font-weight: 400; font-size: 9px; }
+.core .core-tbl2.free { --accent: var(--basil); } .core .core-tbl2.free .tst { color: var(--basil); }
+.core .core-tbl2.seated { --accent: var(--info); } .core .core-tbl2.seated .tst { color: var(--info); }
+.core .core-tbl2.billing { --accent: var(--amber); } .core .core-tbl2.billing .tst { color: var(--amber); } .core .core-tbl2.billing .tchk { color: var(--amber); }
+.core .core-tbl2.freeing { --accent: var(--amber); } .core .core-tbl2.freeing .tst { color: var(--amber); }
+.core .core-tbl2.booked { --accent: var(--line-2); background: var(--panel-2); } .core .core-tbl2.booked .tst { color: var(--ink-3); }
+.core .core-tbl2.oos { --accent: var(--ink-3); opacity: .45; } .core .core-tbl2.oos .tnum, .core .core-tbl2.oos .tcap, .core .core-tbl2.oos .tdwell, .core .core-tbl2.oos .tst { color: var(--ink-3); }
+.core .core-tbl2 .tinfo { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-top: 6px; }
 /* per-table QR / payment status (Service → Floor live orders) */
 .core .core-tbl2 .core-tpay,
 .core .core-tpay { margin-top: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
@@ -1275,12 +1310,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* tile wrapper so the edit affordance isn't a button nested in a button */
 .core .core-tbl2-wrap { position: relative; display: flex; }
 .core .core-tbl2-wrap .core-tbl2 { width: 100%; }
-/* capacity-sized tiles — a 6-top reads bigger than a deuce (larger tables
-   span two columns and stand taller so party size is legible at a glance). */
-.core .core-tbl2-wrap.sz-md .core-tbl2 { min-height: 124px; }
-.core .core-tbl2-wrap.sz-lg { grid-column: span 2; }
-.core .core-tbl2-wrap.sz-lg .core-tbl2 { min-height: 140px; }
-.core .core-tbl2-wrap.sz-lg .tnum { font-size: 30px; }
+/* Uniform dense-console tiles (mockup): every table reads at one size; the
+   number's weight, not the tile footprint, carries the glance. */
+.core .core-tbl2-wrap .core-tbl2 { min-height: 118px; }
 /* live "food up" — a table whose ticket just hit ready pulses basil-green so
    the runner sees it from across the room (fed by the shared order stream). */
 @keyframes core-foodup { 0%,100% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,0); } 50% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,.3); } }

@@ -149,3 +149,13 @@ _(append dated entries as choices are made)_
   supersedes the Core theme's current "flat, no glass" discipline **for this redesign**; the `themes/core` tokens
   will gain a glass material layer during implementation (documented per Rule #11). Build order: **all four lenses,
   one by one**. Strategy: **refactor in place** (evolve CoreShell/CorePos/CoreKds/CoreFloor).
+- **2026-07-01** — **Floor brought 1:1 with the dense-console mockup**
+  (`tests/sketches/core-pages/04-service-floor.html`). The tiles moved from the earlier **portrait, capacity-sized**
+  design (milestone 6 — `.sz-md`/`.sz-lg` 6-tops spanning two columns) to the mockup's **uniform landscape `.core-tbl2`
+  cards** with a state-tinted left accent rail (free=basil · seated=info · billing=amber · freeing=amber · reserved
+  muted · oos faded), a big number + lowercase status dot, and covers/dwell/check lines. The 5-up `.core-kpi-strip`
+  became a **6-up `.core-statstrip`** (seated · free · on bill · covers · occupancy · spend/hr — all live, Rule #1),
+  a `.core-crumb` breadcrumb was added above the section head, and `.core-bottleneck` became the mockup's card banner
+  (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
+  directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
+  food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
