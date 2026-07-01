@@ -237,6 +237,14 @@ proxy over existing store logic; backend typechecks clean) + native screens:
   banner, zone-grouped status-toned table tiles with party / dwell / predicted-free
   / open-check, tap-to-seat/clear, table detail (service note, turns). Location
   picker off `/locations`. Two five-section ⓘ.
+  - **Service OS redesign parity (this pass):** tiles are now **capacity-scaled**
+    (6-tops render larger, web sz-md/sz-lg), carry a **single urgent chip** derived
+    from the live twin (running past the table's own median turn → "Drop check" when
+    a bill is open, else "Running long"), and gain a **"Move party"** context action
+    → `MoveTargetSheet` → `POST /api/v1/admin/floor/twin {action:"move"}`, which
+    relocates the party AND its open dine-in check (orders reassigned server-side,
+    source freed, target seated). The v1 twin route gained the `move` action to match
+    the web `/api/admin/floor-twin` (one behaviour, two facades).
 - **Guest → hub** (`OperatorGuestView` now segments **Inbox | Guests | Loyalty |
   Concierge | Book** — full five-tab parity with the web subbar `guestTabs.ts`):
   - **Guests (CRM)** — roster (filters/sorts) → rich profile off

@@ -560,6 +560,11 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(["action": seat ? "seat" : "clear", "tableId": tableId])
         return Endpoint<FloorSeatResult>(.post, "admin/floor/twin", query: ["location": location], body: body, requiresAuth: true)
     }
+    /// Move a seated party (and its open dine-in check) to another table.
+    static func adminFloorMove(location: String, tableId: String, toTableId: String) -> Endpoint<FloorMoveResult> {
+        let body = try? JSONEncoder().encode(["action": "move", "tableId": tableId, "toTableId": toTableId])
+        return Endpoint<FloorMoveResult>(.post, "admin/floor/twin", query: ["location": location], body: body, requiresAuth: true)
+    }
     static func adminReservations(location: String, date: String? = nil) -> Endpoint<[Reservation]> {
         var q = ["location": location]; if let date { q["date"] = date }
         return Endpoint<[Reservation]>(.get, "admin/floor/reservations", query: q, requiresAuth: true)

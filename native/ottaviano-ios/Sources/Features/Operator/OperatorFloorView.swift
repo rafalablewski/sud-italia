@@ -38,12 +38,27 @@ final class OperatorFloorStore {
         catch { self.message = "Couldn't update the table" }
         busyTableId = nil
     }
+    /// Move a seated party (and its open dine-in check) to another table — the
+    /// native twin of the web Floor radial "Move" verb. The check follows the
+    /// party server-side; we just reload the room afterwards.
+    func move(_ from: FloorTwinTable, to: FloorTwinTable) async {
+        busyTableId = from.id
+        do {
+            let r = try await api.send(.adminFloorMove(location: location, tableId: from.id, toTableId: to.id))
+            await load()
+            message = "Moved to \(to.number)\(r.moved > 0 ? " · \(r.moved) order\(r.moved == 1 ? "" : "s")" : "")"
+        } catch let e as APIError { message = OperatorListLoader<Int>.message(e) }
+        catch { self.message = "Couldn't move the table" }
+        busyTableId = nil
+    }
 }
 
 public struct OperatorFloorView: View {
     @Environment(\.theme) private var theme
     @State private var store: OperatorFloorStore?
     @State private var selected: FloorTwinTable?
+    /// The seated table awaiting a move destination (web Floor "Move" radial verb).
+    @State private var movingFrom: FloorTwinTable?
     private let api: APIClient
     private let initialLocation: String
     public init(api: APIClient, location: String = "krakow") { self.api = api; self.initialLocation = location }
@@ -65,6 +80,11 @@ public struct OperatorFloorView: View {
         .refreshable { await store?.load() }
         .sheet(item: $selected) { t in
             if let store { FloorTableSheet(table: t, store: store) }
+        }
+        .sheet(item: $movingFrom) { t in
+            if let store {
+                MoveTargetSheet(source: t, tables: store.room?.twin.tables ?? [], store: store)
+            }
         }
         .dsToast(Binding(get: { store?.message }, set: { store?.message = $0 }))
     }
@@ -139,10 +159,12 @@ public struct OperatorFloorView: View {
 
     private func tableTile(_ t: FloorTwinTable, store: OperatorFloorStore) -> some View {
         let tint = statusTint(t.status)
+        let urgent = urgency(t)
+        let big = t.seats >= 6   // capacity-scaled tile (web sz-md/sz-lg)
         return Button { selected = t } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(t.number).font(.headline).foregroundStyle(theme.color.textPrimary)
+                    Text(t.number).font(big ? .title3.weight(.bold) : .headline).foregroundStyle(theme.color.textPrimary)
                     Spacer()
                     Image(systemName: "person.2").font(.caption2).foregroundStyle(theme.color.textSecondary)
                     Text("\(t.party ?? t.seats)").font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.textSecondary)
@@ -158,12 +180,24 @@ public struct OperatorFloorView: View {
                 }
             }
             .padding(theme.space.md)
-            .frame(height: 92, alignment: .topLeading)
+            .frame(height: big ? 108 : 92, alignment: .topLeading)
             .frame(maxWidth: .infinity)
             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous).strokeBorder(tint.opacity(0.5), lineWidth: 1))
             .overlay(alignment: .topTrailing) {
                 if store.busyTableId == t.id { ProgressView().controlSize(.mini).padding(6) }
+            }
+            // A SINGLE urgent chip (web Floor semantics) — the one thing the server
+            // needs from this table right now, never a stack of badges.
+            .overlay(alignment: .bottomTrailing) {
+                if let urgent, store.busyTableId != t.id {
+                    Text(urgent.0)
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .foregroundStyle(theme.color.onAccent)
+                        .background(urgent.1, in: Capsule())
+                        .padding(6)
+                }
             }
         }
         .buttonStyle(.plain)
@@ -171,12 +205,26 @@ public struct OperatorFloorView: View {
             if t.status != "out-of-service" {
                 if t.occupied {
                     Button { Task { await store.seat(t, seat: false) } } label: { Label("Clear table", systemImage: "arrow.uturn.backward") }
+                    Button { movingFrom = t } label: { Label("Move party", systemImage: "arrow.left.arrow.right") }
                 } else {
                     Button { Task { await store.seat(t, seat: true) } } label: { Label("Seat table", systemImage: "person.fill.checkmark") }
                 }
             }
         }
-        .accessibilityLabel("Table \(t.number), \(statusLabel(t)), seats \(t.seats)")
+        .accessibilityLabel("Table \(t.number), \(statusLabel(t)), seats \(t.seats)\(urgent.map { ", \($0.0)" } ?? "")")
+    }
+
+    /// A seated table's single most-urgent nudge, derived from the live twin (Rule
+    /// #1): running well past its own median turn → drop the check (if a bill is
+    /// open) or check on it. Nil when the table is calm.
+    private func urgency(_ t: FloorTwinTable) -> (String, Color)? {
+        guard t.occupied, let e = t.elapsedMin else { return nil }
+        if let med = t.medianDwellMin, med > 0, e > med * 1.25 {
+            if let open = t.openCheckGrosze, open > 0 { return ("Drop check", theme.color.warning) }
+            return ("Running long", theme.color.warning)
+        }
+        if e >= 90 { return ("Running long", theme.color.warning) }
+        return nil
     }
 
     // MARK: helpers
@@ -283,6 +331,62 @@ private struct FloorTableSheet: View {
         if let z = table.zone { m.append(OperatorMetaRow("mappin.and.ellipse", z)) }
         if table.turns > 0 { m.append(OperatorMetaRow("arrow.triangle.2.circlepath", "\(table.turns) turns today")) }
         return m
+    }
+}
+
+/// Pick a destination for a table move — the seated party (and its open check)
+/// relocate there (web Floor "Move" radial verb). Free tables are offered first;
+/// occupied ones are still selectable (the server merges the parties).
+private struct MoveTargetSheet: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let source: FloorTwinTable
+    let tables: [FloorTwinTable]
+    let store: OperatorFloorStore
+
+    private var candidates: [FloorTwinTable] {
+        tables
+            .filter { $0.id != source.id && $0.status != "out-of-service" }
+            .sorted {
+                if $0.occupied != $1.occupied { return !$0.occupied }  // free tables first
+                return $0.number.localizedStandardCompare($1.number) == .orderedAscending
+            }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: theme.space.sm) {
+                        Image(systemName: "arrow.left.arrow.right").foregroundStyle(theme.color.accent)
+                        Text("Moving Table \(source.number)\(source.party.map { " · party of \($0)" } ?? "")")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                    }
+                }
+                Section("Move to") {
+                    if candidates.isEmpty {
+                        Text("No other tables available").foregroundStyle(theme.color.textSecondary)
+                    }
+                    ForEach(candidates) { t in
+                        Button { Task { await store.move(source, to: t); dismiss() } } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Table \(t.number)").foregroundStyle(theme.color.textPrimary)
+                                    Text("\(t.seats) seats\(t.zone.map { " · \($0)" } ?? "")\(t.occupied ? " · occupied" : "")")
+                                        .font(.caption).foregroundStyle(theme.color.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: t.occupied ? "person.fill" : "checkmark.circle")
+                                    .foregroundStyle(t.occupied ? theme.color.warning : theme.color.success)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Move party")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+        }
     }
 }
 

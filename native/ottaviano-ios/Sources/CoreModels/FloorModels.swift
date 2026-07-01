@@ -65,6 +65,16 @@ public struct FloorSeatResult: Codable, Sendable {
     public let status: String
 }
 
+/// Result of a table move — the party (and its open dine-in check) relocated to
+/// `to`; `moved` is the count of reassigned orders.
+public struct FloorMoveResult: Codable, Sendable {
+    public let ok: Bool
+    public let action: String
+    public let moved: Int
+    public let from: String
+    public let to: String
+}
+
 // MARK: - Reservations / booking
 
 public struct Reservation: Codable, Sendable, Identifiable {

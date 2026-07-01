@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/v1/envelope";
 import { requireRole, scopeAllows, scopedLocations } from "@/lib/api/v1/guard";
-import { getFloorEvents, getOrders, getTables, saveTable } from "@/lib/store";
+import { getFloorEvents, getOrders, getTables, saveTable, updateOrder } from "@/lib/store";
 import { buildFloorTwin } from "@/lib/floor-twin";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
@@ -74,21 +74,44 @@ export async function POST(req: NextRequest) {
   const loc = resolveLocation(req, guard.claims.scope);
   if (typeof loc !== "string") return loc.error;
 
-  let body: { action?: string; tableId?: string };
+  let body: { action?: string; tableId?: string; toTableId?: string };
   try { body = await req.json(); } catch { return apiError("bad_request", "Body must be valid JSON"); }
   const action = String(body.action ?? "");
   const tableId = String(body.tableId ?? "").trim();
-  if (action !== "seat" && action !== "clear") return apiError("validation_failed", "action must be seat or clear");
+  if (action !== "seat" && action !== "clear" && action !== "move")
+    return apiError("validation_failed", "action must be seat, clear or move");
   if (!tableId) return apiError("validation_failed", "tableId is required");
 
   try {
-    const table = (await getTables(loc)).find((t) => t.id === tableId);
+    const tables = await getTables(loc);
+    const table = tables.find((t) => t.id === tableId);
     if (!table) return apiError("not_found", "Unknown table");
+
+    // Move — relocate a seated party (and its open dine-in check) to another
+    // table: reassign the source table's active orders, free the source, seat
+    // the target. The check follows the party; the Twin re-derives dwell. Mirrors
+    // the web `/api/admin/floor-twin` move action (one behaviour, two facades).
+    if (action === "move") {
+      const toTableId = String(body.toTableId ?? "").trim();
+      const target = toTableId ? tables.find((t) => t.id === toTableId) : undefined;
+      if (!target) return apiError("not_found", "Unknown destination table");
+      if (target.id === table.id) return apiError("validation_failed", "Pick a different table");
+      if (target.status === "out-of-service") return apiError("validation_failed", "Destination is out of service");
+      const orders = await getOrders(loc);
+      const moving = orders.filter(
+        (o) => o.tableId === table.id && !o.simulated && o.status !== "completed" && o.status !== "cancelled",
+      );
+      for (const o of moving) await updateOrder(o.id, { tableId: target.id });
+      await saveTable({ ...table, status: "available" });
+      await saveTable({ ...target, status: "seated" });
+      return apiOk({ ok: true, action: "move", moved: moving.length, from: table.id, to: target.id }, { location: loc });
+    }
+
     const status = action === "seat" ? "seated" : "available";
     await saveTable({ ...table, status });
     return apiOk({ ok: true, tableId, status }, { location: loc });
   } catch (err) {
-    logger.error("v1 floor seat/clear failed", { layer: "api.v1.admin.floor.twin" }, err as Error);
+    logger.error("v1 floor seat/clear/move failed", { layer: "api.v1.admin.floor.twin" }, err as Error);
     return apiError("internal", "Could not update the table");
   }
 }
