@@ -20,15 +20,24 @@ public struct DSCard<Content: View>: View {
         content()
             .padding(theme.space.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+            .background {
+                if theme.glassy {
+                    // Liquid Glass skin — translucent Material + rim + float.
+                    Color.clear.dsGlassSurface(cornerRadius: theme.radius.lg, elevated: elevated)
+                } else {
+                    // Flat skin — opaque panel fill + optional card shadow.
+                    // .clear / 0 keeps the type stable when not elevated (no branch).
+                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        .fill(theme.color.surface2)
+                        .shadow(
+                            color: elevated ? theme.elevation.card.color : .clear,
+                            radius: elevated ? theme.elevation.card.radius : 0,
+                            x: 0,
+                            y: elevated ? theme.elevation.card.y : 0
+                        )
+                }
+            }
             .overlay(alignment: .leading) { accentEdge }
-            // .clear / 0 keeps the type stable when not elevated (no branch).
-            .shadow(
-                color: elevated ? theme.elevation.card.color : .clear,
-                radius: elevated ? theme.elevation.card.radius : 0,
-                x: 0,
-                y: elevated ? theme.elevation.card.y : 0
-            )
     }
 
     @ViewBuilder private var accentEdge: some View {

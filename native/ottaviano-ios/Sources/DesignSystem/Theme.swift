@@ -63,6 +63,12 @@ public struct Theme: Sendable {
     /// no Cormorant bundled, so we lean on the system serif face — same mood,
     /// zero font files to ship.
     public let headingDesign: Font.Design
+    /// When true, surfaces render in the 2026 "Liquid Glass" material (translucent
+    /// Material fill + specular rim + aurora backdrop) — the native mirror of the
+    /// web `liquid-glass` Core skin. Only the operator (kds) skin opts in; the
+    /// customer app keeps its V8 Tuscany paper look. A required member (both skins
+    /// set it) so the synthesized memberwise init always exposes it.
+    public let glassy: Bool
     public let snappy = Animation.spring(duration: 0.28, bounce: 0.18)
 
     // The two skins' palettes + corner radii are GENERATED from the web token CSS
@@ -74,7 +80,8 @@ public struct Theme: Sendable {
     public static let ottaviano = Theme(
         color: GeneratedTokens.ottaviano,
         cornerRadius: GeneratedTokens.ottavianoCornerRadius,
-        headingDesign: .serif
+        headingDesign: .serif,
+        glassy: false
     )
 
     /// OttavianoKDS (operator) — the dark web Core skin (near-black panels,
@@ -83,7 +90,8 @@ public struct Theme: Sendable {
     public static let kds = Theme(
         color: GeneratedTokens.kds,
         cornerRadius: GeneratedTokens.kdsCornerRadius,
-        headingDesign: .default
+        headingDesign: .default,
+        glassy: true
     )
 }
 
@@ -290,5 +298,50 @@ public extension Theme {
         case .cooking: return color.warning
         case .late: return color.danger
         }
+    }
+}
+
+// MARK: - Liquid Glass materials (operator skin — mirrors the web `liquid-glass` Core skin)
+
+public extension View {
+    /// Frosted-glass surface: a translucent Material fill, a specular rim, and a
+    /// soft float — the native equivalent of the web skin's backdrop-blur + rim +
+    /// shadow. `Material` gives real blur/vibrancy on device (no image capture).
+    func dsGlassSurface(cornerRadius: CGFloat, elevated: Bool = true) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return self
+            .background(.regularMaterial, in: shape)
+            .overlay(
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.35), .white.opacity(0.06), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            )
+            .shadow(color: .black.opacity(elevated ? 0.45 : 0), radius: elevated ? 18 : 0, x: 0, y: elevated ? 10 : 0)
+    }
+}
+
+/// Ambient aurora backdrop — soft brand / info / warn / success blooms behind the
+/// glass so the Material has colour to refract. Mirrors the web skin's aurora.
+/// Honours Reduce Motion implicitly (it's static — no animation to disable).
+public struct AuroraBackground: View {
+    @Environment(\.theme) private var theme
+    public init() {}
+    public var body: some View {
+        ZStack {
+            theme.color.surface
+            bloom(theme.color.accent, 0.55).offset(x: -140, y: -260)
+            bloom(theme.info, 0.40).offset(x: 150, y: 300)
+            bloom(theme.color.warning, 0.30).offset(x: 120, y: -120)
+            bloom(theme.color.success, 0.24).offset(x: -120, y: 220)
+        }
+        .ignoresSafeArea()
+    }
+    private func bloom(_ c: Color, _ opacity: Double) -> some View {
+        Circle().fill(c.opacity(opacity)).frame(width: 460, height: 460).blur(radius: 90)
     }
 }
