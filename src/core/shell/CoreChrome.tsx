@@ -1,35 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useLocation } from "@/shared/LocationContext";
 
+/** Minimal shape of a Command Bar view tab — mirrors `CoreTab` in CoreShell,
+ *  kept local so the client chrome doesn't import the shell (avoids a cycle). */
+interface PromptTab {
+  label: string;
+  active?: boolean;
+}
+
 /**
- * Location chip — shows the active truck (real data from LocationContext) and
- * cycles through [All trucks · …active locations] on click. Same store the
- * rest of Core reads, so a switch here follows you across surfaces.
+ * Live shell prompt — `core ❯ surface:tab` with a blinking block caret. The
+ * surface segment is read from the pathname (so the prompt always states
+ * exactly where you are) and the active view tab from the tabs passed to the
+ * shell. `title` carries the fuller eyebrow context on hover.
+ */
+export function CorePrompt({ tabs, title }: { tabs?: PromptTab[]; title?: string }) {
+  const pathname = usePathname() ?? "";
+  // /core/pos → "pos", /core/service/floor → "service", /core → "core".
+  const surface = pathname.split("/").filter(Boolean)[1] ?? "core";
+  const active = tabs?.find((t) => t.active) ?? tabs?.[0];
+  const tab = active?.label.toLowerCase();
+  return (
+    <div className="cm-prompt" title={title}>
+      <span className="u">core</span>
+      <span className="g">❯</span>
+      <span className="c">
+        {surface}
+        {tab ? `:${tab}` : ""}
+      </span>
+      <span className="cm-caret" aria-hidden />
+    </div>
+  );
+}
+
+/**
+ * ⌘K launcher chip — opens the command palette (same `core:cmdk` event the
+ * palette listens for). Client-only because it dispatches a window event.
+ */
+export function CmdkLauncher() {
+  return (
+    <button
+      type="button"
+      className="cm-k"
+      title="Search — tables, lenses, dishes (⌘K)"
+      onClick={() => window.dispatchEvent(new Event("core:cmdk"))}
+    >
+      <span className="cm-k-label">search</span>
+      <kbd>⌘K</kbd>
+    </button>
+  );
+}
+
+/**
+ * Location telemetry — `loc <slug>` in the command bar's telemetry cluster.
+ * Shows the active truck (real data from LocationContext) and cycles through
+ * [All restaurants · …active locations] on click. Same store the rest of Core
+ * reads, so a switch here follows you across surfaces.
  */
 export function CoreLocationChip() {
   const { location, setLocation, activeLocations } = useLocation();
   const order = ["", ...activeLocations.map((l) => l.slug)];
   const current = activeLocations.find((l) => l.slug === location);
-  const label = current ? current.name : "All restaurants";
+  const label = current ? current.slug : "all";
   return (
     <button
       type="button"
-      className="core-chip"
-      title="Switch location"
+      className="cm-tel-item cm-tel-loc"
+      title={current ? `Location — ${current.name} (click to switch)` : "All restaurants (click to switch)"}
       onClick={() => {
         const i = order.indexOf(location);
         setLocation(order[(i + 1) % order.length]);
       }}
     >
-      <span className="dot" />
-      {label}
+      <span className="lbl">loc</span>
+      <span className="val">{label}</span>
     </button>
   );
 }
 
-/** Live HH:MM clock for the command bar — the till + line read it at a glance. */
+/** Live HH:MM clock — the telemetry cluster's tail; the till + line read it at
+ *  a glance. Terminal-green so it reads as the "ok" heartbeat. */
 export function CoreClock() {
   const [now, setNow] = useState<string>("--:--");
   useEffect(() => {
@@ -41,7 +94,11 @@ export function CoreClock() {
     const id = setInterval(tick, 1000 * 15);
     return () => clearInterval(id);
   }, []);
-  return <span className="core-clock" aria-label="Current time">{now}</span>;
+  return (
+    <span className="cm-tel-item cm-tel-clock" aria-label="Current time">
+      {now}
+    </span>
+  );
 }
 
 /**

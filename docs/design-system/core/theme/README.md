@@ -54,23 +54,47 @@ surface lives in [`../modules/`](../modules/).
 
 ### Shell (`CoreShell` · `src/core/shell/`)
 
-- **`.core-bar`** — command bar (row 1): `.core-brand` (mark + wordmark) ·
-  `.core-switch` (the segmented surface switcher, `CoreNav`) ·
-  `.core-right` (global actions).
-- **`.core-switch a`** — a surface tab; `.on` = active (pathname-derived).
-- **`.core-sub`** — context subbar (row 2): `.core-eyebrow` + `.core-tabs`
-  (the surface's view tabs) + `.core-sp` spacer + the surface's own
-  controls (passed as `subRight`).
+The command bar is the **"Command"** terminal chrome — one all-monospace row,
+left→right: traffic lights · shell prompt · view-tab chips · spacer · the
+surface's own controls · ⌘K launcher · telemetry cluster · global tools.
+
+- **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
+  `--panel` row with a `--line` bottom hairline.
+- **`.cm-lights`** — decorative macOS traffic-light chrome; the three dots are
+  tokenised `--danger` · `--amber` · `--basil`. **`.cm-div`** — a 1px vertical
+  divider (`--line-2`) flanking the prompt.
+- **`.cm-prompt`** — the live shell prompt `core ❯ surface:tab` (`CorePrompt`):
+  `.u` = the green `core` user (`--basil`), `.g` = the `❯` glyph, `.c` = the
+  `surface:tab` location (surface read from the pathname, tab from the active
+  view tab). **`.cm-caret`** — the blinking block caret (`core-caret-blink`;
+  stilled under `prefers-reduced-motion`).
+- **`.cm-tabs`** — the shell's `.core-tabs` in the bar: mono, `lowercase`,
+  swipe-scroll; `.on` = a `--basil` chip with a basil inset ring.
+- **`.cm-sp`** — the flex spacer that pushes the tail cluster right.
+- **`.cm-surf`** — wraps the surface's own controls (`subRight` — surface
+  tools, a live pill, a primary action).
+- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
+  `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
+- **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
+  (`.lbl` dim key + `.val` bright value): `risk N` from `PressureBadge`
+  (`.ok`/`.warn`/`.risk` colour the count basil/amber/red), **`.cm-tel-loc`**
+  the click-to-cycle `loc <slug>` from `CoreLocationChip`, and
+  **`.cm-tel-clock`** the basil mono HH:MM clock.
+- **`.cm-right`** — the global tools (notifications bell · theme toggle) as
+  flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
 
 ### Global-action primitives
 
-- **`.core-chip`** — pill (location chip, status, a `Dine-in` flag).
-  `.dot` = a small status dot. `.on` = filled brand (active toggle).
-- **`.core-iconbtn`** — 34px square icon button (theme toggle, fullscreen).
-- **`.core-clock`** — the mono HH:MM clock.
-- **`.core-tabs a/button`** — subbar view tabs; `.on` = active.
+- **`.core-chip`** — pill (surface status flags, a `Dine-in` flag, the Orders
+  channel tag). `.dot` = a small status dot. `.on` = filled brand (active toggle).
+- **`.core-iconbtn`** — 34px square icon button (theme toggle, fullscreen);
+  reskinned to a flush 32px terminal button inside `.cm-right`.
+- **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
+  scope tabs). `.on` = active.
+- **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
+  command bar they carry `.cm-tabs` for the mono/lowercase treatment.
 - **`.core-seg button`** — a segmented filter (KDS stage filter, etc.).
   `.core-seg.icons` = square icon-only cells (centred 16px glyph) for an
   icon-only switcher / filter pod; pair each button with a `title` /
@@ -124,20 +148,22 @@ hard-coded hex), and add it to the reference here in the same commit
 (Rule #11). Never reach into admin or suite.css classes — Core owns
 its whole surface.
 
-## Chrome — command bar + bottom switcher
+## Chrome — command bar + left Lens Rail
 
-`CoreShell` renders a **single command bar** on top and a **centred bottom
-surface-switcher** (no second subbar row):
+`CoreShell` renders the **"Command"** terminal command bar on top and the
+**left Lens Rail** (`CoreNav`, `.core-rail`) down the side — no brand
+wordmark, no second subbar row, no bottom switcher:
 
-- **`.core-bar`** — `.core-brand` (pinned left) · `.core-bar-ctx` (the contextual
-  strip: `.core-eyebrow` + the surface's view `.core-tabs` + its own `subRight`
-  controls — scrolls horizontally, `scrollbar-width:none`, when it can't all
-  fit) · `.core-right` (pinned right: location · clock · notifications bell ·
-  theme). Brand + controls never scroll; only the middle does.
-- **`.core-bottomnav`** — a layout row (`flex:none`, reserves its own height
-  `--core-navh`) that centres the `CoreNav` `.core-switch` pill at the very
-  bottom. Because it's a real row, body content never hides behind it; only
-  the POS fixed ticket drawer + FAB offset above it via `--core-navh`.
+- **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
+  lights) · `.cm-div` · `.cm-prompt` (the live `core ❯ surface:tab` prompt +
+  `.cm-caret`) · `.cm-div` · `.cm-tabs` (the surface's swipe-scroll view tabs) ·
+  `.cm-sp` (spacer) · `.cm-surf` (the surface's own `subRight` controls) ·
+  `.cm-k` (⌘K launcher) · `.cm-tel` (risk · loc · clock telemetry) · `.cm-right`
+  (bell · theme). Only `.cm-tabs` scrolls; everything else is `flex:none`.
+- **`.core-rail`** — the icon-only 60px Lens Rail (expands to labels on hover)
+  that switches the four room lenses (Floor · Line · Pass · Book). It sits
+  inside `.core-main`, beside the Canvas, so it spans the full body height under
+  the command bar. Orders + Guest are cross-cutting surfaces reached from ⌘K.
 
 ## Responsive — tablet & phone
 
@@ -146,10 +172,10 @@ Core runs on iPads and phones, not only desktop. Breakpoints at the end of
 
 | Width | What changes |
 | ----- | ------------ |
-| **≤1100** (tablet landscape) | POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
-| **≤900** (tablet portrait) | Command bar drops the brand wordmark + the `.core-eyebrow`; POS panes `148 · 1fr · 296`. |
-| **≤820** (phone / iPad portrait) | Location chip + clock hide from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
-| **≤560** (phone) | Bottom switcher → compact **icon-only** pill so all surfaces fit. |
+| **≤1100** (tablet landscape) | Command bar sheds the low-priority `loc` telemetry (`.cm-tel-loc`); POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
+| **≤900** (tablet portrait) | Command bar drops the decorative traffic lights + dividers (`.cm-lights` / `.cm-div`) and collapses the ⌘K launcher to just its chip (`.cm-k-label` hidden); POS panes `148 · 1fr · 296`. |
+| **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
+| **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail (no hover-expand). |
 | **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
 
 The POS ticket is **never hidden** on small screens (the old behaviour) —
