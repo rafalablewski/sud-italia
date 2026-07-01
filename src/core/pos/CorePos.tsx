@@ -1573,6 +1573,16 @@ export function CorePos({
                   <span className="tl">Total</span>
                   <span className="tv mono">{zl(grandG(active))}</span>
                 </div>
+                {/* fire-moment upsell — the top cross-sell right at the Fire
+                    button, before the check goes away. One tap adds it to the
+                    check so it fires with the (next) course. */}
+                {!active.sentKds && offers.length > 0 && (
+                  <button type="button" className="core-fire-upsell" onClick={() => addLine(offers[0].item.id)} title="Adds it to the check so it fires with this course">
+                    <span className="u-plus">＋</span>
+                    <span className="u-t">Add <b>{offers[0].item.name}</b> before firing?</span>
+                    <span className="u-p mono">+{zl(offers[0].item.price)}</span>
+                  </button>
+                )}
                 <div className="core-foot-actions">
                   {!active.sentKds && (
                     nextUnfiredCourse ? (

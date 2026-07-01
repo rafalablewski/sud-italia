@@ -310,6 +310,12 @@
 .core .core-frow.disc { color: var(--basil); font-weight: 600; }
 .core .core-ftot { display: flex; justify-content: space-between; align-items: baseline; margin: 11px 0 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .core .core-ftot .tl { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); } .core .core-ftot .tv { font-weight: 800; font-size: 25px; letter-spacing: -.015em; color: var(--ink); }
+/* fire-moment upsell — the top cross-sell docked right at the Fire button. */
+.core .core-fire-upsell { display: flex; align-items: center; gap: 9px; width: 100%; margin-bottom: 9px; padding: 9px 12px; border-radius: var(--r-md); background: var(--brand-wash); border: 1px solid rgba(232,107,62,.4); color: var(--ink); cursor: pointer; font-size: 12.5px; text-align: left; transition: background var(--fast); }
+.core .core-fire-upsell:hover { background: rgba(232,107,62,.24); }
+.core .core-fire-upsell .u-plus { color: var(--brand-bright); font-weight: 800; font-size: 15px; flex: none; }
+.core .core-fire-upsell .u-t { flex: 1; } .core .core-fire-upsell .u-t b { font-weight: 700; }
+.core .core-fire-upsell .u-p { color: var(--brand-bright); font-weight: 700; flex: none; }
 .core .core-foot-actions { display: flex; gap: 10px; }
 /* shared press / transition feel for the footer actions */
 .core .core-send, .core .core-charge, .core .core-foot-aux { transition: background var(--fast), border-color var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast), filter var(--fast); }
