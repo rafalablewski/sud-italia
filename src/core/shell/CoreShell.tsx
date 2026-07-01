@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CoreNav } from "./CoreNav";
 import { CoreClock, CoreThemeToggle, CoreLocationChip } from "./CoreChrome";
 import { PressureBadge } from "./PressureBadge";
+import { CommandPalette } from "./CommandPalette";
 import { CoreNotificationsBell } from "./CoreNotificationsBell";
 import { CoreDock } from "./CoreDock";
 
@@ -72,6 +73,9 @@ export function CoreShell({
           {subRight}
         </div>
         <div className="core-right">
+          <button type="button" className="core-cmdk-trigger" title="Search — tables, lenses, dishes (⌘K)" onClick={() => window.dispatchEvent(new Event("core:cmdk"))}>
+            <span className="si">⌕</span><kbd>⌘K</kbd>
+          </button>
           <PressureBadge />
           <CoreLocationChip />
           <CoreClock />
@@ -86,6 +90,7 @@ export function CoreShell({
           operator across every lens. Renders null until something is selected
           (additive; see SelectionContext / CoreDock). */}
       <CoreDock />
+      <CommandPalette />
 
       {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
       <div className="core-bottomnav">
