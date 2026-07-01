@@ -364,8 +364,27 @@ export function CoreFloor({
                     const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
                     const hasQr = tOrders.some((o) => o.channel === "qr");
                     const isFocus = selected?.kind === "table" && selected.id === t.id;
+                    const allergy = !!t.notes && ALLERGY_RE.test(t.notes);
+                    // Capacity-sized tiles — a 6-top reads bigger than a deuce.
+                    const sizeCls = t.seats >= 6 ? "sz-lg" : t.seats >= 4 ? "sz-md" : "sz-sm";
+                    // At most ONE glance-fact beyond number+covers and the status
+                    // line — the single most urgent thing needing a human, in
+                    // priority order (allergy → unpaid → note → paid → open check).
+                    const urgent = allergy ? (
+                      <span className="core-tnote-chip alrg" title={t.notes}>⚠ {t.notes}</span>
+                    ) : tUnpaid.length > 0 ? (
+                      <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
+                        {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
+                      </span>
+                    ) : t.notes ? (
+                      <span className="core-tnote-chip" title={t.notes}>📝 {t.notes}</span>
+                    ) : tOrders.length > 0 ? (
+                      <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
+                    ) : t.openCheckGrosze ? (
+                      <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
+                    ) : null;
                     return (
-                      <div key={t.id} className="core-tbl2-wrap">
+                      <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
                         <button
                           className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}`}
                           onClick={() => {
@@ -401,23 +420,7 @@ export function CoreFloor({
                           <span className="tnum">{t.number}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
                           <span className={`tst ${st.cls}`}>● {st.label}</span>
-                          {t.notes ? (
-                            <span
-                              className={`core-tnote-chip${ALLERGY_RE.test(t.notes) ? " alrg" : ""}`}
-                              title={t.notes}
-                            >
-                              {ALLERGY_RE.test(t.notes) ? "⚠ " : "📝 "}{t.notes}
-                            </span>
-                          ) : null}
-                          {tUnpaid.length > 0 ? (
-                            <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
-                              {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
-                            </span>
-                          ) : tOrders.length > 0 ? (
-                            <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
-                          ) : t.openCheckGrosze ? (
-                            <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
-                          ) : null}
+                          {urgent}
                         </button>
                         <button
                           type="button"

@@ -1022,6 +1022,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* tile wrapper so the edit affordance isn't a button nested in a button */
 .core .core-tbl2-wrap { position: relative; display: flex; }
 .core .core-tbl2-wrap .core-tbl2 { width: 100%; }
+/* capacity-sized tiles — a 6-top reads bigger than a deuce (larger tables
+   span two columns and stand taller so party size is legible at a glance). */
+.core .core-tbl2-wrap.sz-md .core-tbl2 { min-height: 104px; }
+.core .core-tbl2-wrap.sz-lg { grid-column: span 2; }
+.core .core-tbl2-wrap.sz-lg .core-tbl2 { min-height: 118px; }
+.core .core-tbl2-wrap.sz-lg .tnum { font-size: 26px; }
 .core .core-tbl2-edit { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--ink-3); font-size: 14px; line-height: 1; opacity: 0; transition: opacity var(--fast), background var(--fast); }
 .core .core-tbl2-wrap:hover .core-tbl2-edit { opacity: 1; }
 .core .core-tbl2-edit:hover { background: var(--panel-3); color: var(--ink); }
