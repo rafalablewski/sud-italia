@@ -75,6 +75,7 @@ type TenderInput = {
   payments?: { method: "cash" | "card"; amount: number }[];
   cashTenderedGrosze?: number;
   defaultMethod?: "cash" | "card";
+  compOverridePin?: string;
 };
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
@@ -2027,6 +2028,7 @@ function TenderDialog({
   const [compOpen, setCompOpen] = useState(false);
   const [compZl, setCompZl] = useState("");
   const [compReason, setCompReason] = useState(COMP_REASONS[0]);
+  const [compPin, setCompPin] = useState(""); // manager PIN for an over-cap comp
   const [splitN, setSplitN] = useState(1);
   // Live per-shift comp status for the acting user (drives the cap meter).
   const [compStatus, setCompStatus] = useState<{ compTodayGrosze: number; capGrosze: number; singleMaxGrosze: number; bypasses: boolean } | null>(null);
@@ -2095,6 +2097,7 @@ function TenderDialog({
     const tender: TenderInput = {
       ...(tip > 0 ? { tipGrosze: tip } : {}),
       ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      ...(overCap && compPin ? { compOverridePin: compPin } : {}),
       payments: [{ method, amount: total }],
       defaultMethod: method,
       ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
@@ -2108,6 +2111,7 @@ function TenderDialog({
     const tender: TenderInput = {
       ...(tip > 0 ? { tipGrosze: tip } : {}),
       ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      ...(overCap && compPin ? { compOverridePin: compPin } : {}),
       payments,
       ...(cashShares > 0 && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
     };
@@ -2178,7 +2182,18 @@ function TenderDialog({
                   <div className="cc-row"><span>Comps this shift</span><span className="mono">{fmtPLN(compTodayG)} / {fmtPLN(capG)}</span></div>
                   <div className="cc-bar"><i style={{ width: `${Math.min(100, capG ? (wouldBeG / capG) * 100 : 0)}%` }} /></div>
                   {overCap ? (
-                    <div className="cc-gate">🔒 <b>Over the {fmtPLN(capG)} shift cap</b> — needs a manager. This comp would take the shift to {fmtPLN(wouldBeG)}; the till will refuse it.</div>
+                    <div className="cc-gate">
+                      🔒 <b>Over the {fmtPLN(capG)} shift cap</b> — this comp takes the shift to {fmtPLN(wouldBeG)}. A manager PIN authorises it.
+                      <input
+                        className="core-inp cc-pin"
+                        inputMode="numeric"
+                        type="password"
+                        autoComplete="off"
+                        value={compPin}
+                        onChange={(e) => setCompPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                        placeholder="Manager PIN"
+                      />
+                    </div>
                   ) : (
                     <div className="cc-note">This comp fits — takes the shift to {fmtPLN(wouldBeG)}.</div>
                   )}

@@ -28,6 +28,7 @@ function parseTender(raw: unknown): PosTender | undefined {
     payments: payments.length ? payments : undefined,
     cashTenderedGrosze: num(b.cashTenderedGrosze),
     defaultMethod: b.defaultMethod === "cash" ? "cash" : b.defaultMethod === "card" ? "card" : undefined,
+    compOverridePin: typeof b.compOverridePin === "string" ? b.compOverridePin.slice(0, 20) : undefined,
   };
 }
 
