@@ -31,6 +31,69 @@ import { posLineKey } from "@/lib/pos-line";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
+
+/**
+ * Category-rail glyphs — the rail is pure icon-only (collapsed), so each
+ * category (+ the Popular/All pseudo-categories) needs a distinct icon; the
+ * label rides along as a `title`/`aria-label` tooltip. One 24-viewBox,
+ * 1.9-weight line set, matching the Core icon language.
+ */
+const CAT_ICON: Record<string, ReactNode> = {
+  popular: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L4.5 9.7l5.9-.9z" />,
+  all: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  pizza: (
+    <>
+      <path d="M12 3.2 3.6 18.5a1 1 0 0 0 1 1.5h14.8a1 1 0 0 0 .9-1.5z" />
+      <path d="M5.8 10.4h12.4" />
+      <circle cx="10" cy="14" r="1" />
+      <circle cx="14" cy="14.5" r="1" />
+      <circle cx="12" cy="9" r="1" />
+    </>
+  ),
+  pasta: (
+    <>
+      <path d="M4 11h16v1a8 8 0 0 1-16 0z" />
+      <path d="M2.5 20h19" />
+      <path d="M8 11c0-3 .5-6 1.5-7M12 11c0-3.5.3-6.5 1.3-8M16 11c0-3 .5-5.5 1.4-7" />
+    </>
+  ),
+  antipasti: (
+    <>
+      <ellipse cx="12" cy="13" rx="8.5" ry="4" />
+      <circle cx="9" cy="12.4" r="1.1" />
+      <circle cx="13" cy="13.4" r="1.1" />
+      <circle cx="15.5" cy="12" r="1.1" />
+      <path d="M8 9.2c1-1.6 2.4-2.4 4-2.4s3 .8 4 2.4" />
+    </>
+  ),
+  panini: (
+    <>
+      <path d="M3.5 9.5c0-2 3.8-3.5 8.5-3.5s8.5 1.5 8.5 3.5z" />
+      <path d="M3.5 14.5c0 2 3.8 3.5 8.5 3.5s8.5-1.5 8.5-3.5z" />
+      <path d="M4.5 11.8c2.4 1 12.6 1 15 0" />
+    </>
+  ),
+  desserts: (
+    <>
+      <path d="M6 20h12l-1-8H7z" />
+      <path d="M9.5 12c0-2 1-3 2.5-3s2.5 1 2.5 3" />
+      <path d="M12 6.2V4M12 4a1.2 1.2 0 1 0 0-.1z" />
+    </>
+  ),
+  drinks: (
+    <>
+      <path d="M6 4h12l-1.5 5.5a5 5 0 0 1-9 0z" />
+      <path d="M12 15v4M8.5 20h7" />
+    </>
+  ),
+};
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
   { key: "dine-in", label: "Dine-in" },
   { key: "takeout", label: "Takeaway" },
@@ -1308,22 +1371,49 @@ export function CorePos({
         </div>
       </div>
       <div className="core-pos">
-        {/* category rail */}
-        <aside className="core-rail">
-          <div className="lbl">Menu</div>
+        {/* category rail — pure icon-only (collapsed); label rides as a tooltip */}
+        <aside className="core-rail core-rail-icons" aria-label="Menu categories">
           {hasPopular && (
-            <button type="button" className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"} onClick={() => setCat("popular")}>
-              ★ Popular
+            <button
+              type="button"
+              className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"}
+              onClick={() => setCat("popular")}
+              title="Popular"
+              aria-label="Popular"
+              aria-pressed={activeCat === "popular"}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+                {CAT_ICON.popular}
+              </svg>
               <span className="n">{popularItems.filter(channelOk).length}</span>
             </button>
           )}
-          <button type="button" className={activeCat === "all" ? "core-cat on" : "core-cat"} onClick={() => setCat("all")}>
-            All
+          <button
+            type="button"
+            className={activeCat === "all" ? "core-cat on" : "core-cat"}
+            onClick={() => setCat("all")}
+            title="All"
+            aria-label="All"
+            aria-pressed={activeCat === "all"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+              {CAT_ICON.all}
+            </svg>
             <span className="n">{channelMenu.length}</span>
           </button>
           {categories.map((c) => (
-            <button key={c} type="button" className={c === activeCat ? "core-cat on" : "core-cat"} onClick={() => setCat(c)}>
-              {MENU_CATEGORY_LABELS[c]}
+            <button
+              key={c}
+              type="button"
+              className={c === activeCat ? "core-cat on" : "core-cat"}
+              onClick={() => setCat(c)}
+              title={MENU_CATEGORY_LABELS[c]}
+              aria-label={MENU_CATEGORY_LABELS[c]}
+              aria-pressed={c === activeCat}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {CAT_ICON[c]}
+              </svg>
               {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
                 <span className="core-cat-promise">{promiseMin(steer.promiseSecondsByCategory[c])}</span>
               )}

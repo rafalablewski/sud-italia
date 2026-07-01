@@ -146,8 +146,10 @@ surface toolbar.
 
 ### POS
 
-`.core-pos` grid (rail · menu · ticket): `.core-rail` + `.core-cat` category
-buttons · `.core-menu` + `.core-menu-grid` + `.core-prod` cards (`.pn` name ·
+`.core-pos` grid (rail · menu · ticket): `.core-rail.core-rail-icons` (the
+**pure icon-only** 72px category rail) + `.core-cat` icon buttons (glyph +
+corner count badge, label as tooltip) · `.core-menu` + `.core-menu-grid` +
+`.core-prod` cards (`.pn` name ·
 `.pd` desc · `.core-tagrow`/`.core-tag` · `.pp` price · `.add`) · `.core-ticket`
 + `.core-ticket-empty` (the no-open-check state). Full anatomy:
 [`../modules/pos.md`](../modules/pos.md).
