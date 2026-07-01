@@ -14194,6 +14194,7 @@ function sanitizePosTabLines(input: unknown): PosTabLine[] {
     const course = POS_COURSES.has(raw?.course) ? (raw.course as PosTabLine["course"]) : undefined;
     const modifiers = sanitizeSelectedModifiers(raw?.modifiers);
     const notes = typeof raw?.notes === "string" ? raw.notes.trim().slice(0, 200) || undefined : undefined;
+    const guestPending = raw?.guestPending === true ? true : undefined;
     // Identity is the item + its modifier picks + its note — so a plain item and
     // a customised one (or two with different notes) stay on separate lines, and
     // only a genuinely-identical re-add stacks. The last course wins on a merge
@@ -14203,6 +14204,7 @@ function sanitizePosTabLines(input: unknown): PosTabLine[] {
     if (existing) {
       existing.quantity = Math.min(99, existing.quantity + qty);
       if (course) existing.course = course;
+      if (guestPending) existing.guestPending = true;
     } else {
       lines.push({
         menuItemId: id,
@@ -14210,6 +14212,7 @@ function sanitizePosTabLines(input: unknown): PosTabLine[] {
         ...(course ? { course } : {}),
         ...(modifiers ? { modifiers } : {}),
         ...(notes ? { notes } : {}),
+        ...(guestPending ? { guestPending: true } : {}),
       });
     }
   }

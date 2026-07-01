@@ -304,6 +304,7 @@
 .core .core-qstep.big .q { min-width: 34px; font-size: 15px; }
 /* tappable line name → opens the line editor (modifiers + note) */
 .core .core-line .ln-edit { display: inline-flex; align-items: center; gap: 6px; text-align: left; color: var(--ink); }
+.core .core-line .ln-edit .ln-guest { font-size: 10px; font-weight: 700; color: var(--info); background: rgba(84,188,224,.16); border-radius: 5px; padding: 1px 6px; }
 .core .core-line .ln-edit .ln-pen { color: var(--ink-3); font-size: 11px; opacity: 0; transition: opacity var(--fast); }
 .core .core-line-main:hover .ln-edit .ln-pen { opacity: 1; }
 /* per-line modifier chips + note, under the line name */

@@ -43,6 +43,7 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
   const [covers, setCovers] = useState(2);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sentToTable, setSentToTable] = useState(false);
   // Lazily minted so we never call an impure function during render. One key
   // per checkout attempt; rotated on a rejected attempt so a corrected retry
   // isn't deduped against the rejected one.
@@ -80,6 +81,31 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
     setPlacing(true);
     if (!idemKey.current) idemKey.current = freshKey();
     try {
+      // Dine-in at a table → contribute to the table's OPEN check as pending
+      // lines (the "fourth renderer"), not a standalone order. The server
+      // reviews & fires; the one check settles later (POS or guest-pay).
+      if (table) {
+        const res = await fetch("/api/pos/guest-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Idempotency-Key": idemKey.current },
+          body: JSON.stringify({
+            locationSlug,
+            tableNumber: table,
+            customerName: name.trim(),
+            items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.q })),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError((data as { error?: string })?.error ?? "Could not send your order. Please try again.");
+          idemKey.current = freshKey();
+          setPlacing(false);
+          return;
+        }
+        setSentToTable(true);
+        setPlacing(false);
+        return;
+      }
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idemKey.current },
@@ -112,6 +138,21 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
       setPlacing(false);
     }
   };
+
+  if (sentToTable) {
+    return (
+      <main className="qr">
+        <div className="qr-sent" role="status">
+          <div className="qr-sent-tick" aria-hidden>✓</div>
+          <h1>Sent to your table</h1>
+          <p>Your order is on <strong>Table {table}</strong>&rsquo;s check — your server will review and bring it over. Add another round any time from this page.</p>
+          <button type="button" className="qr-place" onClick={() => { setSentToTable(false); setQty({}); setCartOpen(false); idemKey.current = null; }}>
+            Add another round
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="qr">
@@ -253,6 +294,11 @@ function QrStyles() {
       .qr-cartbar { position:fixed; left:14px; right:14px; bottom:14px; z-index:20; display:flex; align-items:center; gap:12px; width:calc(100% - 28px); padding:14px 18px; border:none; border-radius:14px; background:var(--brand); color:#fff; font-size:16px; font-weight:600; cursor:pointer; box-shadow:0 8px 24px rgba(0,0,0,.4); }
       .qr-cartbar-count { background:rgba(255,255,255,.25); border-radius:8px; padding:2px 9px; font-variant-numeric:tabular-nums; }
       .qr-cartbar-total { margin-left:auto; font-variant-numeric:tabular-nums; }
+      .qr-sent { min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; gap:14px; }
+      .qr-sent-tick { width:64px; height:64px; border-radius:50%; background:var(--brand); color:#fff; display:grid; place-items:center; font-size:34px; font-weight:700; }
+      .qr-sent h1 { font-size:24px; margin:6px 0 0; }
+      .qr-sent p { color:var(--muted); font-size:15px; line-height:1.55; max-width:340px; }
+      .qr-sent .qr-place { margin-top:10px; padding:14px 22px; border:none; border-radius:12px; background:var(--brand); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
       .qr-sheet-scrim { position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.55); display:flex; align-items:flex-end; }
       .qr-sheet { width:100%; max-height:92dvh; overflow-y:auto; background:var(--bg); border-radius:18px 18px 0 0; border-top:1px solid var(--line); }
       .qr-sheet-head { position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; padding:16px 18px; font-size:17px; background:var(--bg); border-bottom:1px solid var(--line); }

@@ -1239,6 +1239,7 @@ export function CorePos({
           </div>
           <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
             {m.name}
+            {l.guestPending && <span className="ln-guest" title="Guest added via QR — review & fire">🛎 guest</span>}
             <span className="ln-pen" aria-hidden>✎</span>
           </button>
           <span className="lp mono">{zl(lineUnit * l.quantity)}</span>

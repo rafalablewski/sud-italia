@@ -652,6 +652,10 @@ export interface PosTabLine {
   /** Free-text special request for this line ("no chili", "well done", an
    *  allergy flag). Surfaced on the KDS ticket and the receipt. */
   notes?: string;
+  /** True when a GUEST added this line via QR to the table's open check — it
+   *  awaits the server's review before firing (the "fourth renderer"
+   *  contributing to the same check, not a parallel order). Cleared on fire. */
+  guestPending?: boolean;
 }
 
 /** An open check at the counter — the "Tabs" POS lets staff juggle several at
