@@ -431,6 +431,12 @@ visual + usability pass first (`OttavianoKDSApp.swift`):
 - **`.searchable` over the whole IA** — filters `OPERATOR_NAV` live on label +
   blurb, empty sections drop, no-match → `ContentUnavailableView.search`; prompt
   counts the role's reachable surfaces.
+- **⌘K command palette** (`CommandPalette.swift`, Service OS parity) — a
+  keyboard-summoned overlay (⌘K, or the toolbar `command` button) that jumps to any
+  role-reachable surface from *anywhere* in the app, not just when the rail is
+  focused. Auto-focuses its field, matches label + blurb + href, `return` jumps the
+  first hit; sets the split-view `selection` so the detail pane follows. Fed by the
+  same `filteredNav(for:)` IA as the rail — never offers an unreachable surface.
 - **`OperatorNavRow`** — icon-chip + label rows (web-rail parity); scaffolds
   carry a subtle wrench glyph (live vs. layout-parity at a glance).
 - **Universal list search** — `OperatorListView` gained an optional `search:`
