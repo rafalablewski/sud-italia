@@ -284,18 +284,10 @@ export function CoreSlots() {
   };
 
   return (
-    <CoreShell
-      eyebrow="Service · Floor & Slots"
-      tabs={serviceTabs("slots")}
-      subRight={
-        tab === "manage" ? (
-          <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
-        ) : undefined
-      }
-    >
+    <CoreShell eyebrow="Service · Floor & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
-        {/* View filters + date live on the surface, not the command bar
-            (mockup: Service bar tools = refresh + primary only). */}
+        {/* All Slots controls — view filters, range, date, and the New action —
+            live in this one body sub-toolbar; the command bar stays standard. */}
         <div className="core-surf-toolbar">
           <div className="core-seg">
             <button className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
@@ -309,6 +301,9 @@ export function CoreSlots() {
           )}
           <div className="core-sp" />
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
+          {tab === "manage" && (
+            <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
+          )}
         </div>
         {tab === "manage" ? (
           <>

@@ -83,23 +83,26 @@ surface toolbar.
 - **`.cm-tabs`** — the shell's `.core-tabs` in the bar: mono, `lowercase`,
   swipe-scroll; `.on` = a `--basil` chip with a basil inset ring.
 - **`.cm-sp`** — the flex spacer that pushes the tail cluster right.
-- **`.cm-surf`** — wraps the surface's own controls (`subRight` — surface
-  tools, a live pill, a primary action). Every `.core-iconbtn` inside the bar
-  (both `.cm-surf` and `.cm-right`) shares **one** flush terminal style — 32px
-  tall, transparent, mono, hover → `--basil` — so QR · fullscreen · refresh ·
-  bell · theme all read as one family. Icon-only tools stay a 32px square;
-  labelled ones (KDS `86` / `Σ`, the QR count) grow; the amber `.core-recall-btn`
-  keeps its own emphasis (excluded). The shared SVG glyphs (QR · expand ·
-  refresh · sound · pause) come from
+- **No surface tools in the bar.** The command bar is ONE standard on every
+  surface (prompt · tabs · ⌘K · risk/loc/clock · bell · theme). A surface's own
+  controls — passed as `subRight`, plus richer filters/segments/date pickers —
+  live in a **`.core-surf-toolbar`** at the top of the Canvas body (see the
+  "Chrome" section), never the chrome. `CoreShell` renders `subRight`
+  right-aligned in that toolbar automatically; a surface that builds its own
+  richer toolbar (Slots) passes no `subRight`.
+- **`.core-surf-toolbar` tools** keep the flush terminal treatment there: every
+  `.core-iconbtn` inside it (and the global `.cm-right` bell/theme) shares one
+  32px transparent mono style, hover → `--basil`; icon-only tools stay a 32px
+  square, labelled ones (KDS `86` / `Σ`, the QR count) grow, the amber
+  `.core-recall-btn` keeps its emphasis (excluded). `.core-chip` status flags
+  (the Guest concierge live pill) go mono too. The shared SVG glyphs (QR ·
+  expand · refresh · sound · pause) come from
   [`src/core/shell/toolIcons.tsx`](../../../src/core/shell/toolIcons.tsx) — one
   24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
-  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.) In-bar
-  `.core-chip` status flags (the Guest concierge live pill) go mono too. Heavier
-  controls — segmented filters, date pickers — are NOT in the bar; they live in
-  a `.core-surf-toolbar` on the surface body.
+  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.)
 - **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
-  a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. The
-  mockup's `cm-primary`, tokenised.
+  a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. Lives
+  in the `.core-surf-toolbar`, not the command bar.
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
   `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
@@ -123,9 +126,9 @@ surface toolbar.
 
 - **`.core-chip`** — pill (surface status flags, a `Dine-in` flag, the Orders
   channel tag). `.dot` = a small status dot. `.on` = filled brand (active toggle).
-- **`.core-iconbtn`** — 34px square icon button (the default outside the bar —
+- **`.core-iconbtn`** — 34px square icon button (the default in surface bodies —
   KDS lane toolbar, inbox conversation actions); reskinned to a flush 32px
-  terminal button inside the command bar (`.cm-surf` / `.cm-right`, above).
+  terminal button inside a `.core-surf-toolbar` and the global `.cm-right`, above.
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
@@ -192,9 +195,13 @@ wordmark, no second subbar row, no bottom switcher:
 - **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
   lights) · `.cm-div` · `.cm-prompt` (the live `core ❯ surface:tab` prompt +
   `.cm-caret`) · `.cm-div` · `.cm-tabs` (the surface's swipe-scroll view tabs) ·
-  `.cm-sp` (spacer) · `.cm-surf` (the surface's own `subRight` controls) ·
-  `.cm-k` (⌘K launcher) · `.cm-tel` (risk · loc · clock telemetry) · `.cm-right`
-  (bell · theme). Only `.cm-tabs` scrolls; everything else is `flex:none`.
+  `.cm-sp` (spacer) · `.cm-k` (⌘K launcher) · `.cm-tel` (risk · loc · clock
+  telemetry) · `.cm-right` (bell · theme). ONE standard on every surface — no
+  surface tools here; those live in a `.core-surf-toolbar` on the body. Only
+  `.cm-tabs` scrolls; everything else is `flex:none`.
+- **`.core-surf-toolbar`** — the surface sub-toolbar at the top of the Canvas
+  body that carries the surface's own controls (`subRight` right-aligned, plus
+  any filters/segments/date the surface builds). Keeps the command bar standard.
 - **`.core-lens`** — the icon-only 60px Lens Rail that switches the four room
   lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
   Collapsed by default; it expands to labels only when **pinned** — a click on

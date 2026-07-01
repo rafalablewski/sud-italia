@@ -72,30 +72,29 @@
    transparent, 32px tall, mono, hover → basil. Icon-only buttons stay 32px
    square; labelled ones (KDS 86 / Σ / QR count) grow. The amber recall button
    keeps its own emphasis (excluded). */
-.core .cm-surf { display: flex; align-items: center; gap: 4px; flex: none; }
-.core .core-bar .cm-surf .core-iconbtn:not(.core-recall-btn),
+/* The command bar carries NO surface tools — one standard bar on every
+   surface (prompt · tabs · ⌘K · risk/loc/clock · bell · theme). A surface's own
+   controls live in a body sub-toolbar (.core-surf-toolbar), where they keep the
+   flush terminal treatment; the global bell + theme (.cm-right) keep it too. */
+.core .core-surf-toolbar .core-iconbtn:not(.core-recall-btn),
 .core .core-bar .cm-right .core-iconbtn {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   height: 32px; min-width: 32px; padding: 0 7px; border-radius: 6px;
   background: transparent; border: 0; color: var(--ink-2);
   font-family: var(--mono); font-size: 12.5px; }
-.core .core-bar .cm-surf .core-iconbtn:not(.core-recall-btn):hover,
+.core .core-surf-toolbar .core-iconbtn:not(.core-recall-btn):hover,
 .core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--basil); }
-.core .core-bar .cm-surf .core-iconbtn.on { background: var(--basil-wash); color: var(--basil); }
-.core .core-bar .cm-surf .core-iconbtn svg,
+.core .core-surf-toolbar .core-iconbtn.on { background: var(--basil-wash); color: var(--basil); }
+.core .core-surf-toolbar .core-iconbtn svg,
 .core .core-bar .cm-right .core-iconbtn svg { width: 16px; height: 16px; }
-/* the rest of the surface's own controls also speak terminal: segmented
-   status chips (the Guest concierge live pill) go mono so the whole .cm-surf
-   strip reads as one language. Heavier controls (segmented filters, date
-   inputs) live on the surface, not the bar — see .core-surf-toolbar. */
-.core .core-bar .cm-surf .core-chip { font-family: var(--mono); font-size: 11.5px; }
-/* primary surface action — the mockup's cm-primary: a basil-outlined mono
-   pill with a leading plus (Service "add table" / "new"). */
-.core .core-bar .cm-primary { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
+.core .core-surf-toolbar .core-chip { font-family: var(--mono); font-size: 11.5px; }
+/* primary surface action — a basil-outlined mono pill (Service "add table" /
+   "new"); lives in the body toolbar now, not the command bar. */
+.core .cm-primary { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
   font-family: var(--mono); font-size: 11.5px; text-transform: lowercase; color: var(--basil);
-  border: 1px solid var(--basil); border-radius: 7px; padding: 6px 11px; background: var(--basil-wash); }
-.core .core-bar .cm-primary:hover { background: var(--basil); color: var(--on-basil); }
-.core .core-bar .cm-primary svg { width: 13px; height: 13px; }
+  border: 1px solid var(--basil); border-radius: 7px; padding: 6px 11px; background: var(--basil-wash); cursor: pointer; }
+.core .cm-primary:hover { background: var(--basil); color: var(--on-basil); }
+.core .cm-primary svg { width: 13px; height: 13px; }
 
 /* ⌘K launcher chip */
 .core .cm-k { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 12px; font-family: var(--mono);
@@ -251,7 +250,8 @@
    the working controls the "Command" bar deliberately omits (Slots' view
    filters + date, Book's date). Distinct from the command bar: it belongs to
    the surface, not the global chrome. */
-.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 46px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; }
+.core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 
 /* ============================================================
@@ -1158,12 +1158,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-ztab .n { font-family: var(--mono); font-size: 11px; opacity: .7; }
 .core .core-zone-h { display: flex; align-items: baseline; gap: 10px; margin: 6px 2px 12px; }
 .core .core-zone-h .zt { font-family: var(--display); font-weight: 600; font-size: 15px; }
-.core .core-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.core .core-tbl2 { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--basil); border-radius: var(--r-md); padding: 12px 13px; text-align: left; box-shadow: var(--sh-1); transition: all var(--fast); }
-.core .core-tbl2:hover { border-color: var(--line-2); box-shadow: var(--sh-2); }
+.core .core-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.core .core-tbl2 { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--basil); border-radius: var(--r-lg); padding: 15px 16px; text-align: left; box-shadow: var(--sh-1); transition: transform var(--fast), box-shadow var(--fast), border-color var(--fast); }
+.core .core-tbl2:hover { border-color: var(--line-2); box-shadow: var(--sh-2); transform: translateY(-2px); }
 .core .core-tbl2:disabled { cursor: default; }
 .core .core-tbl2.seated { border-left-color: var(--brand); } .core .core-tbl2.freeing { border-left-color: var(--amber); } .core .core-tbl2.booked { border-left-color: var(--info); } .core .core-tbl2.oos { opacity: .45; border-left-color: var(--ink-3); }
-.core .core-tbl2 .tnum { font-family: var(--display); font-weight: 700; font-size: 20px; }
+.core .core-tbl2 .tnum { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; }
 .core .core-tbl2 .tcap { font-size: 11px; color: var(--ink-3); }
 .core .core-tbl2 .tst { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--basil-wash); color: var(--basil); }
 .core .core-tbl2 .tst.seated { background: var(--brand-wash); color: var(--brand-bright); } .core .core-tbl2 .tst.freeing { background: var(--amber-wash); color: var(--amber); } .core .core-tbl2 .tst.booked { background: var(--info-wash); color: var(--info); } .core .core-tbl2 .tst.oos { background: var(--panel-3); color: var(--ink-3); }
@@ -1206,10 +1206,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl2-wrap .core-tbl2 { width: 100%; }
 /* capacity-sized tiles — a 6-top reads bigger than a deuce (larger tables
    span two columns and stand taller so party size is legible at a glance). */
-.core .core-tbl2-wrap.sz-md .core-tbl2 { min-height: 104px; }
+.core .core-tbl2-wrap.sz-md .core-tbl2 { min-height: 124px; }
 .core .core-tbl2-wrap.sz-lg { grid-column: span 2; }
-.core .core-tbl2-wrap.sz-lg .core-tbl2 { min-height: 118px; }
-.core .core-tbl2-wrap.sz-lg .tnum { font-size: 26px; }
+.core .core-tbl2-wrap.sz-lg .core-tbl2 { min-height: 140px; }
+.core .core-tbl2-wrap.sz-lg .tnum { font-size: 30px; }
 /* live "food up" — a table whose ticket just hit ready pulses basil-green so
    the runner sees it from across the room (fed by the shared order stream). */
 @keyframes core-foodup { 0%,100% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,0); } 50% { box-shadow: 0 0 0 2px var(--basil), 0 0 0 6px rgba(125,196,100,.3); } }

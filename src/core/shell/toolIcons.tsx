@@ -1,6 +1,7 @@
 /**
  * Shared command-bar tool icons — one consistent 24-viewBox, 1.6-weight line
- * set for the surface tools that live in the "Command" bar (`.cm-surf`), so QR,
+ * set for the surface tools that live in a surface's body sub-toolbar
+ * (`.core-surf-toolbar`), so QR,
  * fullscreen and refresh render identically across POS / KDS / Orders / Service
  * instead of a mix of unicode glyphs and pills. Matches the "14 — Command"
  * mockup icon set. Pure SVG (no hooks) — safe in server or client components.

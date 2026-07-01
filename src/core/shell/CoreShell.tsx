@@ -42,11 +42,13 @@ export function CoreShell({
 }) {
   return (
     <>
-      {/* "Command" — a keyboard-first terminal command bar: traffic-light chrome
-          · a live shell prompt (core ❯ surface:tab) + blinking caret · mono
-          view-tab chips · the surface's own controls (subRight) · a ⌘K launcher
-          · a risk·loc·clock telemetry cluster · the global bell + theme tools.
-          The primary surface switcher is the left Lens Rail (CoreNav, below). */}
+      {/* "Command" — ONE standard bar on every surface: traffic-light chrome · a
+          live shell prompt (core ❯ surface:tab) + blinking caret · mono view-tab
+          chips · a ⌘K launcher · a risk·loc·clock telemetry cluster · the global
+          bell + theme tools. NO surface-specific tools live here — a surface's
+          own controls (`subRight`) render in a body sub-toolbar below, so the
+          chrome reads identically across POS/KDS/Orders/Service/Guest/Book. The
+          primary surface switcher is the left Lens Rail (CoreNav, below). */}
       <header className="core-bar">
         <div className="cm-lights" aria-hidden>
           <i />
@@ -72,7 +74,6 @@ export function CoreShell({
           </div>
         )}
         <div className="cm-sp" />
-        {subRight && <div className="cm-surf">{subRight}</div>}
         <CmdkLauncher />
         <div className="cm-tel">
           <PressureBadge />
@@ -85,10 +86,21 @@ export function CoreShell({
         </div>
       </header>
 
-      {/* The Canvas region: the Lens Rail (left) beside the surface body. */}
+      {/* The Canvas region: the Lens Rail (left) beside the surface body. The
+          surface's own controls (`subRight`) sit in a body sub-toolbar at the
+          top of the Canvas (right-aligned), not in the command bar. Surfaces
+          that build their own richer toolbar (Slots) pass no `subRight`. */}
       <div className="core-main">
         <CoreNav />
-        <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+        <div className={bleed ? "core-body bleed" : "core-body"}>
+          {subRight && (
+            <div className="core-surf-toolbar">
+              <div className="core-sp" />
+              {subRight}
+            </div>
+          )}
+          {children}
+        </div>
       </div>
 
       {/* Persistent Context Dock — the selected entity's check, following the
