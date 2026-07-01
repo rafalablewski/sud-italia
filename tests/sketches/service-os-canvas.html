@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en" class="core" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service OS — Liquid Glass Canvas (Floor · Line · Pass · Book)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══ Core tokens (from src/app/themes/core/tokens.css) + a LIQUID-GLASS material layer ═══ */
+.core{
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --on-accent:#2a160b;--on-basil:#0c1a0f;--on-danger:#fff4f0;
+  --r-sm:10px;--r-md:16px;--r-lg:22px;--r-xl:30px;--pill:999px;
+  --spring:520ms cubic-bezier(.16,1,.3,1);
+  --fast:200ms cubic-bezier(.16,1,.3,1);
+}
+.core,.core[data-theme="dark"]{
+  --bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;
+  --brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.16);
+  --basil:#7dc464;--amber:#f0ad46;--info:#54bce0;--danger:#ff5a5c;
+  /* glass materials */
+  --glass:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.035) 55%,rgba(255,255,255,.02));
+  --glass-2:linear-gradient(150deg,rgba(255,255,255,.09),rgba(255,255,255,.02));
+  --glass-hi:linear-gradient(150deg,rgba(255,255,255,.22),rgba(255,255,255,.06) 50%);
+  --rim:1px solid rgba(255,255,255,.16);
+  --rim-hi:1px solid rgba(255,255,255,.28);
+  --blur:blur(26px) saturate(180%);
+  --blur-lite:blur(14px) saturate(160%);
+  --float:0 18px 50px -12px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+  --inset:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.disp{font-family:var(--display)}
+
+/* ═══ ambient aurora backdrop — gives the glass something to refract ═══ */
+.aurora{position:fixed;inset:0;z-index:0;overflow:hidden;background:
+  radial-gradient(60% 50% at 15% 10%,rgba(232,107,62,.28),transparent 60%),
+  radial-gradient(55% 55% at 85% 90%,rgba(84,188,224,.20),transparent 60%),
+  radial-gradient(50% 45% at 70% 20%,rgba(240,173,70,.16),transparent 55%),
+  radial-gradient(60% 60% at 30% 85%,rgba(125,196,100,.14),transparent 60%),
+  #0a0806}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;animation:drift 22s ease-in-out infinite}
+.orb.a{width:520px;height:520px;background:#e86b3e;top:-140px;left:-80px}
+.orb.b{width:460px;height:460px;background:#54bce0;bottom:-160px;right:-60px;animation-delay:-7s}
+.orb.c{width:380px;height:380px;background:#f0ad46;top:30%;left:55%;animation-delay:-13s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,-40px) scale(1.08)}66%{transform:translate(-40px,50px) scale(.95)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.4;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
+@media(prefers-reduced-motion:reduce){.orb{animation:none}}
+
+.caption{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:60;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:var(--rim);border-radius:var(--pill);padding:8px 18px;font-size:12px;color:var(--ink-2);box-shadow:var(--float),var(--inset)}
+.caption b{color:var(--brand-bright)}
+
+/* glass helper */
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:var(--rim);box-shadow:var(--float),var(--inset);position:relative}
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(150deg,rgba(255,255,255,.14),transparent 40%);opacity:.6;pointer-events:none;mix-blend-mode:screen}
+
+.app{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;padding:14px;gap:14px}
+.lensradio{position:absolute;opacity:0;pointer-events:none}
+
+/* ═══ Command Bar — floating glass capsule ═══ */
+.cmd{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:var(--pill)}
+.brand{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px;padding:0 6px}
+.brand .dot{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--brand-bright),var(--brand));box-shadow:0 0 14px var(--brand),0 0 0 4px var(--brand-wash)}
+.scope{display:flex;align-items:center;gap:6px;background:var(--glass-2);border:var(--rim);border-radius:var(--pill);padding:7px 14px;font-size:13px;color:var(--ink);cursor:pointer;box-shadow:var(--inset)}
+.search{flex:1;max-width:440px;display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.22);border:var(--rim);border-radius:var(--pill);padding:9px 16px;color:var(--ink-3);font-size:13px;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.search kbd{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--glass);border:var(--rim);border-radius:7px;padding:2px 7px;color:var(--ink-2)}
+.pressure{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pchip{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink);background:var(--glass-2);border:var(--rim);border-radius:var(--pill);padding:6px 12px;box-shadow:var(--inset)}
+.pchip .pd{width:8px;height:8px;border-radius:50%}
+.pd.risk{background:var(--danger);box-shadow:0 0 10px var(--danger);animation:pulse 1.4s ease-in-out infinite}
+.pd.warn{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.pd.calm{background:var(--basil);box-shadow:0 0 8px var(--basil)}
+@keyframes pulse{0%,100%{box-shadow:0 0 10px var(--danger),0 0 0 0 var(--brand-wash)}50%{box-shadow:0 0 10px var(--danger),0 0 0 7px transparent}}
+.who{display:flex;align-items:center;gap:9px;font-size:13px;padding-right:4px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--brand-bright),var(--amber));display:grid;place-items:center;font-weight:700;font-size:12px;color:var(--on-accent);box-shadow:0 4px 14px rgba(232,107,62,.5),var(--inset)}
+
+/* ═══ Body ═══ */
+.body{flex:1;display:flex;gap:14px;min-height:0}
+.rail{flex:0 0 76px;border-radius:var(--r-xl);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px}
+.rl{width:58px;height:62px;border-radius:var(--r-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--ink-3);cursor:pointer;transition:var(--spring);position:relative}
+.rl:hover{color:var(--ink);transform:translateY(-1px)}
+.rl svg{width:23px;height:23px}
+.rl span{font-size:10.5px;font-weight:700;letter-spacing:.01em}
+.rl .ind{position:absolute;left:-12px;top:50%;transform:translateY(-50%) scaleY(0);width:4px;height:34px;border-radius:3px;background:linear-gradient(var(--brand-bright),var(--brand));box-shadow:0 0 12px var(--brand);transition:var(--spring)}
+.railspace{flex:1}
+
+.canvas{flex:1;position:relative;overflow:auto;padding-right:2px}
+.lens{display:none;animation:fade var(--spring) both}
+@keyframes fade{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+#L-floor:checked ~ .body .lens.floor{display:block}
+#L-line:checked  ~ .body .lens.line{display:block}
+#L-pass:checked  ~ .body .lens.pass{display:block}
+#L-book:checked  ~ .body .lens.book{display:block}
+#L-floor:checked ~ .body .rail [for=L-floor],
+#L-line:checked  ~ .body .rail [for=L-line],
+#L-pass:checked  ~ .body .rail [for=L-pass],
+#L-book:checked  ~ .body .rail [for=L-book]{color:var(--brand-bright);background:var(--brand-wash);box-shadow:inset 0 0 0 1px rgba(255,148,99,.4),0 0 24px -6px var(--brand)}
+#L-floor:checked ~ .body .rail [for=L-floor] .ind,
+#L-line:checked  ~ .body .rail [for=L-line] .ind,
+#L-pass:checked  ~ .body .rail [for=L-pass] .ind,
+#L-book:checked  ~ .body .rail [for=L-book] .ind{transform:translateY(-50%) scaleY(1)}
+
+.lenshead{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;padding:2px 4px}
+.lenshead h1{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.025em}
+.lenshead p{font-size:12.5px;color:var(--ink-3)}
+.seg{display:inline-flex;border-radius:var(--pill);padding:4px;gap:3px;margin-left:auto}
+.seg b{font-size:12px;padding:6px 14px;border-radius:var(--pill);color:var(--ink-2);cursor:pointer;font-weight:600}
+.seg b.on{background:var(--glass-hi);color:var(--ink);box-shadow:var(--inset);border:var(--rim)}
+
+/* ═══ Floor ═══ */
+.zones{display:flex;gap:8px;margin-bottom:16px}
+.zone{font-size:12.5px;padding:8px 16px;border-radius:var(--pill);background:var(--glass-2);border:var(--rim);color:var(--ink-2);cursor:pointer;font-weight:600;box-shadow:var(--inset)}
+.zone.on{background:var(--glass-hi);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
+.tile{position:relative;border-radius:var(--r-lg);padding:16px;min-height:126px;cursor:pointer;transition:var(--spring);overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ink-3);opacity:.5}
+.tile:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 26px 60px -14px rgba(0,0,0,.7),var(--inset)}
+.tile .tn{font-family:var(--display);font-weight:700;font-size:20px}
+.tile .meta{font-size:11.5px;color:var(--ink-2);margin-top:3px}
+.tile .dots{display:flex;gap:4px;margin-top:12px}
+.tile .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}
+.tile .dots i.f{background:var(--brand);box-shadow:0 0 8px var(--brand)}
+.tile .state{position:absolute;bottom:14px;left:16px;right:16px;font-size:11px;font-weight:800;letter-spacing:.03em;display:flex;align-items:center;gap:6px}
+.tile.free::before{background:var(--basil);box-shadow:0 0 14px var(--basil)}
+.tile.free .state{color:var(--basil)}
+.tile.seated::before{background:var(--info);box-shadow:0 0 14px var(--info)}
+.tile.seated .state{color:var(--info)}
+.tile.risk::before{background:var(--danger);box-shadow:0 0 16px var(--danger)}
+.tile.risk{background:linear-gradient(155deg,rgba(255,90,92,.20),rgba(255,255,255,.03) 55%)}
+.tile.risk .state{color:var(--danger)}
+.tile.pay::before{background:var(--amber);box-shadow:0 0 14px var(--amber)}
+.tile.pay .state{color:var(--amber)}
+.tile .badge{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;background:rgba(0,0,0,.3);border:var(--rim);border-radius:var(--pill);padding:3px 9px;color:var(--ink-2)}
+.tile.sel{box-shadow:0 0 0 2px var(--brand-bright),0 26px 60px -14px rgba(0,0,0,.7),0 0 40px -8px var(--brand)}
+
+.radial{position:absolute;inset:0;z-index:5;pointer-events:none}
+.radial .rb{position:absolute;left:50%;top:50%;font-size:11px;font-weight:800;padding:9px 14px;border-radius:var(--pill);background:var(--glass);backdrop-filter:var(--blur-lite);-webkit-backdrop-filter:var(--blur-lite);border:var(--rim-hi);color:var(--ink);box-shadow:var(--float),var(--inset);white-space:nowrap;animation:bloom var(--spring) both}
+.radial .rb.primary{background:linear-gradient(150deg,var(--brand-bright),var(--brand));color:var(--on-accent);border:none;box-shadow:0 8px 26px rgba(232,107,62,.6),var(--inset)}
+@keyframes bloom{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1}}
+.rb.a{transform:translate(-50%,-175%)}.rb.b{transform:translate(34%,-50%)}.rb.c{transform:translate(-50%,70%)}.rb.d{transform:translate(-140%,-50%)}
+
+/* ═══ Line (POS) ═══ */
+.pos{display:grid;grid-template-columns:168px 1fr;gap:16px}
+.catrail{display:flex;flex-direction:column;gap:5px;padding:8px;border-radius:var(--r-lg)}
+.cat{font-size:13px;padding:11px 14px;border-radius:var(--r-md);color:var(--ink-2);cursor:pointer;font-weight:600}
+.cat:hover{background:rgba(255,255,255,.06)}
+.cat.on{background:var(--glass-hi);color:var(--ink);box-shadow:var(--inset)}
+.cat.star{color:var(--amber)}
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px;align-content:start}
+.prod{border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:var(--spring);position:relative;min-height:96px}
+.prod:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 24px 52px -14px rgba(0,0,0,.7),var(--inset)}
+.prod .pn{font-weight:600;font-size:14.5px}
+.prod .pp{font-family:var(--mono);font-size:14px;color:var(--brand-bright);margin-top:auto;position:absolute;bottom:16px}
+.prod .mod{position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--info);box-shadow:0 0 8px var(--info)}
+.prod.off{opacity:.35}
+.prod.off .pn{text-decoration:line-through}
+.prod.off .tag86{position:absolute;top:14px;right:14px;font-size:9px;font-weight:800;color:var(--danger);letter-spacing:.05em}
+
+/* ═══ Book ═══ */
+.tl{border-radius:var(--r-lg);overflow:hidden}
+.tlrow{display:grid;grid-template-columns:78px repeat(8,1fr);border-bottom:1px solid rgba(255,255,255,.07);min-height:48px}
+.tlrow:last-child{border-bottom:0}
+.tlrow.head{background:rgba(255,255,255,.05);min-height:38px}
+.tlh,.tlc{border-right:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 8px;font-size:11.5px;position:relative}
+.tlh{color:var(--ink-2);font-weight:700}
+.tlrow.head .tlc{color:var(--ink-3);font-weight:700;justify-content:center;font-family:var(--mono)}
+.resv{position:absolute;top:7px;bottom:7px;border-radius:var(--r-sm);background:linear-gradient(150deg,rgba(84,188,224,.4),rgba(84,188,224,.18));border:1px solid rgba(84,188,224,.6);color:var(--ink);font-size:10.5px;font-weight:700;display:flex;align-items:center;padding:0 8px;z-index:2;box-shadow:var(--inset);backdrop-filter:var(--blur-lite)}
+.resv.seated{background:linear-gradient(150deg,rgba(125,196,100,.4),rgba(125,196,100,.18));border-color:rgba(125,196,100,.6)}
+.conflict{position:absolute;top:7px;bottom:7px;border-radius:var(--r-sm);background:repeating-linear-gradient(45deg,rgba(255,90,92,.28),rgba(255,90,92,.28) 6px,transparent 6px,transparent 12px);border:1px solid var(--danger);z-index:3}
+
+/* ═══ Pass (compact) ═══ */
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.col h3{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px;display:flex;justify-content:space-between;padding:0 4px}
+.tk{border-radius:var(--r-md);padding:14px;margin-bottom:12px;position:relative;overflow:hidden}
+.tk::before{content:"";position:absolute;left:0;top:0;right:0;height:3px}
+.tk.firing::before{background:var(--basil);box-shadow:0 0 12px var(--basil)}
+.tk.warn::before{background:var(--amber);box-shadow:0 0 12px var(--amber)}
+.tk.risk::before{background:var(--danger);box-shadow:0 0 14px var(--danger)}
+.tk.ready::before{background:var(--basil);box-shadow:0 0 12px var(--basil)}
+.tk .tkh{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700}
+.tk .tkh .clk{font-family:var(--mono);color:var(--ink-2)}
+.sla{height:6px;border-radius:4px;background:rgba(0,0,0,.35);margin:9px 0;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+.sla i{display:block;height:100%;border-radius:4px}
+.sla i.g{width:40%;background:linear-gradient(90deg,var(--basil),#a6e089)}
+.sla i.a{width:72%;background:linear-gradient(90deg,var(--amber),#ffca6e)}
+.sla i.r{width:96%;background:linear-gradient(90deg,var(--danger),#ff8a8b)}
+.tk .li{font-size:13px;color:var(--ink-2);margin:3px 0}
+.tk .allerg{color:var(--danger);font-weight:800;font-size:12px}
+.tk .held{color:var(--ink-3);opacity:.6}
+
+/* ═══ Context Dock — floating glass slab ═══ */
+.dock{flex:0 0 auto;border-radius:var(--r-xl);overflow:hidden}
+.dockbar{display:flex;align-items:center;gap:18px;padding:14px 20px}
+.dockbar .dt{font-family:var(--display);font-weight:700;font-size:17px}
+.dockbar .dmeta{font-size:12px;color:var(--ink-3);margin-top:2px}
+.spine{display:flex;align-items:center;gap:7px}
+.crs{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:var(--pill);background:var(--glass-2);border:var(--rim);color:var(--ink-3);box-shadow:var(--inset)}
+.crs .cd{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink-3)}
+.crs.done{color:var(--basil)}.crs.done .cd{background:var(--basil);border-color:var(--basil);box-shadow:0 0 8px var(--basil)}
+.crs.fire{color:var(--amber);border-color:rgba(240,173,70,.5);background:var(--brand-wash)}
+.crs.fire .cd{background:var(--amber);border-color:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse2 1.3s infinite}
+@keyframes pulse2{0%,100%{box-shadow:0 0 10px var(--amber),0 0 0 0 rgba(240,173,70,.3)}50%{box-shadow:0 0 10px var(--amber),0 0 0 6px transparent}}
+.dockbar .total{margin-left:auto;font-family:var(--mono);font-size:22px;font-weight:700}
+.dockbar .total small{font-size:11px;color:var(--ink-3);font-family:var(--ui);font-weight:600;display:block;text-align:right}
+.btn{font-family:var(--ui);font-weight:800;font-size:14px;padding:13px 22px;border-radius:var(--pill);border:var(--rim-hi);background:var(--glass-hi);color:var(--ink);cursor:pointer;transition:var(--spring);box-shadow:var(--inset)}
+.btn:hover{transform:translateY(-2px)}
+.btn.fire{background:linear-gradient(150deg,var(--amber),var(--brand));color:var(--on-accent);border:none;box-shadow:0 10px 30px -6px rgba(240,173,70,.6),var(--inset)}
+.btn.pay{background:linear-gradient(150deg,var(--brand-bright),var(--brand));color:var(--on-accent);border:none;box-shadow:0 10px 30px -6px rgba(232,107,62,.6),var(--inset)}
+.upsell{margin:0 20px;margin-top:14px;background:var(--brand-wash);border:1px dashed rgba(255,148,99,.5);border-radius:var(--r-md);padding:10px 16px;font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.upsell b{color:var(--brand-bright)}
+.upsell .add{margin-left:auto;font-size:12px;font-weight:800;color:var(--on-accent);background:linear-gradient(150deg,var(--brand-bright),var(--brand));padding:7px 14px;border-radius:var(--pill);cursor:pointer;box-shadow:0 6px 18px -4px var(--brand)}
+.hint{font-size:11px;color:var(--ink-3);text-align:center;padding:8px 0 12px}
+
+/* ═══════════ RESPONSIVE — web ⇄ mobile-app parity ═══════════ */
+/* tablet */
+@media(max-width:1024px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .search{max-width:200px}
+  .pchip:nth-of-type(2),.pchip:nth-of-type(3){display:none}
+  .pos{grid-template-columns:140px 1fr}
+}
+/* phone — the native-app form factor */
+@media(max-width:640px){
+  html,body{overflow:auto}
+  .app{height:auto;min-height:100vh;padding:10px 10px 0;gap:10px}
+  .caption{font-size:11px;padding:6px 12px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* command bar: brand + scope + avatar; search drops to its own row */
+  .cmd{flex-wrap:wrap;gap:9px;padding:9px 11px}
+  .brand{font-size:15px}
+  .who span:not(.avatar){display:none}
+  .search{order:9;flex-basis:100%;max-width:none}
+  .pressure{gap:6px}
+  .pchip{padding:6px 10px}
+  .body{flex-direction:column}
+  /* lens rail → fixed bottom TAB BAR (thumb zone) */
+  .rail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;flex:0 0 auto;flex-direction:row;justify-content:space-around;height:64px;padding:6px;z-index:45;border-radius:var(--r-xl)}
+  .rl{flex:1;height:52px;width:auto;min-width:0}
+  .rl svg{width:21px;height:21px}
+  .rl .ind{display:none}
+  .rl:last-child{display:none}      /* hide 'More' gear on phone */
+  .railspace{display:none}
+  /* canvas scrolls; clear the fixed dock + tab bar */
+  .canvas{overflow:visible;padding-bottom:250px}
+  .lenshead h1{font-size:22px}
+  .lenshead .seg{display:none}
+  .grid{grid-template-columns:repeat(2,1fr);gap:11px}
+  .tile{min-height:116px}
+  .pos{grid-template-columns:1fr;gap:12px}
+  .catrail{flex-direction:row;overflow-x:auto;padding:6px;gap:6px}
+  .cat{white-space:nowrap;padding:9px 13px}
+  .prods{grid-template-columns:repeat(2,1fr)}
+  .cols{grid-template-columns:1fr;gap:12px}
+  .tl{overflow-x:auto}
+  .tl .tlrow{min-width:640px}
+  /* Context Dock → bottom sheet, sits above the tab bar */
+  .dock{position:fixed;left:8px;right:8px;bottom:80px;z-index:44;max-height:52vh;overflow:auto}
+  .upsell{margin-top:12px;font-size:12px}
+  .dockbar{flex-wrap:wrap;gap:12px;padding:12px 16px}
+  .dockbar .dt{font-size:15px}
+  .spine{order:9;flex-basis:100%;overflow-x:auto;padding-bottom:2px}
+  .crs{flex:0 0 auto}
+  .dockbar .total{margin-left:0;font-size:19px}
+  .btn{flex:1;padding:14px 16px}    /* full-width 44px+ targets */
+  .hint{display:none}
+}
+</style>
+</head>
+<body>
+<div class="aurora"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
+<div class="grain"></div>
+<div class="caption">Sud Italia <b>Service OS</b> — liquid-glass canvas · four lenses, one persistent check · <b>click the left rail</b> to switch lens</div>
+
+<div class="app core" data-theme="dark">
+  <input class="lensradio" type="radio" name="lens" id="L-floor" checked>
+  <input class="lensradio" type="radio" name="lens" id="L-line">
+  <input class="lensradio" type="radio" name="lens" id="L-pass">
+  <input class="lensradio" type="radio" name="lens" id="L-book">
+
+  <header class="cmd glass">
+    <div class="brand"><span class="dot"></span>SUD&nbsp;ITALIA</div>
+    <div class="scope">Kraków ▾</div>
+    <div class="search">⌘K &nbsp;Search table, check, guest, dish, action… <kbd>⌘K</kbd></div>
+    <div class="pressure">
+      <span class="pchip"><span class="pd risk"></span>3 at-risk</span>
+      <span class="pchip"><span class="pd warn"></span>Line 7</span>
+      <span class="pchip"><span class="pd calm"></span>42-min wall</span>
+    </div>
+    <div class="who"><span class="avatar">OL</span>Ola · Server</div>
+  </header>
+
+  <div class="body">
+    <nav class="rail glass">
+      <label class="rl" for="L-floor"><span class="ind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><circle cx="17.5" cy="17.5" r="3.5"/></svg><span>Floor</span></label>
+      <label class="rl" for="L-line"><span class="ind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Line</span></label>
+      <label class="rl" for="L-pass"><span class="ind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h16M4 10a8 8 0 0 1 16 0M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg><span>Pass</span></label>
+      <label class="rl" for="L-book"><span class="ind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span>Book</span></label>
+      <div class="railspace"></div>
+      <label class="rl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1l-.3-2.5H9.4l-.3 2.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5a7 7 0 0 0 .1-1Z"/></svg><span>More</span></label>
+    </nav>
+
+    <main class="canvas">
+      <!-- FLOOR -->
+      <section class="lens floor">
+        <div class="lenshead"><h1>Floor</h1><p>Twin-driven · each tile shows the single most urgent fact · tap for radial actions</p>
+          <div class="seg glass"><b class="on">Map</b><b>List</b></div></div>
+        <div class="zones"><span class="zone on">Terrace</span><span class="zone">Main</span><span class="zone">Bar</span><span class="zone">Private</span></div>
+        <div class="grid">
+          <div class="tile glass free"><div class="tn">T1</div><div class="meta">2-top</div><div class="dots"><i></i><i></i></div><div class="state">● OPEN</div></div>
+          <div class="tile glass seated"><div class="tn">T2</div><div class="meta">4-top · 12 min</div><div class="dots"><i class="f"></i><i class="f"></i><i></i><i></i></div><div class="state">◷ SEATED · antipasti</div></div>
+          <div class="tile glass sel seated">
+            <div class="tn">T10</div><div class="meta">4 covers · 47 min · 218 zł</div>
+            <div class="dots"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div>
+            <div class="state" style="color:var(--brand-bright)">◉ SELECTED</div>
+            <div class="radial"><span class="rb a">＋ Add</span><span class="rb b primary">🔥 Fire</span><span class="rb c">Pay</span><span class="rb d">Move</span></div>
+          </div>
+          <div class="tile glass risk"><div class="tn">T7</div><div class="badge">⚠ allergy</div><div class="meta">2-top · 61 min</div><div class="dots"><i class="f"></i><i class="f"></i></div><div class="state">⏱ MAINS · 6m over</div></div>
+          <div class="tile glass pay"><div class="tn">T11</div><div class="badge">1 unpaid</div><div class="meta">3-top · 78 min</div><div class="dots"><i class="f"></i><i class="f"></i><i class="f"></i></div><div class="state">◷ AWAITING PAYMENT</div></div>
+          <div class="tile glass free"><div class="tn">T12</div><div class="meta">2-top</div><div class="dots"><i></i><i></i></div><div class="state">● OPEN</div></div>
+          <div class="tile glass seated"><div class="tn">T14</div><div class="meta">6-top · 24 min</div><div class="dots"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><div class="state">◷ SEATED · primi</div></div>
+          <div class="tile glass free"><div class="tn">T15</div><div class="badge">needs bus</div><div class="meta">4-top</div><div class="dots"><i></i><i></i><i></i><i></i></div><div class="state">● CLEARING</div></div>
+        </div>
+      </section>
+
+      <!-- LINE -->
+      <section class="lens line">
+        <div class="lenshead"><h1>Line · POS</h1><p>Same dock as Floor · ★ Popular first · 86'd items grey &amp; sink</p></div>
+        <div class="pos">
+          <div class="catrail glass">
+            <div class="cat star on">★ Popular</div><div class="cat">Pizze</div><div class="cat">Pasta</div><div class="cat">Antipasti</div><div class="cat">Bar</div><div class="cat">Dolci</div>
+          </div>
+          <div class="prods">
+            <div class="prod glass"><div class="pn">Margherita</div><div class="pp">32 zł</div></div>
+            <div class="prod glass"><span class="mod"></span><div class="pn">Diavola</div><div class="pp">38 zł</div></div>
+            <div class="prod glass"><span class="mod"></span><div class="pn">Quattro Formaggi</div><div class="pp">42 zł</div></div>
+            <div class="prod glass"><div class="pn">Aperol Spritz</div><div class="pp">24 zł</div></div>
+            <div class="prod glass"><div class="pn">Tiramisù</div><div class="pp">24 zł</div></div>
+            <div class="prod glass"><div class="pn">Espresso</div><div class="pp">9 zł</div></div>
+            <div class="prod glass off"><span class="tag86">86</span><div class="pn">Vongole</div><div class="pp">54 zł</div></div>
+            <div class="prod glass"><span class="mod"></span><div class="pn">Carbonara</div><div class="pp">44 zł</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PASS -->
+      <section class="lens pass">
+        <div class="lenshead"><h1>Pass · KDS</h1><p>Selected T10 highlighted · cards sort by SLA urgency · full card = bump</p>
+          <div class="seg glass"><b class="on">All</b><b>Pizza</b><b>Pasta</b><b>Cold</b><b>Bar</b></div></div>
+        <div class="cols">
+          <div class="col"><h3>New <span>2</span></h3>
+            <div class="tk glass warn"><div class="tkh"><span>T12 · DINE · 4</span><span class="clk">4:10</span></div><div class="sla"><i class="g"></i></div><div class="li">2× Margherita</div><div class="li">1× Diavola</div><div class="li held">⊘ Dolci (held)</div></div>
+            <div class="tk glass firing"><div class="tkh"><span>#4419 · DELIV</span><span class="clk">2:05</span></div><div class="sla"><i class="g"></i></div><div class="li">1× Quattro Formaggi</div></div>
+          </div>
+          <div class="col"><h3>Preparing <span>3</span></h3>
+            <div class="tk glass risk" style="box-shadow:0 0 0 2px var(--brand-bright),var(--float),var(--inset)"><div class="tkh"><span>T10 · DINE · 4 ◉</span><span class="clk">11:32</span></div><div class="sla"><i class="r"></i></div><div class="li">1× Carbonara</div><div class="li allerg">⚠ NO NUTS</div><div class="li held">⊘ Secondi (held)</div></div>
+            <div class="tk glass warn"><div class="tkh"><span>T7 · DINE · 2</span><span class="clk">6:48</span></div><div class="sla"><i class="a"></i></div><div class="li">1× Diavola</div></div>
+            <div class="tk glass warn"><div class="tkh"><span>T14 · DINE · 6</span><span class="clk">7:20</span></div><div class="sla"><i class="a"></i></div><div class="li">2× Margherita · 1× Carbonara</div></div>
+          </div>
+          <div class="col"><h3>Ready <span>1</span></h3>
+            <div class="tk glass ready"><div class="tkh"><span>#4416 · DELIV</span><span style="color:var(--basil);font-weight:800">READY ✓</span></div><div class="li" style="color:var(--basil)">bump → pass</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOOK -->
+      <section class="lens book">
+        <div class="lenshead"><h1>Book</h1><p>Tables × service hours · live conflict = red hatch · drag to reassign</p></div>
+        <div class="tl glass">
+          <div class="tlrow head"><div class="tlh">Table</div><div class="tlc">17:00</div><div class="tlc">17:30</div><div class="tlc">18:00</div><div class="tlc">18:30</div><div class="tlc">19:00</div><div class="tlc">19:30</div><div class="tlc">20:00</div><div class="tlc">20:30</div></div>
+          <div class="tlrow"><div class="tlh">T1</div><div class="tlc"></div><div class="tlc"></div><div class="tlc"><div class="resv" style="left:8px;right:-52px">Nowak · 2</div></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"><div class="resv seated" style="left:8px;right:-52px">Kowal · 2</div></div><div class="tlc"></div><div class="tlc"></div></div>
+          <div class="tlrow"><div class="tlh">T10</div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"><div class="resv seated" style="left:8px;right:-110px">Bianchi · 4 (seated)</div></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div></div>
+          <div class="tlrow"><div class="tlh">T14</div><div class="tlc"></div><div class="tlc"><div class="conflict" style="left:8px;right:-52px"></div><div class="resv" style="left:12px;right:-48px;z-index:4">Rossi · 6</div></div><div class="tlc"><div class="resv" style="left:8px;right:8px;background:linear-gradient(150deg,rgba(255,90,92,.4),rgba(255,90,92,.15));border-color:var(--danger);color:var(--ink)">⚠ overlap</div></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div></div>
+          <div class="tlrow"><div class="tlh">T15</div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"><div class="resv" style="left:8px;right:-52px">Verdi · 4</div></div><div class="tlc"></div><div class="tlc"></div><div class="tlc"></div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- CONTEXT DOCK -->
+  <footer class="dock glass">
+    <div class="upsell">🍰 <b>Fire the dessert course?</b> Add 2× Tiramisù to T10 — cross-sell pairs it with the mains. <span class="add">+48 zł · Add &amp; fire</span></div>
+    <div class="dockbar">
+      <div><div class="dt">Table 10 <span style="font-weight:400;color:var(--ink-3);font-size:12px">· dine-in · 4 covers · Ola</span></div>
+        <div class="dmeta">2× Margherita · 1× Carbonara · 1× Aperol · +nuts allergy flag</div></div>
+      <div class="spine">
+        <span class="crs done"><span class="cd"></span>Antipasti</span>
+        <span class="crs fire"><span class="cd"></span>Primi · firing</span>
+        <span class="crs"><span class="cd"></span>Secondi</span>
+        <span class="crs"><span class="cd"></span>Dolci</span>
+      </div>
+      <div class="total">218,00 zł<small>subtotal · +tip at pay</small></div>
+      <button class="btn fire">🔥 Fire course</button>
+      <button class="btn pay">Pay</button>
+    </div>
+    <div class="hint">Context Dock stays docked on every lens — the selected check follows you from Floor → Line → Pass → Book. Long-press a line item for comp / void / discount.</div>
+  </footer>
+</div>
+</body>
+</html>

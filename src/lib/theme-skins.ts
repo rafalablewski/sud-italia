@@ -62,18 +62,27 @@ export const THEME_SKINS: Record<ThemeSurface, ThemeSkin[]> = {
   ],
   core: [
     {
+      id: "liquid-glass",
+      label: "Liquid Glass",
+      description: "2026 liquid-glass — translucent frosted surfaces over an ember aurora, specular rim-light, floating chrome. The KDS wall stays dark.",
+    },
+    {
       id: "default",
       label: "Core Dark",
-      description: "The Core theme — near-black flat materials for night trucks and kitchen glare.",
+      description: "The original Core theme — near-black flat materials for night trucks and kitchen glare.",
     },
   ],
 };
 
-/** The default skin id for every surface — always "default". */
+/**
+ * The default skin id for every surface. Core defaults to "liquid-glass"
+ * (the 2026 Service OS redesign look); "default" (Core Dark) remains
+ * selectable in /admin/settings → Themes.
+ */
 export const DEFAULT_THEME_SKINS: Record<ThemeSurface, string> = {
   homepage: "default",
   admin: "default",
-  core: "default",
+  core: "liquid-glass",
 };
 
 /** True when `id` is a known skin for `surface`. */

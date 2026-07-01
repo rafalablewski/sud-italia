@@ -1,4 +1,5 @@
 import "../themes/core/index.css";
+import "../themes/core/skins/liquid-glass.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";

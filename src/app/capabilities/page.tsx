@@ -88,6 +88,27 @@ export default async function CapabilitiesPage() {
             "A Σ control on the KDS board (src/core/kds/CoreKds.tsx, Floor + Chef views) toggles an 'all-day' rail (.core-allday): every still-to-make item (New + Firing, not yet Ready) summed by dish across all active tickets, biggest first, with the ticket count — the line's 'make-now' batch the pizzaiolo cooks from. Derived live from the same KdsTicket stream (no mock data, Rule #1) and respects the station filter. Also tightened the ticket hierarchy (larger mono due-clock, allergen strip gets a left safety rule) and fixed fmtClock to round to whole seconds (the Oldest/Avg-age KPIs and due clocks were rendering fractional seconds like '41:3.96099').",
         },
         {
+          name: "Delivery dispatch board",
+          status: "live",
+          href: "/core/service/dispatch",
+          summary:
+            "Core · Service · Dispatch (src/core/service/CoreDispatch.tsx) is the delivery driver board: it lists the active delivery orders (confirmed→preparing→ready→assigned→picked_up) with address, item count, total and live status, plus in-kitchen / ready-to-go / on-the-road KPIs, polling /api/admin/dispatch every 8s. Drivers are the location's 'delivery'-group staff (roles driver/courier, status active) surfaced as one-tap assign chips; assigning writes order.assignedDriverId (new store helper assignOrderDriver — DB column + kv mirror already existed) and moves the order to 'assigned'. A single advance button walks it 'picked up' → 'delivered' via the shared updateOrderStatus. Every write goes through PUT /api/admin/dispatch (audit-logged as orders.assign_driver / orders.status_change) reusing the order money/lifecycle model — no parallel state. Glass-styled via theme tokens so it follows the active Core skin.",
+        },
+        {
+          name: "Liquid Glass — the default Core skin",
+          status: "live",
+          href: "/admin/settings",
+          summary:
+            "The 2026 Service OS visual language ships as the default Core skin (src/app/themes/core/skins/liquid-glass.css, scoped .core[data-skin=\"liquid-glass\"]; DEFAULT_THEME_SKINS.core in src/lib/theme-skins.ts). It redefines the Core palette to translucent frosted glass, paints an ambient ember aurora on the root, and frosts the shared chrome + surface primitives (command bar, bottom nav, POS/Floor/Guest/Book cards, ticket, check panel, KPI bands) with backdrop-blur + specular rim + floating shadow. The KDS kitchen wall stays a dark wall by design. Fully reversible — 'Core Dark' is selectable in /admin/settings → Themes.",
+        },
+        {
+          name: "Context Dock — cross-lens selected check",
+          status: "live",
+          href: "/core/service/floor",
+          summary:
+            "A persistent glass dock (src/core/shell/CoreDock.tsx + SelectionContext) shows the selected entity's check and follows the operator across every Core lens. Selecting a table (Floor tile), the active till check (POS, standalone), or a ticket (KDS header) pins it; the dock shows status/covers/allergy/amount + an Open jump and expands (peek→expand) to the captured line items. Additive with a no-op fallback context — renders nothing until something is selected, so no surface regresses.",
+        },
+        {
           name: "Floor home — tap a table → its check opens over the floor",
           status: "live",
           href: "/core/service/floor",

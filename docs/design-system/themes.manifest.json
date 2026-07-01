@@ -12,6 +12,10 @@
     {
      "path": "src/app/themes/core/tokens.css",
      "description": "Design tokens scoped under .core[data-theme=dark|light]. Dark is the default; light is the option. Surfaces, ink, lines, brand, semantics, elevation, type, radius, motion."
+    },
+    {
+     "path": "src/app/themes/core/skins/liquid-glass.css",
+     "description": "Liquid Glass skin (the Core default) — scoped under .core[data-skin=\"liquid-glass\"]. Redefines the palette tokens to translucent frosted glass, paints an ambient aurora on the root, and frosts the shared chrome + surface primitives (backdrop-blur + specular rim + floating shadow). KDS wall stays dark by design. See docs/design-system/core/skins.md + redesign/."
     }
    ],
    "routes": [

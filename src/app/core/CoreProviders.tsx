@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LocationProvider } from "@/shared/LocationContext";
 import { CoreToastProvider } from "@/core/ui/Toast";
+import { SelectionProvider } from "@/core/shell/SelectionContext";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**
@@ -57,7 +58,9 @@ export function CoreProviders({ children }: { children: ReactNode }) {
 
   return (
     <LocationProvider>
-      <CoreToastProvider>{children}</CoreToastProvider>
+      <CoreToastProvider>
+        <SelectionProvider>{children}</SelectionProvider>
+      </CoreToastProvider>
     </LocationProvider>
   );
 }

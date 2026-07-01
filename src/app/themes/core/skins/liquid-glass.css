@@ -1,0 +1,174 @@
+/* ============================================================
+   CORE skin — "Liquid Glass" (2026)
+   Scoped under `.core[data-skin="liquid-glass"]`. A translucent,
+   frosted-glass overlay on the Core base: the palette tokens become
+   glass-tinted (so every component that reads --panel/--line turns to
+   glass at once), the root paints an ambient aurora the glass refracts,
+   and the shared chrome + common surface primitives gain backdrop-blur,
+   a specular rim highlight and a floating shadow.
+
+   Design language + rationale: docs/design-system/core/redesign/.
+   Skin mechanism + checklist: docs/design-system/core/skins.md.
+
+   Two rules honoured (see skins.md):
+   1. This mostly REDEFINES TOKENS; the handful of component rules below
+      are skin-scoped ENHANCEMENTS (higher specificity, additive — they
+      never strip the base reset).
+   2. The KDS kitchen wall stays dark by design — we do NOT skin
+      `.core-kds` / `.core-kiosk` (a wood-fired line reads better as a
+      dark wall, matching the redesign sketches).
+   ============================================================ */
+
+/* ---------- palette → glass tokens (DARK, the Core default) ---------- */
+.core[data-skin="liquid-glass"],
+.core[data-skin="liquid-glass"][data-theme="dark"] {
+  --bg: #0a0806;
+  --ink: #fbf6ee; --ink-2: #d9cbba; --ink-3: #9a8b79;
+  /* translucent surfaces — read as frosted glass over the aurora */
+  --panel: rgba(255, 255, 255, .075);
+  --panel-2: rgba(255, 255, 255, .05);
+  --panel-3: rgba(255, 255, 255, .11);
+  --hover: rgba(255, 255, 255, .15);
+  --line: rgba(255, 247, 235, .14);
+  --line-2: rgba(255, 247, 235, .24);
+  /* accents brightened a touch for vibrancy on glass */
+  --brand: #e86b3e; --brand-bright: #ff9463; --brand-wash: rgba(232, 107, 62, .18);
+  --basil: #7dc464; --basil-wash: rgba(125, 196, 100, .18);
+  --amber: #f0ad46; --amber-wash: rgba(240, 173, 70, .18);
+  --info: #54bce0; --info-wash: rgba(84, 188, 224, .2);
+  --danger: #ff5a5c; --danger-wash: rgba(255, 90, 92, .2);
+  /* deeper floating shadows */
+  --sh-1: 0 2px 8px rgba(0, 0, 0, .4);
+  --sh-2: 0 12px 34px -10px rgba(0, 0, 0, .6);
+  --sh-pop: 0 24px 60px -14px rgba(0, 0, 0, .7);
+  /* reusable glass materials for the skin-scoped rules below */
+  --lg-blur: blur(22px) saturate(175%);
+  --lg-fill: linear-gradient(150deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03) 55%, rgba(255, 255, 255, .015));
+  --lg-fill-hi: linear-gradient(150deg, rgba(255, 255, 255, .19), rgba(255, 255, 255, .05));
+  --lg-rim: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .22);
+  --lg-float: 0 18px 50px -14px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .4);
+
+  /* ambient aurora — sits behind every child; the frosted panels refract it */
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(232, 107, 62, .22), transparent 60%),
+    radial-gradient(55% 55% at 88% 92%, rgba(84, 188, 224, .17), transparent 60%),
+    radial-gradient(50% 45% at 72% 18%, rgba(240, 173, 70, .13), transparent 55%),
+    radial-gradient(60% 60% at 28% 88%, rgba(125, 196, 100, .11), transparent 60%),
+    var(--bg);
+}
+
+/* ---------- palette → glass tokens (LIGHT — bright daytime POS) ---------- */
+.core[data-skin="liquid-glass"][data-theme="light"] {
+  --bg: #f4ece0;
+  --ink: #241a12; --ink-2: #5e5040; --ink-3: #8c7c69;
+  --panel: rgba(255, 255, 255, .55);
+  --panel-2: rgba(255, 255, 255, .4);
+  --panel-3: rgba(40, 26, 16, .07);
+  --hover: rgba(40, 26, 16, .09);
+  --line: rgba(40, 26, 16, .12);
+  --line-2: rgba(40, 26, 16, .2);
+  --brand: #d85f2e; --brand-bright: #e86b3e;
+  --sh-1: 0 2px 8px rgba(40, 26, 16, .08);
+  --sh-2: 0 12px 30px -10px rgba(40, 26, 16, .16);
+  --sh-pop: 0 24px 56px -14px rgba(40, 26, 16, .22);
+  --lg-fill: linear-gradient(150deg, rgba(255, 255, 255, .7), rgba(255, 255, 255, .38) 55%, rgba(255, 255, 255, .28));
+  --lg-fill-hi: linear-gradient(150deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .5));
+  --lg-rim: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -1px 0 rgba(40, 26, 16, .06);
+  --lg-float: 0 18px 46px -14px rgba(40, 26, 16, .22), 0 4px 12px rgba(40, 26, 16, .12);
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(232, 107, 62, .16), transparent 60%),
+    radial-gradient(55% 55% at 88% 92%, rgba(84, 188, 224, .12), transparent 60%),
+    radial-gradient(50% 45% at 72% 18%, rgba(240, 173, 70, .12), transparent 55%),
+    var(--bg);
+}
+
+/* ---------- shared chrome ---------- */
+/* command bar — the frosted capsule over the aurora */
+.core[data-skin="liquid-glass"] .core-bar {
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  border-bottom-color: var(--line-2);
+  box-shadow: var(--lg-float), var(--lg-rim);
+}
+.core[data-skin="liquid-glass"] .core-mark {
+  box-shadow: 0 6px 18px -4px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+/* bottom nav switcher — floating glass pill */
+.core[data-skin="liquid-glass"] .core-bottomnav .core-switch {
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  border-color: var(--line-2);
+  box-shadow: var(--lg-float), var(--lg-rim);
+}
+.core[data-skin="liquid-glass"] .core-body { background: transparent; }
+
+/* ---------- surface primitives → glass ---------- */
+.core[data-skin="liquid-glass"] .core-prod,
+.core[data-skin="liquid-glass"] .core-ticket,
+.core[data-skin="liquid-glass"] .core-check-panel,
+.core[data-skin="liquid-glass"] .core-cat,
+.core[data-skin="liquid-glass"] .core-btn,
+.core[data-skin="liquid-glass"] .core-chip,
+.core[data-skin="liquid-glass"] .core-seg {
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+}
+.core[data-skin="liquid-glass"] .core-prod {
+  background: var(--lg-fill);
+  box-shadow: var(--lg-rim);
+  transition: transform var(--base), box-shadow var(--base), border-color var(--base);
+}
+.core[data-skin="liquid-glass"] .core-prod:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--lg-float), var(--lg-rim);
+  border-color: var(--line-2);
+}
+.core[data-skin="liquid-glass"] .core-ticket,
+.core[data-skin="liquid-glass"] .core-check-panel {
+  background: var(--lg-fill);
+  box-shadow: var(--lg-float), var(--lg-rim);
+}
+.core[data-skin="liquid-glass"] .core-btn { box-shadow: var(--lg-rim); }
+.core[data-skin="liquid-glass"] .core-charge {
+  box-shadow: 0 10px 28px -8px var(--brand), var(--lg-rim);
+}
+
+/* ---------- more surfaces: Floor · Guest · Book · Slots · KPI cards ---------- */
+/* frosted cards that float */
+.core[data-skin="liquid-glass"] .core-tbl2,
+.core[data-skin="liquid-glass"] .core-fleet-bench,
+.core[data-skin="liquid-glass"] .core-book-side,
+.core[data-skin="liquid-glass"] .core-slot {
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-float), var(--lg-rim);
+}
+.core[data-skin="liquid-glass"] .core-tbl2 {
+  transition: transform var(--base), box-shadow var(--base), border-color var(--base);
+}
+.core[data-skin="liquid-glass"] .core-tbl2:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--lg-float), var(--lg-rim);
+}
+/* frosted (blur + rim), keep their own layout bg */
+.core[data-skin="liquid-glass"] .core-stat-grid,
+.core[data-skin="liquid-glass"] .core-ctx-card,
+.core[data-skin="liquid-glass"] .core-crm-table-wrap {
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-rim);
+}
+/* hairline-grid KPI bands — frost the band, keep the 1px gap, glass the cells */
+.core[data-skin="liquid-glass"] .core-fleet-kpi,
+.core[data-skin="liquid-glass"] .core-kpi,
+.core[data-skin="liquid-glass"] .core-kpi-strip {
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+}
+.core[data-skin="liquid-glass"] .core-kpi .k,
+.core[data-skin="liquid-glass"] .core-fleet-kpi .kc { background: var(--panel); }
+/* guest inbox panels */
+.core[data-skin="liquid-glass"] .core-convs,
+.core[data-skin="liquid-glass"] .core-conv-list,
+.core[data-skin="liquid-glass"] .core-composer {
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+}
+
+/* keep the KDS kitchen wall a dark wall — do NOT frost it (skins.md rule 2) */

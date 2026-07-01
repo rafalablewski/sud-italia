@@ -9,6 +9,7 @@ import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket, type KdsTicketItem } from "@/lib/kds-ticket";
+import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
 import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
 import {
   KDS_COLUMNS,
@@ -148,11 +149,15 @@ const TicketCard = memo(function TicketCard({
   station,
   updating,
   onAdvance,
+  onPick,
 }: {
   t: KdsTicket;
   station: MenuCategory | "all";
   updating: boolean;
   onAdvance: (t: KdsTicket) => void;
+  /** Pin this ticket to the persistent Context Dock (stable setter from the
+   *  board's single useSelection() — keeps memoised tickets from re-rendering). */
+  onPick?: (s: CoreSelection) => void;
 }) {
   const now = useKitchenClock();
   const due = dueLabel(t, now);
@@ -168,7 +173,25 @@ const TicketCard = memo(function TicketCard({
   const next = nextStatus(t.status);
   return (
     <div className={`core-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
-      <div className="core-tk-h">
+      <div
+        className="core-tk-h"
+        onClick={() => {
+          if (t.simulated) return;
+          onPick?.({
+            kind: "order",
+            id: t.id,
+            label: `#${t.shortId}`,
+            sub: `${channelTag(t)}${t.partySize ? ` · ${t.partySize} covers` : ""} · ${t.itemCount} item${t.itemCount === 1 ? "" : "s"}`,
+            status: t.status === "ready" ? "Ready" : t.status === "preparing" ? "Preparing" : t.status.charAt(0).toUpperCase() + t.status.slice(1),
+            statusCls: t.status === "ready" ? "available" : atRisk ? "freeing" : "booked",
+            note: t.specialInstructions || undefined,
+            href: "/core/kds",
+            items: t.items.slice(0, 24).map((i) => ({ label: i.name, qty: i.quantity, note: i.notes })),
+          });
+        }}
+        style={{ cursor: "pointer" }}
+        title="Pin to the check dock"
+      >
         <span className="id">
           #{t.shortId}
           <span className="chiplet">{channelTag(t)}</span>
@@ -232,6 +255,10 @@ const TicketCard = memo(function TicketCard({
 export function CoreKds() {
   const { location, setLocation } = useLocation();
   const toast = useCoreToast();
+  // Single context read for the whole board — the stable `select` setter is
+  // passed to each memoised TicketCard, so pinning a ticket to the Context Dock
+  // never re-renders the other tickets.
+  const { select } = useSelection();
   const [view, setView] = useState<View>("floor");
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [lane, setLane] = useState<OrderStatus | "all">("all");
@@ -527,7 +554,7 @@ export function CoreKds() {
   ];
 
   const renderTicket = (t: KdsTicket) => (
-    <TicketCard key={t.id} t={t} station={station} updating={updatingId === t.id} onAdvance={advance} />
+    <TicketCard key={t.id} t={t} station={station} updating={updatingId === t.id} onAdvance={advance} onPick={select} />
   );
 
   const controls =

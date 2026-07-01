@@ -1,7 +1,7 @@
 # Core · Service
 
 The merged Floor + Slots surface. `/core/service` (redirects to Floor).
-Two nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`).
+Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor · Slots · Dispatch.
 
 ## Floor (`/core/service/floor`) — wired
 
@@ -94,3 +94,27 @@ The Floor board pairs the predictive twin with the table's **live orders**:
   (persisted on `FloorTable.notes`, threaded through `buildFloorTwin` →
   `TwinTableRow.notes`) and an **Orders at this table** list with the same
   settle action.
+
+## Dispatch (`/core/service/dispatch`) — wired
+
+- **Live code:** `src/core/service/CoreDispatch.tsx`; API
+  `src/app/api/admin/dispatch/route.ts`; store helper `assignOrderDriver`
+  (`src/lib/store.ts`).
+- **Theme:** token-styled inline (no new `.core-*` classes) so it inherits the
+  active skin's glass; reuses `.core-btn` / `.core-chip` / `.core-iconbtn`.
+- The delivery driver board. `GET /api/admin/dispatch?location=` returns the
+  active delivery orders (`fulfillmentType==="delivery"`, status in
+  confirmed→preparing→ready→assigned→picked_up, non-simulated) plus the
+  location's **drivers** (staff whose role is in the `delivery` group —
+  `driver`/`courier` — and `status==="active"`).
+- Three KPIs (in kitchen · ready to go · on the road) over a card grid. Each
+  card shows `#shortId`, delivery address, item count + total + customer, a
+  status chip, and driver controls: unassigned cards show one-tap **assign
+  chips**; an assigned card shows the driver + **Unassign**.
+- Writes go through `PUT /api/admin/dispatch` — `{orderId, driverId}` calls
+  `assignOrderDriver` (sets `Order.assignedDriverId`; the `assigned_driver_id`
+  column + row mappers already existed) and `{orderId, status}` advances the
+  lifecycle via the shared `updateOrderStatus` (assigned → picked_up →
+  delivered). Both are audit-logged (`orders.assign_driver` /
+  `orders.status_change`). The board polls every 8s. No parallel money/lifecycle
+  state — it drives the same `Order`.

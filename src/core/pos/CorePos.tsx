@@ -6,6 +6,7 @@ import { usePolling } from "@/lib/usePolling";
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { CoreQrQueue } from "@/core/pos/CoreQrQueue";
@@ -114,6 +115,7 @@ export function CorePos({
 }) {
   const { location } = useLocation();
   const toast = useCoreToast();
+  const { select } = useSelection();
   const locationKeys = useMemo(() => Object.keys(menusByLocation), [menusByLocation]);
   const fallbackLoc = locationKeys[0] ?? "";
   const [pageLoc, setPageLoc] = useState<string>(location || fallbackLoc);
@@ -850,6 +852,34 @@ export function CorePos({
   // Manual operator discount, on top of the auto combo (same pure helper as the server).
   const manualDiscountG = useCallback((t: PosTab) => manualDiscountGrosze(Math.max(0, subtotalG(t) - discountG(t)), t.discount), [subtotalG, discountG]);
   const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t) - manualDiscountG(t)), [subtotalG, discountG, manualDiscountG]);
+
+  // Sync the active check to the persistent Context Dock — standalone till only.
+  // When POS is embedded in the Floor's check panel the Floor already owns the
+  // selection (same table), so we don't fight it. Additive: no other flow reads
+  // this. See docs/design-system/core/redesign/.
+  useEffect(() => {
+    if (embedded) return;
+    const t = tabs.find((x) => x.id === activeTabId);
+    if (!t) return;
+    const g = grandG(t);
+    const chLabel =
+      t.channel === "dine-in" ? "Dine-in" : t.channel === "takeout" ? "Takeaway" : t.channel === "delivery" ? "Delivery" : "New check";
+    select({
+      kind: "tab",
+      id: t.id,
+      label: t.name || "Check",
+      sub: `${chLabel}${t.covers ? ` · ${t.covers} covers` : ""}`,
+      status: t.status === "pay" ? "To pay" : t.status === "parked" ? "Parked" : "Open",
+      statusCls: t.channel === "dine-in" ? "seated" : "booked",
+      amount: g > 0 ? `${(g / 100).toFixed(2)} zł` : undefined,
+      amountDue: t.status === "pay",
+      note: t.customerName || undefined,
+      href: "/core/pos",
+      items: cartOf(t)
+        .slice(0, 24)
+        .map((ci) => ({ label: ci.menuItem.name, qty: ci.quantity, note: ci.notes })),
+    });
+  }, [embedded, activeTabId, tabs, grandG, cartOf, select]);
 
   const active = getActive();
   // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
@@ -1798,6 +1828,35 @@ function LineEditorDialog({
             <div className="core-alrg-banner">⚠ Allergy flagged — this prints emphasised on the kitchen ticket.</div>
           )}
         </div>
+
+        {item.allergens && item.allergens.length > 0 && (
+          <div className="core-modgroup">
+            <div className="core-modgroup-h">
+              Contains<span className="core-modgroup-rule">declared allergens — shown large on the kitchen ticket</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {item.allergens.map((a) => (
+                <span
+                  key={a}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "5px 11px",
+                    borderRadius: "var(--pill)",
+                    background: "var(--amber-wash)",
+                    color: "var(--amber)",
+                    border: "1px solid var(--amber-wash)",
+                  }}
+                >
+                  ⚠ {a.charAt(0).toUpperCase() + a.slice(1)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="core-editor-qty">
           <span>Quantity</span>

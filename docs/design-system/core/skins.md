@@ -7,12 +7,19 @@ applies to every Core surface. See the cross-theme overview in
 [`../README.md`](../README.md#skins--swapping-a-surfaces-whole-theme) and
 the registry at `src/lib/theme-skins.ts`.
 
-**Today Core ships only its single current theme** (`default` — Core
-Dark). The swap *mechanism* is in place so alternates can be added without
-new plumbing; the checklist is at the bottom.
+**Core ships two skins.** `liquid-glass` (the **default** — the 2026
+Service OS redesign look) and `default` (Core Dark, the original flat
+theme). The swap *mechanism* lets an operator flip between them in
+`/admin/settings → Themes`; the add checklist is at the bottom.
 
 The `default` skin is the shipped Core Dark theme — no extra file; it's
-the base `themes/core/index.css` + `tokens.css` left untouched.
+the base `themes/core/index.css` + `tokens.css` left untouched. The
+`liquid-glass` skin adds `themes/core/skins/liquid-glass.css` on top.
+
+> **Default note.** `DEFAULT_THEME_SKINS.core` is `liquid-glass` (in
+> `src/lib/theme-skins.ts`), so a Core surface with no saved preference
+> renders the glass look. Selecting "Core Dark" in Settings reverts to the
+> flat base.
 
 ## How a core skin is applied
 
@@ -46,9 +53,10 @@ it will stick without being overridden on mount.
 
 ## Skins
 
-| id        | label     | Live code                              | Look |
-| --------- | --------- | -------------------------------------- | ---- |
-| `default` | Core Dark | `themes/core/index.css` + `tokens.css` | The shipped Core — near-black flat materials for night trucks + kitchen glare. |
+| id             | label        | Live code                                       | Look |
+| -------------- | ------------ | ----------------------------------------------- | ---- |
+| `liquid-glass` | Liquid Glass | `themes/core/skins/liquid-glass.css`            | **Default.** 2026 liquid glass — translucent frosted surfaces over an ember aurora, specular rim-light, floating chrome. KDS wall stays dark. |
+| `default`      | Core Dark    | `themes/core/index.css` + `tokens.css`          | The original Core — near-black flat materials for night trucks + kitchen glare. |
 
 ## Adding a core skin
 
