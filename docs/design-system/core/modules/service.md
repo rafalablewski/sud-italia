@@ -21,8 +21,13 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   table** rings + ember-pulses via `.core-tbl2.is-focus` (shared
   `@keyframes core-focus-pulse`, reduced-motion-guarded) — so the entity in
   focus is visible on the Floor even after it was picked on another lens.
-- **Tap a table → its check opens as a panel over the floor** — the core IA
-  move. The tile's main tap mounts the **embedded till** (`<CorePos embedded>`)
+- **Tap a table → a state-aware RadialActions bloom** (`.core-radial`,
+  portaled to the `.core` root per Rule #4) offers 3-4 verbs for that table's
+  state (seated → Open check · Free · Edit; free/reserved → Seat · Reserve ·
+  Edit; out-of-service → Restore · Edit). The tap also feeds the Context Dock.
+  Zones are filterable via `.core-zonetabs` (All + one chip per zone).
+- **Open check → the check opens as a panel over the floor** — the core IA
+  move. The radial's **Open check** verb mounts the **embedded till** (`<CorePos embedded>`)
   in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled
   into the **`.core` theme root** (not `document.body`, so it keeps core tokens —
   same rule as `CoreDialog`). The panel opens (or focuses) that table's dine-in

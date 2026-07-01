@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { useSelection } from "@/core/shell/SelectionContext";
+import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -185,6 +185,48 @@ export function CoreFloor({
   const act = (t: TwinTableRow) => {
     if (t.status === "out-of-service") return;
     void post(t.occupied ? "clear" : "seat", t.id, t.number);
+  };
+
+  // The dock/selection payload for a table — shared by the tile tap and the
+  // radial's "Open check" verb so both feed the Context Dock identically.
+  const buildSelection = (t: TwinTableRow): CoreSelection => {
+    const st = stateOf(t);
+    const tOrders = ordersByTable.get(t.id) ?? [];
+    const tUnpaid = tOrders.filter((o) => !o.paid);
+    const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
+    return {
+      kind: "table", id: t.id, label: `Table ${t.number}`,
+      sub: `${t.party ? `${t.party} / ${t.seats}` : `${t.seats}`} covers · ${t.zone || "Floor"}`,
+      status: st.label, statusCls: st.cls,
+      amount: tUnpaid.length > 0 ? `${zl2(tDue)} to pay` : tOrders.length > 0 ? "✓ paid" : t.openCheckGrosze ? `${zl0(t.openCheckGrosze)} open` : undefined,
+      amountDue: tUnpaid.length > 0,
+      note: t.notes || undefined,
+      allergy: t.notes ? ALLERGY_RE.test(t.notes) : false,
+      href: "/core/service/floor",
+    };
+  };
+  const openCheck = (t: TwinTableRow) => {
+    if (t.status === "out-of-service") return;
+    setCheckTable(t);
+    select(buildSelection(t));
+  };
+  // Contextual radial — a table tap blooms 3-4 verbs relevant to its state.
+  const [radial, setRadial] = useState<{ table: TwinTableRow; x: number; y: number } | null>(null);
+  const radialVerbs = (t: TwinTableRow): { label: string; icon: string; primary?: boolean; on: () => void }[] => {
+    if (t.status === "out-of-service")
+      return [{ label: "Restore", icon: "↻", primary: true, on: () => setEditing(t) }, { label: "Edit", icon: "⋯", on: () => setEditing(t) }];
+    if (t.occupied)
+      return [
+        { label: "Open check", icon: "🧾", primary: true, on: () => openCheck(t) },
+        { label: "Free", icon: "✓", on: () => act(t) },
+        { label: "Edit", icon: "⋯", on: () => setEditing(t) },
+      ];
+    // free or reserved — bookable/seatable
+    return [
+      { label: "Seat", icon: "＋", primary: true, on: () => act(t) },
+      { label: "Reserve", icon: "📅", on: () => location.assign("/core/guest/book") },
+      { label: "Edit", icon: "⋯", on: () => setEditing(t) },
+    ];
   };
 
   // Optimistic merge so a created/edited/deleted table reflects instantly in
@@ -400,35 +442,14 @@ export function CoreFloor({
                       <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
                         <button
                           className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}`}
-                          onClick={() => {
-                            if (t.status === "out-of-service") return;
-                            setCheckTable(t);
-                            // Also pin it to the persistent Context Dock so the
-                            // check follows across lenses (additive — the check
-                            // panel above is unchanged).
-                            select({
-                              kind: "table",
-                              id: t.id,
-                              label: `Table ${t.number}`,
-                              sub: `${t.party ? `${t.party} / ${t.seats}` : `${t.seats}`} covers · ${zone}`,
-                              status: st.label,
-                              statusCls: st.cls,
-                              amount:
-                                tUnpaid.length > 0
-                                  ? `${zl2(tDue)} to pay`
-                                  : tOrders.length > 0
-                                    ? "✓ paid"
-                                    : t.openCheckGrosze
-                                      ? `${zl0(t.openCheckGrosze)} open`
-                                      : undefined,
-                              amountDue: tUnpaid.length > 0,
-                              note: t.notes || undefined,
-                              allergy: t.notes ? ALLERGY_RE.test(t.notes) : false,
-                              href: "/core/service/floor",
-                            });
+                          onClick={(e) => {
+                            // Tap blooms the state-aware radial AND feeds the
+                            // dock (so the check follows across lenses on tap).
+                            select(buildSelection(t));
+                            const r = e.currentTarget.getBoundingClientRect();
+                            setRadial({ table: t, x: r.left + r.width / 2, y: r.top + r.height / 2 });
                           }}
-                          disabled={t.status === "out-of-service"}
-                          title={t.status === "out-of-service" ? "Out of service" : `Open Table ${t.number}'s check`}
+                          title={`Table ${t.number} — actions`}
                         >
                           <span className="tnum">{t.number}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
@@ -484,6 +505,24 @@ export function CoreFloor({
           (no navigation). Build / modify / course / split / pay all live in the
           embedded till. Portaled to <body> so the fixed panel escapes any
           stacking context (Rule #4). */}
+      {radial && coreRoot && createPortal(
+        <div className="core-radial-scrim" onClick={() => setRadial(null)}>
+          <div className="core-radial" style={{ left: radial.x, top: radial.y }} onClick={(e) => e.stopPropagation()}>
+            <div className="core-radial-h">Table {radial.table.number}</div>
+            {radialVerbs(radial.table).map((v) => (
+              <button
+                key={v.label}
+                type="button"
+                className={v.primary ? "core-radial-v primary" : "core-radial-v"}
+                onClick={() => { setRadial(null); v.on(); }}
+              >
+                <span className="ri" aria-hidden>{v.icon}</span>{v.label}
+              </button>
+            ))}
+          </div>
+        </div>,
+        coreRoot,
+      )}
       {checkTable && coreRoot && createPortal(
         <div
           className="core-check-overlay"
