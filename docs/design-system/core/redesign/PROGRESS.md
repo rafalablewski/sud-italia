@@ -134,3 +134,10 @@ _(append dated entries as choices are made)_
 - **2026-07-01** — Redesign adopts an entity-centric **Service Canvas** (4 lenses + persistent Context Dock) rather
   than the current app-per-surface navigation. Rationale: eliminates POS↔Floor↔KDS context switching, the root
   cause of the "features not wired together" complaint.
+- **2026-07-01** — **Visual language pivot: "Liquid Glass" (2026).** The first flat sketch round read as basic /
+  "Microsoft Millennium". New direction = translucent frosted-glass materials (backdrop-blur + saturate), layered
+  depth, specular rim-light on edges, vibrancy, floating detached components (capsule command bar, floating rail,
+  hovering dock), and fluid spring motion — while keeping the dark-first canvas + ember-terracotta accent. This
+  supersedes the Core theme's current "flat, no glass" discipline **for this redesign**; the `themes/core` tokens
+  will gain a glass material layer during implementation (documented per Rule #11). Build order: **all four lenses,
+  one by one**. Strategy: **refactor in place** (evolve CoreShell/CorePos/CoreKds/CoreFloor).
