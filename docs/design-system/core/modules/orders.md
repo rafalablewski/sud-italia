@@ -10,10 +10,12 @@ history — so staff aren't limited to the POS's open tickets.
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.
 - **KPI strip:** Orders today · Current (active) · To pay · Paid today (zł).
-- **Filters:** a scope `core-switch.sm` segmented control — **Current**
-  (active statuses) · **Paid** (has `paidAt`) · **All** — a channel
-  `<select>` (All / QR / Web / WhatsApp / POS), and a search box over
-  id / guest / phone / table number.
+- **Scope** lives in the **command-bar view tabs** — **Current** (active
+  statuses) · **Paid** (has `paidAt`) · **All** — so the prompt reads
+  `orders:current` and the chrome matches every other surface.
+- **Filter bar** (`.core-floor-bar`, one row): a channel `<select>`
+  (All / QR / Web / WhatsApp / POS), a search box over id / guest / phone /
+  table number, and a refresh icon — no separate bar tool.
 - **Rows** (`.core-order-row`): time + date · table-or-fulfillment + guest ·
   item count + id · channel chip · status chip · paid/unpaid chip · total.
 - **Detail dialog:** the full ticket (lines + notes + total), guest, channel,

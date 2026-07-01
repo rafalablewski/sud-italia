@@ -152,7 +152,11 @@ export function CoreOrders() {
   return (
     <CoreShell
       eyebrow="Orders · live & history"
-      subRight={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
+      tabs={(["current", "paid", "all"] as Scope[]).map((s) => ({
+        label: s === "current" ? "Current" : s === "paid" ? "Paid" : "All",
+        active: scope === s,
+        onClick: () => setScope(s),
+      }))}
     >
       <div className="core-guest-inbox">
         <div className="core-kpi-strip">
@@ -162,18 +166,14 @@ export function CoreOrders() {
           <div className="k"><div className="kl">Paid today</div><div className="kv mono">{zl2(kpi.revenue)}</div></div>
         </div>
 
+        {/* One filter toolbar — channel · search · refresh. The Current/Paid/All
+            scope now lives in the command bar's view tabs. */}
         <div className="core-floor-bar">
-          <div className="core-switch sm">
-            {(["current", "paid", "all"] as Scope[]).map((s) => (
-              <button key={s} type="button" className={scope === s ? "on" : undefined} onClick={() => setScope(s)}>
-                {s === "current" ? "Current" : s === "paid" ? "Paid" : "All"}
-              </button>
-            ))}
-          </div>
           <select className="core-inp" style={{ width: 150 }} value={channel} onChange={(e) => setChannel(e.target.value as ChannelFilter)}>
             {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABEL[c]}</option>)}
           </select>
           <input className="core-inp" style={{ flex: 1, minWidth: 0 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="order id, guest, phone or table…" />
+          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
         </div>
 
         <div className="core-orders-list">
