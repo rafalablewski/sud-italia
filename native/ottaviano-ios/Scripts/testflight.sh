@@ -8,10 +8,15 @@
 set -euo pipefail
 
 SCHEME="$1"
-# 2nd arg is advisory (logging only). The build number is the committed
-# CURRENT_PROJECT_VERSION in project.yml (e.g. 0.3.0.1), bumped +1 per release —
-# we no longer override it from CI so the version is deterministic + reviewable.
-BUILD_NUMBER="${2:-?}"
+# 2nd arg is advisory (logging only) — the GitHub Actions run number.
+CI_RUN="${2:-?}"
+# Build number (CFBundleVersion) AUTO-INCREMENTS every upload: epoch seconds is
+# strictly monotonic, always exceeds the old manual integers (52/60/61/62), and is
+# unique even across re-runs on the same commit — so App Store Connect always sees
+# a strictly-greater build and testers always get the newest one. It's overridden
+# onto the archive below (project.yml's CURRENT_PROJECT_VERSION is only a local
+# fallback). The user-facing MARKETING_VERSION stays human-set in project.yml.
+BUILD_NUMBER="$(date +%s)"
 TEAM_ID="T4WC9M8Y3S"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -24,12 +29,13 @@ AUTH=(-allowProvisioningUpdates
   -authenticationKeyID "$ASC_KEY_ID"
   -authenticationKeyIssuerID "$ASC_ISSUER_ID")
 
-echo "── Archiving $SCHEME (version from project.yml; CI run $BUILD_NUMBER) ──"
+echo "── Archiving $SCHEME (marketing from project.yml; build $BUILD_NUMBER; CI run $CI_RUN) ──"
 xcodebuild archive \
   -project Ottaviano.xcodeproj \
   -scheme "$SCHEME" \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   "${AUTH[@]}" \
   -quiet
 
