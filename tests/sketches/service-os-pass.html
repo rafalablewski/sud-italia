@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en" class="core" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service OS — Pass (KDS kitchen wall, pressure-adaptive)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+.core{
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --on-accent:#2a160b;--on-basil:#0c1a0f;--on-danger:#fff4f0;
+  --r-sm:7px;--r-md:10px;--r-lg:14px;--pill:999px;
+  --fast:130ms cubic-bezier(.3,.7,0,1);--base:200ms cubic-bezier(.3,.7,0,1);
+}
+.core,.core[data-theme="dark"]{
+  --bg:#15110d;--panel:#1f1a14;--panel-2:#28211a;--panel-3:#322a21;--hover:#3a3026;
+  --ink:#f8f1e7;--ink-2:#c9bba9;--ink-3:#908172;
+  --line:rgba(255,247,235,.10);--line-2:rgba(255,247,235,.18);
+  --brand:#e86b3e;--brand-bright:#ff905e;--brand-wash:rgba(232,107,62,.16);
+  --basil:#6fb155;--basil-wash:rgba(111,177,85,.16);
+  --amber:#e8a23c;--amber-wash:rgba(232,162,60,.16);
+  --info:#3fa7ce;--info-wash:rgba(63,167,206,.18);
+  --danger:#e5484a;--danger-wash:rgba(229,72,74,.18);
+  --sh-1:0 1px 2px rgba(0,0,0,.4);--sh-2:0 6px 18px rgba(0,0,0,.5);--sh-pop:0 20px 50px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0d0a07;color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.caption{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:50;background:var(--panel-2);border:1px solid var(--line-2);border-radius:var(--pill);padding:6px 16px;font-size:12px;color:var(--ink-2);box-shadow:var(--sh-2)}
+.caption b{color:var(--brand-bright)}
+
+.wall{display:flex;flex-direction:column;height:100vh;padding:14px}
+/* KDS top band */
+.kbar{display:flex;align-items:center;gap:16px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:12px}
+.kbrand{font-family:var(--display);font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+.kbrand .d{width:9px;height:9px;border-radius:50%;background:var(--brand)}
+.kpis{display:flex;gap:10px;margin-left:8px}
+.kpi{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 14px;min-width:96px}
+.kpi .kl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.kpi .kv{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:2px}
+.kpi.risk .kv{color:var(--danger)}
+.kpi.warn .kv{color:var(--amber)}
+.kpi.calm .kv{color:var(--basil)}
+.tier{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;padding:8px 16px;border-radius:var(--pill)}
+.tier.risk{background:var(--danger-wash);color:var(--danger)}
+.tier .rd{width:9px;height:9px;border-radius:50%;background:var(--danger);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--danger-wash)}50%{box-shadow:0 0 0 7px transparent}}
+.stations{display:flex;gap:6px;margin-left:8px}
+.st{font-size:12px;font-weight:700;padding:7px 14px;border-radius:var(--pill);background:var(--panel-2);border:1px solid var(--line);color:var(--ink-2);cursor:pointer}
+.st.on{background:var(--brand);color:var(--on-accent);border-color:transparent}
+
+/* lanes */
+.lanes{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-height:0}
+.lane{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;flex-direction:column;min-height:0}
+.lane>h2{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:center}
+.lane .cnt{font-family:var(--mono);background:var(--panel-3);border-radius:var(--pill);padding:1px 9px;color:var(--ink-2)}
+.lane.hot>h2{color:var(--danger)}
+.lane.hot{box-shadow:inset 0 3px 0 var(--danger)}
+.stack{flex:1;overflow:auto;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+
+.tk{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-md);padding:13px;border-left:4px solid var(--line-2);cursor:pointer;transition:var(--fast)}
+.tk:hover{background:var(--panel-3);transform:translateY(-1px)}
+.tk:active{transform:scale(.98)}
+.tk.firing{border-left-color:var(--basil)}
+.tk.warn{border-left-color:var(--amber)}
+.tk.risk{border-left-color:var(--danger);background:linear-gradient(180deg,var(--danger-wash),transparent 55%)}
+.tk.late{border-left-color:var(--danger);animation:flash 1.6s infinite}
+@keyframes flash{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 2px var(--danger)}}
+.tk.ready{border-left-color:var(--basil);background:linear-gradient(180deg,var(--basil-wash),transparent 55%)}
+.tkh{display:flex;justify-content:space-between;align-items:baseline}
+.tkh .id{font-family:var(--display);font-weight:700;font-size:15px}
+.tkh .ch{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--ink-3);text-transform:uppercase}
+.tkh .clk{font-family:var(--mono);font-size:15px;font-weight:700}
+.risk .clk,.late .clk{color:var(--danger)}
+.warn .clk{color:var(--amber)}
+.sla{height:6px;border-radius:3px;background:var(--panel-3);margin:9px 0;overflow:hidden}
+.sla i{display:block;height:100%}
+.sla i.g{width:38%;background:var(--basil)}
+.sla i.a{width:70%;background:var(--amber)}
+.sla i.r{width:94%;background:var(--danger)}
+.sla i.full{width:100%;background:var(--basil)}
+.grp{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:8px 0 3px}
+.li{font-size:14px;color:var(--ink);margin:2px 0;display:flex;gap:7px}
+.li .q{font-family:var(--mono);color:var(--brand-bright);font-weight:700}
+.li .m{color:var(--info);font-size:12px}
+.allerg{display:inline-block;background:var(--danger);color:var(--on-danger);font-size:11px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:5px;margin:5px 0}
+.held{opacity:.5}
+.held .q{color:var(--ink-3)}
+.bump{margin-top:10px;width:100%;text-align:center;font-weight:800;font-size:12px;letter-spacing:.04em;padding:8px;border-radius:var(--r-sm);background:var(--panel-3);border:1px solid var(--line-2);color:var(--ink-2)}
+.tk.risk .bump,.tk.late .bump{background:var(--danger);color:var(--on-danger);border-color:transparent}
+.tk.ready .bump{background:var(--basil);color:var(--on-basil);border-color:transparent}
+.legend{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:11px;color:var(--ink-3);background:var(--panel);border:1px solid var(--line);border-radius:var(--pill);padding:7px 18px}
+.legend b{color:var(--ink-2)}
+.legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="caption"><b>Pass</b> · KDS kitchen wall — SLA heartbeat drives colour · whole card = 1-tap bump · at-risk lane pulses when the kitchen tips to <b>risk</b></div>
+
+<div class="wall core" data-theme="dark">
+  <div class="kbar">
+    <div class="kbrand"><span class="d"></span>PASS · Kraków line</div>
+    <div class="kpis">
+      <div class="kpi risk"><div class="kl">On the line</div><div class="kv">12</div></div>
+      <div class="kpi risk"><div class="kl">At risk</div><div class="kv">3</div></div>
+      <div class="kpi warn"><div class="kl">Longest</div><div class="kv">11:32</div></div>
+      <div class="kpi calm"><div class="kl">Bumped / hr</div><div class="kv">38</div></div>
+    </div>
+    <div class="stations">
+      <span class="st on">All</span><span class="st">Pizza</span><span class="st">Pasta</span><span class="st">Cold</span><span class="st">Bar</span>
+    </div>
+    <div class="tier risk"><span class="rd"></span>RISK — board auto-compacted</div>
+  </div>
+
+  <div class="lanes">
+    <!-- NEW -->
+    <div class="lane">
+      <h2>New <span class="cnt">4</span></h2>
+      <div class="stack">
+        <div class="tk warn">
+          <div class="tkh"><span class="id">T12 <span class="ch">· dine · 4</span></span><span class="clk">4:10</span></div>
+          <div class="sla"><i class="g"></i></div>
+          <div class="grp">Pizza</div>
+          <div class="li"><span class="q">2×</span> Margherita</div>
+          <div class="li"><span class="q">1×</span> Diavola <span class="m">+extra 'nduja</span></div>
+          <div class="li held"><span class="q">2×</span> Tiramisù &nbsp;⊘ Dolci held</div>
+          <div class="bump">▲ Start</div>
+        </div>
+        <div class="tk firing">
+          <div class="tkh"><span class="id">#4419 <span class="ch">· delivery</span></span><span class="clk">2:05</span></div>
+          <div class="sla"><i class="g"></i></div>
+          <div class="grp">Pizza</div>
+          <div class="li"><span class="q">1×</span> Quattro Formaggi</div>
+          <div class="bump">▲ Start</div>
+        </div>
+        <div class="tk firing">
+          <div class="tkh"><span class="id">T2 <span class="ch">· dine · 2</span></span><span class="clk">1:12</span></div>
+          <div class="sla"><i class="g"></i></div>
+          <div class="grp">Antipasti</div>
+          <div class="li"><span class="q">1×</span> Burrata</div>
+          <div class="li"><span class="q">1×</span> Bruschetta</div>
+          <div class="bump">▲ Start</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREPARING (hot) -->
+    <div class="lane hot">
+      <h2>Preparing <span class="cnt">5</span></h2>
+      <div class="stack">
+        <div class="tk late">
+          <div class="tkh"><span class="id">T7 <span class="ch">· dine · 2</span></span><span class="clk">+6:12 over</span></div>
+          <div class="sla"><i class="r"></i></div>
+          <span class="allerg">⚠ ALLERGY · NO NUTS</span>
+          <div class="grp">Pasta</div>
+          <div class="li"><span class="q">1×</span> Carbonara</div>
+          <div class="bump">✓ Ready → Pass</div>
+        </div>
+        <div class="tk risk">
+          <div class="tkh"><span class="id">T10 <span class="ch">· dine · 4</span></span><span class="clk">11:32</span></div>
+          <div class="sla"><i class="r"></i></div>
+          <div class="grp">Pasta · Primi</div>
+          <div class="li"><span class="q">2×</span> Carbonara</div>
+          <div class="li held"><span class="q">2×</span> Bistecca &nbsp;⊘ Secondi held</div>
+          <div class="bump">✓ Ready → Pass</div>
+        </div>
+        <div class="tk warn">
+          <div class="tkh"><span class="id">T14 <span class="ch">· dine · 6</span></span><span class="clk">7:20</span></div>
+          <div class="sla"><i class="a"></i></div>
+          <div class="grp">Pizza</div>
+          <div class="li"><span class="q">2×</span> Margherita</div>
+          <div class="li"><span class="q">1×</span> Capricciosa</div>
+          <div class="bump">✓ Ready → Pass</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- READY -->
+    <div class="lane">
+      <h2>Ready · Expo <span class="cnt">2</span></h2>
+      <div class="stack">
+        <div class="tk ready">
+          <div class="tkh"><span class="id">#4416 <span class="ch">· delivery</span></span><span style="color:var(--basil);font-weight:800">READY ✓</span></div>
+          <div class="sla"><i class="full"></i></div>
+          <div class="li"><span class="q">1×</span> Margherita · <span class="q">1×</span> Diavola</div>
+          <div class="bump">⇢ Hand to driver</div>
+        </div>
+        <div class="tk ready">
+          <div class="tkh"><span class="id">T5 <span class="ch">· dine · 2</span></span><span style="color:var(--basil);font-weight:800">READY ✓</span></div>
+          <div class="sla"><i class="full"></i></div>
+          <div class="li"><span class="q">1×</span> Aperol · <span class="q">1×</span> Negroni</div>
+          <div class="bump">⇢ Runner: T5</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECALL / done rail -->
+    <div class="lane">
+      <h2>Just bumped <span class="cnt">↺ long-press to recall</span></h2>
+      <div class="stack">
+        <div class="tk" style="opacity:.6">
+          <div class="tkh"><span class="id">T3 <span class="ch">· dine · 2</span></span><span class="mono" style="color:var(--basil)">✓ 0:22 ago</span></div>
+          <div class="li"><span class="q">2×</span> Margherita</div>
+        </div>
+        <div class="tk" style="opacity:.45">
+          <div class="tkh"><span class="id">#4412</span><span class="mono" style="color:var(--ink-3)">✓ 1:40 ago</span></div>
+          <div class="li"><span class="q">1×</span> Carbonara</div>
+        </div>
+        <div class="tk" style="opacity:.3">
+          <div class="tkh"><span class="id">T8</span><span class="mono" style="color:var(--ink-3)">✓ 3:05 ago</span></div>
+          <div class="li"><span class="q">3×</span> Diavola</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><span class="sw" style="background:var(--basil)"></span><b>On time</b></span>
+  <span><span class="sw" style="background:var(--amber)"></span><b>Warming up</b></span>
+  <span><span class="sw" style="background:var(--danger)"></span><b>At risk / late</b></span>
+  <span>⊘ <b>held course</b></span>
+  <span>tap card = bump · long-press = recall</span>
+</div>
+</body>
+</html>
