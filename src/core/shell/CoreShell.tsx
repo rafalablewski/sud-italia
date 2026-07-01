@@ -4,6 +4,7 @@ import { CoreNav } from "./CoreNav";
 import { CoreClock, CoreThemeToggle, CoreLocationChip } from "./CoreChrome";
 import { PressureBadge } from "./PressureBadge";
 import { CommandPalette } from "./CommandPalette";
+import { CoreHandover } from "./CoreHandover";
 import { CoreNotificationsBell } from "./CoreNotificationsBell";
 import { CoreDock } from "./CoreDock";
 
@@ -91,6 +92,7 @@ export function CoreShell({
           (additive; see SelectionContext / CoreDock). */}
       <CoreDock />
       <CommandPalette />
+      <CoreHandover />
 
       {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
       <div className="core-bottomnav">

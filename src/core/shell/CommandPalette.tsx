@@ -65,6 +65,7 @@ export function CommandPalette() {
     const t = q.trim().toLowerCase();
     const list: Cmd[] = [];
     for (const l of LENSES) if (!t || l.label.toLowerCase().includes(t) || l.kw.includes(t)) list.push({ id: `lens:${l.path}`, label: l.label, hint: "Lens", run: () => go(l.path) });
+    if (!t || "shift handover close open".includes(t)) list.push({ id: "act:handover", label: "Shift handover", hint: "Action", run: () => { setOpen(false); window.dispatchEvent(new Event("core:handover")); } });
     if (t) {
       for (const tb of tables) if (`table ${tb.number}`.includes(t) || String(tb.number) === t) list.push({ id: `tbl:${tb.id}`, label: `Table ${tb.number}`, hint: "Floor", run: () => go("/service/floor") });
       for (const m of menu) if (m.name.toLowerCase().includes(t)) list.push({ id: `sku:${m.id}`, label: m.name, hint: "Add on POS", run: () => go("/pos") });

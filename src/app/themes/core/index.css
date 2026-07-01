@@ -78,6 +78,17 @@
 .core .core-cmdk-empty { padding: 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
 .core .core-cmdk-foot { padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--ink-3); }
 .core .core-cmdk-foot kbd { font-family: var(--mono); background: var(--panel-3); border-radius: 4px; padding: 1px 5px; margin: 0 1px; }
+/* Core shift-handover snapshot (opened via ⌘K → Shift handover). */
+.core .core-handover { width: min(92vw, 560px); border-radius: var(--r-lg); background: var(--panel); border: 1px solid var(--line-2); box-shadow: var(--sh-pop); overflow: hidden; }
+.core .core-handover-h { display: flex; align-items: baseline; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.core .core-handover-h b { font-family: var(--display); font-size: 16px; } .core .core-handover-h span { font-size: 12px; color: var(--ink-3); }
+.core .core-handover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); padding: 1px; }
+.core .core-handover-grid .hstat { background: var(--panel); padding: 14px 16px; }
+.core .core-handover-grid .hstat.warn { background: rgba(240,173,70,.1); }
+.core .core-handover-grid .hl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.core .core-handover-grid .hv { font-family: var(--mono); font-size: 22px; font-weight: 700; margin-top: 4px; }
+.core .core-handover-note { font-size: 12px; color: var(--ink-3); padding: 14px 18px 0; line-height: 1.5; }
+.core .core-handover-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 18px; }
 .core .core-chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill);
   background: var(--panel-2); border: 1px solid var(--line); font-weight: 550; font-size: 13px; color: var(--ink); }
 .core .core-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--basil); }
