@@ -219,6 +219,10 @@ struct OperatorRootView: View {
             OperatorRecipesView(api: deps.api)
         case "/core/guest":
             OperatorGuestView(api: deps.api)
+        case "/core/book":
+            GuestBookTab(api: deps.api)
+                .navigationTitle("Book")
+                .navigationBarTitleDisplayMode(.inline)
         case "/admin/alerts":
             OperatorAlertsView(api: deps.api)
         case "/admin/comms/tasks":

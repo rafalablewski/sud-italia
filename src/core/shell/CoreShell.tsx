@@ -16,10 +16,12 @@ export interface CoreTab {
 }
 
 /**
- * The one chrome every Core surface shares — a fixed two-row header over a
- * surface body, no sidebar. Row 1 = brand + the primary surface switcher
- * (CoreNav) + global actions (location · clock · theme · fullscreen). Row 2 =
- * the context subbar (eyebrow + the surface's view tabs + its own controls).
+ * The one chrome every Core surface shares — the Service OS three-region IA:
+ * a thin Command Bar (top), the Lens Rail (left, `CoreNav`), the surface Canvas
+ * (right), and the persistent Context Dock (`CoreDock`, docked bottom). The
+ * Command Bar holds global state (location · ⌘K · pressure · clock · user); the
+ * Lens Rail switches how you view the room; the selected entity persists across
+ * lenses and its check stays docked.
  *
  * Core is a SEPARATE entity from /admin: this renders none of the admin
  * shell. It loads only the core theme (see src/app/core/layout.tsx).
@@ -85,7 +87,11 @@ export function CoreShell({
         </div>
       </header>
 
-      <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+      {/* The Canvas region: the Lens Rail (left) beside the surface body. */}
+      <div className="core-main">
+        <CoreNav />
+        <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
+      </div>
 
       {/* Persistent Context Dock — the selected entity's check, following the
           operator across every lens. Renders null until something is selected
@@ -93,11 +99,6 @@ export function CoreShell({
       <CoreDock />
       <CommandPalette />
       <CoreHandover />
-
-      {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
-      <div className="core-bottomnav">
-        <CoreNav />
-      </div>
     </>
   );
 }

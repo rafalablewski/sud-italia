@@ -752,7 +752,7 @@ final class GuestBookStore {
     func cancel(_ id: String) async { _ = try? await api.send(.adminCancelReservation(id: id, location: location)); await load() }
 }
 
-struct GuestBookTab: View {
+public struct GuestBookTab: View {
     @Environment(\.theme) private var theme
     @State private var store: GuestBookStore
     @State private var slotId = ""
@@ -762,9 +762,9 @@ struct GuestBookTab: View {
     @State private var phone = ""
     @State private var forceOverride = false
     private let api: APIClient
-    init(api: APIClient) { self.api = api; _store = State(initialValue: GuestBookStore(api: api)) }
+    public init(api: APIClient) { self.api = api; _store = State(initialValue: GuestBookStore(api: api)) }
 
-    var body: some View {
+    public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.space.lg) {
                 if store.locations.count > 1 {

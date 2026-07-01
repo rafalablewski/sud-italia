@@ -61,8 +61,8 @@ it will stick without being overridden on mount.
   The `liquid-glass` skin paints its ambient aurora on the `.core` root
   and makes panels translucent so they refract it. But the base theme
   fills several *scroll/content* containers with an opaque `var(--bg)`
-  (`.core-menu`, `.core-pos-embed`, `.core-thread`, `.core-cap-inspect`,
-  the `.core-bottomnav` band). Painted on top of the root, they bury the
+  (`.core-menu`, `.core-pos-embed`, `.core-thread`, `.core-cap-inspect`).
+  Painted on top of the root, they bury the
   aurora — the frosted panels then have only flat black to refract and the
   skin collapses to the dark base look. The skin resets those to
   `background: transparent` (see the "let the aurora through" block).

@@ -4,8 +4,8 @@
 // Regenerate: `npm run gen:native`. CI fails on drift: `npm run check:native`.
 //
 // The operator (OttavianoKDS) information architecture — a verifiably 1:1 mirror
-// of the web admin nav plus the Core surfaces. 54 surfaces across
-// 10 sections (52 live on /api/v1, 2 parity scaffolds).
+// of the web admin nav plus the Core surfaces. 55 surfaces across
+// 10 sections (53 live on /api/v1, 2 parity scaffolds).
 // The presentation icons + the role-rank filter live in operatorNav.ts.
 
 import type { AdminRole } from "./roles";
@@ -33,6 +33,7 @@ export const OPERATOR_NAV_DATA: GeneratedNavSection[] = [
     { path: "/core/orders", label: "Orders", requiredRole: "staff", status: "live", blurb: "Every live order across fulfilment types, in one board." },
     { path: "/core/guest", label: "Guest Engagement", requiredRole: "staff", status: "live", blurb: "Loyalty, guest profiles (CRM) and table bookings." },
     { path: "/core/service", label: "Service", requiredRole: "staff", status: "live", blurb: "Floor plan, table turns and reservation slots." },
+    { path: "/core/book", label: "Book", requiredRole: "staff", status: "live", blurb: "Reservations & slots — book a table against the floor timeline." },
   ] },
   { id: "overview", label: "Overview", items: [
     { path: "/admin/welcome", label: "Welcome", requiredRole: "kitchen", status: "live", blurb: "Day-one tour and quick links into the operation." },

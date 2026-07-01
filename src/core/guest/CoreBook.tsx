@@ -23,7 +23,7 @@ function todayLocal(): string {
  * reservations, create via POST /api/admin/booking, cancel via DELETE
  * /api/admin/floor/reservations. Conflicts via the pure findReservationConflicts.
  */
-export function CoreBook() {
+export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) {
   const toast = useCoreToast();
   const { selected } = useSelection();
   const { location, activeLocations } = useLocation();
@@ -154,8 +154,8 @@ export function CoreBook() {
 
   return (
     <CoreShell
-      eyebrow="Guest Engagement"
-      tabs={guestTabs("book")}
+      eyebrow={standalone ? "Book" : "Guest Engagement"}
+      tabs={standalone ? undefined : guestTabs("book")}
       subRight={<input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />}
     >
       <div className="core-book">

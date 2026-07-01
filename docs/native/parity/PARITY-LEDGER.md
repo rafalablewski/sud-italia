@@ -2,7 +2,7 @@
 
 > **Generated** by `scripts/gen-native-nav.ts` — do not edit. This is the cross-reference the README's “52 of 54 surfaces” claim resolves to. Structure comes from the web nav (`src/admin-v3/nav.config.ts`, `src/core/routes.ts`); presentation (icon, blurb, live/scaffold) from `docs/native/parity/operator-nav.overlay.json`.
 
-**54 surfaces · 10 sections · 52 live · 2 scaffold.** Each native surface mirrors the web href shown; `live` = rendered from `/api/v1`, `scaffold` = layout-parity pending facade coverage.
+**55 surfaces · 10 sections · 53 live · 2 scaffold.** Each native surface mirrors the web href shown; `live` = rendered from `/api/v1`, `scaffold` = layout-parity pending facade coverage.
 
 ## Core
 
@@ -13,6 +13,7 @@
 | Orders | `/core/orders` | staff | 🟢 live | — |
 | Guest Engagement | `/core/guest` | staff | 🟢 live | `/api/v1/admin/loyalty` |
 | Service | `/core/service` | staff | 🟢 live | `/api/v1/admin/slots` |
+| Book | `/core/book` | staff | 🟢 live | — |
 
 ## Overview
 
