@@ -60,6 +60,11 @@ svg{display:block;}
 .cap b{color:var(--basil); font-weight:600;}
 .cap .fix{color:var(--brand-bright); border:1px solid var(--line-2); padding:1px 7px; border-radius:var(--pill); font-size:9px; background:var(--brand-wash);}
 
+/* ---- sub-toolbar ---- */
+.subbar{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;flex-wrap:wrap;}
+.subbar .sb-sp{flex:1;}
+.subbar .sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);}
+
 /* ================= COMMAND BAR ================= */
 .cmdbar{
   position:sticky; top:0; z-index:60;
@@ -179,34 +184,46 @@ svg{display:block;}
 .zone-h::after{content:""; flex:1; height:1px; background:var(--line);}
 
 /* ================= TABLE TILES ================= */
-.tables{display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:8px;}
-.tbl{border-radius:var(--r-sm); padding:9px 10px; background:var(--panel-2); border:1px solid var(--line); box-shadow:var(--lg-rim); position:relative; cursor:pointer; transition:transform .12s, box-shadow .12s;}
-.tbl:hover{transform:translateY(-1px);}
-.tbl .thead{display:flex; align-items:baseline; justify-content:space-between;}
-.tbl .no{font-family:var(--display); font-weight:700; font-size:15px;}
-.tbl .st{font-family:var(--mono); font-size:8.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3);}
-.tbl .mt{font-family:var(--mono); font-size:9.5px; color:var(--ink-2); margin-top:6px; display:flex; justify-content:space-between; gap:6px;}
-.tbl .mt .dwell{color:var(--ink-3);}
-.tbl .chk{font-family:var(--mono); font-size:11px; color:var(--ink); font-weight:600; margin-top:5px;}
+.tables{display:grid; grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); gap:10px;}
+.tbl{
+  --accent:var(--line-2);
+  border-radius:var(--r-md); padding:13px 14px 13px 16px;
+  background:var(--lg-sheen),var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur); backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line); box-shadow:var(--lg-rim);
+  position:relative; cursor:pointer; overflow:hidden;
+  transition:transform .14s ease, box-shadow .14s ease;
+}
+/* left accent bar per state */
+.tbl::after{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent); box-shadow:0 0 12px -2px var(--accent);}
+.tbl:hover{transform:translateY(-3px); box-shadow:var(--lg-float),var(--lg-rim);}
+
+.tbl .thead{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+.tbl .no{font-family:var(--display); font-weight:800; font-size:22px; line-height:1; letter-spacing:-.02em;}
+.tbl .stat{display:flex; align-items:center; gap:6px; margin-top:2px;}
+.tbl .stat .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 7px -1px var(--accent); flex:0 0 auto;}
+.tbl .st{font-family:var(--mono); font-size:9.5px; text-transform:lowercase; letter-spacing:.04em; color:var(--ink-3);}
+.tbl .covers{font-family:var(--mono); font-size:11px; color:var(--ink-2); margin-top:11px;}
+.tbl .dwell{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:3px;}
+.tbl .chk{font-family:var(--mono); font-size:13px; color:var(--ink); font-weight:600; margin-top:8px;}
 .tbl .chk small{color:var(--ink-3); font-weight:400; font-size:9px;}
 
-.tbl.free{background:rgba(125,196,100,.1); box-shadow:inset 0 0 0 1px rgba(125,196,100,.3);}
+.tbl.free{--accent:var(--basil); background:rgba(125,196,100,.09),var(--lg-fill);}
 .tbl.free .st{color:var(--basil);}
-.tbl.seated{background:rgba(84,188,224,.1); box-shadow:inset 0 0 0 1px rgba(84,188,224,.3);}
+.tbl.seated{--accent:var(--info); background:rgba(84,188,224,.09),var(--lg-fill);}
 .tbl.seated .st{color:var(--info);}
-.tbl.billing{background:rgba(240,173,70,.1); box-shadow:inset 0 0 0 1px rgba(240,173,70,.35);}
+.tbl.billing{--accent:var(--amber); background:rgba(240,173,70,.1),var(--lg-fill);}
 .tbl.billing .st{color:var(--amber);}
 .tbl.billing .chk{color:var(--amber);}
-.tbl.reserved{background:var(--panel-2); box-shadow:inset 0 0 0 1px var(--line);}
+.tbl.reserved{--accent:var(--line-2); background:var(--panel-2);}
 .tbl.reserved .st{color:var(--ink-3);}
-.tbl.oos{background:rgba(255,255,255,.02); box-shadow:inset 0 0 0 1px rgba(255,247,235,.06); opacity:.5;}
-.tbl.oos .no,.tbl.oos .mt{color:var(--ink-3);}
+.tbl.oos{--accent:rgba(255,247,235,.14); background:rgba(255,255,255,.02); opacity:.45;}
+.tbl.oos .no,.tbl.oos .covers,.tbl.oos .dwell{color:var(--ink-3);}
 .tbl.oos .st{color:var(--ink-3);}
 
 /* selected tile -> quick actions */
-.tbl.sel{transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--brand-bright), 0 0 22px -6px var(--brand), var(--lg-float);}
-.tbl.sel::before{content:""; position:absolute; left:-1px; top:8px; bottom:8px; width:3px; border-radius:99px; background:var(--brand-bright); box-shadow:0 0 10px var(--brand);}
-.qa{display:none; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); gap:5px;}
+.tbl.sel{--accent:var(--brand-bright); transform:translateY(-3px); box-shadow:inset 0 0 0 1px var(--brand-bright), 0 0 26px -6px var(--brand), var(--lg-float);}
+.qa{display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); gap:5px;}
 .tbl.sel .qa{display:flex;}
 .qa button{
   flex:1; font-family:var(--mono); font-size:9.5px; letter-spacing:.03em; color:var(--ink-2);
@@ -254,16 +271,8 @@ svg{display:block;}
     <span class="vtab">dispatch</span>
   </div>
   <div class="spacer"></div>
-  <div class="pill on">All zones</div>
-  <div class="pill">Terrace</div>
-  <div class="pill">Main</div>
-  <div class="reficon" title="Refresh floor"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></div>
   <div class="kchip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> search <kbd>⌘K</kbd></div>
-  <div class="tele">
-    <span class="risk">▲ risk 3</span>
-    <span class="loc">◈ loc krakow</span>
-    <span class="clk">16:16</span>
-  </div>
+  <div class="tele"><span class="risk">▲ risk 3</span><span class="loc">◈ loc krakow</span><span class="clk">16:16</span></div>
   <div class="tico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="badge">5</span></div>
   <div class="tico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
 </div>
@@ -287,6 +296,15 @@ svg{display:block;}
 
   <!-- ============ MAIN ============ -->
   <main class="main">
+
+    <div class="subbar">
+      <span class="sb-lbl">zone</span>
+      <div class="pill on">All zones</div>
+      <div class="pill">Terrace</div>
+      <div class="pill">Main</div>
+      <div class="sb-sp"></div>
+      <div class="tico" title="Refresh floor"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></div>
+    </div>
 
     <div class="cap">CORE — SERVICE · FLOOR · <b>liquid glass</b> · <span class="fix">krakow · dine-in</span></div>
 
@@ -319,35 +337,41 @@ svg{display:block;}
         <div class="zone-h"><span class="zn">Terrace</span><span class="zsub">6 tables · 71%</span></div>
         <div class="tables">
           <div class="tbl free" data-tbl="TT1">
-            <div class="thead"><div class="no">TT1</div><div class="st">Free</div></div>
-            <div class="mt"><span>2 top</span><span class="dwell">—</span></div>
+            <div class="thead"><div class="no">TT1</div><div class="stat"><span class="dot"></span><span class="st">free</span></div></div>
+            <div class="covers">2-top</div>
+            <div class="dwell">open</div>
+            <div class="qa"><button class="pri">Seat</button><button>Reserve</button><button>Merge</button></div>
           </div>
           <div class="tbl seated" data-tbl="TT2" data-covers="4" data-check="146.00">
-            <div class="thead"><div class="no">TT2</div><div class="st">Seated</div></div>
-            <div class="mt"><span>4 cov</span><span class="dwell">41 min</span></div>
+            <div class="thead"><div class="no">TT2</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">4 covers</div>
+            <div class="dwell">41 min</div>
             <div class="chk">146.00 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl seated" data-tbl="TT3" data-covers="2" data-check="72.50">
-            <div class="thead"><div class="no">TT3</div><div class="st">Seated</div></div>
-            <div class="mt"><span>2 cov</span><span class="dwell">18 min</span></div>
+            <div class="thead"><div class="no">TT3</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">2 covers</div>
+            <div class="dwell">18 min</div>
             <div class="chk">72.50 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl billing" data-tbl="TT4" data-covers="4" data-check="204.00">
-            <div class="thead"><div class="no">TT4</div><div class="st">Billing</div></div>
-            <div class="mt"><span>4 cov</span><span class="dwell">63 min</span></div>
+            <div class="thead"><div class="no">TT4</div><div class="stat"><span class="dot"></span><span class="st">billing</span></div></div>
+            <div class="covers">4 covers</div>
+            <div class="dwell">63 min</div>
             <div class="chk">204.00 zł <small>on bill</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl reserved" data-tbl="TT5">
-            <div class="thead"><div class="no">TT5</div><div class="st">Reserved</div></div>
-            <div class="mt"><span>4 top</span><span class="dwell">rsv 19:30</span></div>
-            <div class="chk"><small>Kowalczyk · 4</small></div>
+            <div class="thead"><div class="no">TT5</div><div class="stat"><span class="dot"></span><span class="st">reserved</span></div></div>
+            <div class="covers">4-top · Kowalczyk</div>
+            <div class="dwell">rsv 19:30</div>
           </div>
           <div class="tbl oos" data-tbl="TT6">
-            <div class="thead"><div class="no">TT6</div><div class="st">Out of service</div></div>
-            <div class="mt"><span>2 top</span><span class="dwell">wobble</span></div>
+            <div class="thead"><div class="no">TT6</div><div class="stat"><span class="dot"></span><span class="st">out of service</span></div></div>
+            <div class="covers">2-top</div>
+            <div class="dwell">wobble</div>
           </div>
         </div>
       </div>
@@ -357,61 +381,70 @@ svg{display:block;}
         <div class="zone-h"><span class="zn">Main</span><span class="zsub">10 tables · 90%</span></div>
         <div class="tables">
           <div class="tbl seated sel" data-tbl="T10" data-covers="2" data-check="187.92">
-            <div class="thead"><div class="no">T10</div><div class="st">Seated · Tab 4</div></div>
-            <div class="mt"><span>2 cov</span><span class="dwell">44 min</span></div>
+            <div class="thead"><div class="no">T10</div><div class="stat"><span class="dot"></span><span class="st">seated · tab 4</span></div></div>
+            <div class="covers">2 covers</div>
+            <div class="dwell">44 min</div>
             <div class="chk">187.92 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl seated" data-tbl="T4" data-covers="2" data-check="88.00">
-            <div class="thead"><div class="no">T4</div><div class="st">Seated</div></div>
-            <div class="mt"><span>2 cov</span><span class="dwell">34 min</span></div>
+            <div class="thead"><div class="no">T4</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">2 covers</div>
+            <div class="dwell">34 min</div>
             <div class="chk">88.00 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl billing" data-tbl="T9" data-covers="4" data-check="248.00">
-            <div class="thead"><div class="no">T9</div><div class="st">Billing</div></div>
-            <div class="mt"><span>4 cov</span><span class="dwell">68 min</span></div>
+            <div class="thead"><div class="no">T9</div><div class="stat"><span class="dot"></span><span class="st">billing</span></div></div>
+            <div class="covers">4 covers</div>
+            <div class="dwell">68 min</div>
             <div class="chk">248.00 zł <small>on bill</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl seated" data-tbl="T7" data-covers="3" data-check="112.00">
-            <div class="thead"><div class="no">T7</div><div class="st">Seated</div></div>
-            <div class="mt"><span>3 cov</span><span class="dwell">12 min</span></div>
+            <div class="thead"><div class="no">T7</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">3 covers</div>
+            <div class="dwell">12 min</div>
             <div class="chk">112.00 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl free" data-tbl="T1">
-            <div class="thead"><div class="no">T1</div><div class="st">Free</div></div>
-            <div class="mt"><span>2 top</span><span class="dwell">—</span></div>
+            <div class="thead"><div class="no">T1</div><div class="stat"><span class="dot"></span><span class="st">free</span></div></div>
+            <div class="covers">2-top</div>
+            <div class="dwell">open</div>
             <div class="qa"><button class="pri">Seat</button><button>Reserve</button><button>Merge</button></div>
           </div>
           <div class="tbl seated" data-tbl="T12" data-covers="5" data-check="316.00">
-            <div class="thead"><div class="no">T12</div><div class="st">Seated</div></div>
-            <div class="mt"><span>5 cov</span><span class="dwell">51 min</span></div>
+            <div class="thead"><div class="no">T12</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">5 covers</div>
+            <div class="dwell">51 min</div>
             <div class="chk">316.00 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl billing" data-tbl="T6" data-covers="2" data-check="94.00">
-            <div class="thead"><div class="no">T6</div><div class="st">Billing</div></div>
-            <div class="mt"><span>2 cov</span><span class="dwell">57 min</span></div>
+            <div class="thead"><div class="no">T6</div><div class="stat"><span class="dot"></span><span class="st">billing</span></div></div>
+            <div class="covers">2 covers</div>
+            <div class="dwell">57 min</div>
             <div class="chk">94.00 zł <small>on bill</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl free" data-tbl="T2">
-            <div class="thead"><div class="no">T2</div><div class="st">Free</div></div>
-            <div class="mt"><span>4 top</span><span class="dwell">—</span></div>
+            <div class="thead"><div class="no">T2</div><div class="stat"><span class="dot"></span><span class="st">free</span></div></div>
+            <div class="covers">4-top</div>
+            <div class="dwell">open</div>
             <div class="qa"><button class="pri">Seat</button><button>Reserve</button><button>Merge</button></div>
           </div>
           <div class="tbl seated" data-tbl="T8" data-covers="4" data-check="176.50">
-            <div class="thead"><div class="no">T8</div><div class="st">Seated</div></div>
-            <div class="mt"><span>4 cov</span><span class="dwell">26 min</span></div>
+            <div class="thead"><div class="no">T8</div><div class="stat"><span class="dot"></span><span class="st">seated</span></div></div>
+            <div class="covers">4 covers</div>
+            <div class="dwell">26 min</div>
             <div class="chk">176.50 zł <small>open</small></div>
             <div class="qa"><button class="pri">Bill</button><button>Move</button><button>Clear</button></div>
           </div>
           <div class="tbl reserved" data-tbl="T3">
-            <div class="thead"><div class="no">T3</div><div class="st">Reserved</div></div>
-            <div class="mt"><span>6 top</span><span class="dwell">rsv 20:00</span></div>
-            <div class="chk"><small>Nowak · 6</small></div>
+            <div class="thead"><div class="no">T3</div><div class="stat"><span class="dot"></span><span class="st">reserved</span></div></div>
+            <div class="covers">6-top · Nowak</div>
+            <div class="dwell">rsv 20:00</div>
           </div>
         </div>
       </div>
@@ -439,9 +472,9 @@ svg{display:block;}
   // lens rail: Esc collapses
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ document.getElementById('lens').classList.remove('open'); }});
   // zone pills: single select
-  document.querySelectorAll('.cmdbar .pill').forEach(function(p){
+  document.querySelectorAll('.subbar .pill').forEach(function(p){
     p.addEventListener('click',function(){
-      document.querySelectorAll('.cmdbar .pill').forEach(function(x){x.classList.remove('on');});
+      document.querySelectorAll('.subbar .pill').forEach(function(x){x.classList.remove('on');});
       p.classList.add('on');
     });
   });
