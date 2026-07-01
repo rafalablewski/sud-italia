@@ -209,7 +209,7 @@ wordmark, no second subbar row, no bottom switcher:
 - **`.core-surf-toolbar`** — the surface sub-toolbar at the top of the Canvas
   body that carries the surface's own controls (`subRight` right-aligned, plus
   any filters/segments/date the surface builds). Keeps the command bar standard.
-- **`.core-lens`** — the icon-only 60px Lens Rail that switches the four room
+- **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
   lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
   Collapsed by default; it expands to labels only when **pinned** — a click on
   the `.core-lens-pin` toggle adds `.open` — never on hover, so a stray cursor

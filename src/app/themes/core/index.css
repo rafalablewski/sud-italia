@@ -21,7 +21,7 @@
    docs/design-system/core/theme/README.md → "Reset specificity". */
 :where(.core), :where(.core) *, :where(.core) *::before, :where(.core) *::after { box-sizing: border-box; }
 .core { margin: 0; min-height: 0; flex: 1; display: flex; flex-direction: column;
-  background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 14px;
+  background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 13px;
   -webkit-font-smoothing: antialiased; overflow: hidden; transition: background var(--fast), color var(--fast); }
 :where(.core) button { font-family: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
 :where(.core) a { color: inherit; text-decoration: none; }
@@ -35,24 +35,24 @@
    from --basil (Core's semantic go/live green) and warn from --amber, so the
    look stays 100% token-driven — no raw terminal hexes. See mockup "14 —
    Command" + docs/design-system/core/theme/README.md → "Chrome". */
-.core .core-bar { display: flex; align-items: center; gap: 14px; height: 58px; padding: 0 15px;
+.core .core-bar { display: flex; align-items: center; gap: 11px; height: 42px; padding: 0 12px;
   background: var(--panel); border-bottom: 1px solid var(--line); flex: none; box-shadow: var(--sh-1);
-  z-index: 5; font-family: var(--mono); }
+  z-index: 5; font-family: var(--mono); font-size: 12px; }
 
 /* traffic-light chrome (decorative) — tokenised red · amber · green */
-.core .cm-lights { display: flex; gap: 7px; flex: none; }
-.core .cm-lights i { width: 11px; height: 11px; border-radius: 50%; }
+.core .cm-lights { display: flex; gap: 6px; flex: none; }
+.core .cm-lights i { width: 10px; height: 10px; border-radius: 50%; }
 .core .cm-lights i:nth-child(1) { background: var(--danger); }
 .core .cm-lights i:nth-child(2) { background: var(--amber); }
 .core .cm-lights i:nth-child(3) { background: var(--basil); }
-.core .cm-div { width: 1px; height: 22px; background: var(--line-2); flex: none; }
+.core .cm-div { width: 1px; height: 18px; background: var(--line-2); flex: none; }
 
 /* live shell prompt — core ❯ surface:tab, then a blinking block caret */
-.core .cm-prompt { display: flex; align-items: center; gap: 7px; font-size: 13px; white-space: nowrap; flex: none; }
+.core .cm-prompt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; flex: none; }
 .core .cm-prompt .u { color: var(--basil); }
 .core .cm-prompt .g { color: var(--ink-3); }
 .core .cm-prompt .c { color: var(--ink); font-weight: 500; }
-.core .cm-caret { width: 8px; height: 15px; background: var(--basil); display: inline-block; animation: core-caret-blink 1.1s step-end infinite; }
+.core .cm-caret { width: 7px; height: 13px; background: var(--basil); display: inline-block; animation: core-caret-blink 1.1s step-end infinite; }
 @keyframes core-caret-blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .core .cm-caret { animation: none; } }
 
@@ -61,7 +61,7 @@
    rules regardless of source order. */
 .core .cm-tabs { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .core .cm-tabs::-webkit-scrollbar { display: none; }
-.core .core-bar .cm-tabs a, .core .core-bar .cm-tabs button { font-family: var(--mono); font-size: 11.5px; text-transform: lowercase; height: 28px; padding: 0 9px; border-radius: 6px; }
+.core .core-bar .cm-tabs a, .core .core-bar .cm-tabs button { font-family: var(--mono); font-size: 11px; text-transform: lowercase; height: 25px; padding: 0 8px; border-radius: 6px; }
 .core .core-bar .cm-tabs a.on, .core .core-bar .cm-tabs button.on { background: var(--basil-wash); color: var(--basil); box-shadow: inset 0 0 0 1px var(--basil); }
 
 .core .cm-sp { flex: 1 1 auto; min-width: 8px; }
@@ -79,9 +79,9 @@
 .core .core-surf-toolbar .core-iconbtn:not(.core-recall-btn),
 .core .core-bar .cm-right .core-iconbtn {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-  height: 32px; min-width: 32px; padding: 0 7px; border-radius: 6px;
+  height: 28px; min-width: 28px; padding: 0 6px; border-radius: 6px;
   background: transparent; border: 0; color: var(--ink-2);
-  font-family: var(--mono); font-size: 12.5px; }
+  font-family: var(--mono); font-size: 12px; }
 .core .core-surf-toolbar .core-iconbtn:not(.core-recall-btn):hover,
 .core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--basil); }
 .core .core-surf-toolbar .core-iconbtn.on { background: var(--basil-wash); color: var(--basil); }
@@ -97,14 +97,14 @@
 .core .cm-primary svg { width: 13px; height: 13px; }
 
 /* ⌘K launcher chip */
-.core .cm-k { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 12px; font-family: var(--mono);
-  border: 1px solid var(--line); border-radius: 7px; padding: 6px 11px; flex: none; background: transparent; }
+.core .cm-k { display: flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 11px; font-family: var(--mono);
+  border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; flex: none; background: transparent; }
 .core .cm-k:hover { color: var(--ink); background: var(--hover); }
 .core .cm-k kbd { font-family: var(--mono); font-size: 10px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px; background: var(--panel-3); }
 
 /* telemetry cluster — risk · loc · clock, mono, colour-coded */
-.core .cm-tel { display: flex; align-items: center; gap: 13px; font-size: 11.5px; white-space: nowrap; flex: none; }
-.core .cm-tel-item { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); background: transparent; border: 0; }
+.core .cm-tel { display: flex; align-items: center; gap: 11px; font-size: 11px; white-space: nowrap; flex: none; }
+.core .cm-tel-item { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: transparent; border: 0; }
 .core .cm-tel-item .lbl { color: var(--ink-3); }
 .core .cm-tel-item .val { color: var(--ink); }
 .core .cm-tel-item.ok .val { color: var(--basil); }
@@ -190,24 +190,24 @@
    (SelectionContext) — you change the VIEW, not the app. Distinct from the POS
    category `.core-rail` below. */
 .core .core-main { flex: 1; min-height: 0; display: flex; }
-.core .core-lens { flex: none; width: 60px; display: flex; flex-direction: column; gap: 4px;
-  padding: 10px 8px; background: var(--panel); border-right: 1px solid var(--line);
+.core .core-lens { flex: none; width: 56px; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 7px; background: var(--panel); border-right: 1px solid var(--line);
   overflow: hidden; z-index: 6; transition: width var(--fast); }
-.core .core-lens.open { width: 196px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); }
+.core .core-lens.open { width: 184px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); }
 /* pin toggle at the top of the rail — collapses/expands (and persists) */
-.core .core-lens-pin { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 11px; margin-bottom: 4px;
-  flex: none; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line);
+.core .core-lens-pin { display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px; margin-bottom: 4px;
+  flex: none; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line);
   color: var(--ink-3); cursor: pointer; transition: color var(--fast), background var(--fast); }
 .core .core-lens-pin:hover { color: var(--ink); background: var(--panel-3); }
-.core .core-lens-pin svg { width: 18px; height: 18px; flex: none; }
-.core .core-lens-pin span { white-space: nowrap; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+.core .core-lens-pin svg { width: 16px; height: 16px; flex: none; }
+.core .core-lens-pin span { white-space: nowrap; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
   opacity: 0; transition: opacity var(--fast); }
 .core .core-lens.open .core-lens-pin { color: var(--brand-bright); }
 .core .core-lens.open .core-lens-pin span { opacity: 1; }
-.core .core-lens a { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px; flex: none;
-  border-radius: var(--pill); color: var(--ink-2); transition: background var(--fast), color var(--fast); }
-.core .core-lens a svg { width: 22px; height: 22px; flex: none; opacity: .78; }
-.core .core-lens a span { white-space: nowrap; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity var(--fast); }
+.core .core-lens a { display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 9px; flex: none;
+  border-radius: var(--r-sm); color: var(--ink-2); transition: background var(--fast), color var(--fast); }
+.core .core-lens a svg { width: 20px; height: 20px; flex: none; opacity: .78; }
+.core .core-lens a span { white-space: nowrap; font-weight: 600; font-size: 13px; opacity: 0; transition: opacity var(--fast); }
 .core .core-lens.open a span { opacity: 1; }
 .core .core-lens a:hover { background: var(--panel-3); color: var(--ink); }
 .core .core-lens a.on { background: var(--panel-2); color: var(--ink); box-shadow: var(--sh-1); }
@@ -250,7 +250,7 @@
    the working controls the "Command" bar deliberately omits (Slots' view
    filters + date, Book's date). Distinct from the command bar: it belongs to
    the surface, not the global chrome. */
-.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 46px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; }
+.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 14px; min-height: 40px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; font-family: var(--mono); font-size: 11.5px; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 
@@ -654,10 +654,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
 
 /* KPI band */
-.core .core-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
-.core .core-kpi .k { background: var(--bg); padding: 11px 16px; }
-.core .core-kpi .kl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-.core .core-kpi .kv { font-family: var(--mono); font-weight: 600; font-size: 21px; margin-top: 3px; }
+.core .core-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
+.core .core-kpi .k { background: var(--bg); padding: 9px 14px; }
+.core .core-kpi .kl { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.core .core-kpi .kv { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 19px; margin-top: 2px; line-height: 1.05; }
 .core .core-kpi .kv.i { color: var(--t-firing); } .core .core-kpi .kv.ok { color: var(--t-ready); }
 .core .core-kpi .kv.warn { color: var(--t-warn); } .core .core-kpi .kv.bad { color: var(--t-late); }
 
@@ -862,9 +862,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    + Guest `.core-kpi-strip`): hairline-divided columns, an uppercase mono
    label, and a big MONO tabular number. Fixes the KDS-vs-Service mismatch. */
 .core .core-kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
-.core .core-kpi-strip .k { background: var(--panel); padding: 11px 16px; }
-.core .core-kpi-strip .kl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-.core .core-kpi-strip .kv { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 21px; margin-top: 3px; }
+.core .core-kpi-strip .k { background: var(--panel); padding: 9px 14px; }
+.core .core-kpi-strip .kl { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.core .core-kpi-strip .kv { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 19px; margin-top: 2px; line-height: 1.05; }
 
 .core .core-inbox { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px 1fr 300px; }
 
