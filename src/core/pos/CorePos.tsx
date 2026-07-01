@@ -124,6 +124,10 @@ export function CorePos({
   }, [location, menusByLocation]);
 
   const menu = useMemo(() => menusByLocation[pageLoc] ?? [], [menusByLocation, pageLoc]);
+  // Live 86 set — polled from the kitchen's authoritative override list so a
+  // sold-out item greys/strikes/sinks on the till within one poll, no reload.
+  // Declared up here because the availability filter below reads it.
+  const [eightySix, setEightySix] = useState<Set<string>>(new Set());
   const config = upsellByLocation[pageLoc] ?? null;
   const byId = useCallback((id: string) => menu.find((m) => m.id === id), [menu]);
 
@@ -922,9 +926,18 @@ export function CorePos({
     }
   };
 
-  // Channel-true available menu; "all" shows every category stacked.
-  const channelMenu = menu.filter((m) => m.available && (active?.channel === "delivery" || !m.deliveryOnly));
-  const items = activeCat === "all" ? channelMenu : channelMenu.filter((m) => m.category === activeCat);
+  // Channel-appropriate + availability. A sold-out item (base-unavailable OR
+  // live-86'd) is NOT hidden — it stays on the grid greyed/struck and sinks to
+  // the bottom, so the line never taps it but always sees the gap.
+  const channelOk = (m: MenuItem) => active?.channel === "delivery" || !m.deliveryOnly;
+  const isAvail = (m: MenuItem) => m.available && !eightySix.has(m.id) && channelOk(m);
+  // available-only list — combos, cross-sell and every add-path use this.
+  const channelMenu = menu.filter(isAvail);
+  // grid list — channel-appropriate incl. sold-out; available first, 86'd sunk.
+  const gridSource = menu.filter(channelOk);
+  const items = (activeCat === "all" ? gridSource : gridSource.filter((m) => m.category === activeCat))
+    .slice()
+    .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
 
@@ -997,6 +1010,22 @@ export function CorePos({
     void loadSteer();
   }, [loadSteer]);
   usePolling(loadSteer, 15000, { enabled: !!pageLoc });
+
+  const loadEightySix = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/kds/eighty-six?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = (await res.json()) as { eightySixed?: { id: string }[] };
+      setEightySix(new Set((d.eightySixed ?? []).map((x) => x.id)));
+    } catch {
+      /* non-fatal — the till just keeps the last known 86 set */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadEightySix();
+  }, [loadEightySix]);
+  usePolling(loadEightySix, 15000, { enabled: !!pageLoc });
 
   // --- Drag-to-recourse + fullscreen kiosk --------------------------------
   const dragItem = useRef<string | null>(null);
@@ -1071,12 +1100,16 @@ export function CorePos({
   // Tapping a card that has modifier groups opens the editor to configure the
   // line; a plain item adds straight to the check (the fast path is unchanged).
   const customisable = (m: MenuItem) => !!m.modifierGroups && m.modifierGroups.length > 0;
-  const productCard = (m: MenuItem) => (
+  const productCard = (m: MenuItem) => {
+    const soldOut = !isAvail(m);
+    return (
     <button
       key={m.id}
       type="button"
-      className="core-prod"
-      onClick={() => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
+      className={`core-prod${soldOut ? " sold-out" : ""}`}
+      disabled={soldOut}
+      title={soldOut ? "86'd — sold out" : undefined}
+      onClick={soldOut ? undefined : () => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
     >
       <div className="pn">
         {m.name}
@@ -1084,19 +1117,21 @@ export function CorePos({
       </div>
       <div className="pd">{m.description}</div>
       <div className="core-tagrow">
+        {soldOut && <span className="core-tag off">86 · sold out</span>}
         {m.tags.map((t) => (
           <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
         ))}
         {customisable(m) && <span className="core-tag opt">options</span>}
-        {steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
-        {steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
+        {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
+        {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
       </div>
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>{customisable(m) ? "⋯" : "+"}</span>
+        <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
       </div>
     </button>
-  );
+    );
+  };
 
   const lineRow = (l: PosTabLine, coursed: boolean) => {
     const m = byId(l.menuItemId);

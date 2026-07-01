@@ -58,7 +58,12 @@ inside the shell body: **rail · menu · ticket**.
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates. Tapping a plain
   card adds it straight to the check; a **customisable** card opens the line
-  editor first (see *Line editor* below).
+  editor first (see *Line editor* below). A **sold-out** card
+  (`.core-prod.sold-out` — base-unavailable OR live-86'd) is **not hidden**:
+  it stays greyed + struck with a danger `.core-tag.off` "86 · sold out"
+  chip, is disabled, and **sinks to the bottom** of its category (available
+  first). The 86 set is polled live from `/api/admin/kds/eighty-six`, so an
+  item 86'd on the pass greys on the till within one poll — no reload.
 - **`.core-ticket`** — the open-check panel. Today it shows
   `.core-ticket-empty` (the no-open-check state).
 
