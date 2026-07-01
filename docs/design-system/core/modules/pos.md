@@ -79,9 +79,15 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
   with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
   the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
-  description can't make one card taller than its row-mates. Tapping a plain
+  description can't make one card taller than its row-mates. **Calm at rest**
+  (matching the mockup): on hover-capable devices the `.core-role` badge and the
+  ember `.add` button stay hidden until the card is hovered/focused (`@media
+  (hover: hover)`), so a resting card is just name · description · dietary tags ·
+  price; a touch till (`@media (hover: none)`) keeps them always visible so the
+  button stays tappable — no function lost. Tapping a plain
   card adds it straight to the check; a **customisable** card opens the line
-  editor first (see *Line editor* below). A **sold-out** card
+  editor first (see *Line editor* below). Cross-sell is capped at the top **2**
+  suggestions so the ticket stays calm (the combo prompt renders separately). A **sold-out** card
   (`.core-prod.sold-out` — base-unavailable OR live-86'd) is **not hidden**:
   it stays greyed + struck with a danger `.core-tag.off` "86 · sold out"
   chip, is disabled, and **sinks to the bottom** of its category (available

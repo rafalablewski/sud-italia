@@ -1047,7 +1047,9 @@ export function CorePos({
   )
     .slice()
     .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
-  const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
+  // Cap cross-sell to the top 2 so the ticket stays calm (the mockup shows one
+  // or two, not a stacked list) — the combo-completion prompt renders separately.
+  const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 2, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
   // Smart-default fire: the earliest course that has lines and isn't fired yet.
   // A coursed check's primary action fires THIS (Starters first) instead of the
