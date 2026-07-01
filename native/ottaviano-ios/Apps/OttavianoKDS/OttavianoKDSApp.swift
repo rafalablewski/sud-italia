@@ -103,7 +103,11 @@ struct OperatorRootView: View {
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
-            .background(theme.color.surface)
+            .background {
+                // Liquid Glass skin paints the ambient aurora behind the frosted
+                // list; the flat skin keeps the plain canvas.
+                if theme.glassy { AuroraBackground() } else { theme.color.surface }
+            }
             .navigationTitle("OttavianoKDS")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search \(surfaceCount) surfaces")
             .toolbar {
