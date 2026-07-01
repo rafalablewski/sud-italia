@@ -1829,6 +1829,35 @@ function LineEditorDialog({
           )}
         </div>
 
+        {item.allergens && item.allergens.length > 0 && (
+          <div className="core-modgroup">
+            <div className="core-modgroup-h">
+              Contains<span className="core-modgroup-rule">declared allergens — shown large on the kitchen ticket</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {item.allergens.map((a) => (
+                <span
+                  key={a}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "5px 11px",
+                    borderRadius: "var(--pill)",
+                    background: "var(--amber-wash)",
+                    color: "var(--amber)",
+                    border: "1px solid var(--amber-wash)",
+                  }}
+                >
+                  ⚠ {a.charAt(0).toUpperCase() + a.slice(1)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="core-editor-qty">
           <span>Quantity</span>
           <div className="core-qstep big">
