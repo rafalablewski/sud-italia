@@ -41,6 +41,8 @@ struct OperatorRootView: View {
 
     @State private var selection: OperatorNavItem?
     @State private var showAccount = false
+    /// ⌘K command palette — jump to any surface from anywhere.
+    @State private var showCommand = false
     /// Free-text jump bar over the whole IA — an operator app with 54 surfaces
     /// is unusable without one. Filters sections by label + purpose blurb.
     @State private var query = ""
@@ -111,6 +113,11 @@ struct OperatorRootView: View {
             .navigationTitle("OttavianoKDS")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search \(surfaceCount) surfaces")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showCommand = true } label: { Image(systemName: "command") }
+                        .keyboardShortcut("k", modifiers: .command)
+                        .accessibilityLabel("Command palette")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAccount = true } label: { Image(systemName: "person.crop.circle") }
                         .accessibilityLabel("Account")
@@ -123,6 +130,10 @@ struct OperatorRootView: View {
             NavigationStack {
                 detail(for: selection ?? defaultItem)
             }
+        }
+        // ⌘K from anywhere — the palette jumps the detail pane by setting selection.
+        .sheet(isPresented: $showCommand) {
+            CommandPalette(sections: sections) { item in selection = item }
         }
         .onAppear { if selection == nil { selection = defaultItem } }
     }
@@ -208,6 +219,10 @@ struct OperatorRootView: View {
             OperatorRecipesView(api: deps.api)
         case "/core/guest":
             OperatorGuestView(api: deps.api)
+        case "/core/book":
+            GuestBookTab(api: deps.api)
+                .navigationTitle("Book")
+                .navigationBarTitleDisplayMode(.inline)
         case "/admin/alerts":
             OperatorAlertsView(api: deps.api)
         case "/admin/comms/tasks":

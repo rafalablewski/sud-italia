@@ -64,6 +64,15 @@
           "icon": "fork.knife.circle.fill",
           "blurb": "Floor plan, table turns and reservation slots.",
           "v1Endpoint": "slots"
+        },
+        {
+          "href": "/core/book",
+          "label": "Book",
+          "requiredRole": "staff",
+          "kind": "live",
+          "icon": "calendar.badge.clock",
+          "blurb": "Reservations & slots — book a table against the floor timeline.",
+          "v1Endpoint": null
         }
       ]
     },
@@ -617,8 +626,8 @@
   ],
   "counts": {
     "sections": 10,
-    "surfaces": 54,
-    "live": 52,
+    "surfaces": 55,
+    "live": 53,
     "scaffold": 2
   }
 }

@@ -5,7 +5,8 @@
     "/core/kds": { "icon": "flame.fill", "kind": "live", "blurb": "Live ticket lanes — bump dishes from cooking to ready." },
     "/core/orders": { "icon": "list.bullet.rectangle.portrait", "label": "Orders", "role": "staff", "kind": "live", "blurb": "Every live order across fulfilment types, in one board." },
     "/core/guest": { "icon": "person.2.fill", "kind": "live", "blurb": "Loyalty, guest profiles (CRM) and table bookings." },
-    "/core/service": { "icon": "fork.knife.circle.fill", "kind": "live", "blurb": "Floor plan, table turns and reservation slots." }
+    "/core/service": { "icon": "fork.knife.circle.fill", "kind": "live", "blurb": "Floor plan, table turns and reservation slots." },
+    "/core/book": { "icon": "calendar.badge.clock", "label": "Book", "role": "staff", "kind": "live", "blurb": "Reservations & slots — book a table against the floor timeline." }
   },
   "admin": {
     "/admin/welcome": { "icon": "sparkles", "kind": "live", "blurb": "Day-one tour and quick links into the operation." },

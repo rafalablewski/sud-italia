@@ -18,7 +18,7 @@ const LENSES = [
   { label: "Floor", path: "/service/floor", kw: "floor tables map home" },
   { label: "POS · Line", path: "/pos", kw: "pos till order line check" },
   { label: "KDS · Pass", path: "/kds", kw: "kds kitchen pass tickets wall" },
-  { label: "Book", path: "/guest/book", kw: "book reserve reservation slots" },
+  { label: "Book", path: "/book", kw: "book reserve reservation slots" },
   { label: "Orders", path: "/orders", kw: "orders history" },
   { label: "Dispatch", path: "/service/dispatch", kw: "dispatch delivery drivers" },
   { label: "Guest", path: "/guest", kw: "guest crm loyalty inbox" },

@@ -76,8 +76,20 @@ public struct KDSTicket: View, Equatable {
                 }
 
                 if !held.isEmpty {
-                    Text("Coursed · \(held.map(courseLabel).joined(separator: ", ")) held")
-                        .textRole(.caption).foregroundStyle(theme.info)
+                    // Coursed check — the ⊘ courses are FIRED-later; the cook must
+                    // not start them yet (web `/core/kds` held-`⊘` marker). One chip
+                    // per held course so it reads at a glance on the line.
+                    HStack(spacing: theme.space.xs) {
+                        Image(systemName: "hourglass").font(.caption2)
+                        Text("Held").textRole(.caption).fontWeight(.bold)
+                        ForEach(held, id: \.self) { c in
+                            Text("⊘ \(courseLabel(c))")
+                                .textRole(.caption)
+                                .padding(.horizontal, 6).padding(.vertical, 1)
+                                .background(theme.infoSoft, in: Capsule())
+                        }
+                    }
+                    .foregroundStyle(theme.info)
                 }
 
                 // Lines — station-grouped when showing all stations.
@@ -92,8 +104,21 @@ public struct KDSTicket: View, Equatable {
                 }
 
                 if !allergens.isEmpty {
-                    Text("Allergens · \(allergens.joined(separator: " · "))")
-                        .textRole(.caption).foregroundStyle(theme.color.warning)
+                    // Allergen callout — a filled danger banner the line can't miss
+                    // (web `.core-tk-alrg` large-danger). Icon + colour, never colour
+                    // alone (DESIGN-SYSTEM §5, colour-blind cooks).
+                    Label {
+                        Text("Allergens · \(allergens.joined(separator: " · "))")
+                            .textRole(.caption).fontWeight(.bold)
+                    } icon: {
+                        Image(systemName: "allergens")
+                    }
+                    .foregroundStyle(theme.color.danger)
+                    .padding(.horizontal, theme.space.sm).padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(theme.dangerSoft, in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous)
+                        .strokeBorder(theme.color.danger.opacity(0.4), lineWidth: 1))
                 }
 
                 if let note = order.specialInstructions, !note.isEmpty {

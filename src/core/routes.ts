@@ -13,11 +13,17 @@ export const CORE_BASE = "/core";
 /** Join a sub-path onto the Core base, e.g. `coreHref("/pos")` → `/core/pos`. */
 export const coreHref = (path = ""): string => `${CORE_BASE}${path}`;
 
-/** The five primary surfaces (the bottom switcher). */
+/**
+ * The primary Core surfaces. The four *room lenses* (service → Floor, pos →
+ * Line, kds → Pass, book → Book) are the left Lens Rail (`CoreNav`); `orders`
+ * and `guest` are cross-cutting surfaces reached from the Command Bar's ⌘K
+ * (they are not "room lenses" in the Service OS IA).
+ */
 export const CORE_SURFACES = {
   pos: coreHref("/pos"),
   kds: coreHref("/kds"),
   orders: coreHref("/orders"),
   guest: coreHref("/guest"),
   service: coreHref("/service"),
+  book: coreHref("/book"),
 } as const;

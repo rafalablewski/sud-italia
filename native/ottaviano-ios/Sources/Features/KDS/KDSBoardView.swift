@@ -69,7 +69,11 @@ public struct KDSBoardView: View {
                     // the coarse tick; the per-ticket countdowns live in each
                     // KDSTicket, and the controls re-render off @Observable changes.
                     TimelineView(.periodic(from: .now, by: 2)) { ctx in
-                        kpiStrip(now: ctx.date.timeIntervalSince1970 * 1000)
+                        let now = ctx.date.timeIntervalSince1970 * 1000
+                        VStack(alignment: .leading, spacing: theme.space.sm) {
+                            kpiStrip(now: now)
+                            pressureBanner(now: now)
+                        }
                     }
                     stationStrip
                     if mode == .floor { laneSegment }
@@ -257,6 +261,52 @@ public struct KDSBoardView: View {
         .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
         .frame(minWidth: 72, alignment: .leading)
         .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+    }
+
+    // MARK: pressure badge (web `PressureBadge` — board-level line pressure)
+
+    /// A single line-pressure banner derived from the LIVE board (Rule #1 — real
+    /// late/at-risk counts + oldest age, nothing faked). Mirrors the web KDS
+    /// pressure tier: calm shows nothing, busy paces the line, slammed says
+    /// expedite. The server prediction block already tags at-risk/late per ticket;
+    /// this rolls them up so the expo sees the room's state without counting cards.
+    @ViewBuilder
+    private func pressureBanner(now: Double) -> some View {
+        let active = activeOrders
+        let working = active.filter { $0.status != .ready }
+        let late = active.filter { $0.isLate(nowMs: now) }.count
+        let risk = active.filter { $0.isAtRisk }.count
+        let oldest = working.map { max(0, (now - $0.paidAtMs) / 1000) }.max() ?? 0
+        let tier = pressureTier(late: late, risk: risk, oldest: oldest)
+        if tier != .calm {
+            HStack(spacing: theme.space.sm) {
+                Image(systemName: tier == .slammed ? "flame.fill" : "gauge.with.dots.needle.67percent")
+                    .foregroundStyle(tier == .slammed ? theme.color.danger : theme.color.warning)
+                Text(pressureText(tier: tier, late: late, oldest: oldest))
+                    .textRole(.caption).fontWeight(.semibold).foregroundStyle(theme.color.textPrimary)
+                Spacer()
+            }
+            .padding(theme.space.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background((tier == .slammed ? theme.dangerSoft : theme.warningSoft),
+                        in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private enum PressureTier { case calm, busy, slammed }
+    private func pressureTier(late: Int, risk: Int, oldest: Double) -> PressureTier {
+        if late >= 3 || oldest >= 900 { return .slammed }
+        if late >= 1 || risk >= 3 || oldest >= 600 { return .busy }
+        return .calm
+    }
+    private func pressureText(tier: PressureTier, late: Int, oldest: Double) -> String {
+        let oldestTxt = oldest > 0 ? " · oldest \(KDSClock.clock(oldest))" : ""
+        switch tier {
+        case .slammed: return "Kitchen slammed — \(late) late\(oldestTxt). Expedite the oldest first."
+        case .busy: return "Kitchen under pressure — pace the line\(oldestTxt)."
+        case .calm: return ""
+        }
     }
 
     // MARK: station + lane controls

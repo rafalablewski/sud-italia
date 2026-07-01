@@ -6,8 +6,8 @@ import Foundation
 // Regenerate: `npm run gen:native`. CI fails on drift: `npm run check:native`.
 //
 // The operator (OttavianoKDS) information architecture — a verifiably 1:1 mirror
-// of the web admin nav plus the Core surfaces. 54 surfaces across
-// 10 sections (52 live on /api/v1, 2 parity scaffolds).
+// of the web admin nav plus the Core surfaces. 55 surfaces across
+// 10 sections (53 live on /api/v1, 2 parity scaffolds).
 // Types, the role enum, and `filteredNav(for:)` live in OperatorNav.swift.
 
 public let OPERATOR_NAV: [OperatorNavSection] = [
@@ -22,6 +22,8 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Loyalty, guest profiles (CRM) and table bookings."),
         OperatorNavItem("/core/service", "Service", "fork.knife.circle.fill", .staff, .live,
                         "Floor plan, table turns and reservation slots."),
+        OperatorNavItem("/core/book", "Book", "calendar.badge.clock", .staff, .live,
+                        "Reservations & slots — book a table against the floor timeline."),
     ]),
     OperatorNavSection("overview", "Overview", [
         OperatorNavItem("/admin/welcome", "Welcome", "sparkles", .kitchen, .live,

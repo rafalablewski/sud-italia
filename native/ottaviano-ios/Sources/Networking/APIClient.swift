@@ -160,9 +160,15 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(TabFireBody(courses: courses, fireAll: fireAll))
         return Endpoint<TabFireResult>(.post, "admin/pos/tabs/\(id)/fire", query: ["location": location], body: body, requiresAuth: true)
     }
-    /// Charge (settle) the tab and close it.
-    static func posTabCharge(id: String, location: String) -> Endpoint<TabChargeResult> {
-        Endpoint<TabChargeResult>(.post, "admin/pos/tabs/\(id)/charge", query: ["location": location], requiresAuth: true)
+    /// Charge (settle) the tab and close it. An optional tender payload carries
+    /// tip / comp / split / cash / manager-PIN override; omit for a full-bill tap.
+    static func posTabCharge(id: String, location: String, tender: PosTenderBody? = nil) -> Endpoint<TabChargeResult> {
+        let body = tender.flatMap { try? JSONEncoder().encode($0) }
+        return Endpoint<TabChargeResult>(.post, "admin/pos/tabs/\(id)/charge", query: ["location": location], body: body, requiresAuth: true)
+    }
+    /// Live comp-cap status for the acting operator (tender-sheet comp meter).
+    static func posCompStatus(location: String) -> Endpoint<CompStatus> {
+        Endpoint<CompStatus>(.get, "admin/pos/comp-status", query: ["location": location], requiresAuth: true)
     }
     // Customer auth (phone OTP).
     static func requestOtp(phone: String) -> Endpoint<OtpRequestResult> {
@@ -560,6 +566,11 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(["action": seat ? "seat" : "clear", "tableId": tableId])
         return Endpoint<FloorSeatResult>(.post, "admin/floor/twin", query: ["location": location], body: body, requiresAuth: true)
     }
+    /// Move a seated party (and its open dine-in check) to another table.
+    static func adminFloorMove(location: String, tableId: String, toTableId: String) -> Endpoint<FloorMoveResult> {
+        let body = try? JSONEncoder().encode(["action": "move", "tableId": tableId, "toTableId": toTableId])
+        return Endpoint<FloorMoveResult>(.post, "admin/floor/twin", query: ["location": location], body: body, requiresAuth: true)
+    }
     static func adminReservations(location: String, date: String? = nil) -> Endpoint<[Reservation]> {
         var q = ["location": location]; if let date { q["date"] = date }
         return Endpoint<[Reservation]>(.get, "admin/floor/reservations", query: q, requiresAuth: true)
@@ -739,9 +750,50 @@ public struct TabFireResult: Codable, Sendable {
     public let firedCourses: [String]
 }
 
-/// Result of `POST /api/v1/admin/pos/tabs/:id/charge`.
+/// Result of `POST /api/v1/admin/pos/tabs/:id/charge`. The tender breakdown
+/// (tip / comp / change / net collected) is present when the tender sheet drove
+/// the charge; optional so a bare single-tap settle still decodes.
 public struct TabChargeResult: Codable, Sendable {
     public let ok: Bool
     public let orderId: String
     public let totalAmount: Grosze
+    public let tip: Grosze?
+    public let comp: Grosze?
+    public let change: Grosze?
+    public let netCollected: Grosze?
+}
+
+/// One split payment leg (web PosPayment).
+public struct PosPaymentBody: Encodable, Sendable {
+    public let method: String  // "cash" | "card"
+    public let amount: Grosze
+    public init(method: String, amount: Grosze) { self.method = method; self.amount = amount }
+}
+
+/// The tender-sheet payload (web PosTender) — tip / comp / split / cash / manager
+/// PIN override. All optional; the server re-derives the bill and clamps every
+/// amount in chargeTab, so this only carries intent (never a trusted total).
+public struct PosTenderBody: Encodable, Sendable {
+    public var tipGrosze: Grosze?
+    public var compGrosze: Grosze?
+    public var compNote: String?
+    public var payments: [PosPaymentBody]?
+    public var cashTenderedGrosze: Grosze?
+    public var defaultMethod: String?      // "cash" | "card"
+    public var compOverridePin: String?
+    public init(tipGrosze: Grosze? = nil, compGrosze: Grosze? = nil, compNote: String? = nil,
+                payments: [PosPaymentBody]? = nil, cashTenderedGrosze: Grosze? = nil,
+                defaultMethod: String? = nil, compOverridePin: String? = nil) {
+        self.tipGrosze = tipGrosze; self.compGrosze = compGrosze; self.compNote = compNote
+        self.payments = payments; self.cashTenderedGrosze = cashTenderedGrosze
+        self.defaultMethod = defaultMethod; self.compOverridePin = compOverridePin
+    }
+}
+
+/// Live comp-cap status for the acting operator (web `/api/admin/pos/comp-status`).
+public struct CompStatus: Codable, Sendable {
+    public let compTodayGrosze: Grosze
+    public let capGrosze: Grosze
+    public let singleMaxGrosze: Grosze
+    public let bypasses: Bool
 }

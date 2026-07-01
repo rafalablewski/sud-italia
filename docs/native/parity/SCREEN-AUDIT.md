@@ -39,6 +39,13 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   collapses to one column), a **Chef** make-queue mode (station queue, oldest-first
   + depth header), a **multi-entry recall tray** (`KDSStore.liveRecents`, 10-min,
   via `POST /api/v1/orders/:id/recall`), and a **pause/resume** SSE control.
+- **Shipped — Service OS redesign parity (this pass):** the web Core "Liquid Glass /
+  Service OS" interaction pass carried onto the native Pass. `KDSTicket` now shows
+  **held courses as per-course `⊘` chips** (fire-later at a glance) and promotes the
+  **allergen line to a filled danger callout** (web `.core-tk-alrg` large-danger,
+  icon + colour). The board gains a **line-pressure banner** (`KDSBoardView.pressureBanner`)
+  — the native twin of the web `PressureBadge`, tiered calm/busy/slammed off the live
+  board's late + at-risk counts and oldest age (Rule #1 — derived, never faked).
 - **Shipped — Fleet + floor-ops (this pass):** the two facade feeds landed.
   - **Fleet (owner atlas)** — `GET /api/v1/admin/kds/fleet` (owner; pure mappers in
     `fleet-dto.ts`, unit-tested) + a native **`KDSFleetView`** (owner-gated view
@@ -91,10 +98,17 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
 - **Shipped — table assignment (this pass):** `GET /api/v1/admin/floor/tables`
   (staff+, read-only twin of web `/api/admin/floor/tables`) + a native table
   picker in `CheckSheet` (dine-in) that seats the check (`tableId`).
-- **Honest gaps (not faked — Rule #1):** **Tender method** (Cash/Card) on a *tab*
-  charge — the counter sale captures it (`POSKeypad`), the tab charge settles
-  without recording the method. (Still *not* split-bill — the web does coursing,
-  not bill-splitting.)
+- **Shipped — Tender & comp (Service OS parity, this pass):** the tab **Charge**
+  now opens a native **`TenderSheet`** — the twin of the web `/core/pos`
+  TenderDialog: **tip** presets (+ custom), an **even** or **by-item split**
+  (payments reconcile to the server target), **Card/Cash** with a `POSKeypad`
+  change-due, and a **manager comp** (reason chips Quality/Wait/Goodwill/Error) with
+  a live **per-shift comp-cap meter** and an inline **manager-PIN override** when the
+  comp breaches the cap. Backend: the v1 `pos/tabs/:id/charge` route now parses the
+  tender (tip/comp/split/cash/PIN) and passes the acting **actor + role** to the
+  shared `chargeTab` (one comp-cap gate, web + native); a new
+  `GET /api/v1/admin/pos/comp-status` backs the meter (real audit total, Rule #1).
+  This closes the earlier tender-method gap **and** adds bill-splitting.
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
@@ -230,6 +244,14 @@ proxy over existing store logic; backend typechecks clean) + native screens:
   banner, zone-grouped status-toned table tiles with party / dwell / predicted-free
   / open-check, tap-to-seat/clear, table detail (service note, turns). Location
   picker off `/locations`. Two five-section ⓘ.
+  - **Service OS redesign parity (this pass):** tiles are now **capacity-scaled**
+    (6-tops render larger, web sz-md/sz-lg), carry a **single urgent chip** derived
+    from the live twin (running past the table's own median turn → "Drop check" when
+    a bill is open, else "Running long"), and gain a **"Move party"** context action
+    → `MoveTargetSheet` → `POST /api/v1/admin/floor/twin {action:"move"}`, which
+    relocates the party AND its open dine-in check (orders reassigned server-side,
+    source freed, target seated). The v1 twin route gained the `move` action to match
+    the web `/api/admin/floor-twin` (one behaviour, two facades).
 - **Guest → hub** (`OperatorGuestView` now segments **Inbox | Guests | Loyalty |
   Concierge | Book** — full five-tab parity with the web subbar `guestTabs.ts`):
   - **Guests (CRM)** — roster (filters/sorts) → rich profile off
@@ -409,6 +431,12 @@ visual + usability pass first (`OttavianoKDSApp.swift`):
 - **`.searchable` over the whole IA** — filters `OPERATOR_NAV` live on label +
   blurb, empty sections drop, no-match → `ContentUnavailableView.search`; prompt
   counts the role's reachable surfaces.
+- **⌘K command palette** (`CommandPalette.swift`, Service OS parity) — a
+  keyboard-summoned overlay (⌘K, or the toolbar `command` button) that jumps to any
+  role-reachable surface from *anywhere* in the app, not just when the rail is
+  focused. Auto-focuses its field, matches label + blurb + href, `return` jumps the
+  first hit; sets the split-view `selection` so the detail pane follows. Fed by the
+  same `filteredNav(for:)` IA as the rail — never offers an unreachable surface.
 - **`OperatorNavRow`** — icon-chip + label rows (web-rail parity); scaffolds
   carry a subtle wrench glyph (live vs. layout-parity at a glance).
 - **Universal list search** — `OperatorListView` gained an optional `search:`

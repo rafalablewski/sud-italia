@@ -103,12 +103,11 @@
 .core[data-skin="liquid-glass"] .core-mark {
   box-shadow: 0 6px 18px -4px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, .22);
 }
-/* bottom nav switcher — floating glass pill */
-.core[data-skin="liquid-glass"] .core-bottomnav .core-switch {
+/* Lens Rail — frosted glass column so the aurora refracts through it. */
+.core[data-skin="liquid-glass"] .core-rail {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
-  border-color: var(--line-2);
-  box-shadow: var(--lg-float), var(--lg-rim);
+  border-right-color: var(--line-2);
 }
 .core[data-skin="liquid-glass"] .core-body { background: transparent; }
 
@@ -132,8 +131,7 @@
 .core[data-skin="liquid-glass"] .core-menu,
 .core[data-skin="liquid-glass"] .core-pos-embed,
 .core[data-skin="liquid-glass"] .core-thread,
-.core[data-skin="liquid-glass"] .core-cap-inspect,
-.core[data-skin="liquid-glass"] .core-bottomnav {
+.core[data-skin="liquid-glass"] .core-cap-inspect {
   background: transparent;
 }
 

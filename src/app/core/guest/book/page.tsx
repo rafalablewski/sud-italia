@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { CoreBook } from "@/core/guest/CoreBook";
+import { coreHref } from "@/core/routes";
 
-export default async function CoreBookPage() {
-  if (!(await isAuthenticated())) redirect("/login");
-  return <CoreBook />;
+/**
+ * Book was promoted from a Guest sub-tab to a top-level Lens (`/core/book`).
+ * This legacy path just forwards there so old links / bookmarks keep working.
+ */
+export default function LegacyGuestBookPage() {
+  redirect(coreHref("/book"));
 }

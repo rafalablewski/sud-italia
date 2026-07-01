@@ -95,7 +95,7 @@ const overlay = JSON.parse(readFileSync(OVERLAY_PATH, "utf-8")) as Overlay;
 
 // ── Core section — hrefs from CORE_SURFACES; label/role from the web v3 `core`
 //    section where present, else the overlay (only /core/orders needs that). ──
-const CORE_ORDER = ["pos", "kds", "orders", "guest", "service"] as const;
+const CORE_ORDER = ["pos", "kds", "orders", "guest", "service", "book"] as const;
 const webCore = NAV_SECTIONS_V3.find((s) => s.id === "core");
 const webCoreByHref = new Map(
   (webCore?.items ?? []).map((i) => [i.href, i]),

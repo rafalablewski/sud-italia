@@ -120,15 +120,24 @@
 .core .core-notif-msg { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
 .core .core-notif-time { flex: 0 0 auto; font-size: 11px; color: var(--ink-3); }
 
-/* ---------- bottom surface-switcher nav ----------
-   The primary surface switcher (CoreNav .core-switch) lives centred at the
-   very bottom — a thumb-reach floating pill — and the old context subbar is
-   folded up into the command bar (.core-bar). Layout row (flex:none): it
-   reserves its own height, so body content never hides behind it. */
-.core .core-bottomnav { flex: none; display: flex; justify-content: center; z-index: 6;
-  padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px));
-  background: var(--bg); border-top: 1px solid var(--line); }
-.core .core-bottomnav .core-switch { box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); max-width: 100%; }
+/* ---------- Lens Rail (left) ----------
+   The Service OS lens switcher: a left, icon-only rail (60px) that expands on
+   hover to reveal labels. It sits inside `.core-main`, beside the Canvas, so it
+   spans the full body height under the Command Bar. Switching lens keeps the
+   selected entity in focus (SelectionContext) — you change the VIEW, not the app. */
+.core .core-main { flex: 1; min-height: 0; display: flex; }
+.core .core-rail { flex: none; width: 60px; display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 8px; background: var(--panel); border-right: 1px solid var(--line);
+  overflow: hidden; z-index: 6; transition: width var(--fast); }
+@media (hover: hover) { .core .core-rail:hover { width: 196px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); } }
+.core .core-rail a { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px; flex: none;
+  border-radius: var(--pill); color: var(--ink-2); transition: background var(--fast), color var(--fast); }
+.core .core-rail a svg { width: 22px; height: 22px; flex: none; opacity: .78; }
+.core .core-rail a span { white-space: nowrap; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity var(--fast); }
+@media (hover: hover) { .core .core-rail:hover a span { opacity: 1; } }
+.core .core-rail a:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-rail a.on { background: var(--panel-2); color: var(--ink); box-shadow: var(--sh-1); }
+.core .core-rail a.on svg { opacity: 1; color: var(--brand); }
 .core .core-eyebrow { font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; white-space: nowrap; }
 .core .core-tabs { display: flex; gap: 2px; }
 .core .core-tabs a, .core .core-tabs button { height: 30px; padding: 0 13px; border-radius: 8px; font-weight: 550; font-size: 13px; color: var(--ink-2); transition: all var(--fast); display: inline-flex; align-items: center; }
@@ -162,7 +171,7 @@
 .core .core-gfilters .core-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* ---------- body shell ---------- */
-.core .core-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.core .core-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
 /* ============================================================
    POS surface
@@ -1275,9 +1284,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 }
 
 @media (max-width: 560px) {
-  /* bottom nav → compact icon-only pill so all surfaces fit a phone */
-  .core .core-bottomnav .core-switch a span { display: none; }
-  .core .core-bottomnav .core-switch a { padding: 0 14px; }
+  /* On a phone the Lens Rail stays icon-only (no hover to expand); keep it
+     narrow so the Canvas gets the width. */
+  .core .core-rail { width: 52px; padding: 8px 6px; }
+  .core .core-rail a span { display: none; }
 }
 
 @media (max-width: 480px) {
