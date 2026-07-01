@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
+import { QrIcon } from "@/core/shell/toolIcons";
 
 interface QrOrderRow {
   id: string;
@@ -117,12 +118,17 @@ export function CoreQrQueue({ location }: { location: string }) {
     <>
       <button
         type="button"
-        className={unpaid > 0 ? "core-chip on" : "core-chip"}
-        style={{ height: 32 }}
+        className={unpaid > 0 ? "core-iconbtn on" : "core-iconbtn"}
         onClick={() => setOpen(true)}
-        title="In-restaurant QR table orders"
+        title={
+          orders.length > 0
+            ? `QR table orders — ${unpaid > 0 ? `${unpaid} to pay` : `${orders.length} open`}`
+            : "In-restaurant QR table orders"
+        }
+        aria-label="QR table orders"
       >
-        ▦ QR{orders.length > 0 ? <> · {unpaid > 0 ? `${unpaid} to pay` : orders.length}</> : null}
+        <QrIcon />
+        {orders.length > 0 && <span>{unpaid > 0 ? unpaid : orders.length}</span>}
       </button>
 
       {open && (

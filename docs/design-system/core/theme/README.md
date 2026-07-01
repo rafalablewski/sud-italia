@@ -54,23 +54,103 @@ surface lives in [`../modules/`](../modules/).
 
 ### Shell (`CoreShell` · `src/core/shell/`)
 
-- **`.core-bar`** — command bar (row 1): `.core-brand` (mark + wordmark) ·
-  `.core-switch` (the segmented surface switcher, `CoreNav`) ·
-  `.core-right` (global actions).
-- **`.core-switch a`** — a surface tab; `.on` = active (pathname-derived).
-- **`.core-sub`** — context subbar (row 2): `.core-eyebrow` + `.core-tabs`
-  (the surface's view tabs) + `.core-sp` spacer + the surface's own
-  controls (passed as `subRight`).
+The command bar is the **"Command"** terminal chrome — one all-monospace row,
+left→right: traffic lights · shell prompt · view-tab chips · spacer · the
+surface's own controls · ⌘K launcher · telemetry cluster · global tools.
+
+**Bar contract — keep it minimal.** The bar carries only what the "14 —
+Command" mockup gives each surface: the prompt, the view tabs, a *short* set of
+surface tool icons, an optional primary action, an optional live pill, then the
+global cluster. Per surface: **POS** = QR + fullscreen · **KDS** = *nothing*
+(board-only) · **Orders** = refresh · **Service** = refresh + a primary
+(Floor "Add table", Slots "New") · **Guest** = the 3 inbox tools + WhatsApp-live.
+Anything heavier — KDS's lane filter + board actions, POS's channel/held flags,
+Slots' view filters + date, Book's date — lives **on the surface**, not the
+chrome (see `.core-kds-toolbar` / `.core-surf-toolbar` below). When you add a
+control, ask "does the mockup put this in the bar?" — if not, it goes in a
+surface toolbar.
+
+- **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
+  `--panel` row with a `--line` bottom hairline.
+- **`.cm-lights`** — decorative macOS traffic-light chrome; the three dots are
+  tokenised `--danger` · `--amber` · `--basil`. **`.cm-div`** — a 1px vertical
+  divider (`--line-2`) flanking the prompt.
+- **`.cm-prompt`** — the live shell prompt `core ❯ surface:tab` (`CorePrompt`):
+  `.u` = the green `core` user (`--basil`), `.g` = the `❯` glyph, `.c` = the
+  `surface:tab` location (surface read from the pathname, tab from the active
+  view tab). **`.cm-caret`** — the blinking block caret (`core-caret-blink`;
+  stilled under `prefers-reduced-motion`).
+- **`.cm-tabs`** — the shell's `.core-tabs` in the bar: mono, `lowercase`,
+  swipe-scroll; `.on` = a `--basil` chip with a basil inset ring.
+- **`.cm-sp`** — the flex spacer that pushes the tail cluster right.
+- **No surface tools in the bar.** The command bar is ONE standard on every
+  surface (prompt · tabs · ⌘K · risk/loc/clock · bell · theme). A surface's own
+  controls — passed as `subRight`, plus richer filters/segments/date pickers —
+  live in a **`.core-surf-toolbar`** at the top of the Canvas body (see the
+  "Chrome" section), never the chrome. `CoreShell` renders `subRight`
+  right-aligned in that toolbar automatically; a surface that builds its own
+  richer toolbar (Slots) passes no `subRight`.
+- **`.core-surf-toolbar` tools** keep the flush terminal treatment there: every
+  `.core-iconbtn` inside it (and the global `.cm-right` bell/theme) shares one
+  32px transparent mono style, hover → `--basil`; icon-only tools stay a 32px
+  square, labelled ones (KDS `86` / `Σ`, the QR count) grow, the amber
+  `.core-recall-btn` keeps its emphasis (excluded). `.core-chip` status flags
+  (the Guest concierge live pill) go mono too. The shared SVG glyphs (QR ·
+  expand · refresh · sound · pause) come from
+  [`src/core/shell/toolIcons.tsx`](../../../src/core/shell/toolIcons.tsx) — one
+  24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
+  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.)
+- **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
+  a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. Lives
+  in the `.core-surf-toolbar`, not the command bar.
+- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
+  `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
+- **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
+  (`.lbl` dim key + `.val` bright value): `risk N` from `PressureBadge`
+  (`.ok`/`.warn`/`.risk` colour the count basil/amber/red), **`.cm-tel-loc`**
+  the click-to-cycle `loc <slug>` from `CoreLocationChip`, and
+  **`.cm-tel-clock`** the basil mono HH:MM clock.
+- **`.cm-right`** — the global tools (notifications bell · theme toggle) as
+  flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
+- **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
+  Service/Guest/Orders `.core-kpi-strip` and POS's `.core-statstrip` are
+  hairline-divided columns with an uppercase mono label and a big **mono
+  tabular** value. `.core-kpi-strip` lays its cells out with `grid-auto-flow:
+  column` (auto `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all
+  distribute evenly in one row — no fixed column count to overflow. Same
+  component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
+  identically.
+  - **`.core-statstrip`** — the dense-console variant used at the top of a
+    surface body (POS): a bordered glass panel of `.cell`s, each an uppercase
+    mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/`.basil`/
+    `.amber`/`.info`/`.danger`, optional `<small>` unit), and a colour-coded
+    `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber). Divider is a
+    `.cell + .cell::before` hairline. Every figure MUST be real surface data
+    (Rule #1). Matches the mockup's `.statstrip`.
+- **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
+  beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
+  context tag. Sits under the sub-toolbar, over the stat strip.
+- **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
+  for the working controls the bar omits (Slots' view filters + date, Book's
+  date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the
+  surface, not the global chrome.
+- **`.core-kds-toolbar`** — the KDS board's own toolbar (lane filter left,
+  board actions + fullscreen right, split by `.core-kds-tb-sp`) — because the
+  KDS command bar carries no tools.
 
 ### Global-action primitives
 
-- **`.core-chip`** — pill (location chip, status, a `Dine-in` flag).
-  `.dot` = a small status dot. `.on` = filled brand (active toggle).
-- **`.core-iconbtn`** — 34px square icon button (theme toggle, fullscreen).
-- **`.core-clock`** — the mono HH:MM clock.
-- **`.core-tabs a/button`** — subbar view tabs; `.on` = active.
+- **`.core-chip`** — pill (surface status flags, a `Dine-in` flag, the Orders
+  channel tag). `.dot` = a small status dot. `.on` = filled brand (active toggle).
+- **`.core-iconbtn`** — 34px square icon button (the default in surface bodies —
+  KDS lane toolbar, inbox conversation actions); reskinned to a flush 32px
+  terminal button inside a `.core-surf-toolbar` and the global `.cm-right`, above.
+- **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
+  scope tabs). `.on` = active.
+- **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
+  command bar they carry `.cm-tabs` for the mono/lowercase treatment.
 - **`.core-seg button`** — a segmented filter (KDS stage filter, etc.).
   `.core-seg.icons` = square icon-only cells (centred 16px glyph) for an
   icon-only switcher / filter pod; pair each button with a `title` /
@@ -84,8 +164,10 @@ surface lives in [`../modules/`](../modules/).
 
 ### POS
 
-`.core-pos` grid (rail · menu · ticket): `.core-rail` + `.core-cat` category
-buttons · `.core-menu` + `.core-menu-grid` + `.core-prod` cards (`.pn` name ·
+`.core-pos` grid (rail · menu · ticket): `.core-rail.core-rail-icons` (the
+**pure icon-only** 72px category rail) + `.core-cat` icon buttons (glyph +
+corner count badge, label as tooltip) · `.core-menu` + `.core-menu-grid` +
+`.core-prod` cards (`.pn` name ·
 `.pd` desc · `.core-tagrow`/`.core-tag` · `.pp` price · `.add`) · `.core-ticket`
 + `.core-ticket-empty` (the no-open-check state). Full anatomy:
 [`../modules/pos.md`](../modules/pos.md).
@@ -124,20 +206,30 @@ hard-coded hex), and add it to the reference here in the same commit
 (Rule #11). Never reach into admin or suite.css classes — Core owns
 its whole surface.
 
-## Chrome — command bar + bottom switcher
+## Chrome — command bar + left Lens Rail
 
-`CoreShell` renders a **single command bar** on top and a **centred bottom
-surface-switcher** (no second subbar row):
+`CoreShell` renders the **"Command"** terminal command bar on top and the
+**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — no brand
+wordmark, no second subbar row, no bottom switcher:
 
-- **`.core-bar`** — `.core-brand` (pinned left) · `.core-bar-ctx` (the contextual
-  strip: `.core-eyebrow` + the surface's view `.core-tabs` + its own `subRight`
-  controls — scrolls horizontally, `scrollbar-width:none`, when it can't all
-  fit) · `.core-right` (pinned right: location · clock · notifications bell ·
-  theme). Brand + controls never scroll; only the middle does.
-- **`.core-bottomnav`** — a layout row (`flex:none`, reserves its own height
-  `--core-navh`) that centres the `CoreNav` `.core-switch` pill at the very
-  bottom. Because it's a real row, body content never hides behind it; only
-  the POS fixed ticket drawer + FAB offset above it via `--core-navh`.
+- **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
+  lights) · `.cm-div` · `.cm-prompt` (the live `core ❯ surface:tab` prompt +
+  `.cm-caret`) · `.cm-div` · `.cm-tabs` (the surface's swipe-scroll view tabs) ·
+  `.cm-sp` (spacer) · `.cm-k` (⌘K launcher) · `.cm-tel` (risk · loc · clock
+  telemetry) · `.cm-right` (bell · theme). ONE standard on every surface — no
+  surface tools here; those live in a `.core-surf-toolbar` on the body. Only
+  `.cm-tabs` scrolls; everything else is `flex:none`.
+- **`.core-surf-toolbar`** — the surface sub-toolbar at the top of the Canvas
+  body that carries the surface's own controls (`subRight` right-aligned, plus
+  any filters/segments/date the surface builds). Keeps the command bar standard.
+- **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
+  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
+  Collapsed by default; it expands to labels only when **pinned** — a click on
+  the `.core-lens-pin` toggle adds `.open` — never on hover, so a stray cursor
+  never shoves the Canvas. The pinned choice persists (localStorage,
+  `core-lens-pinned`). It sits inside `.core-main`, beside the Canvas, spanning
+  the full body height under the command bar. Distinct from the POS category
+  `.core-rail`. Orders + Guest are cross-cutting surfaces reached from ⌘K.
 
 ## Responsive — tablet & phone
 
@@ -146,10 +238,10 @@ Core runs on iPads and phones, not only desktop. Breakpoints at the end of
 
 | Width | What changes |
 | ----- | ------------ |
-| **≤1100** (tablet landscape) | POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
-| **≤900** (tablet portrait) | Command bar drops the brand wordmark + the `.core-eyebrow`; POS panes `148 · 1fr · 296`. |
-| **≤820** (phone / iPad portrait) | Location chip + clock hide from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
-| **≤560** (phone) | Bottom switcher → compact **icon-only** pill so all surfaces fit. |
+| **≤1100** (tablet landscape) | Command bar sheds the low-priority `loc` telemetry (`.cm-tel-loc`); POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
+| **≤900** (tablet portrait) | Command bar drops the decorative traffic lights + dividers (`.cm-lights` / `.cm-div`) and collapses the ⌘K launcher to just its chip (`.cm-k-label` hidden); POS panes `148 · 1fr · 296`. |
+| **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
+| **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail; the pin toggle still expands it (to a slimmer 176px). |
 | **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
 
 The POS ticket is **never hidden** on small screens (the old behaviour) —

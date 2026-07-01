@@ -7,6 +7,7 @@ import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { useSelection } from "@/core/shell/SelectionContext";
+import { ExpandIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { CoreQrQueue } from "@/core/pos/CoreQrQueue";
@@ -30,15 +31,78 @@ import { posLineKey } from "@/lib/pos-line";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
+
+/**
+ * Category-rail glyphs — the rail is pure icon-only (collapsed), so each
+ * category (+ the Popular/All pseudo-categories) needs a distinct icon; the
+ * label rides along as a `title`/`aria-label` tooltip. One 24-viewBox,
+ * 1.9-weight line set, matching the Core icon language.
+ */
+const CAT_ICON: Record<string, ReactNode> = {
+  popular: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L4.5 9.7l5.9-.9z" />,
+  all: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  pizza: (
+    <>
+      <path d="M12 3.2 3.6 18.5a1 1 0 0 0 1 1.5h14.8a1 1 0 0 0 .9-1.5z" />
+      <path d="M5.8 10.4h12.4" />
+      <circle cx="10" cy="14" r="1" />
+      <circle cx="14" cy="14.5" r="1" />
+      <circle cx="12" cy="9" r="1" />
+    </>
+  ),
+  pasta: (
+    <>
+      <path d="M4 11h16v1a8 8 0 0 1-16 0z" />
+      <path d="M2.5 20h19" />
+      <path d="M8 11c0-3 .5-6 1.5-7M12 11c0-3.5.3-6.5 1.3-8M16 11c0-3 .5-5.5 1.4-7" />
+    </>
+  ),
+  antipasti: (
+    <>
+      <ellipse cx="12" cy="13" rx="8.5" ry="4" />
+      <circle cx="9" cy="12.4" r="1.1" />
+      <circle cx="13" cy="13.4" r="1.1" />
+      <circle cx="15.5" cy="12" r="1.1" />
+      <path d="M8 9.2c1-1.6 2.4-2.4 4-2.4s3 .8 4 2.4" />
+    </>
+  ),
+  panini: (
+    <>
+      <path d="M3.5 9.5c0-2 3.8-3.5 8.5-3.5s8.5 1.5 8.5 3.5z" />
+      <path d="M3.5 14.5c0 2 3.8 3.5 8.5 3.5s8.5-1.5 8.5-3.5z" />
+      <path d="M4.5 11.8c2.4 1 12.6 1 15 0" />
+    </>
+  ),
+  desserts: (
+    <>
+      <path d="M6 20h12l-1-8H7z" />
+      <path d="M9.5 12c0-2 1-3 2.5-3s2.5 1 2.5 3" />
+      <path d="M12 6.2V4M12 4a1.2 1.2 0 1 0 0-.1z" />
+    </>
+  ),
+  drinks: (
+    <>
+      <path d="M6 4h12l-1.5 5.5a5 5 0 0 1-9 0z" />
+      <path d="M12 15v4M8.5 20h7" />
+    </>
+  ),
+};
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
   { key: "dine-in", label: "Dine-in" },
   { key: "takeout", label: "Takeaway" },
   { key: "delivery", label: "Delivery" },
 ];
 const TAG_META: Record<MenuItem["tags"][number], { label: string; cls: string }> = {
-  vegetarian: { label: "veg", cls: "veg" },
-  vegan: { label: "vegan", cls: "veg" },
-  spicy: { label: "spicy", cls: "hot" },
+  vegetarian: { label: "V", cls: "veg" },
+  vegan: { label: "VG", cls: "veg" },
+  spicy: { label: "S", cls: "hot" },
   "gluten-free": { label: "GF", cls: "fast" },
 };
 
@@ -983,7 +1047,9 @@ export function CorePos({
   )
     .slice()
     .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
-  const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
+  // Cap cross-sell to the top 2 so the ticket stays calm (the mockup shows one
+  // or two, not a stacked list) — the combo-completion prompt renders separately.
+  const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 2, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
   // Smart-default fire: the earliest course that has lines and isn't fired yet.
   // A coursed check's primary action fires THIS (Starters first) instead of the
@@ -1165,23 +1231,27 @@ export function CorePos({
       title={soldOut ? "86'd — sold out" : undefined}
       onClick={soldOut ? undefined : () => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
     >
+      <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
       <div className="pn">
         {m.name}
         {m.menuRole && <span className={`core-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
       </div>
       <div className="pd">{m.description}</div>
-      <div className="core-tagrow">
-        {soldOut && <span className="core-tag off">86 · sold out</span>}
-        {m.tags.map((t) => (
-          <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
-        ))}
-        {customisable(m) && <span className="core-tag opt">options</span>}
-        {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
-        {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
-      </div>
+      {(soldOut || (steer?.active && (makeNowSet.has(m.id) || throttleSet.has(m.id)))) && (
+        <div className="core-tagrow">
+          {soldOut && <span className="core-tag off">86 · sold out</span>}
+          {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
+          {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
+        </div>
+      )}
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
+        <span className="core-prod-tags">
+          {customisable(m) && <span className="core-tag opt" title="Has options">◦</span>}
+          {m.tags.map((t) => (
+            <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
+          ))}
+        </span>
       </div>
     </button>
     );
@@ -1278,8 +1348,72 @@ export function CorePos({
     );
   };
 
+  // Live stat strip — the dense-console KPI row over the menu. EVERY figure is
+  // derived from the till's real, live state (Rule #1): open checks, seated
+  // covers, value to collect vs total open value, fired-to-kitchen count, and
+  // the live pace read (server steering plan). No fetch, no invented numbers —
+  // the same state the ticket + rail already show. (Declared here, after the
+  // steering plan is in scope.)
+  const posStats = useMemo(() => {
+    const live = tabs.filter((t) => t.status !== "parked");
+    const covers = live.filter((t) => t.channel === "dine-in").reduce((s, t) => s + (t.covers ?? 0), 0);
+    const dineIn = live.filter((t) => t.channel === "dine-in").length;
+    const readyValue = tabs.filter((t) => t.status === "pay").reduce((s, t) => s + grandG(t), 0);
+    const inKitchen = tabs.filter((t) => t.sentKds).length;
+    const avg = live.length ? Math.round(railSummary.openValue / live.length) : 0;
+    const util = steer?.bottleneck ? Math.round((steer.bottleneck.util ?? 0) * 100) : 0;
+    const paceTier = steer?.active ? (steer.bottleneck?.tier ?? "warn") : "calm";
+    return { covers, dineIn, readyValue, inKitchen, avg, util, paceTier };
+  }, [tabs, grandG, railSummary.openValue, steer]);
+
   const posBody = (
     <>
+      {/* surface section header — dense-console page title + context sub */}
+      <div className="core-sectionhead">
+        <h1>POS · Order</h1>
+        <span className="sub">{pageLoc} · dine-in service</span>
+        <div className="core-sp" />
+        <span className="sub">Till · {CHANNELS.find((c) => c.key === active?.channel)?.label ?? "dinner service"}</span>
+      </div>
+
+      {/* live stat strip — the dense-console KPI row, every figure from real
+          till state (Rule #1): open checks · covers · to pay · open value ·
+          pace · avg check. Matches the mockup's `.statstrip`. */}
+      <div className="core-statstrip" role="group" aria-label="Till metrics">
+        <div className="cell">
+          <span className="lab">Open checks</span>
+          <span className="val">{railSummary.count}</span>
+          <span className="delta">{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Covers seated</span>
+          <span className="val basil">{posStats.covers}</span>
+          <span className="delta">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">To pay</span>
+          <span className={railSummary.ready > 0 ? "val amber" : "val"}>{railSummary.ready}</span>
+          <span className={railSummary.ready > 0 ? "delta warn" : "delta"}>{fmtPLN(posStats.readyValue)}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Open value</span>
+          <span className="val brand">{zl(railSummary.openValue)}<small> zł</small></span>
+          <span className="delta">avg {zl(posStats.avg)} zł</span>
+        </div>
+        <div className="cell">
+          <span className="lab">In kitchen</span>
+          <span className={posStats.inKitchen > 0 ? "val info" : "val"}>{posStats.inKitchen}</span>
+          <span className="delta">fired {posStats.inKitchen === 1 ? "check" : "checks"}</span>
+        </div>
+        <div className="cell">
+          <span className="lab">Pace</span>
+          <span className={`val ${posStats.paceTier === "calm" ? "basil" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "danger" : "amber"}`}>
+            {steer?.active ? `${posStats.util}%` : "Clear"}
+          </span>
+          <span className="delta">{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
+        </div>
+      </div>
+
       {/* open-check bar — spans the full width, above the panes */}
       <div className="core-checkbar">
         {pendingWrites > 0 && (
@@ -1294,12 +1428,19 @@ export function CorePos({
           </div>
         )}
         <div className="core-tabrail">
-          {tabs.map((t) => (
-            <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
-              <span className="tt">{t.name}</span>
-              <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const tn = tableById(t.tableId)?.number;
+            const n = t.items.reduce((s, l) => s + l.quantity, 0);
+            // Context line reads like the mockup: dine-in shows its table (· T10),
+            // takeaway/delivery show the channel, otherwise the live item count.
+            const ctx = tn ? `· T${tn}` : t.channel === "takeout" ? "takeaway" : t.channel === "delivery" ? "delivery" : n > 0 ? `${n} ${n === 1 ? "item" : "items"}` : "empty";
+            return (
+              <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
+                <span className="tt">{t.name}</span>
+                <span className="ts">{ctx}</span>
+              </button>
+            );
+          })}
           <button type="button" className="core-ttab core-ttab-new" onClick={() => void newTab()}>
             <span className="tt">+ New</span>
             <span className="ts">open check</span>
@@ -1307,22 +1448,49 @@ export function CorePos({
         </div>
       </div>
       <div className="core-pos">
-        {/* category rail */}
-        <aside className="core-rail">
-          <div className="lbl">Menu</div>
+        {/* category rail — pure icon-only (collapsed); label rides as a tooltip */}
+        <aside className="core-rail core-rail-icons" aria-label="Menu categories">
           {hasPopular && (
-            <button type="button" className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"} onClick={() => setCat("popular")}>
-              ★ Popular
+            <button
+              type="button"
+              className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"}
+              onClick={() => setCat("popular")}
+              title="Popular"
+              aria-label="Popular"
+              aria-pressed={activeCat === "popular"}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+                {CAT_ICON.popular}
+              </svg>
               <span className="n">{popularItems.filter(channelOk).length}</span>
             </button>
           )}
-          <button type="button" className={activeCat === "all" ? "core-cat on" : "core-cat"} onClick={() => setCat("all")}>
-            All
+          <button
+            type="button"
+            className={activeCat === "all" ? "core-cat on" : "core-cat"}
+            onClick={() => setCat("all")}
+            title="All"
+            aria-label="All"
+            aria-pressed={activeCat === "all"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+              {CAT_ICON.all}
+            </svg>
             <span className="n">{channelMenu.length}</span>
           </button>
           {categories.map((c) => (
-            <button key={c} type="button" className={c === activeCat ? "core-cat on" : "core-cat"} onClick={() => setCat(c)}>
-              {MENU_CATEGORY_LABELS[c]}
+            <button
+              key={c}
+              type="button"
+              className={c === activeCat ? "core-cat on" : "core-cat"}
+              onClick={() => setCat(c)}
+              title={MENU_CATEGORY_LABELS[c]}
+              aria-label={MENU_CATEGORY_LABELS[c]}
+              aria-pressed={c === activeCat}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {CAT_ICON[c]}
+              </svg>
               {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
                 <span className="core-cat-promise">{promiseMin(steer.promiseSecondsByCategory[c])}</span>
               )}
@@ -1428,6 +1596,7 @@ export function CorePos({
                     {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
                   </div>
                 </div>
+                {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}
                 {tabPromiseSec > 0 && (
                   <span className={`core-tabpromise ${steer?.bottleneck?.tier ?? "calm"}`} title="Estimated kitchen ready time for this check">
                     ready {promiseMin(tabPromiseSec)}
@@ -1815,10 +1984,8 @@ export function CorePos({
       subRight={
         <>
           <CoreQrQueue location={pageLoc} />
-          {active?.channel && <span className="core-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
-          {active?.status === "parked" && <span className="core-chip on" style={{ height: 32 }}>▣ Held</span>}
-          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
-            {kiosk ? "✕" : "⛶"}
+          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} aria-label={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
+            <ExpandIcon />
           </button>
         </>
       }

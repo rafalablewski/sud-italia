@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Core — KDS · Kitchen Wall (Dense Glass Console)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --ui:"Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+
+  --bg:#0a0806; --ink:#fbf6ee; --ink-2:#d9cbba; --ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075); --panel-2:rgba(255,255,255,.05); --panel-3:rgba(255,255,255,.11); --hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14); --line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e; --brand-bright:#ff9463; --brand-wash:rgba(232,107,62,.18); --on-accent:#2a160b;
+  --basil:#7dc464; --basil-wash:rgba(125,196,100,.18); --on-basil:#0c1a0f;
+  --amber:#f0ad46; --amber-wash:rgba(240,173,70,.18); --info:#54bce0; --info-wash:rgba(84,188,224,.2); --danger:#ff5a5c; --danger-wash:rgba(255,90,92,.2);
+
+  --lg-blur:blur(22px) saturate(175%);
+  --lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);
+  --lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+
+  --r-sm:7px; --r-md:10px; --r-lg:14px; --r-xl:20px; --pill:999px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{
+  color:var(--ink); font-family:var(--ui); font-size:13px; -webkit-font-smoothing:antialiased;
+  background:
+   radial-gradient(70% 55% at 10% 4%, rgba(232,107,62,.34), transparent 62%),
+   radial-gradient(65% 60% at 92% 96%, rgba(84,188,224,.27), transparent 62%),
+   radial-gradient(55% 45% at 80% 12%, rgba(240,173,70,.22), transparent 58%),
+   radial-gradient(60% 55% at 20% 92%, rgba(125,196,100,.18), transparent 60%),
+   radial-gradient(95% 80% at 50% 42%, rgba(232,107,62,.11), transparent 72%),
+   var(--bg);
+  background-attachment:fixed;
+}
+body{min-height:100vh; padding-bottom:96px;}
+svg{display:block;}
+::-webkit-scrollbar{height:8px;width:8px;}
+::-webkit-scrollbar-thumb{background:var(--line-2); border-radius:99px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* ---- glass primitive ---- */
+.glass{
+  background:var(--lg-sheen),var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur); backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);
+  box-shadow:var(--lg-float),var(--lg-rim);
+  border-radius:var(--r-md);
+}
+
+/* ---- captions ---- */
+.cap{font-family:var(--mono); font-size:10px; letter-spacing:.05em; color:var(--ink-3); text-transform:uppercase; padding:14px 16px 6px; display:flex; gap:8px; align-items:center;}
+.cap b{color:var(--basil); font-weight:600;}
+.cap .fix{color:var(--brand-bright); border:1px solid var(--line-2); padding:1px 7px; border-radius:var(--pill); font-size:9px; background:var(--brand-wash);}
+
+/* ================= COMMAND BAR ================= */
+.cmdbar{
+  position:sticky; top:0; z-index:60;
+  display:flex; align-items:center; gap:10px;
+  height:40px; padding:0 12px;
+  background:var(--lg-sheen),var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur); backdrop-filter:var(--lg-blur);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 6px 24px -12px rgba(0,0,0,.7);
+  font-family:var(--mono); font-size:12px;
+}
+.lights{display:flex; gap:6px; align-items:center;}
+.lights i{width:11px; height:11px; border-radius:50%; display:block; box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
+.lights .r{background:#ff5f57;} .lights .a{background:#febc2e;} .lights .g{background:#28c840;}
+.prompt{display:flex; align-items:center; gap:5px; white-space:nowrap; margin-left:4px;}
+.prompt .p-core{color:var(--basil);} .prompt .p-chev{color:var(--ink-3);} .prompt .p-cmd{color:var(--ink);}
+.caret{width:7px; height:14px; background:var(--basil); display:inline-block; animation:blink 1s steps(1) infinite; box-shadow:0 0 8px var(--basil);}
+@keyframes blink{50%{opacity:0;}}
+.vtabs{display:flex; gap:4px; margin-left:8px;}
+.vtab{font-family:var(--mono); font-size:11px; color:var(--ink-3); text-transform:lowercase; padding:3px 9px; border-radius:var(--r-sm); border:1px solid transparent; cursor:pointer;}
+.vtab:hover{color:var(--ink-2); background:var(--panel-2);}
+.vtab.on{color:var(--ink); background:var(--basil-wash); box-shadow:inset 0 0 0 1px var(--basil), 0 0 14px -4px var(--basil);}
+.spacer{flex:1;}
+.pill{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--ink-2); background:var(--panel-2); border:1px solid var(--line); padding:3px 9px; border-radius:var(--pill); cursor:pointer;}
+.pill:hover{background:var(--panel-3);}
+.pill.qr{color:var(--info); box-shadow:inset 0 0 0 1px rgba(84,188,224,.35);}
+.pill.on{color:var(--ink); background:var(--panel-3); box-shadow:inset 0 0 0 1px var(--line-2);}
+.pill.danger{color:var(--danger); box-shadow:inset 0 0 0 1px rgba(255,90,92,.35);}
+.kchip{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ink-3); background:var(--panel-2); border:1px solid var(--line); padding:3px 9px; border-radius:var(--r-sm); cursor:pointer;}
+.kchip kbd{font-family:var(--mono); font-size:10px; color:var(--ink-2); background:var(--panel-3); border:1px solid var(--line); border-radius:4px; padding:0 4px;}
+.tbar-tools{display:flex; align-items:center; gap:4px;}
+.seg-lane{display:inline-flex; padding:3px; gap:2px; border-radius:var(--pill); background:var(--panel-2); border:1px solid var(--line);}
+.seg-lane button{font-family:var(--mono); font-size:10px; color:var(--ink-3); background:transparent; border:0; cursor:pointer; padding:3px 9px; border-radius:var(--pill);}
+.seg-lane button:hover{color:var(--ink-2);}
+.seg-lane button.on{color:var(--ink); background:var(--panel-3); box-shadow:var(--lg-rim);}
+.tele{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:11px; padding:0 4px;}
+.tele span{display:flex; align-items:center; gap:4px; color:var(--ink-3);}
+.tele .risk{color:var(--amber);} .tele .loc{color:var(--ink-2);} .tele .clk{color:var(--basil);}
+.tico{width:28px; height:28px; display:grid; place-items:center; border-radius:var(--r-sm); color:var(--ink-3); cursor:pointer; position:relative;}
+.tico:hover{background:var(--panel-2); color:var(--ink);}
+.tico .badge{position:absolute; top:1px; right:1px; min-width:14px; height:14px; padding:0 3px; border-radius:99px; background:var(--brand); color:var(--on-accent); font-family:var(--mono); font-size:9px; font-weight:700; display:grid; place-items:center; box-shadow:0 0 8px -1px var(--brand);}
+
+.subbar{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;flex-wrap:wrap;}
+.subbar .sb-sp{flex:1;}
+.subbar .sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);}
+
+/* ================= LAYOUT ================= */
+.shell{display:flex; align-items:stretch;}
+
+/* -- LENS RAIL (click to expand) -- */
+.lens{
+  width:56px; flex:0 0 56px; align-self:flex-start;
+  position:sticky; top:52px;
+  margin:12px 0 12px 12px; padding:8px 0;
+  display:flex; flex-direction:column; align-items:stretch; gap:4px;
+  transition:width .16s ease;
+}
+.lens.open{width:172px; flex-basis:172px;}
+.lens .pin{
+  display:flex; align-items:center; gap:8px; margin:0 8px 6px; padding:7px 8px;
+  border-radius:var(--r-sm); color:var(--ink-3); cursor:pointer; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+  background:var(--panel-2); border:1px solid var(--line);
+}
+.lens .pin:hover{color:var(--ink-2);}
+.lens .pin .lbl{white-space:nowrap; opacity:0;}
+.lens.open .pin .lbl{opacity:1;}
+.lens a{
+  display:flex; align-items:center; gap:10px; height:40px; margin:0 8px; padding:0 9px;
+  border-radius:var(--r-sm); color:var(--ink-3); text-decoration:none; position:relative; cursor:pointer;
+}
+.lens a:hover{background:var(--panel-2); color:var(--ink-2);}
+.lens a.on{color:var(--ink); background:var(--brand-wash); box-shadow:inset 0 0 0 1px rgba(232,107,62,.4), 0 0 18px -6px var(--brand);}
+.lens a.on::before{content:""; position:absolute; left:-8px; top:9px; bottom:9px; width:3px; border-radius:99px; background:var(--brand-bright); box-shadow:0 0 10px var(--brand);}
+.lens a .ico{flex:0 0 22px; display:grid; place-items:center;}
+.lens a .txt{font-family:var(--mono); font-size:12px; white-space:nowrap; opacity:0; transition:opacity .12s;}
+.lens.open a .txt{opacity:1;}
+.lens a .sub{font-size:9px; color:var(--ink-3); display:block;}
+.lens .div{height:1px; background:var(--line); margin:6px 14px;}
+
+.main{flex:1; min-width:0; padding:12px 14px 0;}
+
+/* ================= UNIFIED STAT STRIP ================= */
+.statstrip{
+  display:flex; align-items:stretch; overflow:hidden;
+  padding:0; margin-bottom:10px;
+}
+.statstrip .cell{
+  flex:1; min-width:0; padding:9px 12px; position:relative;
+  display:flex; flex-direction:column; gap:3px;
+}
+.statstrip .cell + .cell::before{content:""; position:absolute; left:0; top:8px; bottom:8px; width:1px; background:var(--line);}
+.statstrip .lab{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+.statstrip .val{font-family:var(--mono); font-size:19px; font-weight:600; color:var(--ink); line-height:1; letter-spacing:-.01em;}
+.statstrip .val small{font-size:11px; color:var(--ink-3); font-weight:400;}
+.statstrip .val.brand{color:var(--brand-bright);} .statstrip .val.basil{color:var(--basil);}
+.statstrip .val.amber{color:var(--amber);} .statstrip .val.danger{color:var(--danger);} .statstrip .val.info{color:var(--info);}
+.statstrip .delta{font-family:var(--mono); font-size:9.5px; color:var(--basil);}
+.statstrip .delta.dn{color:var(--danger);}
+
+.sectionhead{display:flex; align-items:center; gap:12px; margin:2px 0 10px;}
+.sectionhead h2{font-family:var(--display); font-weight:700; font-size:16px; letter-spacing:-.01em;}
+.sectionhead .sub{font-family:var(--mono); font-size:10px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em;}
+
+/* ================= KDS (dark wall) ================= */
+.kds-wall{
+  background:rgba(0,0,0,.34); border:1px solid var(--line); border-radius:var(--r-md);
+  box-shadow:var(--lg-rim); padding:10px; margin-top:2px;
+}
+.stations{display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;}
+.station{font-family:var(--mono); font-size:10px; color:var(--ink-2); background:var(--panel-2); border:1px solid var(--line); border-radius:var(--r-sm); padding:5px 10px; display:flex; align-items:center; gap:7px;}
+.station .dot{width:6px; height:6px; border-radius:50%;}
+.station .load{width:44px; height:4px; border-radius:99px; background:rgba(255,255,255,.1); overflow:hidden;}
+.station .load i{display:block; height:100%; border-radius:99px;}
+.station.expo{margin-left:auto;}
+.station.expo .dots{display:flex; gap:3px;}
+.station.expo .dots i{width:6px; height:6px; border-radius:50%;}
+
+.lanes{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.lane-h{display:flex; align-items:center; justify-content:space-between; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); padding:0 2px 8px;}
+.lane-h .c{background:var(--panel-2); border:1px solid var(--line); border-radius:99px; padding:0 7px; color:var(--ink-2);}
+.tickets{display:flex; flex-direction:column; gap:8px;}
+.ticket{
+  background:rgba(255,255,255,.045); border:1px solid var(--line); border-left:3px solid var(--ink-3);
+  border-radius:var(--r-sm); padding:9px 10px; box-shadow:0 6px 18px -10px rgba(0,0,0,.7);
+}
+.ticket.fire{border-left-color:var(--info); background:rgba(84,188,224,.07);}
+.ticket.risk{border-left-color:var(--amber); background:rgba(240,173,70,.07);}
+.ticket.late{border-left-color:var(--danger); background:rgba(255,90,92,.08);}
+.ticket.ready{border-left-color:var(--basil); background:rgba(125,196,100,.07);}
+.ticket .th{display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;}
+.ticket .tt{font-family:var(--display); font-weight:700; font-size:13px;}
+.ticket .due{font-family:var(--mono); font-size:11px; font-weight:600;}
+.ticket.fire .due{color:var(--info);} .ticket.risk .due{color:var(--amber);}
+.ticket.late .due{color:var(--danger);} .ticket.ready .due{color:var(--basil);}
+.ticket .meta{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+.chan{font-family:var(--mono); font-size:8.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; padding:1px 6px; border-radius:99px;}
+.chan.dine{color:var(--info); background:var(--info-wash);}
+.chan.take{color:var(--amber); background:var(--amber-wash);}
+.chan.deliv{color:var(--brand-bright); background:var(--brand-wash);}
+.ticket .ago{font-family:var(--mono); font-size:9px; color:var(--ink-3);}
+.ticket .items{display:flex; flex-direction:column; gap:2px; margin-bottom:7px;}
+.ticket .items div{font-size:11px; color:var(--ink-2);}
+.ticket .items div span{font-family:var(--mono); color:var(--ink-3); margin-right:5px;}
+.ticket .items div em{font-style:normal; font-family:var(--mono); font-size:9px; color:var(--ink-3); display:block; margin-left:21px;}
+.cookmeter{height:5px; border-radius:99px; background:rgba(255,255,255,.1); overflow:hidden; margin-bottom:7px;}
+.cookmeter i{display:block; height:100%; border-radius:99px;}
+.bump{width:100%; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); background:var(--panel-3); border:1px solid var(--line-2); border-radius:var(--r-sm); padding:6px; cursor:pointer;}
+.bump:hover{background:var(--hover);}
+.ticket.ready .bump{color:var(--on-basil); background:var(--basil); border-color:transparent;}
+.ticket.fire .bump{color:var(--on-accent); background:linear-gradient(180deg,var(--brand-bright),var(--brand)); border-color:transparent;}
+
+/* ================= CONTEXT DOCK ================= */
+.dock{
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:70;
+  display:flex; align-items:center; gap:14px; padding:9px 12px;
+  background:var(--lg-sheen),var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur); backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line-2); box-shadow:var(--lg-float),var(--lg-rim); border-radius:var(--pill);
+  max-width:calc(100vw - 32px);
+}
+.dock .check{font-family:var(--mono); font-size:12px; color:var(--ink); display:flex; align-items:center; gap:6px;}
+.dock .check b{color:var(--brand-bright);}
+.dock .spine{display:flex; align-items:center; gap:8px; padding:0 12px; border-left:1px solid var(--line); border-right:1px solid var(--line);}
+.dock .co{font-family:var(--mono); font-size:10px; display:flex; align-items:center; gap:5px; color:var(--ink-3);}
+.dock .co .d{width:7px; height:7px; border-radius:50%;}
+.dock .co.done{color:var(--basil);} .dock .co.done .d{background:var(--basil); box-shadow:0 0 6px var(--basil);}
+.dock .co.fire{color:var(--info);} .dock .co.fire .d{background:var(--info); box-shadow:0 0 6px var(--info); animation:blink 1.4s steps(1) infinite;}
+.dock .co.wait .d{border:1.5px solid var(--ink-3);}
+.dock .tot{font-family:var(--mono); font-size:14px; font-weight:600; color:var(--ink);}
+.dock .db{font-family:var(--mono); font-size:11px; font-weight:600; border:0; border-radius:var(--pill); padding:8px 16px; cursor:pointer;}
+.dock .db.fire{color:var(--on-accent); background:linear-gradient(180deg,var(--brand-bright),var(--brand)); box-shadow:0 4px 14px -4px var(--brand);}
+.dock .db.pay{color:var(--on-basil); background:var(--basil); box-shadow:0 4px 14px -4px var(--basil);}
+
+/* section wrapper */
+.view{margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<!-- ============ COMMAND BAR ============ -->
+<div class="cmdbar">
+  <div class="lights"><i class="r"></i><i class="a"></i><i class="g"></i></div>
+  <div class="prompt"><span class="p-core">core</span><span class="p-chev">❯</span><span class="p-cmd">kds:floor</span><span class="caret"></span></div>
+  <div class="vtabs">
+    <span class="vtab">fleet</span>
+    <span class="vtab on">floor</span>
+    <span class="vtab">chef</span>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="kchip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> search <kbd>⌘K</kbd></div>
+  <div class="tele"><span class="risk">▲ risk 3</span><span class="loc">◈ loc krakow</span><span class="clk">16:16</span></div>
+  <div class="tico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="badge">5</span></div>
+  <div class="tico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+</div>
+
+<div class="shell">
+
+  <!-- ============ LENS RAIL ============ -->
+  <nav class="lens" id="lens">
+    <div class="pin" onclick="document.getElementById('lens').classList.toggle('open')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4v16M4 8h5M15 4l5 8-5 8"/></svg>
+      <span class="lbl">pin rail</span>
+    </div>
+    <a><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="txt">Floor<span class="sub">tables · covers</span></span></a>
+    <a><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 10h20M7 18v3M17 18v3"/></svg></span><span class="txt">POS<span class="sub">order &amp; charge</span></span></a>
+    <a class="on"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v5H4zM4 13h16v7H4zM8 4v5M16 13v7"/></svg></span><span class="txt">KDS<span class="sub">kitchen wall</span></span></a>
+    <a><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></span><span class="txt">Book<span class="sub">reservations</span></span></a>
+    <div class="div"></div>
+    <a><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l3-4 3 3 5-6"/></svg></span><span class="txt">Reports<span class="sub">day close</span></span></a>
+    <a><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3.9a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1z"/></svg></span><span class="txt">Settings<span class="sub">device · tax</span></span></a>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- sub-toolbar -->
+    <div class="subbar">
+      <div class="seg-lane">
+        <button class="on">All</button>
+        <button>New</button>
+        <button>Firing</button>
+        <button>Ready</button>
+      </div>
+      <div class="sb-sp"></div>
+      <div class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h6"/></svg>Σ all-day</div>
+      <div class="tico" title="Refresh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></div>
+      <div class="pill danger" title="86 item">86</div>
+      <div class="tico on" title="Sound on" style="color:var(--basil)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></div>
+      <div class="tico" title="Pause"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></div>
+      <div class="tico" title="Fullscreen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></div>
+    </div>
+
+    <!-- caption -->
+    <div class="cap">CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span class="fix">dark board · frosted KPIs only</span></div>
+
+    <section class="view">
+      <div class="sectionhead">
+        <h2>KDS · Pass — Floor</h2>
+        <span class="sub">SLA-toned tickets · start / bump / pass</span>
+      </div>
+
+      <!-- unified stat strip (frosted glass) -->
+      <div class="statstrip glass">
+        <div class="cell"><span class="lab">Active</span><span class="val">9</span></div>
+        <div class="cell"><span class="lab">At risk</span><span class="val amber">2</span></div>
+        <div class="cell"><span class="lab">Late</span><span class="val danger">1</span></div>
+        <div class="cell"><span class="lab">Ready</span><span class="val basil">3</span></div>
+        <div class="cell"><span class="lab">Throughput</span><span class="val">47<small> /hr</small></span></div>
+        <div class="cell"><span class="lab">Covers</span><span class="val">58<small> /hr</small></span></div>
+        <div class="cell"><span class="lab">Revenue</span><span class="val info">1 240<small> zł/hr</small></span></div>
+      </div>
+
+      <!-- DARK WALL — not frosted -->
+      <div class="kds-wall">
+
+        <!-- station strip -->
+        <div class="stations">
+          <div class="station"><span class="dot" style="background:var(--brand)"></span>Forno 1<div class="load"><i style="width:88%;background:var(--brand)"></i></div>88%</div>
+          <div class="station"><span class="dot" style="background:var(--amber)"></span>Forno 2<div class="load"><i style="width:64%;background:var(--amber)"></i></div>64%</div>
+          <div class="station"><span class="dot" style="background:var(--basil)"></span>Antipasti<div class="load"><i style="width:40%;background:var(--basil)"></i></div>40%</div>
+          <div class="station"><span class="dot" style="background:var(--info)"></span>Primi<div class="load"><i style="width:72%;background:var(--info)"></i></div>72%</div>
+          <div class="station"><span class="dot" style="background:var(--ink-3)"></span>Dolci<div class="load"><i style="width:22%;background:var(--ink-3)"></i></div>22%</div>
+          <div class="station expo"><span class="dot" style="background:var(--amber)"></span>Expo<div class="dots"><i style="background:var(--basil)"></i><i style="background:var(--basil)"></i><i style="background:var(--amber)"></i><i style="background:var(--info)"></i><i style="background:var(--ink-3)"></i></div></div>
+        </div>
+
+        <!-- three lanes -->
+        <div class="lanes">
+
+          <!-- NEW -->
+          <div>
+            <div class="lane-h">New <span class="c">2</span></div>
+            <div class="tickets">
+              <div class="ticket fire">
+                <div class="th"><span class="tt">T7 · Tab 2</span><span class="due">◉ 0:40</span></div>
+                <div class="meta"><span class="chan dine">dine-in</span><span class="ago">fired 0:12 ago</span></div>
+                <div class="items">
+                  <div><span>2×</span>Margherita</div>
+                  <div><span>1×</span>Marinara<em>no garlic</em></div>
+                </div>
+                <div class="cookmeter"><i style="width:14%;background:var(--info)"></i></div>
+                <button class="bump">Start</button>
+              </div>
+              <div class="ticket fire">
+                <div class="th"><span class="tt">T3 · Tab 6</span><span class="due">◉ 1:05</span></div>
+                <div class="meta"><span class="chan take">takeaway</span><span class="ago">fired 0:05 ago</span></div>
+                <div class="items">
+                  <div><span>1×</span>Ortolana</div>
+                  <div><span>1×</span>Bufala DOP</div>
+                  <div><span>1×</span>Aperol Spritz</div>
+                </div>
+                <div class="cookmeter"><i style="width:6%;background:var(--info)"></i></div>
+                <button class="bump">Start</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- FIRING -->
+          <div>
+            <div class="lane-h">Firing <span class="c">3</span></div>
+            <div class="tickets">
+              <div class="ticket risk">
+                <div class="th"><span class="tt">T10 · Tab 4</span><span class="due">▲ 4:20</span></div>
+                <div class="meta"><span class="chan dine">dine-in</span><span class="ago">at risk · forno 1</span></div>
+                <div class="items">
+                  <div><span>1×</span>Margherita</div>
+                  <div><span>1×</span>Diavola<em>extra chilli</em></div>
+                </div>
+                <div class="cookmeter"><i style="width:76%;background:var(--amber)"></i></div>
+                <button class="bump">Bump</button>
+              </div>
+              <div class="ticket late">
+                <div class="th"><span class="tt">T12 · Tab 9</span><span class="due">-1:20 late</span></div>
+                <div class="meta"><span class="chan deliv">delivery</span><span class="ago">Bolt · driver waiting</span></div>
+                <div class="items">
+                  <div><span>2×</span>Capricciosa</div>
+                  <div><span>1×</span>Tartufo</div>
+                </div>
+                <div class="cookmeter"><i style="width:100%;background:var(--danger)"></i></div>
+                <button class="bump">Bump</button>
+              </div>
+              <div class="ticket fire">
+                <div class="th"><span class="tt">T5 · Tab 1</span><span class="due">◉ 3:10</span></div>
+                <div class="meta"><span class="chan dine">dine-in</span><span class="ago">firing · forno 2</span></div>
+                <div class="items">
+                  <div><span>1×</span>Tartufo<em>truffle cream</em></div>
+                </div>
+                <div class="cookmeter"><i style="width:52%;background:var(--info)"></i></div>
+                <button class="bump">Bump</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- READY · PASS -->
+          <div>
+            <div class="lane-h">Ready · Pass <span class="c">3</span></div>
+            <div class="tickets">
+              <div class="ticket ready">
+                <div class="th"><span class="tt">T2 · Tab 3</span><span class="due">✓ 0:00</span></div>
+                <div class="meta"><span class="chan dine">dine-in</span><span class="ago">plated · expo</span></div>
+                <div class="items">
+                  <div><span>1×</span>Margherita</div>
+                  <div><span>1×</span>Aperol Spritz</div>
+                </div>
+                <div class="cookmeter"><i style="width:100%;background:var(--basil)"></i></div>
+                <button class="bump">Pass</button>
+              </div>
+              <div class="ticket ready">
+                <div class="th"><span class="tt">T8 · Tab 7</span><span class="due">✓ 0:00</span></div>
+                <div class="meta"><span class="chan take">takeaway</span><span class="ago">bagged · pickup</span></div>
+                <div class="items">
+                  <div><span>2×</span>Diavola</div>
+                </div>
+                <div class="cookmeter"><i style="width:100%;background:var(--basil)"></i></div>
+                <button class="bump">Pass</button>
+              </div>
+              <div class="ticket ready">
+                <div class="th"><span class="tt">T11 · Tab 5</span><span class="due">✓ 0:00</span></div>
+                <div class="meta"><span class="chan dine">dine-in</span><span class="ago">plated · expo</span></div>
+                <div class="items">
+                  <div><span>1×</span>Bufala DOP</div>
+                  <div><span>1×</span>Cacio e Pepe</div>
+                </div>
+                <div class="cookmeter"><i style="width:100%;background:var(--basil)"></i></div>
+                <button class="bump">Pass</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ CONTEXT DOCK ============ -->
+<div class="dock">
+  <div class="check">Check <b>Tab 4</b> · T10</div>
+  <div class="spine">
+    <span class="co done"><span class="d"></span>Antipasti ✓</span>
+    <span class="co fire"><span class="d"></span>Primi firing</span>
+    <span class="co wait"><span class="d"></span>Secondi ○</span>
+    <span class="co wait"><span class="d"></span>Dolci ○</span>
+  </div>
+  <div class="tot">187.92 zł</div>
+  <button class="db fire">◉ Fire</button>
+  <button class="db pay">Pay</button>
+</div>
+
+<script>
+  // lens rail: open ONLY on pin click (already wired inline); allow Esc to collapse
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ document.getElementById('lens').classList.remove('open'); }});
+  // view-tab chips toggle
+  document.querySelectorAll('.vtabs .vtab').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.querySelectorAll('.vtabs .vtab').forEach(function(x){x.classList.remove('on');});
+      t.classList.add('on');
+    });
+  });
+  // lane-filter segmented toggle
+  document.querySelectorAll('.seg-lane button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.seg-lane button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+    });
+  });
+</script>
+</body>
+</html>

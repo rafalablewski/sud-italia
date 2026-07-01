@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -348,12 +349,16 @@ export function CoreFloor({
       tabs={serviceTabs("floor")}
       subRight={
         <>
-          <button type="button" className="core-iconbtn" title="Refresh" onClick={() => void load()}>⟳</button>
-          <button type="button" className="core-btn primary sm" onClick={() => setEditing("new")}>+ Add table</button>
+          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+          <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
         </>
       }
     >
       <div className="core-guest-inbox">
+        <div className="core-sectionhead">
+          <h1>Service · Floor</h1>
+          <span className="sub">{location} · {s ? `${s.seated} of ${s.totalTables} seated` : "live floor"}</span>
+        </div>
         <div className="core-kpi-strip">
           <div className="k"><div className="kl">Covers seated</div><div className="kv mono">{s ? `${s.seated} / ${s.totalTables}` : "—"}</div></div>
           <div className="k"><div className="kl">Occupancy</div><div className="kv mono">{s ? `${Math.round(s.occupancyPct)}%` : "—"}</div></div>

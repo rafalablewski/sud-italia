@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Core — Liquid Glass · Operator OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============ TOKENS ============ */
+:root,.core{
+  --bg:#0a0806; --ink:#fbf6ee; --ink-2:#d9cbba; --ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075); --panel-2:rgba(255,255,255,.05); --panel-3:rgba(255,255,255,.11); --hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14); --line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e; --brand-bright:#ff9463; --brand-wash:rgba(232,107,62,.18); --on-accent:#2a160b;
+  --basil:#7dc464; --basil-wash:rgba(125,196,100,.18); --on-basil:#0c1a0f;
+  --amber:#f0ad46; --amber-wash:rgba(240,173,70,.18); --info:#54bce0; --info-wash:rgba(84,188,224,.2); --danger:#ff5a5c; --danger-wash:rgba(255,90,92,.2);
+  --lg-blur:blur(22px) saturate(175%);
+  --lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);
+  --lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --ui:"Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--ui); color:var(--ink);
+  background:
+   radial-gradient(70% 55% at 10% 4%, rgba(232,107,62,.34), transparent 62%),
+   radial-gradient(65% 60% at 92% 96%, rgba(84,188,224,.27), transparent 62%),
+   radial-gradient(55% 45% at 80% 12%, rgba(240,173,70,.22), transparent 58%),
+   radial-gradient(60% 55% at 20% 92%, rgba(125,196,100,.18), transparent 60%),
+   radial-gradient(95% 80% at 50% 42%, rgba(232,107,62,.11), transparent 72%),
+   var(--bg);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+.core{min-height:100vh;padding:16px 18px 120px}
+
+/* ============ GLASS PRIMITIVE ============ */
+.glass{
+  /* dark smoked base FIRST so stacked white translucency can never wash to near-white */
+  background:var(--lg-sheen),var(--lg-fill),rgba(10,8,6,.46);
+  -webkit-backdrop-filter:var(--lg-blur); backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);
+  box-shadow:var(--lg-float),var(--lg-rim);
+  border-radius:14px;
+}
+/* leaf glass INSIDE another glass panel must NOT re-blur — nested saturate compounds & brightens.
+   Give it a heavier dark base so it still reads as a distinct darker facet. */
+.glass .glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--lg-sheen),var(--lg-fill),rgba(10,8,6,.58)}
+.lift{transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s}
+.lift:hover{transform:translateY(-3px) scale(1.01);box-shadow:0 26px 60px -14px rgba(0,0,0,.68),var(--lg-rim)}
+
+/* ============ COMMAND BAR ============ */
+.cmd{
+  display:flex;align-items:center;gap:14px;padding:10px 14px;margin-bottom:14px;
+  border-radius:16px;
+}
+.lights{display:flex;gap:7px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57;box-shadow:0 0 8px rgba(255,95,87,.5)}
+.lights i:nth-child(2){background:#febc2e;box-shadow:0 0 8px rgba(254,188,46,.5)}
+.lights i:nth-child(3){background:#28c840;box-shadow:0 0 8px rgba(40,200,64,.5)}
+.prompt{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:2px;white-space:nowrap}
+.prompt b{color:var(--brand-bright);font-weight:600}
+.prompt .p2{color:var(--basil)}
+.caret{width:8px;height:16px;background:var(--basil);display:inline-block;margin-left:3px;border-radius:1px;animation:blink 1s steps(2) infinite;box-shadow:0 0 8px var(--basil)}
+@keyframes blink{50%{opacity:0}}
+.tabs{display:flex;gap:6px;margin-left:6px}
+.tab{font-family:var(--mono);font-size:11.5px;padding:5px 11px;border-radius:9px;color:var(--ink-3);border:1px solid transparent;cursor:pointer;transition:.15s;letter-spacing:.02em}
+.tab:hover{color:var(--ink-2);background:var(--panel-2)}
+.tab.on{background:var(--basil-wash);color:var(--basil);border-color:rgba(125,196,100,.4);box-shadow:0 0 14px rgba(125,196,100,.18)}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-2);cursor:pointer}
+.pill:hover{background:var(--hover)}
+.tele{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.tele .amber{color:var(--amber)} .tele .basil{color:var(--basil)}
+.iconbtn{position:relative;width:32px;height:32px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;color:var(--ink-2);font-size:15px}
+.iconbtn:hover{background:var(--hover);color:var(--ink)}
+.badge{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--brand);color:var(--on-accent);font-size:10px;font-weight:700;font-family:var(--mono);display:grid;place-items:center;box-shadow:0 0 10px var(--brand-wash)}
+
+/* ============ LAYOUT ============ */
+.shell{display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:start}
+
+/* Lens rail */
+.lens{padding:10px 8px;display:flex;flex-direction:column;gap:6px;align-items:center;position:sticky;top:16px;transition:width .22s}
+.lens .brand{width:40px;height:40px;border-radius:12px;background:var(--brand-wash);border:1px solid rgba(232,107,62,.4);display:grid;place-items:center;font-family:var(--display);font-weight:800;color:var(--brand-bright);font-size:19px;margin-bottom:6px;box-shadow:0 0 18px rgba(232,107,62,.3)}
+.lens .li{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;color:var(--ink-3);cursor:pointer;position:relative;transition:.15s;font-size:18px}
+.lens .li .lbl{display:none}
+.lens .li:hover{background:var(--panel-2);color:var(--ink-2)}
+.lens .li.on{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px rgba(232,107,62,.4),0 0 16px rgba(232,107,62,.2)}
+.lens .divide{width:24px;height:1px;background:var(--line);margin:4px 0}
+.lens .pin{margin-top:auto}
+#lensToggle{display:none}
+#lensToggle:checked + .lens{width:186px;align-items:stretch}
+#lensToggle:checked + .lens .li{width:100%;justify-content:flex-start;padding-left:12px;gap:12px}
+#lensToggle:checked + .lens .li .lbl{display:inline;font-family:var(--ui);font-size:13px;font-weight:600}
+#lensToggle:checked + .lens .brand{align-self:flex-start}
+#lensToggle:checked + .lens .divide{width:100%}
+.pin-lbl{position:absolute;inset:0;cursor:pointer;border-radius:11px}
+
+/* Main */
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.workzone{display:grid;grid-template-columns:64px 1fr 380px;gap:14px;align-items:start}
+
+/* POS category rail (icon-only) */
+.catrail{padding:10px 7px;display:flex;flex-direction:column;gap:7px;align-items:center;position:sticky;top:16px}
+.cat{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;color:var(--ink-3);cursor:pointer;position:relative;font-size:20px;transition:.15s;border:1px solid transparent}
+.cat:hover{background:var(--panel-2);color:var(--ink-2)}
+.cat.on{background:var(--brand-wash);color:var(--brand-bright);border-color:rgba(232,107,62,.4);box-shadow:0 0 16px rgba(232,107,62,.2)}
+.cat .cnt{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--panel-3);border:1px solid var(--line-2);font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--ink);display:grid;place-items:center}
+.cat.on .cnt{background:var(--brand);color:var(--on-accent);border-color:transparent}
+
+/* ============ STAT STRIP (shared) ============ */
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.stat{padding:12px 13px;position:relative;overflow:hidden}
+.stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.stat .v{font-family:var(--display);font-size:26px;font-weight:700;line-height:1;margin:7px 0 4px;letter-spacing:-.02em}
+.stat .s{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.stat .glow{position:absolute;bottom:-30px;right:-20px;width:80px;height:80px;border-radius:50%;filter:blur(24px);opacity:.5}
+.g-brand{background:var(--brand)} .g-amber{background:var(--amber)} .g-danger{background:var(--danger)} .g-basil{background:var(--basil)} .g-info{background:var(--info)}
+.stat.acc-basil .v{color:var(--basil)} .stat.acc-amber .v{color:var(--amber)} .stat.acc-danger .v{color:var(--danger)} .stat.acc-info .v{color:var(--info)} .stat.acc-brand .v{color:var(--brand-bright)}
+
+/* section headings */
+.sec-h{display:flex;align-items:center;gap:10px;margin:2px 0 2px}
+.sec-h h2{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:-.01em}
+.sec-h .note{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-left:auto;background:var(--panel-2);padding:3px 9px;border-radius:8px;border:1px solid var(--line)}
+.fixno{color:var(--basil)}
+
+/* POS product grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.prod{padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:96px}
+.prod .nm{font-family:var(--display);font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.prod .ds{font-size:11px;color:var(--ink-3);flex:1;line-height:1.35}
+.prod .bt{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+.prod .pr{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+.diet{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;letter-spacing:.04em}
+.d-v{background:var(--basil-wash);color:var(--basil)}
+.d-vg{background:rgba(125,196,100,.28);color:#a7e08f}
+.d-gf{background:var(--info-wash);color:var(--info)}
+.add{width:26px;height:26px;border-radius:8px;background:var(--brand-wash);border:1px solid rgba(232,107,62,.4);color:var(--brand-bright);font-size:16px;display:grid;place-items:center;font-weight:600}
+
+/* ============ ORDER PANEL ============ */
+.order{padding:15px;position:sticky;top:16px;display:flex;flex-direction:column;gap:12px}
+.ord-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ord-head .tab-nm{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.02em}
+.ord-head .tab-sub{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:2px}
+.covers{display:flex;align-items:center;gap:0;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--panel-2)}
+.covers button{width:28px;height:28px;background:transparent;border:none;color:var(--ink-2);font-size:16px;cursor:pointer;font-family:var(--mono)}
+.covers button:hover{background:var(--hover)}
+.covers .num{width:34px;text-align:center;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+.assign{font-family:var(--mono);font-size:11px;color:var(--info);background:var(--info-wash);border:1px solid rgba(84,188,224,.4);padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+
+/* segmented */
+.seg{display:flex;gap:4px;padding:4px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line)}
+.seg button{flex:1;padding:7px 6px;border-radius:8px;border:none;background:transparent;color:var(--ink-3);font-family:var(--ui);font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.seg button:hover{color:var(--ink-2)}
+.seg button.on{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px rgba(232,107,62,.4)}
+.seg.mini button.on{background:var(--basil-wash);color:var(--basil);box-shadow:inset 0 0 0 1px rgba(125,196,100,.4)}
+.field-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+
+/* course groups */
+.course{border:1px solid var(--line);border-radius:11px;padding:9px 10px;background:var(--panel-2)}
+.course + .course{margin-top:8px}
+.course-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.course-h .cn{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%}
+.fire{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 9px;border-radius:7px;background:var(--brand-wash);border:1px solid rgba(232,107,62,.4);color:var(--brand-bright);cursor:pointer}
+.fire.done{background:var(--basil-wash);border-color:rgba(125,196,100,.4);color:var(--basil)}
+.li-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px}
+.li-row .q{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:20px}
+.li-row .n{flex:1;color:var(--ink)}
+.li-row .n small{color:var(--ink-3);font-size:10.5px}
+.li-row .p{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+
+/* cross-sell + combo */
+.xsell{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--info-wash);border:1px dashed rgba(84,188,224,.5);font-size:12px;color:var(--info)}
+.xsell .add{background:rgba(84,188,224,.25);border-color:rgba(84,188,224,.5);color:var(--info)}
+.combo{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:10px;background:var(--basil-wash);border:1px solid rgba(125,196,100,.35);font-size:12px}
+.combo .lab{color:var(--basil);font-weight:600}
+.combo .val{font-family:var(--mono);color:var(--basil);font-weight:600}
+
+/* totals */
+.totals{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.tt{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);font-family:var(--mono)}
+.tt.grand{font-family:var(--display);font-size:19px;font-weight:800;color:var(--ink);margin-top:4px}
+.charge{margin-top:4px;width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--brand-bright),var(--brand));color:var(--on-accent);
+  font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.01em;
+  box-shadow:0 12px 30px -8px rgba(232,107,62,.6),var(--lg-rim);transition:.15s}
+.charge:hover{transform:translateY(-2px);box-shadow:0 18px 40px -8px rgba(232,107,62,.7),var(--lg-rim)}
+
+/* ============ KDS ============ */
+.kwall{background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.28));border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:inset 0 2px 20px rgba(0,0,0,.5)}
+.stations{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+.station{display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px}
+.station .sd{width:8px;height:8px;border-radius:50%}
+.station b{font-family:var(--mono);font-weight:600}
+.station .load{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.lane-h{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px;display:flex;justify-content:space-between}
+.ticket{background:rgba(20,16,12,.72);border:1px solid var(--line);border-left:4px solid var(--ink-3);border-radius:10px;padding:11px;margin-bottom:10px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.ticket.t-info{border-left-color:var(--info)}
+.ticket.t-amber{border-left-color:var(--amber)}
+.ticket.t-danger{border-left-color:var(--danger)}
+.ticket.t-basil{border-left-color:var(--basil)}
+.tk-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.tk-h .tbl{font-family:var(--display);font-size:14px;font-weight:700}
+.tk-h .due{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:7px}
+.due.info{background:var(--info-wash);color:var(--info)}
+.due.amber{background:var(--amber-wash);color:var(--amber)}
+.due.danger{background:var(--danger-wash);color:var(--danger)}
+.due.basil{background:var(--basil-wash);color:var(--basil)}
+.tk-items{font-size:12px;color:var(--ink-2);line-height:1.55;margin-bottom:9px}
+.tk-items .qq{font-family:var(--mono);color:var(--ink-3)}
+.cook{height:6px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden;margin-bottom:9px}
+.cook i{display:block;height:100%;border-radius:4px}
+.cook .f-info{background:linear-gradient(90deg,var(--info),#8fd6ef)}
+.cook .f-amber{background:linear-gradient(90deg,var(--amber),#f7c877)}
+.cook .f-danger{background:linear-gradient(90deg,var(--danger),#ff8a8b)}
+.cook .f-basil{background:linear-gradient(90deg,var(--basil),#a7e08f)}
+.bump{width:100%;padding:7px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-3);color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+.bump:hover{background:var(--hover)}
+.bump.ready{background:var(--basil-wash);border-color:rgba(125,196,100,.5);color:var(--basil)}
+
+/* ============ SERVICE (shared frame) ============ */
+.svc3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.frame{padding:13px}
+.frame-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.frame-h h3{font-family:var(--display);font-size:14px;font-weight:700}
+.frame-h .chip{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-3)}
+.chip.surge{background:var(--amber-wash);border-color:rgba(240,173,70,.4);color:var(--amber)}
+/* floor tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{border-radius:10px;padding:9px;border:1px solid var(--line);background:var(--panel-2);text-align:center}
+.tile .tn{font-family:var(--display);font-weight:700;font-size:15px}
+.tile .tm{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-top:3px}
+.tile.free{border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.tile.free .tn{color:var(--basil)}
+.tile.seated{border-color:rgba(84,188,224,.35);background:var(--info-wash)}
+.tile.seated .tn{color:var(--info)}
+.tile.billing{border-color:rgba(240,173,70,.4);background:var(--amber-wash)}
+.tile.billing .tn{color:var(--amber)}
+.tile.reserved{border-color:var(--line-2);background:var(--panel-3)}
+.tile.reserved .tn{color:var(--ink-2)}
+/* slots */
+.slot{margin-bottom:11px}
+.slot-h{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.slot-h .tm{font-family:var(--mono);color:var(--ink-2)}
+.slot-h .cp{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.bar{height:8px;border-radius:5px;background:rgba(0,0,0,.35);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--brand),var(--brand-bright))}
+.bar i.hot{background:linear-gradient(90deg,var(--danger),#ff8a8b)}
+.bar i.cool{background:linear-gradient(90deg,var(--basil),#a7e08f)}
+/* dispatch */
+.driver{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.driver:last-child{border-bottom:none}
+.driver .av{width:32px;height:32px;border-radius:9px;background:var(--panel-3);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;color:var(--ink-2)}
+.driver .dn{flex:1}
+.driver .dn b{font-size:12.5px;font-weight:600;display:block}
+.driver .dn small{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.driver .eta{font-family:var(--mono);font-size:11px;font-weight:600}
+.st-tag{font-family:var(--mono);font-size:9.5px;padding:2px 7px;border-radius:6px}
+.st-run{background:var(--info-wash);color:var(--info)}
+.st-ret{background:var(--basil-wash);color:var(--basil)}
+.st-idle{background:var(--panel-2);color:var(--ink-3)}
+
+/* ============ CONTEXT DOCK ============ */
+.dock{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:16px;padding:11px 16px;border-radius:16px;max-width:min(860px,94vw)}
+.dock .sel{display:flex;flex-direction:column;gap:2px}
+.dock .sel b{font-family:var(--display);font-size:14px;font-weight:800}
+.dock .sel small{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.spine{display:flex;align-items:center;gap:5px}
+.spine .cs{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-3)}
+.spine .cs.done{color:var(--basil);background:var(--basil-wash);border-color:rgba(125,196,100,.35)}
+.spine .cs.fire{color:var(--brand-bright);background:var(--brand-wash);border-color:rgba(232,107,62,.4)}
+.spine .cs .sp{width:6px;height:6px;border-radius:50%}
+.spine .arw{color:var(--ink-3);font-size:10px}
+.dock .tot{font-family:var(--display);font-size:18px;font-weight:800;margin-left:2px}
+.dock .acts{display:flex;gap:8px;margin-left:4px}
+.dbtn{padding:9px 15px;border-radius:10px;border:none;font-family:var(--display);font-weight:700;font-size:13px;cursor:pointer}
+.dbtn.fire{background:linear-gradient(135deg,var(--brand-bright),var(--brand));color:var(--on-accent);box-shadow:0 8px 20px -6px rgba(232,107,62,.6)}
+.dbtn.pay{background:var(--panel-3);border:1px solid var(--line-2);color:var(--ink)}
+
+/* ============ WHAT CHANGED ============ */
+.changed{position:fixed;left:16px;bottom:16px;z-index:55;width:216px;padding:12px 13px;border-radius:14px}
+.changed h4{font-family:var(--display);font-size:12px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.changed h4 span{font-family:var(--mono);font-size:9px;color:var(--basil);background:var(--basil-wash);padding:2px 6px;border-radius:6px}
+.changed ol{list-style:none;counter-reset:c;display:flex;flex-direction:column;gap:5px}
+.changed li{counter-increment:c;font-size:10.5px;color:var(--ink-2);line-height:1.35;padding-left:20px;position:relative}
+.changed li::before{content:counter(c);position:absolute;left:0;top:0;width:15px;height:15px;border-radius:5px;background:var(--brand-wash);border:1px solid rgba(232,107,62,.4);color:var(--brand-bright);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center}
+
+@media(max-width:1180px){.changed{display:none}}
+</style>
+</head>
+<body>
+<div class="core">
+
+  <!-- ============ COMMAND BAR ============ -->
+  <div class="cmd glass">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="prompt"><b>core</b>&nbsp;❯&nbsp;<span class="p2">pos:order</span><span class="caret"></span></div>
+    <div class="tabs">
+      <span class="tab on">pos</span>
+      <span class="tab">kds</span>
+      <span class="tab">service</span>
+      <span class="tab">book</span>
+    </div>
+    <span class="pill">▦ qr-orders <b style="color:var(--basil)">·4</b></span>
+    <span class="iconbtn" title="Fullscreen">⛶</span>
+    <div class="spacer"></div>
+    <span class="pill">🔍 search <b style="color:var(--ink-3)">⌘K</b></span>
+    <div class="tele">
+      <span class="amber">risk 3</span><span>·</span>
+      <span>loc krakow</span><span>·</span>
+      <span class="basil">16:16</span>
+    </div>
+    <span class="iconbtn" title="Notifications">🔔<span class="badge">5</span></span>
+    <span class="iconbtn" title="Theme">☀</span>
+  </div>
+
+  <!-- ============ SHELL ============ -->
+  <div class="shell">
+
+    <!-- LENS RAIL (click-to-expand) -->
+    <input type="checkbox" id="lensToggle" />
+    <nav class="lens glass">
+      <div class="brand">O</div>
+      <div class="li" title="Floor"><span>🍽</span><span class="lbl">Floor</span></div>
+      <div class="li on" title="POS"><span>🧾</span><span class="lbl">POS</span></div>
+      <div class="li" title="KDS"><span>🔥</span><span class="lbl">KDS</span></div>
+      <div class="li" title="Book"><span>📖</span><span class="lbl">Book</span></div>
+      <div class="divide"></div>
+      <div class="li" title="Reports"><span>📊</span><span class="lbl">Reports</span></div>
+      <div class="li" title="Settings"><span>⚙</span><span class="lbl">Settings</span></div>
+      <label for="lensToggle" class="li pin" title="Expand rail"><span>⟺</span><span class="lbl">Collapse</span><span class="pin-lbl"></span></label>
+    </nav>
+
+    <div class="main">
+
+      <!-- POS STAT STRIP -->
+      <div class="sec-h">
+        <h2>Service — Kraków · Sala</h2>
+        <span class="note fixno">▲ fix 3 · unified stat strip</span>
+      </div>
+      <div class="strip">
+        <div class="stat glass lift acc-brand"><div class="k">Open tabs</div><div class="v">14</div><div class="s">6 dine · 5 take · 3 dlv</div><div class="glow g-brand"></div></div>
+        <div class="stat glass lift"><div class="k">Covers now</div><div class="v">52</div><div class="s">of 74 seats</div><div class="glow g-basil"></div></div>
+        <div class="stat glass lift acc-amber"><div class="k">Avg ticket</div><div class="v">86<span style="font-size:13px">zł</span></div><div class="s">▲ 4% vs wk</div><div class="glow g-amber"></div></div>
+        <div class="stat glass lift acc-info"><div class="k">Turn time</div><div class="v">47<span style="font-size:13px">m</span></div><div class="s">target 55m</div><div class="glow g-info"></div></div>
+        <div class="stat glass lift acc-danger"><div class="k">At risk</div><div class="v">3</div><div class="s">SLA breach soon</div><div class="glow g-danger"></div></div>
+        <div class="stat glass lift acc-basil"><div class="k">Comp rate</div><div class="v">1.2<span style="font-size:13px">%</span></div><div class="s">within band</div><div class="glow g-basil"></div></div>
+        <div class="stat glass lift acc-brand"><div class="k">Sales /hr</div><div class="v">2.4<span style="font-size:13px">k</span></div><div class="s">zł · peak run</div><div class="glow g-brand"></div></div>
+      </div>
+
+      <!-- POS WORKZONE -->
+      <div class="workzone">
+
+        <!-- ICON-ONLY CATEGORY RAIL -->
+        <div class="catrail glass">
+          <div class="cat on" title="Popular"><span>★</span><span class="cnt">11</span></div>
+          <div class="cat" title="All"><span>▦</span><span class="cnt">23</span></div>
+          <div class="cat" title="Pizza"><span>🍕</span><span class="cnt">8</span></div>
+          <div class="cat" title="Pasta"><span>🍝</span><span class="cnt">4</span></div>
+          <div class="cat" title="Antipasti"><span>🥗</span><span class="cnt">5</span></div>
+          <div class="cat" title="Panini"><span>🥪</span><span class="cnt">2</span></div>
+          <div class="cat" title="Desserts"><span>🍰</span><span class="cnt">3</span></div>
+          <div class="cat" title="Drinks"><span>🥤</span><span class="cnt">2</span></div>
+        </div>
+
+        <!-- PRODUCT GRID -->
+        <div>
+          <div class="sec-h" style="margin-bottom:10px">
+            <h2 style="font-size:14px">Popular · Kraków menu</h2>
+            <span class="note fixno">▲ fix 1 · icon-only rail</span>
+          </div>
+          <div class="grid">
+            <div class="prod glass lift">
+              <div class="nm">Margherita <span class="diet d-v">V</span></div>
+              <div class="ds">San Marzano, fior di latte, basilico</div>
+              <div class="bt"><span class="pr">32 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Diavola</div>
+              <div class="ds">Spianata piccante, fior di latte, chili</div>
+              <div class="bt"><span class="pr">42 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Tartufo <span class="diet d-v">V</span></div>
+              <div class="ds">Crema di tartufo, funghi, mozzarella</div>
+              <div class="bt"><span class="pr">54 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Marinara <span class="diet d-vg">VG</span></div>
+              <div class="ds">San Marzano, aglio, origano, olio EVO</div>
+              <div class="bt"><span class="pr">28 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Bufala DOP <span class="diet d-v">V</span></div>
+              <div class="ds">Mozzarella di bufala, datterini, basilico</div>
+              <div class="bt"><span class="pr">48 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Capricciosa</div>
+              <div class="ds">Prosciutto, carciofi, funghi, olive</div>
+              <div class="bt"><span class="pr">46 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Ortolana <span class="diet d-vg">VG</span></div>
+              <div class="ds">Zucchine, melanzane, peperoni grigliati</div>
+              <div class="bt"><span class="pr">40 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Tagliatelle Tartufo <span class="diet d-gf">GF</span></div>
+              <div class="ds">Tagliatelle fresche, tartufo nero, parmigiano</div>
+              <div class="bt"><span class="pr">58 zł</span><span class="add">＋</span></div>
+            </div>
+            <div class="prod glass lift">
+              <div class="nm">Burrata Pugliese <span class="diet d-v">V</span></div>
+              <div class="ds">Burrata, pomodorini confit, rucola</div>
+              <div class="bt"><span class="pr">38 zł</span><span class="add">＋</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDER PANEL -->
+        <div class="order glass">
+          <div class="sec-h" style="margin:0 0 2px">
+            <span class="note fixno" style="margin-left:0">▲ fix 6 · redesigned check</span>
+          </div>
+          <div class="ord-head">
+            <div>
+              <div class="tab-nm">Tab 4</div>
+              <div class="tab-sub">T10 · opened 16:02 · Ania W.</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
+              <div class="covers">
+                <button>−</button><span class="num">2</span><button>+</button>
+              </div>
+              <span class="assign">＋ Assign table</span>
+            </div>
+          </div>
+
+          <!-- channel -->
+          <div>
+            <div class="field-lbl">Channel</div>
+            <div class="seg">
+              <button class="on">Dine-in</button>
+              <button>Takeaway</button>
+              <button>Delivery</button>
+            </div>
+          </div>
+
+          <!-- kitchen timing -->
+          <div>
+            <div class="field-lbl">Kitchen timing — fix 6</div>
+            <div class="seg mini">
+              <button class="on">Coursed</button>
+              <button>All together</button>
+            </div>
+          </div>
+
+          <!-- COURSES -->
+          <div class="course">
+            <div class="course-h">
+              <span class="cn"><span class="dot" style="background:var(--basil)"></span>Antipasti</span>
+              <span class="fire done">✓ Fired</span>
+            </div>
+            <div class="li-row"><span class="q">1×</span><span class="n">Burrata Pugliese <small>V</small></span><span class="p">38</span></div>
+            <div class="li-row"><span class="q">1×</span><span class="n">Bruschetta Pomodoro</span><span class="p">18</span></div>
+          </div>
+          <div class="course">
+            <div class="course-h">
+              <span class="cn"><span class="dot" style="background:var(--brand)"></span>Primi</span>
+              <span class="fire">🔥 Fire now</span>
+            </div>
+            <div class="li-row"><span class="q">1×</span><span class="n">Diavola</span><span class="p">42</span></div>
+            <div class="li-row"><span class="q">1×</span><span class="n">Bufala DOP <small>V</small></span><span class="p">48</span></div>
+            <div class="li-row"><span class="q">1×</span><span class="n">Tagliatelle Tartufo <small>GF</small></span><span class="p">58</span></div>
+          </div>
+          <div class="course">
+            <div class="course-h">
+              <span class="cn"><span class="dot" style="background:var(--ink-3)"></span>Dolci</span>
+              <span class="fire">Hold</span>
+            </div>
+            <div class="li-row"><span class="q">2×</span><span class="n">Tiramisù</span><span class="p">36</span></div>
+          </div>
+
+          <!-- cross-sell -->
+          <div class="xsell">
+            <span style="flex:1">Suggest <b>Aperol Spritz</b> — pairs with antipasti</span>
+            <span style="font-family:var(--mono);font-weight:600">+24 zł</span>
+            <span class="add">＋</span>
+          </div>
+
+          <!-- combo -->
+          <div class="combo">
+            <span class="lab">Combo · Pizza + Spritz</span>
+            <span class="val">−12 zł</span>
+          </div>
+
+          <!-- totals -->
+          <div class="totals">
+            <div class="tt"><span>Subtotal</span><span>240 zł</span></div>
+            <div class="tt"><span>Combo discount</span><span style="color:var(--basil)">−12 zł</span></div>
+            <div class="tt"><span>VAT 8%</span><span>18.24 zł</span></div>
+            <div class="tt grand"><span>Total</span><span>246.24 zł</span></div>
+          </div>
+          <button class="charge">Charge 246.24 zł</button>
+        </div>
+      </div>
+
+      <!-- ============ KDS ============ -->
+      <div class="sec-h" style="margin-top:6px">
+        <h2>KDS — Kitchen Wall</h2>
+        <span class="note fixno">▲ fix 5 · old names · fix 3 · same strip</span>
+      </div>
+      <div class="kwall">
+        <!-- KPI band = unified stat strip (frosted cells) -->
+        <div class="strip">
+          <div class="stat glass acc-brand"><div class="k">Active</div><div class="v">18</div><div class="s">tickets</div><div class="glow g-brand"></div></div>
+          <div class="stat glass acc-amber"><div class="k">At risk</div><div class="v">4</div><div class="s">&lt;3m to SLA</div><div class="glow g-amber"></div></div>
+          <div class="stat glass acc-danger"><div class="k">Late</div><div class="v">2</div><div class="s">over target</div><div class="glow g-danger"></div></div>
+          <div class="stat glass acc-basil"><div class="k">Ready</div><div class="v">6</div><div class="s">to bump</div><div class="glow g-basil"></div></div>
+          <div class="stat glass"><div class="k">Throughput</div><div class="v">41<span style="font-size:13px">/h</span></div><div class="s">tickets</div><div class="glow g-info"></div></div>
+          <div class="stat glass"><div class="k">Covers</div><div class="v">96<span style="font-size:13px">/h</span></div><div class="s">served</div><div class="glow g-basil"></div></div>
+          <div class="stat glass acc-brand"><div class="k">Revenue</div><div class="v">3.1<span style="font-size:13px">k</span></div><div class="s">zł /hr</div><div class="glow g-brand"></div></div>
+        </div>
+
+        <!-- STATION STRIP -->
+        <div class="stations">
+          <div class="station"><span class="sd" style="background:var(--brand)"></span><b>Forno 1</b><span class="load">6 in · 92%</span></div>
+          <div class="station"><span class="sd" style="background:var(--brand)"></span><b>Forno 2</b><span class="load">5 in · 84%</span></div>
+          <div class="station"><span class="sd" style="background:var(--amber)"></span><b>Pasta</b><span class="load">4 in · 76%</span></div>
+          <div class="station"><span class="sd" style="background:var(--basil)"></span><b>Freddo</b><span class="load">3 in · 48%</span></div>
+          <div class="station"><span class="sd" style="background:var(--info)"></span><b>Dolci</b><span class="load">2 in · 30%</span></div>
+          <div class="station"><span class="sd" style="background:var(--danger)"></span><b>Expo</b><span class="load">bottleneck</span></div>
+        </div>
+
+        <!-- LANES -->
+        <div class="lanes">
+          <!-- NEW -->
+          <div>
+            <div class="lane-h"><span>New</span><span>7</span></div>
+            <div class="ticket t-info">
+              <div class="tk-h"><span class="tbl">T14 · Dine-in</span><span class="due info">6:40</span></div>
+              <div class="tk-items"><span class="qq">1×</span> Margherita · <span class="qq">1×</span> Diavola · <span class="qq">2×</span> Marinara</div>
+              <div class="cook"><i class="f-info" style="width:22%"></i></div>
+              <button class="bump">Firing →</button>
+            </div>
+            <div class="ticket t-info">
+              <div class="tk-h"><span class="tbl">TK-208 · Take</span><span class="due info">8:10</span></div>
+              <div class="tk-items"><span class="qq">1×</span> Capricciosa · <span class="qq">1×</span> Ortolana</div>
+              <div class="cook"><i class="f-info" style="width:14%"></i></div>
+              <button class="bump">Firing →</button>
+            </div>
+          </div>
+          <!-- FIRING -->
+          <div>
+            <div class="lane-h"><span>Firing</span><span>9</span></div>
+            <div class="ticket t-amber">
+              <div class="tk-h"><span class="tbl">T07 · Dine-in</span><span class="due amber">2:05</span></div>
+              <div class="tk-items"><span class="qq">1×</span> Bufala DOP · <span class="qq">1×</span> Tartufo · <span class="qq">1×</span> Tagliatelle</div>
+              <div class="cook"><i class="f-amber" style="width:74%"></i></div>
+              <button class="bump">Bump ↑</button>
+            </div>
+            <div class="ticket t-danger">
+              <div class="tk-h"><span class="tbl">T11 · Dine-in</span><span class="due danger">−1:20</span></div>
+              <div class="tk-items"><span class="qq">2×</span> Diavola · <span class="qq">1×</span> Panini Parma</div>
+              <div class="cook"><i class="f-danger" style="width:96%"></i></div>
+              <button class="bump">Bump ↑</button>
+            </div>
+            <div class="ticket t-info">
+              <div class="tk-h"><span class="tbl">DLV-77 · Bolt</span><span class="due info">5:30</span></div>
+              <div class="tk-items"><span class="qq">3×</span> Margherita · <span class="qq">1×</span> Bufala DOP</div>
+              <div class="cook"><i class="f-info" style="width:52%"></i></div>
+              <button class="bump">Bump ↑</button>
+            </div>
+          </div>
+          <!-- READY -->
+          <div>
+            <div class="lane-h"><span>Ready</span><span>6</span></div>
+            <div class="ticket t-basil">
+              <div class="tk-h"><span class="tbl">T03 · Dine-in</span><span class="due basil">done</span></div>
+              <div class="tk-items"><span class="qq">1×</span> Marinara · <span class="qq">1×</span> Ortolana</div>
+              <div class="cook"><i class="f-basil" style="width:100%"></i></div>
+              <button class="bump ready">✓ Serve</button>
+            </div>
+            <div class="ticket t-basil">
+              <div class="tk-h"><span class="tbl">TK-201 · Take</span><span class="due basil">done</span></div>
+              <div class="tk-items"><span class="qq">2×</span> Capricciosa · <span class="qq">1×</span> Tiramisù</div>
+              <div class="cook"><i class="f-basil" style="width:100%"></i></div>
+              <button class="bump ready">✓ Handoff</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SERVICE (shared frame) ============ -->
+      <div class="sec-h" style="margin-top:6px">
+        <h2>Service — Floor · Slots · Dispatch</h2>
+        <span class="note fixno">▲ fix 4 · one identical frame</span>
+      </div>
+      <div class="svc3">
+        <!-- FLOOR -->
+        <div class="frame glass lift">
+          <div class="frame-h"><h3>Floor</h3><span class="chip">52 / 74 seats</span></div>
+          <div class="tiles">
+            <div class="tile seated"><div class="tn">T10</div><div class="tm">2 cov · 14m</div></div>
+            <div class="tile seated"><div class="tn">T07</div><div class="tm">4 cov · 38m</div></div>
+            <div class="tile billing"><div class="tn">T03</div><div class="tm">3 cov · pay</div></div>
+            <div class="tile free"><div class="tn">T05</div><div class="tm">free</div></div>
+            <div class="tile seated"><div class="tn">T11</div><div class="tm">2 cov · 52m</div></div>
+            <div class="tile reserved"><div class="tn">T12</div><div class="tm">rsv 17:30</div></div>
+            <div class="tile free"><div class="tn">T14</div><div class="tm">free</div></div>
+            <div class="tile seated"><div class="tn">T08</div><div class="tm">5 cov · 21m</div></div>
+            <div class="tile billing"><div class="tn">T02</div><div class="tm">2 cov · pay</div></div>
+          </div>
+        </div>
+        <!-- SLOTS -->
+        <div class="frame glass lift">
+          <div class="frame-h"><h3>Slots</h3><span class="chip surge">⚡ surge +18%</span></div>
+          <div class="slot"><div class="slot-h"><span class="tm">18:00</span><span class="cp">22 / 30</span></div><div class="bar"><i style="width:73%"></i></div></div>
+          <div class="slot"><div class="slot-h"><span class="tm">18:30</span><span class="cp">28 / 30</span></div><div class="bar"><i class="hot" style="width:93%"></i></div></div>
+          <div class="slot"><div class="slot-h"><span class="tm">19:00</span><span class="cp">30 / 30</span></div><div class="bar"><i class="hot" style="width:100%"></i></div></div>
+          <div class="slot"><div class="slot-h"><span class="tm">19:30</span><span class="cp">19 / 30</span></div><div class="bar"><i style="width:63%"></i></div></div>
+          <div class="slot"><div class="slot-h"><span class="tm">20:00</span><span class="cp">11 / 30</span></div><div class="bar"><i class="cool" style="width:37%"></i></div></div>
+          <div class="slot"><div class="slot-h"><span class="tm">20:30</span><span class="cp">7 / 30</span></div><div class="bar"><i class="cool" style="width:23%"></i></div></div>
+        </div>
+        <!-- DISPATCH -->
+        <div class="frame glass lift">
+          <div class="frame-h"><h3>Dispatch</h3><span class="chip">5 en route</span></div>
+          <div class="driver"><div class="av">MK</div><div class="dn"><b>Marek K.</b><small>DLV-77 · 2 stops</small></div><span class="eta" style="color:var(--info)">8m</span><span class="st-tag st-run">running</span></div>
+          <div class="driver"><div class="av">JW</div><div class="dn"><b>Jula W.</b><small>DLV-74 · Kazimierz</small></div><span class="eta" style="color:var(--info)">12m</span><span class="st-tag st-run">running</span></div>
+          <div class="driver"><div class="av">PT</div><div class="dn"><b>Piotr T.</b><small>returning to base</small></div><span class="eta" style="color:var(--basil)">4m</span><span class="st-tag st-ret">return</span></div>
+          <div class="driver"><div class="av">AN</div><div class="dn"><b>Ania N.</b><small>DLV-79 · Podgórze</small></div><span class="eta" style="color:var(--info)">16m</span><span class="st-tag st-run">running</span></div>
+          <div class="driver"><div class="av">RG</div><div class="dn"><b>Rafał G.</b><small>available · base</small></div><span class="eta" style="color:var(--ink-3)">—</span><span class="st-tag st-idle">idle</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ CONTEXT DOCK ============ -->
+  <div class="dock glass">
+    <div class="sel"><b>Tab 4 · T10</b><small>2 covers · dine-in</small></div>
+    <div class="spine">
+      <span class="cs done"><span class="sp" style="background:var(--basil)"></span>Antipasti ✓</span>
+      <span class="arw">›</span>
+      <span class="cs fire"><span class="sp" style="background:var(--brand-bright)"></span>Primi firing</span>
+      <span class="arw">›</span>
+      <span class="cs"><span class="sp" style="background:var(--ink-3)"></span>Secondi ○</span>
+      <span class="arw">›</span>
+      <span class="cs"><span class="sp" style="background:var(--ink-3)"></span>Dolci ○</span>
+    </div>
+    <div class="tot">246.24 zł</div>
+    <div class="acts">
+      <button class="dbtn fire">🔥 Fire</button>
+      <button class="dbtn pay">Pay</button>
+    </div>
+  </div>
+
+  <!-- ============ WHAT CHANGED ============ -->
+  <aside class="changed glass">
+    <h4>What changed <span>6 fixes</span></h4>
+    <ol>
+      <li>POS rail — pure icon-only, count badges</li>
+      <li>Lens rail expands on <b>click</b>, not hover</li>
+      <li>KDS KPIs use the shared stat strip</li>
+      <li>Floor · Slots · Dispatch share one frame</li>
+      <li>Old names POS + KDS · <span style="font-family:var(--mono);color:var(--basil)">core ❯ pos:order</span></li>
+      <li>Check redesigned — header, channel, coursing, totals</li>
+    </ol>
+  </aside>
+
+</div>
+</body>
+</html>

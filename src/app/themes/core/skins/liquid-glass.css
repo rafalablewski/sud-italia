@@ -104,7 +104,7 @@
   box-shadow: 0 6px 18px -4px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, .22);
 }
 /* Lens Rail — frosted glass column so the aurora refracts through it. */
-.core[data-skin="liquid-glass"] .core-rail {
+.core[data-skin="liquid-glass"] .core-lens {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   border-right-color: var(--line-2);
@@ -128,11 +128,30 @@
    fills to transparent so the aurora reaches the glass. The KDS wall
    (`.core-kds`) and fullscreen kiosk (`.core-kiosk`) are deliberately
    excluded — they stay a dark wall (skins.md rule 2). */
-.core[data-skin="liquid-glass"] .core-menu,
 .core[data-skin="liquid-glass"] .core-pos-embed,
 .core[data-skin="liquid-glass"] .core-thread,
 .core[data-skin="liquid-glass"] .core-cap-inspect {
   background: transparent;
+}
+/* POS middle column reads as layered glass like the mockup: a frosted menu
+   surface (the translucent fill still refracts the aurora through the blur) with
+   the cards sitting ON it, and the open-check strip as its own frosted bar. */
+.core[data-skin="liquid-glass"] .core-menu {
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+}
+.core[data-skin="liquid-glass"] .core-checkbar {
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  border-bottom-color: var(--line-2);
+}
+/* cards stay subtle over the frosted menu (panel-2, not the full sheen) so the
+   surface reads layered, not frosted-on-frosted */
+.core[data-skin="liquid-glass"] .core-prod {
+  background: var(--panel-2);
+}
+.core[data-skin="liquid-glass"] .core-prod:hover {
+  background: var(--lg-sheen), var(--lg-fill);
 }
 
 /* ---------- surface primitives → glass ---------- */

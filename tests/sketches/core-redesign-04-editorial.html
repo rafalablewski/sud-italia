@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Core — Glass Editorial 04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --ui:"Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+
+  --bg:#0a0806; --ink:#fbf6ee; --ink-2:#d9cbba; --ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075); --panel-2:rgba(255,255,255,.05); --panel-3:rgba(255,255,255,.11); --hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14); --line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e; --brand-bright:#ff9463; --brand-wash:rgba(232,107,62,.18); --on-accent:#2a160b;
+  --basil:#7dc464; --basil-wash:rgba(125,196,100,.18); --on-basil:#0c1a0f;
+  --amber:#f0ad46; --amber-wash:rgba(240,173,70,.18);
+  --info:#54bce0; --info-wash:rgba(84,188,224,.2);
+  --danger:#ff5a5c; --danger-wash:rgba(255,90,92,.2);
+
+  --lg-blur:blur(22px) saturate(175%);
+  --lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);
+  --lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+
+  --pill:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;line-height:1.45;
+}
+body{
+  min-height:100vh;
+  background:
+   radial-gradient(70% 55% at 10% 4%, rgba(232,107,62,.34), transparent 62%),
+   radial-gradient(65% 60% at 92% 96%, rgba(84,188,224,.27), transparent 62%),
+   radial-gradient(55% 45% at 80% 12%, rgba(240,173,70,.22), transparent 58%),
+   radial-gradient(60% 55% at 20% 92%, rgba(125,196,100,.18), transparent 60%),
+   radial-gradient(95% 80% at 50% 42%, rgba(232,107,62,.11), transparent 72%),
+   var(--bg);
+  background-attachment:fixed;
+}
+::selection{background:var(--brand-wash);color:var(--ink)}
+svg{display:block}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+code{font-family:var(--mono);font-size:.92em}
+
+/* ============ GLASS PRIMITIVES ============ */
+.glass{
+  background:var(--lg-sheen),var(--lg-fill);
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);
+  box-shadow:var(--lg-float),var(--lg-rim);
+  border-radius:14px;
+}
+.card{
+  background:var(--lg-sheen),var(--lg-fill);
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);
+  box-shadow:var(--lg-float),var(--lg-rim);
+  border-radius:14px;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 24px 60px -14px rgba(0,0,0,.68),0 6px 18px rgba(0,0,0,.44),var(--lg-rim);border-color:var(--line-2)}
+
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.rule{height:1px;background:var(--line);margin:9px 0 0}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px}
+.sec-head .eyebrow-r{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.mono{font-family:var(--mono)}
+.tag{display:inline-flex;align-items:center;padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.04em;border:1px solid var(--line)}
+.t-v{color:var(--basil);background:var(--basil-wash)}
+.t-vg{color:var(--basil);background:var(--basil-wash)}
+.t-gf{color:var(--amber);background:var(--amber-wash)}
+
+/* ============ LAYOUT ============ */
+.shell{display:flex;flex-direction:column;min-height:100vh}
+
+/* command bar */
+.cmd{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;gap:14px;padding:9px 16px;
+  background:linear-gradient(150deg,rgba(255,255,255,.16),rgba(255,255,255,.05) 40%,rgba(255,255,255,.03));
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 8px 30px -12px rgba(0,0,0,.6);
+}
+.lights{display:flex;gap:7px;padding-right:4px}
+.lights i{width:11px;height:11px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.lights i:nth-child(1){background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.prompt{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:2px;white-space:nowrap}
+.prompt .p-core{color:var(--ink-3)}
+.prompt .p-path{color:var(--brand-bright)}
+.caret{display:inline-block;width:8px;height:15px;background:var(--basil);margin-left:3px;border-radius:1px;animation:blink 1.05s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.tabs{display:flex;gap:6px;margin-left:4px}
+.tab-chip{font-family:var(--mono);font-size:11px;text-transform:lowercase;color:var(--ink-3);padding:4px 10px;border-radius:8px;border:1px solid transparent}
+.tab-chip.on{color:var(--ink);background:var(--panel);border-color:var(--line)}
+.cmd-spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;padding:5px 10px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.pill.qr{color:var(--info);border-color:rgba(84,188,224,.4);background:var(--info-wash)}
+.pill.search{color:var(--ink-3)}
+.pill.search kbd{font-family:var(--mono);background:var(--panel-3);border-radius:4px;padding:0 4px;font-size:9.5px;color:var(--ink-2)}
+.tele{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.tele .risk{color:var(--amber)}
+.tele .clock{color:var(--basil)}
+.iconbtn{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);position:relative}
+.iconbtn:hover{background:var(--hover)}
+.badge{position:absolute;top:-4px;right:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--brand);color:var(--on-accent);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px rgba(10,8,6,.6)}
+
+/* body split */
+.body{flex:1;display:flex;min-height:0}
+
+/* LENS RAIL (click-expand) */
+.lens{
+  width:60px;flex-shrink:0;padding:12px 8px;display:flex;flex-direction:column;gap:6px;align-items:stretch;
+  background:linear-gradient(150deg,rgba(255,255,255,.11),rgba(255,255,255,.035) 55%,rgba(255,255,255,.02));
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border-right:1px solid var(--line);
+  transition:width .22s ease;
+}
+#lens-toggle:checked ~ .body .lens{width:186px}
+.lens-pin{
+  display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:10px;color:var(--ink-3);
+  border:1px solid transparent;cursor:pointer;
+}
+.lens-pin:hover{background:var(--hover);color:var(--ink-2)}
+.lens-pin .glyph{width:26px;flex-shrink:0;display:grid;place-items:center;font-size:16px}
+.lens-pin .lbl{font-size:12px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity .18s ease}
+#lens-toggle:checked ~ .body .lens .lbl{opacity:1}
+.lens-item{
+  display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:11px;color:var(--ink-3);
+  border:1px solid transparent;position:relative;
+}
+.lens-item:hover{background:var(--hover);color:var(--ink)}
+.lens-item .glyph{width:26px;flex-shrink:0;display:grid;place-items:center;font-size:17px}
+.lens-item .lbl{font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity .18s ease}
+#lens-toggle:checked ~ .body .lens .lens-item .lbl{opacity:1}
+.lens-item.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.lens-item.on .glyph{color:var(--brand-bright)}
+.lens-sep{height:1px;background:var(--line);margin:5px 4px}
+#lens-toggle{display:none}
+
+/* main scroll */
+.main{flex:1;min-width:0;overflow:auto;padding:20px 22px 130px}
+.grid{display:grid;grid-template-columns:64px minmax(0,1.05fr) minmax(360px,.82fr);gap:20px;max-width:1560px;margin:0 auto}
+
+/* POS CATEGORY RAIL (icon only) */
+.catrail{display:flex;flex-direction:column;gap:9px;position:sticky;top:8px;align-self:start}
+.cat{
+  width:64px;height:64px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--ink-3);position:relative;
+  background:var(--lg-sheen),var(--lg-fill);backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);box-shadow:var(--lg-rim);
+  transition:transform .16s ease, color .16s ease, border-color .16s;
+}
+.cat:hover{color:var(--ink);transform:translateY(-2px);border-color:var(--line-2)}
+.cat.on{color:var(--brand-bright);border-color:rgba(232,107,62,.5);background:var(--lg-sheen),linear-gradient(150deg,rgba(232,107,62,.22),rgba(232,107,62,.05))}
+.cat .cbadge{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink-2)}
+.cat.on .cbadge{color:var(--brand-bright)}
+.cat .tip{
+  position:absolute;left:72px;top:50%;transform:translateY(-50%) scale(.96);transform-origin:left;
+  background:var(--panel-3);backdrop-filter:blur(10px);border:1px solid var(--line);
+  padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .14s ease, transform .14s ease;z-index:5;box-shadow:var(--lg-float)}
+.cat:hover .tip{opacity:1;transform:translateY(-50%) scale(1)}
+
+/* MENU column */
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+/* unified stat strip */
+.statstrip{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;overflow:hidden}
+.stat{padding:16px 16px 15px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:none}
+.stat .s-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.stat .s-val{font-family:var(--display);font-weight:700;font-size:34px;line-height:.92;letter-spacing:-.03em;color:var(--ink)}
+.stat .s-val small{font-size:15px;font-weight:600;color:var(--ink-3);letter-spacing:0}
+.stat .s-sub{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-top:6px}
+.stat.acc-amber .s-val{color:var(--amber)}
+.stat.acc-danger .s-val{color:var(--danger)}
+.stat.acc-basil .s-val{color:var(--basil)}
+.stat.acc-info .s-val{color:var(--info)}
+.stat.acc-brand .s-val{color:var(--brand-bright)}
+
+/* menu grid */
+.menu-wrap{padding:16px 16px 18px}
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.dish{
+  padding:13px 14px;border-radius:13px;cursor:pointer;position:relative;
+  background:var(--lg-sheen),var(--lg-fill);backdrop-filter:blur(14px);
+  border:1px solid var(--line);box-shadow:var(--lg-rim);
+  transition:transform .16s ease, border-color .16s ease;
+}
+.dish:hover{transform:translateY(-2px);border-color:var(--line-2)}
+.dish .d-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.dish .d-name{font-family:var(--display);font-weight:600;font-size:16px;letter-spacing:-.01em}
+.dish .d-price{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+.dish .d-desc{font-size:11.5px;color:var(--ink-3);margin-top:4px;line-height:1.35}
+.dish .d-tags{display:flex;gap:5px;margin-top:9px;min-height:16px}
+
+/* ============ ORDER TICKET ============ */
+.order{display:flex;flex-direction:column;gap:0;position:sticky;top:8px;align-self:start}
+.ticket{padding:0;overflow:hidden}
+.tk-head{padding:15px 16px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.tk-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tk-check{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.02em}
+.tk-check span{color:var(--ink-3);font-size:13px;font-weight:500;font-family:var(--mono);margin-left:6px}
+.assign{font-family:var(--mono);font-size:10.5px;color:var(--info);border:1px solid rgba(84,188,224,.4);background:var(--info-wash);padding:5px 9px;border-radius:8px}
+.covers{display:flex;align-items:center;gap:10px}
+.covers .cv-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.stepper{display:flex;align-items:center;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:2px}
+.stepper button{width:26px;height:26px;border-radius:7px;color:var(--ink-2);font-size:15px;font-weight:600;display:grid;place-items:center}
+.stepper button:hover{background:var(--hover);color:var(--ink)}
+.stepper .cv-num{font-family:var(--mono);font-size:14px;font-weight:700;width:26px;text-align:center;color:var(--ink)}
+
+/* segmented */
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;font-family:var(--ui);font-size:11.5px;font-weight:600;color:var(--ink-3);padding:6px 4px;border-radius:7px;letter-spacing:.01em}
+.seg button.on{color:var(--ink);background:var(--lg-fill);box-shadow:var(--lg-rim);border:1px solid var(--line)}
+.seg.small button{font-size:10.5px;padding:5px 4px}
+.fieldrow{display:grid;grid-template-columns:56px 1fr;gap:8px 12px;align-items:center}
+.fieldrow .f-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* line items + coursing */
+.tk-body{padding:6px 16px 14px}
+.course{margin-top:12px}
+.course-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 6px}
+.course-head .c-name{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.course-head .c-name .dotc{width:6px;height:6px;border-radius:50%}
+.fire{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--brand-bright);border:1px solid rgba(232,107,62,.4);background:var(--brand-wash);padding:4px 10px;border-radius:7px;text-transform:uppercase;letter-spacing:.08em}
+.fire.done{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:none}
+.li .li-q{font-family:var(--mono);font-size:12px;color:var(--ink-3);width:20px;flex-shrink:0}
+.li .li-n{flex:1;font-size:13px;color:var(--ink);font-weight:500}
+.li .li-n em{display:block;font-style:normal;font-size:10.5px;color:var(--ink-3);font-family:var(--mono);margin-top:1px}
+.li .li-p{font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+.offer-chip{margin:12px 0 2px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:10px;background:var(--info-wash);border:1px dashed rgba(84,188,224,.45)}
+.offer-chip .oc-txt{font-size:11.5px;color:var(--info);font-weight:600}
+.offer-chip .oc-txt em{font-style:normal;color:var(--ink-3);font-family:var(--mono);font-size:10px;display:block;margin-top:1px}
+.offer-chip .oc-add{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--info);border:1px solid rgba(84,188,224,.5);border-radius:7px;padding:3px 9px}
+
+/* totals */
+.totals{padding:13px 16px;border-top:1px solid var(--line);background:var(--panel-2)}
+.trow{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;padding:3px 0;color:var(--ink-2)}
+.trow .tv{font-family:var(--mono)}
+.trow.neg{color:var(--basil)}
+.trow.grand{margin-top:6px;padding-top:9px;border-top:1px solid var(--line)}
+.trow.grand .tk-lbl{font-family:var(--display);font-weight:700;font-size:17px;color:var(--ink)}
+.trow.grand .tv{font-family:var(--display);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-.02em}
+.charge{
+  margin:14px 16px 16px;padding:15px;border-radius:13px;width:calc(100% - 32px);
+  font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;color:var(--on-accent);
+  background:linear-gradient(150deg,var(--brand-bright),var(--brand));
+  box-shadow:0 10px 26px -8px rgba(232,107,62,.6),inset 0 1px 0 rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:transform .14s ease, box-shadow .14s ease;
+}
+.charge:hover{transform:translateY(-2px);box-shadow:0 16px 34px -8px rgba(232,107,62,.7),inset 0 1px 0 rgba(255,255,255,.5)}
+.charge .ch-amt{font-family:var(--mono);opacity:.85}
+
+/* ============ KDS WALL (STAYS DARK) ============ */
+.kds-section{margin-top:26px}
+.kds-wall{
+  margin-top:14px;border-radius:16px;padding:16px;
+  background:linear-gradient(180deg,rgba(6,5,4,.72),rgba(4,3,2,.85));
+  border:1px solid rgba(255,247,235,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 20px 50px -18px rgba(0,0,0,.7);
+}
+.kds-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.kds-kpi{padding:12px 13px;border-radius:12px;
+  background:var(--lg-sheen),var(--lg-fill);backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);box-shadow:var(--lg-rim)}
+.kds-kpi .s-lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+.kds-kpi .s-val{font-family:var(--display);font-weight:700;font-size:26px;line-height:.9;letter-spacing:-.03em;color:var(--ink)}
+.kds-kpi .s-val small{font-size:12px;color:var(--ink-3);font-weight:600}
+.kds-kpi.acc-amber .s-val{color:var(--amber)}
+.kds-kpi.acc-danger .s-val{color:var(--danger)}
+.kds-kpi.acc-basil .s-val{color:var(--basil)}
+.kds-kpi.acc-info .s-val{color:var(--info)}
+.kds-kpi.acc-brand .s-val{color:var(--brand-bright)}
+
+/* station strip */
+.stations{display:flex;gap:8px;margin:14px 0 0;flex-wrap:wrap}
+.station{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,247,235,.09)}
+.station .st-dot{width:7px;height:7px;border-radius:50%}
+.station .st-n{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.station .st-load{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+
+/* lanes */
+.lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.lane-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
+.lane-head .lh-n{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.lane-head .lh-c{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.lane{display:flex;flex-direction:column;gap:10px}
+.tk{
+  border-radius:11px;padding:11px 12px 12px 14px;position:relative;
+  background:rgba(20,17,13,.72);border:1px solid rgba(255,247,235,.1);
+  border-left:3px solid var(--ink-3);
+  box-shadow:0 8px 22px -12px rgba(0,0,0,.6);
+}
+.tk.firing{border-left-color:var(--info)}
+.tk.risk{border-left-color:var(--amber)}
+.tk.late{border-left-color:var(--danger)}
+.tk.ready{border-left-color:var(--basil)}
+.tk-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.tk-tab{font-family:var(--display);font-weight:700;font-size:14px}
+.tk-due{font-family:var(--mono);font-size:11px;font-weight:600}
+.tk.firing .tk-due{color:var(--info)}
+.tk.risk .tk-due{color:var(--amber)}
+.tk.late .tk-due{color:var(--danger)}
+.tk.ready .tk-due{color:var(--basil)}
+.tk-items{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+.tk-it{font-size:11.5px;color:var(--ink-2)}
+.tk-it b{color:var(--ink-3);font-family:var(--mono);font-weight:600;font-size:10.5px;margin-right:5px}
+.cook{height:5px;border-radius:3px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:9px}
+.cook i{display:block;height:100%;border-radius:3px}
+.cook.firing i{background:var(--info)}
+.cook.risk i{background:var(--amber)}
+.cook.late i{background:var(--danger)}
+.cook.ready i{background:var(--basil)}
+.bump{width:100%;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,247,235,.12);color:var(--ink-2)}
+.bump:hover{background:var(--hover);color:var(--ink)}
+.tk.ready .bump{color:var(--basil);border-color:rgba(125,196,100,.35);background:var(--basil-wash)}
+
+/* ============ SERVICE ============ */
+.service{margin-top:26px}
+.svc-grid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:16px;margin-top:14px}
+.frame{padding:15px 15px 16px}
+.frame-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.frame-head .fh-n{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.frame-head .fh-x{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.frame .fr-rule{height:1px;background:var(--line);margin:9px 0 13px}
+
+/* floor tiles */
+.floor{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tbl{padding:11px 11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2)}
+.tbl.occ{background:var(--brand-wash);border-color:rgba(232,107,62,.35)}
+.tbl.check{background:var(--amber-wash);border-color:rgba(240,173,70,.35)}
+.tbl.free{background:var(--basil-wash);border-color:rgba(125,196,100,.3)}
+.tbl .tb-n{font-family:var(--display);font-weight:700;font-size:15px}
+.tbl .tb-meta{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-top:3px;display:flex;justify-content:space-between}
+.tbl.occ .tb-meta{color:var(--brand-bright)}
+.tbl.check .tb-meta{color:var(--amber)}
+.tbl.free .tb-meta{color:var(--basil)}
+
+/* slots */
+.slot{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.slot:last-child{border-bottom:none}
+.slot .sl-t{font-family:var(--mono);font-size:11px;color:var(--ink-2);width:44px}
+.slot .sl-bar{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.slot .sl-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--brand),var(--brand-bright))}
+.slot .sl-c{font-family:var(--mono);font-size:10px;color:var(--ink-3);width:38px;text-align:right}
+.surge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;color:var(--amber);background:var(--amber-wash);border:1px solid rgba(240,173,70,.4);border-radius:7px;padding:3px 8px}
+
+/* dispatch */
+.driver{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.driver:last-child{border-bottom:none}
+.driver .dv-av{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:12px;background:var(--panel-3);border:1px solid var(--line);color:var(--ink)}
+.driver .dv-mid{flex:1;min-width:0}
+.driver .dv-n{font-size:12.5px;font-weight:600;color:var(--ink)}
+.driver .dv-s{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.driver .dv-eta{font-family:var(--mono);font-size:11px;font-weight:600}
+.dv-st{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
+.dv-st.en{color:var(--info);background:var(--info-wash)}
+.dv-st.back{color:var(--basil);background:var(--basil-wash)}
+.dv-st.load{color:var(--amber);background:var(--amber-wash)}
+
+/* ============ CONTEXT DOCK ============ */
+.dock{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:50;
+  display:flex;align-items:center;gap:16px;padding:11px 14px;max-width:min(960px,94vw);
+  background:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.06) 42%,rgba(255,255,255,.03));
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line-2);border-radius:16px;
+  box-shadow:0 24px 60px -14px rgba(0,0,0,.7),var(--lg-rim);
+}
+.dock .dk-check{font-family:var(--display);font-weight:700;font-size:15px;white-space:nowrap}
+.dock .dk-check span{font-family:var(--mono);font-size:11px;color:var(--ink-3);font-weight:500;margin-left:5px}
+.spine{display:flex;align-items:center;gap:9px;padding:0 4px}
+.spine .sp{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-3);white-space:nowrap}
+.spine .sp .d{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.spine .sp.done{color:var(--basil)}.spine .sp.done .d{background:var(--basil)}
+.spine .sp.fire{color:var(--info)}.spine .sp.fire .d{background:var(--info);box-shadow:0 0 8px var(--info)}
+.spine .arrow{color:var(--ink-3);opacity:.5}
+.dock .dk-total{font-family:var(--display);font-weight:700;font-size:16px;white-space:nowrap;margin-left:auto;line-height:1.05}
+.dock .dk-total small{font-family:var(--mono);font-size:9px;color:var(--ink-3);display:block;text-align:right;font-weight:500}
+.dk-btn{font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:9px 16px;border-radius:10px;white-space:nowrap}
+.dk-btn.fire{color:var(--on-accent);background:linear-gradient(150deg,var(--brand-bright),var(--brand));box-shadow:0 6px 16px -6px rgba(232,107,62,.6)}
+.dk-btn.pay{color:var(--ink);background:var(--panel-3);border:1px solid var(--line-2)}
+.dk-btn.pay:hover{background:var(--hover)}
+
+/* ============ WHAT CHANGED legend ============ */
+.changed{
+  position:fixed;right:14px;bottom:92px;z-index:45;width:272px;
+  background:linear-gradient(150deg,rgba(255,255,255,.15),rgba(255,255,255,.05) 45%,rgba(255,255,255,.03));
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);border-radius:14px;box-shadow:var(--lg-float),var(--lg-rim);
+  overflow:hidden;
+}
+.changed-h{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;cursor:pointer;user-select:none}
+.changed-h .ch-t{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand-bright)}
+.changed-h .ch-x{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.changed-body{padding:2px 13px 12px;display:flex;flex-direction:column;gap:7px}
+#chg-toggle{display:none}
+#chg-toggle:checked ~ .changed-body{display:none}
+.chg{display:flex;gap:8px;font-size:10.5px;color:var(--ink-2);line-height:1.35}
+.chg b{font-family:var(--mono);color:var(--basil);flex-shrink:0}
+
+.caption{font-family:var(--mono);font-size:9px;color:var(--ink-3);letter-spacing:.02em;margin-top:8px;opacity:.9}
+.hint{font-family:var(--mono);font-size:9px;color:var(--info);letter-spacing:.04em}
+
+@media(max-width:1180px){
+  .grid{grid-template-columns:64px 1fr}
+  .order{grid-column:1/-1;position:static}
+  .kds-kpis{grid-template-columns:repeat(4,1fr)}
+  .svc-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- lens toggle lives at top so its :checked sibling selector reaches .body -->
+<input type="checkbox" id="lens-toggle" />
+
+<div class="shell">
+
+  <!-- =============== COMMAND BAR =============== -->
+  <header class="cmd">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="prompt"><span class="p-core">core</span>&nbsp;❯&nbsp;<span class="p-path">pos:order</span><span class="caret"></span></div>
+    <div class="tabs">
+      <span class="tab-chip on">pos</span>
+      <span class="tab-chip">kds</span>
+      <span class="tab-chip">floor</span>
+      <span class="tab-chip">book</span>
+    </div>
+    <div class="cmd-spacer"></div>
+    <span class="pill qr">◱ qr-orders · 4</span>
+    <button class="iconbtn" title="Fullscreen">⤢</button>
+    <span class="pill search">search <kbd>⌘K</kbd></span>
+    <div class="tele">
+      <span class="risk">▲ risk 3</span>
+      <span>loc krakow</span>
+      <span class="clock">16:16</span>
+    </div>
+    <button class="iconbtn" title="Notifications">🔔<span class="badge">5</span></button>
+    <button class="iconbtn" title="Theme">◐</button>
+  </header>
+
+  <div class="body">
+    <!-- =============== LENS RAIL (click to expand) =============== -->
+    <nav class="lens">
+      <label class="lens-pin" for="lens-toggle" title="Toggle rail">
+        <span class="glyph">☰</span><span class="lbl">Collapse rail</span>
+      </label>
+      <div class="lens-sep"></div>
+      <a class="lens-item" title="Floor"><span class="glyph">▦</span><span class="lbl">Floor</span></a>
+      <a class="lens-item on" title="POS"><span class="glyph">▤</span><span class="lbl">POS</span></a>
+      <a class="lens-item" title="KDS"><span class="glyph">◲</span><span class="lbl">KDS</span></a>
+      <a class="lens-item" title="Book"><span class="glyph">◷</span><span class="lbl">Book</span></a>
+      <div class="lens-sep"></div>
+      <a class="lens-item" title="Reports"><span class="glyph">◰</span><span class="lbl">Reports</span></a>
+      <a class="lens-item" title="Settings"><span class="glyph">⚙</span><span class="lbl">Settings</span></a>
+    </nav>
+
+    <!-- =============== MAIN =============== -->
+    <main class="main">
+      <div class="grid">
+
+        <!-- POS ICON CATEGORY RAIL -->
+        <aside class="catrail">
+          <button class="cat on"><span style="font-size:19px">★</span><span class="cbadge">11</span><span class="tip">Popular · 11 items</span></button>
+          <button class="cat"><span style="font-size:19px">⊞</span><span class="cbadge">23</span><span class="tip">All · 23 items</span></button>
+          <button class="cat"><span style="font-size:19px">◕</span><span class="cbadge">8</span><span class="tip">Pizza · 8</span></button>
+          <button class="cat"><span style="font-size:19px">〰</span><span class="cbadge">4</span><span class="tip">Pasta · 4</span></button>
+          <button class="cat"><span style="font-size:19px">◔</span><span class="cbadge">5</span><span class="tip">Antipasti · 5</span></button>
+          <button class="cat"><span style="font-size:19px">▭</span><span class="cbadge">2</span><span class="tip">Panini · 2</span></button>
+          <button class="cat"><span style="font-size:19px">✳</span><span class="cbadge">3</span><span class="tip">Desserts · 3</span></button>
+          <button class="cat"><span style="font-size:19px">◍</span><span class="cbadge">2</span><span class="tip">Drinks · 2</span></button>
+        </aside>
+
+        <!-- MENU COLUMN -->
+        <section class="col">
+          <!-- unified stat strip: POS -->
+          <div>
+            <div class="sec-head">
+              <div class="eyebrow">Service pulse · Kraków</div>
+              <div class="eyebrow-r">unified stat component</div>
+            </div>
+            <div class="rule"></div>
+            <div class="statstrip glass" style="margin-top:14px">
+              <div class="stat"><div class="s-lbl">Open checks</div><div class="s-val">17</div><div class="s-sub">of 22 tables</div></div>
+              <div class="stat acc-basil"><div class="s-lbl">Covers now</div><div class="s-val">62</div><div class="s-sub">seated</div></div>
+              <div class="stat acc-brand"><div class="s-lbl">Avg check</div><div class="s-val">148<small>zł</small></div><div class="s-sub">+6% wk</div></div>
+              <div class="stat acc-amber"><div class="s-lbl">Wait quote</div><div class="s-val">18<small>min</small></div><div class="s-sub">surge</div></div>
+              <div class="stat acc-info"><div class="s-lbl">Turn rate</div><div class="s-val">1.7<small>×</small></div><div class="s-sub">tonight</div></div>
+            </div>
+          </div>
+
+          <!-- MENU -->
+          <div>
+            <div class="sec-head">
+              <div class="eyebrow">Menu · Popular ★</div>
+              <div class="eyebrow-r">tap to add · vat 8%</div>
+            </div>
+            <div class="rule"></div>
+            <div class="card menu-wrap" style="margin-top:14px">
+              <div class="eyebrow" style="color:var(--brand-bright)">◕ Pizza · wood-fired</div>
+              <div class="menu-grid">
+                <div class="dish"><div class="d-top"><span class="d-name">Margherita</span><span class="d-price">38 zł</span></div><div class="d-desc">San Marzano, fior di latte, basil, EVO</div><div class="d-tags"><span class="tag t-v">V</span></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Diavola</span><span class="d-price">46 zł</span></div><div class="d-desc">Spicy salame, 'nduja, chilli, mozzarella</div><div class="d-tags"></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Tartufo</span><span class="d-price">58 zł</span></div><div class="d-desc">Truffle cream, mushroom, taleggio, egg</div><div class="d-tags"><span class="tag t-v">V</span></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Marinara</span><span class="d-price">32 zł</span></div><div class="d-desc">Tomato, garlic, oregano — no cheese</div><div class="d-tags"><span class="tag t-vg">VG</span></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Bufala DOP</span><span class="d-price">54 zł</span></div><div class="d-desc">Mozzarella di bufala, datterini, basil</div><div class="d-tags"><span class="tag t-v">V</span></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Capricciosa</span><span class="d-price">52 zł</span></div><div class="d-desc">Ham, artichoke, mushroom, olives, egg</div><div class="d-tags"></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Ortolana</span><span class="d-price">48 zł</span></div><div class="d-desc">Grilled courgette, aubergine, peppers</div><div class="d-tags"><span class="tag t-vg">VG</span><span class="tag t-gf">GF</span></div></div>
+                <div class="dish"><div class="d-top"><span class="d-name">Salsiccia</span><span class="d-price">50 zł</span></div><div class="d-desc">Fennel sausage, friarielli, provola</div><div class="d-tags"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =============== KDS =============== -->
+          <div class="kds-section">
+            <div class="sec-head">
+              <div class="eyebrow">◲ KDS · Kitchen wall</div>
+              <div class="eyebrow-r">same unified stat strip · board stays dark</div>
+            </div>
+            <div class="rule"></div>
+            <div class="kds-wall">
+              <div class="kds-kpis">
+                <div class="kds-kpi"><div class="s-lbl">Active</div><div class="s-val">14</div></div>
+                <div class="kds-kpi acc-amber"><div class="s-lbl">At risk</div><div class="s-val">3</div></div>
+                <div class="kds-kpi acc-danger"><div class="s-lbl">Late</div><div class="s-val">1</div></div>
+                <div class="kds-kpi acc-basil"><div class="s-lbl">Ready</div><div class="s-val">5</div></div>
+                <div class="kds-kpi acc-info"><div class="s-lbl">Throughput</div><div class="s-val">41<small>/hr</small></div></div>
+                <div class="kds-kpi"><div class="s-lbl">Covers</div><div class="s-val">58<small>/hr</small></div></div>
+                <div class="kds-kpi acc-brand"><div class="s-lbl">Revenue</div><div class="s-val">2.9<small>k zł/hr</small></div></div>
+              </div>
+
+              <div class="stations">
+                <div class="station"><span class="st-dot" style="background:var(--brand)"></span><span class="st-n">Forno</span><span class="st-load">6 firing · 90s</span></div>
+                <div class="station"><span class="st-dot" style="background:var(--amber)"></span><span class="st-n">Pasta</span><span class="st-load">3 · busy</span></div>
+                <div class="station"><span class="st-dot" style="background:var(--basil)"></span><span class="st-n">Freddi</span><span class="st-load">2 · ok</span></div>
+                <div class="station"><span class="st-dot" style="background:var(--info)"></span><span class="st-n">Fritti</span><span class="st-load">1 · ok</span></div>
+                <div class="station"><span class="st-dot" style="background:var(--danger)"></span><span class="st-n">Dolci</span><span class="st-load">2 · queued</span></div>
+              </div>
+
+              <div class="lanes">
+                <!-- NEW -->
+                <div class="lane">
+                  <div class="lane-head"><span class="lh-n">New</span><span class="lh-c">4</span></div>
+                  <div class="tk">
+                    <div class="tk-h"><span class="tk-tab">T7</span><span class="tk-due" style="color:var(--ink-3)">queued</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>2×</b>Margherita</div><div class="tk-it"><b>1×</b>Marinara</div></div>
+                    <div class="cook"><i style="width:8%;background:var(--ink-3)"></i></div>
+                    <button class="bump">Start</button>
+                  </div>
+                  <div class="tk">
+                    <div class="tk-h"><span class="tk-tab">T15</span><span class="tk-due" style="color:var(--ink-3)">queued</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>1×</b>Tartufo</div><div class="tk-it"><b>1×</b>Bufala DOP</div><div class="tk-it"><b>2×</b>Aperol</div></div>
+                    <div class="cook"><i style="width:5%;background:var(--ink-3)"></i></div>
+                    <button class="bump">Start</button>
+                  </div>
+                </div>
+                <!-- FIRING -->
+                <div class="lane">
+                  <div class="lane-head"><span class="lh-n">Firing</span><span class="lh-c">6</span></div>
+                  <div class="tk firing">
+                    <div class="tk-h"><span class="tk-tab">T10</span><span class="tk-due">3:40</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>1×</b>Diavola</div><div class="tk-it"><b>1×</b>Salsiccia</div></div>
+                    <div class="cook firing"><i style="width:58%"></i></div>
+                    <button class="bump">Bump →</button>
+                  </div>
+                  <div class="tk risk">
+                    <div class="tk-h"><span class="tk-tab">T3</span><span class="tk-due">0:55</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>3×</b>Margherita</div><div class="tk-it"><b>1×</b>Ortolana</div></div>
+                    <div class="cook risk"><i style="width:82%"></i></div>
+                    <button class="bump">Bump →</button>
+                  </div>
+                  <div class="tk late">
+                    <div class="tk-h"><span class="tk-tab">T12</span><span class="tk-due">−1:20 late</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>2×</b>Capricciosa</div></div>
+                    <div class="cook late"><i style="width:100%"></i></div>
+                    <button class="bump">Bump →</button>
+                  </div>
+                </div>
+                <!-- READY -->
+                <div class="lane">
+                  <div class="lane-head"><span class="lh-n">Ready · pass</span><span class="lh-c">5</span></div>
+                  <div class="tk ready">
+                    <div class="tk-h"><span class="tk-tab">T5</span><span class="tk-due">plated</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>2×</b>Bufala DOP</div><div class="tk-it"><b>1×</b>Marinara</div></div>
+                    <div class="cook ready"><i style="width:100%"></i></div>
+                    <button class="bump">Serve ✓</button>
+                  </div>
+                  <div class="tk ready">
+                    <div class="tk-h"><span class="tk-tab">T18</span><span class="tk-due">plated</span></div>
+                    <div class="tk-items"><div class="tk-it"><b>1×</b>Tartufo</div><div class="tk-it"><b>1×</b>Tiramisù</div></div>
+                    <div class="cook ready"><i style="width:100%"></i></div>
+                    <button class="bump">Serve ✓</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =============== SERVICE =============== -->
+          <div class="service">
+            <div class="sec-head">
+              <div class="eyebrow">Service · Floor · Slots · Dispatch</div>
+              <div class="eyebrow-r">one identical frame ×3</div>
+            </div>
+            <div class="rule"></div>
+            <div class="svc-grid">
+              <!-- FLOOR -->
+              <div class="card frame">
+                <div class="frame-head"><span class="fh-n">▦ Floor</span><span class="fh-x">22 tables · 62 covers</span></div>
+                <div class="fr-rule"></div>
+                <div class="floor">
+                  <div class="tbl occ"><div class="tb-n">T3</div><div class="tb-meta"><span>4 cv</span><span>52′</span></div></div>
+                  <div class="tbl check"><div class="tb-n">T5</div><div class="tb-meta"><span>2 cv</span><span>check</span></div></div>
+                  <div class="tbl occ"><div class="tb-n">T7</div><div class="tb-meta"><span>3 cv</span><span>8′</span></div></div>
+                  <div class="tbl free"><div class="tb-n">T8</div><div class="tb-meta"><span>—</span><span>open</span></div></div>
+                  <div class="tbl occ"><div class="tb-n">T10</div><div class="tb-meta"><span>5 cv</span><span>34′</span></div></div>
+                  <div class="tbl occ"><div class="tb-n">T12</div><div class="tb-meta"><span>2 cv</span><span>71′</span></div></div>
+                  <div class="tbl free"><div class="tb-n">T14</div><div class="tb-meta"><span>—</span><span>open</span></div></div>
+                  <div class="tbl occ"><div class="tb-n">T15</div><div class="tb-meta"><span>6 cv</span><span>19′</span></div></div>
+                  <div class="tbl check"><div class="tb-n">T18</div><div class="tb-meta"><span>2 cv</span><span>check</span></div></div>
+                </div>
+              </div>
+              <!-- SLOTS -->
+              <div class="card frame">
+                <div class="frame-head"><span class="fh-n">◷ Slots</span><span class="surge">▲ demand surge</span></div>
+                <div class="fr-rule"></div>
+                <div class="slot"><span class="sl-t">18:00</span><span class="sl-bar"><i style="width:64%"></i></span><span class="sl-c">16/25</span></div>
+                <div class="slot"><span class="sl-t">18:30</span><span class="sl-bar"><i style="width:88%"></i></span><span class="sl-c">22/25</span></div>
+                <div class="slot"><span class="sl-t">19:00</span><span class="sl-bar"><i style="width:100%"></i></span><span class="sl-c">25/25</span></div>
+                <div class="slot"><span class="sl-t">19:30</span><span class="sl-bar"><i style="width:96%"></i></span><span class="sl-c">24/25</span></div>
+                <div class="slot"><span class="sl-t">20:00</span><span class="sl-bar"><i style="width:72%"></i></span><span class="sl-c">18/25</span></div>
+                <div class="slot"><span class="sl-t">20:30</span><span class="sl-bar"><i style="width:40%"></i></span><span class="sl-c">10/25</span></div>
+              </div>
+              <!-- DISPATCH -->
+              <div class="card frame">
+                <div class="frame-head"><span class="fh-n">◈ Dispatch</span><span class="fh-x">3 en route</span></div>
+                <div class="fr-rule"></div>
+                <div class="driver"><div class="dv-av">MK</div><div class="dv-mid"><div class="dv-n">Marek K.</div><div class="dv-s">#4821 · Kazimierz</div></div><span class="dv-eta" style="color:var(--info)">6′</span><span class="dv-st en">en route</span></div>
+                <div class="driver"><div class="dv-av">PJ</div><div class="dv-mid"><div class="dv-n">Paweł J.</div><div class="dv-s">#4819 · Podgórze</div></div><span class="dv-eta" style="color:var(--info)">11′</span><span class="dv-st en">en route</span></div>
+                <div class="driver"><div class="dv-av">AN</div><div class="dv-mid"><div class="dv-n">Ania N.</div><div class="dv-s">#4823 · loading</div></div><span class="dv-eta" style="color:var(--amber)">2′</span><span class="dv-st load">loading</span></div>
+                <div class="driver"><div class="dv-av">TW</div><div class="dv-mid"><div class="dv-n">Tomek W.</div><div class="dv-s">returning to base</div></div><span class="dv-eta" style="color:var(--basil)">4′</span><span class="dv-st back">back</span></div>
+              </div>
+            </div>
+            <div class="caption">Fix #4 — Floor · Slots · Dispatch reuse ONE identical <code>.frame</code> (same head, rule, body).</div>
+          </div>
+        </section>
+
+        <!-- =============== ORDER TICKET =============== -->
+        <aside class="order">
+          <div class="sec-head">
+            <div class="eyebrow">▤ POS · Order ticket</div>
+          </div>
+          <div class="rule"></div>
+          <div class="ticket card" style="margin-top:14px">
+            <!-- HEAD -->
+            <div class="tk-head">
+              <div class="tk-top">
+                <div class="tk-check">Tab 4 <span>· T10</span></div>
+                <button class="assign">◎ Assign table</button>
+              </div>
+              <div class="covers">
+                <span class="cv-lbl">Covers</span>
+                <div class="stepper"><button>−</button><span class="cv-num">2</span><button>+</button></div>
+                <span style="flex:1"></span>
+                <span class="cv-lbl">Server · Giulia</span>
+              </div>
+              <!-- channel segmented -->
+              <div class="fieldrow">
+                <span class="f-lbl">Channel</span>
+                <div class="seg"><button class="on">Dine-in</button><button>Takeaway</button><button>Delivery</button></div>
+              </div>
+              <!-- kitchen timing -->
+              <div class="fieldrow">
+                <span class="f-lbl">Timing</span>
+                <div class="seg small"><button class="on">Coursed</button><button>All together</button></div>
+              </div>
+            </div>
+
+            <!-- BODY: line items by course -->
+            <div class="tk-body">
+              <!-- Antipasti -->
+              <div class="course">
+                <div class="course-head">
+                  <span class="c-name"><span class="dotc" style="background:var(--basil)"></span>Antipasti</span>
+                  <button class="fire done">✓ Fired</button>
+                </div>
+                <div class="li"><span class="li-q">1×</span><span class="li-n">Burrata &amp; datterini<em>+ Parma ham</em></span><span class="li-p">34 zł</span></div>
+                <div class="li"><span class="li-q">1×</span><span class="li-n">Arancini <span class="tag t-v" style="margin-left:4px">V</span></span><span class="li-p">22 zł</span></div>
+              </div>
+              <!-- Primi -->
+              <div class="course">
+                <div class="course-head">
+                  <span class="c-name"><span class="dotc" style="background:var(--info)"></span>Primi</span>
+                  <button class="fire">▲ Fire</button>
+                </div>
+                <div class="li"><span class="li-q">1×</span><span class="li-n">Diavola<em>extra 'nduja</em></span><span class="li-p">46 zł</span></div>
+                <div class="li"><span class="li-q">1×</span><span class="li-n">Tartufo</span><span class="li-p">58 zł</span></div>
+                <div class="li"><span class="li-q">1×</span><span class="li-n">Bufala DOP</span><span class="li-p">54 zł</span></div>
+              </div>
+              <!-- Dolci -->
+              <div class="course">
+                <div class="course-head">
+                  <span class="c-name"><span class="dotc" style="background:var(--ink-3)"></span>Dolci</span>
+                  <button class="fire">▲ Fire</button>
+                </div>
+                <div class="li"><span class="li-q">2×</span><span class="li-n">Tiramisù</span><span class="li-p">36 zł</span></div>
+              </div>
+
+              <!-- CROSS-SELL offer -->
+              <div class="offer-chip">
+                <span class="oc-txt">+ Aperol Spritz<em>pairs with antipasti</em></span>
+                <button class="oc-add">add 24 zł</button>
+              </div>
+            </div>
+
+            <!-- TOTALS -->
+            <div class="totals">
+              <div class="trow"><span class="tk-lbl">Subtotal</span><span class="tv">284.00 zł</span></div>
+              <div class="trow neg"><span class="tk-lbl">Combo · Pizza + dolce</span><span class="tv">−18.00 zł</span></div>
+              <div class="trow"><span class="tk-lbl">VAT 8%</span><span class="tv">21.28 zł</span></div>
+              <div class="trow grand"><span class="tk-lbl">Total</span><span class="tv">287.28 zł</span></div>
+            </div>
+            <button class="charge">Charge <span class="ch-amt">287.28 zł</span></button>
+          </div>
+          <div class="caption">Fix #6 — header (check · covers −2+ · assign) · channel · timing · coursed items · totals · Charge.</div>
+        </aside>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- =============== CONTEXT DOCK =============== -->
+<div class="dock">
+  <div class="dk-check">Tab 4 <span>· T10 · 2 cv</span></div>
+  <div class="spine">
+    <span class="sp done"><span class="d"></span>Antipasti ✓</span>
+    <span class="arrow">›</span>
+    <span class="sp fire"><span class="d"></span>Primi firing</span>
+    <span class="arrow">›</span>
+    <span class="sp"><span class="d"></span>Secondi ○</span>
+    <span class="arrow">›</span>
+    <span class="sp"><span class="d"></span>Dolci ○</span>
+  </div>
+  <div class="dk-total">287.28 zł<small>vat incl</small></div>
+  <button class="dk-btn fire">▲ Fire primi</button>
+  <button class="dk-btn pay">Pay</button>
+</div>
+
+<!-- =============== WHAT CHANGED LEGEND =============== -->
+<div class="changed">
+  <input type="checkbox" id="chg-toggle" />
+  <label class="changed-h" for="chg-toggle">
+    <span class="ch-t">What changed · 6 fixes</span>
+    <span class="ch-x">▾</span>
+  </label>
+  <div class="changed-body">
+    <div class="chg"><b>1</b><span>POS category rail is icon-only (~64px), hover-title + count badge.</span></div>
+    <div class="chg"><b>2</b><span>Left lens rail expands on click of the ☰ pin — not hover.</span></div>
+    <div class="chg"><b>3</b><span>KDS KPI band uses the same unified stat component as POS.</span></div>
+    <div class="chg"><b>4</b><span>Floor · Slots · Dispatch share one identical frame.</span></div>
+    <div class="chg"><b>5</b><span>Old names kept: POS + KDS in rail; prompt <span class="hint">core ❯ pos:order</span>.</span></div>
+    <div class="chg"><b>6</b><span>Ticket redesigned: covers stepper, channel, timing, coursing, VAT, Charge.</span></div>
+  </div>
+</div>
+
+</body>
+</html>

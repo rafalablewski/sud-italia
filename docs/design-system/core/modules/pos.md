@@ -19,8 +19,22 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 
 ## Layout
 
-A full-width **open-check bar** (`.core-checkbar`) over a three-column grid
-inside the shell body: **rail · menu · ticket**.
+The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
++ an uppercase-mono `<location> · dine-in service` sub, with a right-aligned
+`Till · <channel>` context tag) over the **`.core-statstrip`** — the
+dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
+over a three-column grid inside the shell body: **rail · menu · ticket**.
+
+- **`.core-statstrip`** — a hairline-divided glass panel of six live cells
+  (label · big mono value · colour-coded delta), every figure derived from the
+  till's **real, live state** (Rule #1 — no fetch, no invented numbers, the same
+  state the rail + ticket already show): **Open checks** (count · N parked) ·
+  **Covers seated** (dine-in covers · N dine-in checks) · **To pay** (ready
+  count · zł outstanding) · **Open value** (total open zł · avg check) ·
+  **In kitchen** (fired-check count) · **Pace** (the live server steering-plan
+  bottleneck util %, or "Clear" · bottleneck label). Toned by `--basil` /
+  `--amber` / `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
+  visual is documented in the theme README ("Stat strip").
 
 - **`.core-checkbar`** — spans the whole width above the panes (so it sits
   over the menu's steering banner): an optional `.core-sync-pill`, then the
@@ -39,18 +53,23 @@ inside the shell body: **rail · menu · ticket**.
   tells staff a send/charge made offline is saved and will land on
   reconnect — the visible end of the Phase 2b durable-queue path.
 
-- **`.core-rail`** — the category rail. A **★ Popular** chip first when
-  present (`.core-cat.pop`, ember fill, the default landing category) —
-  frequency-ranked top items for the current daypart from
-  `GET /api/admin/pos/popular` (real orders, Rule #1; hidden when empty) —
-  then an **All** chip (stacks every
-  category as `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over
-  the per-category `.core-cat` buttons — each lists only categories present
-  on the active location's menu, with a live item count (`.n`) and, when
-  steering is active, a `.core-cat-promise` per-category ETA (`~Nm` from
+- **`.core-rail.core-rail-icons`** — the category rail, **pure icon-only**
+  (collapsed, 56px): each category is a 44px boxed `.core-cat` icon button
+  (glyph from `CAT_ICON` in `CorePos.tsx`, `--panel-2` fill + hairline, ember
+  `.on`, count as a corner badge that sits just outside the box) with the label
+  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present (`.core-cat.pop`, ember
+  fill, the default landing category) — frequency-ranked top items for the
+  current daypart from `GET /api/admin/pos/popular` (real orders, Rule #1;
+  hidden when empty) — then an **All** chip (stacks every category as
+  `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over the
+  per-category `.core-cat` buttons — each lists only categories present on the
+  active location's menu, with a live item count as a corner badge (`.n`) and,
+  when steering is active, a `.core-cat-promise` per-category ETA (`~Nm` from
   `promiseSecondsByCategory`). `.on` = the selected category (filled ink).
-- **`.core-menu` / `.core-menu-grid`** — auto-fill grid of `.core-prod` cards.
-  Each card is **text-forward** (no photo dependency): `.pn` (display
+- **`.core-menu` / `.core-menu-grid`** — a dense auto-fill grid
+  (`minmax(178px,1fr)`, 8px gutters) of compact `.core-prod` cards (78px min,
+  `r-sm`, 9/10 padding — the dense-console density). Each card is
+  **text-forward** (no photo dependency): `.pn` (display
   name, with a `.core-role` menu-engineering badge — Hero / Profit / Anchor
   / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
   `.core-tagrow` of `.core-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
@@ -60,9 +79,15 @@ inside the shell body: **rail · menu · ticket**.
   with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
   the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
-  description can't make one card taller than its row-mates. Tapping a plain
+  description can't make one card taller than its row-mates. **Calm at rest**
+  (matching the mockup): on hover-capable devices the `.core-role` badge and the
+  ember `.add` button stay hidden until the card is hovered/focused (`@media
+  (hover: hover)`), so a resting card is just name · description · dietary tags ·
+  price; a touch till (`@media (hover: none)`) keeps them always visible so the
+  button stays tappable — no function lost. Tapping a plain
   card adds it straight to the check; a **customisable** card opens the line
-  editor first (see *Line editor* below). A **sold-out** card
+  editor first (see *Line editor* below). Cross-sell is capped at the top **2**
+  suggestions so the ticket stays calm (the combo prompt renders separately). A **sold-out** card
   (`.core-prod.sold-out` — base-unavailable OR live-86'd) is **not hidden**:
   it stays greyed + struck with a danger `.core-tag.off` "86 · sold out"
   chip, is disabled, and **sinks to the bottom** of its category (available
