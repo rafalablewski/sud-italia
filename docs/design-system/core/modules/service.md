@@ -12,10 +12,22 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
 - The live room: a 5-up KPI strip (covers seated · occupancy · turn time ·
   **spend / hr** · freeing ≤15m) over zoned table tiles. Each `.core-tbl2`
   is toned by state — free · seated · **freeing** (predicted ≤15m) ·
-  reserved · out-of-service — and shows party / dwell / open check; hover
-  reveals a `⋯` **edit** affordance.
-- **Tap a table → its check opens as a panel over the floor** — the core IA
-  move. The tile's main tap mounts the **embedded till** (`<CorePos embedded>`)
+  reserved · out-of-service. Tiles are **capacity-sized**
+  (`.core-tbl2-wrap.sz-md` / `.sz-lg` — a 6-top spans two columns and stands
+  taller with a bigger numeral) and carry **≤3 glance-facts**: number +
+  covers, the status/dwell line, and a **single most-urgent chip** chosen by
+  priority (allergy → unpaid → note → paid → open check) rather than stacking
+  them all. Hover reveals a `⋯` **edit** affordance. The tile of the **cross-lens selected
+  table** rings + ember-pulses via `.core-tbl2.is-focus` (shared
+  `@keyframes core-focus-pulse`, reduced-motion-guarded) — so the entity in
+  focus is visible on the Floor even after it was picked on another lens.
+- **Tap a table → a state-aware RadialActions bloom** (`.core-radial`,
+  portaled to the `.core` root per Rule #4) offers 3-4 verbs for that table's
+  state (seated → Open check · Move · Free · Edit; free/reserved → Seat · Reserve ·
+  Edit; out-of-service → Restore · Edit). The tap also feeds the Context Dock.
+  Zones are filterable via `.core-zonetabs` (All + one chip per zone).
+- **Open check → the check opens as a panel over the floor** — the core IA
+  move. The radial's **Open check** verb mounts the **embedded till** (`<CorePos embedded>`)
   in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled
   into the **`.core` theme root** (not `document.body`, so it keeps core tokens —
   same rule as `CoreDialog`). The panel opens (or focuses) that table's dine-in

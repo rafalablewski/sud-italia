@@ -60,22 +60,48 @@ Below, in order, the **safety-relevant** content the line needs:
 
 - `.core-tk-sim` — *Simulation — not a real order* (sandbox tickets; the
   card also goes dashed via `.core-tk.sim`).
-- `.core-tk-course` — *Coursed · Mains, Dessert held* when a dine-in check
-  has held courses (`t.coursing.held`).
+- `.core-tk-course.held` — *⊘ Mains · Dessert held* when a dine-in check
+  has held courses (`t.coursing.held`) — dimmed with a ⊘ so the line knows
+  they exist but aren't fired.
 - `.core-tk-items` — lines grouped by station (`.core-tk-grp` header per
   category, canonical order; headers shown only in the all-station Floor
   view). Each `.it` is `.q` qty + an `.it-body` (name, then `.mod`
   modifier lines — flagged picks render `.mod.flag` bold-amber — then any
   note). Items off the active station dim.
-- `.core-tk-alrg` — an amber allergen strip with a 3px left safety rule
-  (`Allergens · …`, deduped across the ticket), bold for emphasis. **Never
-  dropped** — it's a safety line. (The toned **due** clock in the header is the
-  big mono figure cooks track from.)
+- `.core-tk-alrg` — the allergen strip: **large + danger-red** with a 4px
+  left safety rule (`Allergens · …`, deduped across the ticket), the one
+  thing that must never be missed. **Never dropped, never dimmed** — kept
+  even in dense mode. (The toned **due** clock in the header is the big mono
+  figure cooks track from.)
 - `.core-tk-note` — the order's special instructions (`Note …`).
+
+`.core-tk.is-focus` — the ticket rings + ember-pulses (`@keyframes
+core-focus-pulse`, reduced-motion-guarded) when its table is the cross-lens
+selected entity (`KdsTicket.tableId === selection.id`), so a table picked on
+the Floor lens is visible here without hunting. Shared with `.core-tbl2.is-focus`
+(Floor tile) and `.core-pk.is-focus` (Book picker).
 
 Then a `.core-meter` cook-time bar and a `.core-bump` button. SLA **tone**
 drives the left border, due colour and meter fill: `queued · firing ·
 warn · risk · late · ready`.
+
+**Interaction (one wet hand):** the **whole card is the bump target**
+(`.core-tk.bumpable`, cursor + hover-lift) — a tap advances a step
+(`nextStatus`); the explicit `.core-bump` button and the `.core-tk-h` pin
+target both `stopPropagation` so they don't double-fire. A **long-press**
+(~550ms) steps the ticket **back** one status (`prevStatus`) — the on-card
+destructive recall. Both are optimistic + roll back on failure.
+
+**Column sort = SLA urgency** (`groupTicketsByColumn(tickets, station,
+nowMs)`): predictive tone first (late → risk → warn → …), then least slack
+vs the promise, then oldest-paid — the cook reads the ticket that needs a
+hand first, not just the oldest.
+
+**Pressure-adaptive density** (`.core-kds.dense`, set when the live
+at-risk/late counts tip to risk): cards compact (drop notes + non-flag
+modifier descriptions, tighten spacing; 44px targets kept), allergens +
+flagged mods stay (safety), and a pulsing danger rail runs across the top
+(reduced-motion-guarded).
 
 ## Engine + API contract
 

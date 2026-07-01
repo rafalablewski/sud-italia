@@ -17,6 +17,7 @@ import {
   fmtClock,
   groupTicketsByColumn,
   nextStatus,
+  prevStatus,
   toneForTicket,
 } from "@/core/kds/kds-board";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type OrderStatus } from "@/data/types";
@@ -148,13 +149,19 @@ const TicketCard = memo(function TicketCard({
   t,
   station,
   updating,
+  focused,
   onAdvance,
+  onRegress,
   onPick,
 }: {
   t: KdsTicket;
   station: MenuCategory | "all";
   updating: boolean;
+  /** True when this ticket's table is the cross-lens selected entity. */
+  focused?: boolean;
   onAdvance: (t: KdsTicket) => void;
+  /** Long-press = step the ticket back one status (destructive recall). */
+  onRegress?: (t: KdsTicket) => void;
   /** Pin this ticket to the persistent Context Dock (stable setter from the
    *  board's single useSelection() — keeps memoised tickets from re-rendering). */
   onPick?: (s: CoreSelection) => void;
@@ -171,11 +178,40 @@ const TicketCard = memo(function TicketCard({
   const grouped = station === "all" && groups.length > 1;
   const held = t.coursing?.held ?? [];
   const next = nextStatus(t.status);
+  const canRecall = !!onRegress && !!prevStatus(t.status);
+
+  // Whole card = bump; long-press = recall a step. The line has one wet hand:
+  // the entire card is the target, and a deliberate hold undoes a mis-bump.
+  const lp = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
+  const cancelPress = () => {
+    if (lp.current.timer) { clearTimeout(lp.current.timer); lp.current.timer = null; }
+  };
+  const startPress = () => {
+    if (t.simulated || !canRecall) return;
+    lp.current.fired = false;
+    lp.current.timer = setTimeout(() => { lp.current.fired = true; onRegress!(t); }, 550);
+  };
+  const onCardClick = () => {
+    if (lp.current.fired) { lp.current.fired = false; return; } // long-press already fired
+    if (t.simulated || !next) return;
+    onAdvance(t);
+  };
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
   return (
-    <div className={`core-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
+    <div
+      className={`core-tk t-${due.tone}${t.simulated ? " sim" : ""}${focused ? " is-focus" : ""}${next && !t.simulated ? " bumpable" : ""}`}
+      onClick={onCardClick}
+      onPointerDown={startPress}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onPointerCancel={cancelPress}
+      title={next && !t.simulated ? `Tap to ${BUMP_LABEL[t.status]}${canRecall ? " · hold to recall" : ""}` : undefined}
+    >
       <div
         className="core-tk-h"
-        onClick={() => {
+        onPointerDown={stop}
+        onClick={(e) => {
+          stop(e);
           if (t.simulated) return;
           onPick?.({
             kind: "order",
@@ -203,7 +239,7 @@ const TicketCard = memo(function TicketCard({
       </div>
       {t.simulated && <div className="core-tk-sim">Simulation — not a real order</div>}
       {held.length > 0 && (
-        <div className="core-tk-course">Coursed · {held.map((c) => POS_COURSE_LABELS[c]).join(", ")} held</div>
+        <div className="core-tk-course held">⊘ {held.map((c) => POS_COURSE_LABELS[c]).join(" · ")} held</div>
       )}
       <div className="core-tk-items">
         {groups.map(([label, items]) => (
@@ -237,7 +273,7 @@ const TicketCard = memo(function TicketCard({
         <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
       </div>
       {next && (
-        <button type="button" className="core-bump" disabled={updating} onClick={() => onAdvance(t)}>
+        <button type="button" className="core-bump" disabled={updating} onPointerDown={stop} onClick={(e) => { stop(e); onAdvance(t); }}>
           {BUMP_LABEL[t.status]}
         </button>
       )}
@@ -258,7 +294,7 @@ export function CoreKds() {
   // Single context read for the whole board — the stable `select` setter is
   // passed to each memoised TicketCard, so pinning a ticket to the Context Dock
   // never re-renders the other tickets.
-  const { select } = useSelection();
+  const { select, selected } = useSelection();
   const [view, setView] = useState<View>("floor");
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [lane, setLane] = useState<OrderStatus | "all">("all");
@@ -298,7 +334,7 @@ export function CoreKds() {
   const visibleByStatus = useMemo(() => {
     const analysis = analyzeTruck(orders, now);
     const tickets = orders.map((o) => buildKdsTicket(o, analysis.predictions.get(o.id), now));
-    return groupTicketsByColumn(tickets, station);
+    return groupTicketsByColumn(tickets, station, now);
   }, [orders, station, now]);
 
   const allTickets = useMemo(() => KDS_COLUMNS.flatMap((c) => visibleByStatus.get(c.id) ?? []), [visibleByStatus]);
@@ -309,6 +345,12 @@ export function CoreKds() {
     c.late = allTickets.filter((t) => t.promisedReadyAtMs !== null && t.promisedReadyAtMs < now && t.status !== "ready").length;
     return c;
   }, [visibleByStatus, allTickets, now]);
+
+  // Pressure-adaptive density (real signal, not a toggle): when the line tips
+  // to risk the board compacts — cards drop descriptions/notes, targets stay
+  // 44px, more tickets fit the wall. Derived from live at-risk/late counts.
+  const pressureTier: "calm" | "warn" | "risk" =
+    counts.late > 0 || counts.risk >= 3 ? "risk" : counts.risk >= 1 ? "warn" : "calm";
 
   // "All-day" — the batch the line cooks from: every still-to-make item (New +
   // Firing, not yet Ready) summed by dish across active tickets, biggest first.
@@ -355,6 +397,34 @@ export function CoreKds() {
         if (next === "completed") {
           setRecalls((r) => [{ orderId: t.id, label: `#${t.shortId}`, at: Date.now() }, ...r].slice(0, 5));
         }
+        refresh();
+      } finally {
+        setUpdatingId(null);
+      }
+    },
+    [updatingId, refresh, toast, patchOrder],
+  );
+
+  // Long-press on a card steps it BACK one status — the on-card destructive
+  // "recall" (ready→firing, firing→new). Optimistic + rolls back on failure,
+  // same idempotent PUT the bump uses.
+  const regress = useCallback(
+    async (t: KdsTicket) => {
+      const prev = prevStatus(t.status);
+      if (!prev || updatingId) return;
+      setUpdatingId(t.id);
+      patchOrder(t.id, { status: prev });
+      try {
+        const { res } = await idempotentFetch(`/api/admin/orders`, {
+          method: "PUT",
+          body: { orderId: t.id, status: prev },
+        });
+        if (!res || !res.ok) {
+          patchOrder(t.id, { status: t.status });
+          toast(res ? "Could not recall ticket" : "No connection — ticket not recalled", "danger");
+          return;
+        }
+        toast(`#${t.shortId} recalled to ${prev === "confirmed" ? "New" : "Firing"}`, "success");
         refresh();
       } finally {
         setUpdatingId(null);
@@ -553,8 +623,21 @@ export function CoreKds() {
     { label: "Chef", active: view === "chef", onClick: () => setView("chef") },
   ];
 
+  // Cross-lens focus: a table selected on any lens (Floor/dock) pulses its
+  // ticket here. Computed per-card so the memoised TicketCard only re-renders
+  // the cards whose focus actually flipped.
+  const focusTableId = selected?.kind === "table" ? selected.id : null;
   const renderTicket = (t: KdsTicket) => (
-    <TicketCard key={t.id} t={t} station={station} updating={updatingId === t.id} onAdvance={advance} onPick={select} />
+    <TicketCard
+      key={t.id}
+      t={t}
+      station={station}
+      updating={updatingId === t.id}
+      focused={!!focusTableId && t.tableId === focusTableId}
+      onAdvance={advance}
+      onRegress={regress}
+      onPick={select}
+    />
   );
 
   const controls =
@@ -605,7 +688,7 @@ export function CoreKds() {
   );
 
   const board = (
-    <div className="core-kds">
+    <div className={`core-kds${view !== "fleet" && pressureTier === "risk" ? " dense" : ""}`}>
         {view === "fleet" ? (
           <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
         ) : (

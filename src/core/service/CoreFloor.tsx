@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { useSelection } from "@/core/shell/SelectionContext";
+import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
+import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { CorePos } from "@/core/pos/CorePos";
 import { recommendSeating, type FloorTwin, type TwinTableRow } from "@/lib/floor-twin";
 import type { FloorTable, MenuItem, TableStatus } from "@/data/types";
@@ -61,7 +62,7 @@ export function CoreFloor({
   upsellByLocation: Record<string, UpsellConfig | null>;
 }) {
   const toast = useCoreToast();
-  const { select } = useSelection();
+  const { select, selected } = useSelection();
   const { location, activeLocations } = useLocation();
   // The table whose check is open over the floor (the docked check panel).
   const [checkTable, setCheckTable] = useState<TwinTableRow | null>(null);
@@ -89,6 +90,7 @@ export function CoreFloor({
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [party, setParty] = useState("2");
+  const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<TwinTableRow | "new" | null>(null);
   const [orders, setOrders] = useState<FloorOrderRow[]>([]);
   const [lookup, setLookup] = useState("");
@@ -134,6 +136,38 @@ export function CoreFloor({
     }
     return m;
   }, [orders]);
+
+  // Live "food up" — the same order stream the KDS bumps into. When a table's
+  // ticket hits `ready`, its tile pulses so the server sees food's up without
+  // walking the pass (the cross-surface half of the redesign's event spine).
+  const { orders: liveOrders } = useAdminOrdersStream(location);
+  const foodUpTables = useMemo(() => {
+    const s = new Set<string>();
+    for (const o of liveOrders) if (o.tableId && o.status === "ready") s.add(o.tableId);
+    return s;
+  }, [liveOrders]);
+
+  // Guest-ordered tables — a QR order the guest placed at a table, still active
+  // (the "fourth renderer" contributing to the floor). The tile flags it and,
+  // when a NEW one lands, the server gets a soft toast to review & fire.
+  const guestOrderedTables = useMemo(() => {
+    const s = new Set<string>();
+    for (const o of liveOrders) if (o.channel === "qr" && o.tableId && o.status !== "completed" && o.status !== "cancelled") s.add(o.tableId);
+    return s;
+  }, [liveOrders]);
+  const prevGuest = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const prev = prevGuest.current;
+    if (prev) {
+      for (const id of guestOrderedTables) {
+        if (!prev.has(id)) {
+          const num = twin?.tables.find((t) => t.id === id)?.number ?? "?";
+          toast(`T${num} — guest ordered · review & fire`, "default");
+        }
+      }
+    }
+    prevGuest.current = new Set(guestOrderedTables);
+  }, [guestOrderedTables, twin, toast]);
 
   const settle = async (orderId: string) => {
     if (settling) return;
@@ -184,6 +218,65 @@ export function CoreFloor({
   const act = (t: TwinTableRow) => {
     if (t.status === "out-of-service") return;
     void post(t.occupied ? "clear" : "seat", t.id, t.number);
+  };
+
+  // The dock/selection payload for a table — shared by the tile tap and the
+  // radial's "Open check" verb so both feed the Context Dock identically.
+  const buildSelection = (t: TwinTableRow): CoreSelection => {
+    const st = stateOf(t);
+    const tOrders = ordersByTable.get(t.id) ?? [];
+    const tUnpaid = tOrders.filter((o) => !o.paid);
+    const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
+    return {
+      kind: "table", id: t.id, label: `Table ${t.number}`,
+      sub: `${t.party ? `${t.party} / ${t.seats}` : `${t.seats}`} covers · ${t.zone || "Floor"}`,
+      status: st.label, statusCls: st.cls,
+      amount: tUnpaid.length > 0 ? `${zl2(tDue)} to pay` : tOrders.length > 0 ? "✓ paid" : t.openCheckGrosze ? `${zl0(t.openCheckGrosze)} open` : undefined,
+      amountDue: tUnpaid.length > 0,
+      note: t.notes || undefined,
+      allergy: t.notes ? ALLERGY_RE.test(t.notes) : false,
+      href: "/core/service/floor",
+    };
+  };
+  const openCheck = (t: TwinTableRow) => {
+    if (t.status === "out-of-service") return;
+    setCheckTable(t);
+    select(buildSelection(t));
+  };
+  // Contextual radial — a table tap blooms 3-4 verbs relevant to its state.
+  const [radial, setRadial] = useState<{ table: TwinTableRow; x: number; y: number } | null>(null);
+  // Move mode — after "Move", the next tapped table is the destination.
+  const [moveFrom, setMoveFrom] = useState<TwinTableRow | null>(null);
+  const startMove = (t: TwinTableRow) => { setMoveFrom(t); toast(`Move Table ${t.number} — tap the destination table`, "default"); };
+  const doMove = async (from: TwinTableRow, to: TwinTableRow) => {
+    setMoveFrom(null);
+    if (from.id === to.id) return;
+    setActing(to.id);
+    try {
+      const res = await fetch(`/api/admin/floor-twin?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move", tableId: from.id, toTableId: to.id }),
+      });
+      if (res.ok) { toast(`Moved Table ${from.number} → Table ${to.number}`, "success"); await load(); }
+      else { const j = await res.json().catch(() => ({})); toast(j.error || "Could not move", "danger"); }
+    } finally { setActing(null); }
+  };
+  const radialVerbs = (t: TwinTableRow): { label: string; icon: string; primary?: boolean; on: () => void }[] => {
+    if (t.status === "out-of-service")
+      return [{ label: "Restore", icon: "↻", primary: true, on: () => setEditing(t) }, { label: "Edit", icon: "⋯", on: () => setEditing(t) }];
+    if (t.occupied)
+      return [
+        { label: "Open check", icon: "🧾", primary: true, on: () => openCheck(t) },
+        { label: "Move", icon: "⇄", on: () => startMove(t) },
+        { label: "Free", icon: "✓", on: () => act(t) },
+        { label: "Edit", icon: "⋯", on: () => setEditing(t) },
+      ];
+    // free or reserved — bookable/seatable
+    return [
+      { label: "Seat", icon: "＋", primary: true, on: () => act(t) },
+      { label: "Reserve", icon: "📅", on: () => window.location.assign("/core/guest/book") },
+      { label: "Edit", icon: "⋯", on: () => setEditing(t) },
+    ];
   };
 
   // Optimistic merge so a created/edited/deleted table reflects instantly in
@@ -345,12 +438,24 @@ export function CoreFloor({
         </div>
 
         <div className="core-floor">
+          {zones.length > 1 && (
+            <div className="core-zonetabs">
+              <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
+                All<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+              </button>
+              {zones.map(([z, ts]) => (
+                <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
+                  {z}<span className="n">{ts.length}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {!twin ? (
             <div className="core-ctx-empty pad">Loading floor…</div>
           ) : zones.length === 0 ? (
             <div className="core-ctx-empty pad">No tables yet — add one to start modelling the floor.</div>
           ) : (
-            zones.map(([zone, tbls]) => (
+            (zoneFilter ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => (
               <div key={zone}>
                 <div className="core-zone-h">
                   <span className="zt">{zone}</span>
@@ -363,60 +468,51 @@ export function CoreFloor({
                     const tUnpaid = tOrders.filter((o) => !o.paid);
                     const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
                     const hasQr = tOrders.some((o) => o.channel === "qr");
+                    const isFocus = selected?.kind === "table" && selected.id === t.id;
+                    const foodUp = foodUpTables.has(t.id);
+                    const guestOrdered = guestOrderedTables.has(t.id);
+                    const allergy = !!t.notes && ALLERGY_RE.test(t.notes);
+                    // Capacity-sized tiles — a 6-top reads bigger than a deuce.
+                    const sizeCls = t.seats >= 6 ? "sz-lg" : t.seats >= 4 ? "sz-md" : "sz-sm";
+                    // At most ONE glance-fact beyond number+covers and the status
+                    // line — the single most urgent thing needing a human, in
+                    // priority order (allergy → unpaid → note → paid → open check).
+                    const urgent = foodUp ? (
+                      <span className="core-tfoodup">🔔 Food up</span>
+                    ) : guestOrdered ? (
+                      <span className="core-tguest">🛎 Guest ordered</span>
+                    ) : allergy ? (
+                      <span className="core-tnote-chip alrg" title={t.notes}>⚠ {t.notes}</span>
+                    ) : tUnpaid.length > 0 ? (
+                      <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
+                        {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
+                      </span>
+                    ) : t.notes ? (
+                      <span className="core-tnote-chip" title={t.notes}>📝 {t.notes}</span>
+                    ) : tOrders.length > 0 ? (
+                      <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
+                    ) : t.openCheckGrosze ? (
+                      <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
+                    ) : null;
                     return (
-                      <div key={t.id} className="core-tbl2-wrap">
+                      <div key={t.id} className={`core-tbl2-wrap ${sizeCls}`}>
                         <button
-                          className={`core-tbl2 ${st.cls}`}
-                          onClick={() => {
-                            if (t.status === "out-of-service") return;
-                            setCheckTable(t);
-                            // Also pin it to the persistent Context Dock so the
-                            // check follows across lenses (additive — the check
-                            // panel above is unchanged).
-                            select({
-                              kind: "table",
-                              id: t.id,
-                              label: `Table ${t.number}`,
-                              sub: `${t.party ? `${t.party} / ${t.seats}` : `${t.seats}`} covers · ${zone}`,
-                              status: st.label,
-                              statusCls: st.cls,
-                              amount:
-                                tUnpaid.length > 0
-                                  ? `${zl2(tDue)} to pay`
-                                  : tOrders.length > 0
-                                    ? "✓ paid"
-                                    : t.openCheckGrosze
-                                      ? `${zl0(t.openCheckGrosze)} open`
-                                      : undefined,
-                              amountDue: tUnpaid.length > 0,
-                              note: t.notes || undefined,
-                              allergy: t.notes ? ALLERGY_RE.test(t.notes) : false,
-                              href: "/core/service/floor",
-                            });
+                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}${moveFrom?.id === t.id ? " is-moving" : ""}`}
+                          onClick={(e) => {
+                            // In move mode, the next tap is the destination.
+                            if (moveFrom) { void doMove(moveFrom, t); return; }
+                            // Tap blooms the state-aware radial AND feeds the
+                            // dock (so the check follows across lenses on tap).
+                            select(buildSelection(t));
+                            const r = e.currentTarget.getBoundingClientRect();
+                            setRadial({ table: t, x: r.left + r.width / 2, y: r.top + r.height / 2 });
                           }}
-                          disabled={t.status === "out-of-service"}
-                          title={t.status === "out-of-service" ? "Out of service" : `Open Table ${t.number}'s check`}
+                          title={`Table ${t.number} — actions`}
                         >
                           <span className="tnum">{t.number}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
                           <span className={`tst ${st.cls}`}>● {st.label}</span>
-                          {t.notes ? (
-                            <span
-                              className={`core-tnote-chip${ALLERGY_RE.test(t.notes) ? " alrg" : ""}`}
-                              title={t.notes}
-                            >
-                              {ALLERGY_RE.test(t.notes) ? "⚠ " : "📝 "}{t.notes}
-                            </span>
-                          ) : null}
-                          {tUnpaid.length > 0 ? (
-                            <span className="core-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
-                              {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
-                            </span>
-                          ) : tOrders.length > 0 ? (
-                            <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
-                          ) : t.openCheckGrosze ? (
-                            <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
-                          ) : null}
+                          {urgent}
                         </button>
                         <button
                           type="button"
@@ -467,6 +563,24 @@ export function CoreFloor({
           (no navigation). Build / modify / course / split / pay all live in the
           embedded till. Portaled to <body> so the fixed panel escapes any
           stacking context (Rule #4). */}
+      {radial && coreRoot && createPortal(
+        <div className="core-radial-scrim" onClick={() => setRadial(null)}>
+          <div className="core-radial" style={{ left: radial.x, top: radial.y }} onClick={(e) => e.stopPropagation()}>
+            <div className="core-radial-h">Table {radial.table.number}</div>
+            {radialVerbs(radial.table).map((v) => (
+              <button
+                key={v.label}
+                type="button"
+                className={v.primary ? "core-radial-v primary" : "core-radial-v"}
+                onClick={() => { setRadial(null); v.on(); }}
+              >
+                <span className="ri" aria-hidden>{v.icon}</span>{v.label}
+              </button>
+            ))}
+          </div>
+        </div>,
+        coreRoot,
+      )}
       {checkTable && coreRoot && createPortal(
         <div
           className="core-check-overlay"

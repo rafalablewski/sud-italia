@@ -27,6 +27,9 @@ export interface KdsTicket {
   customerName: string;
   fulfillmentType: FulfillmentType;
   partySize?: number;
+  /** Assigned floor table (FloorTable.id) for dine-in — lets the Pass card
+   *  react to the cross-lens selection (a table picked on Floor pulses here). */
+  tableId?: string;
   status: OrderStatus;
   slotTime: string;
   specialInstructions?: string;
@@ -62,6 +65,7 @@ export function buildKdsTicket(o: Order, prediction: TicketPrediction | undefine
     customerName: o.customerName || "Guest",
     fulfillmentType: o.fulfillmentType,
     partySize: o.partySize,
+    tableId: o.tableId,
     status: o.status,
     slotTime: o.slotTime,
     specialInstructions: o.specialInstructions,

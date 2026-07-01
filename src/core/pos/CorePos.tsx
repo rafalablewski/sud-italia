@@ -61,9 +61,10 @@ const ALLERGY_CHIP = "⚠ ALLERGY: ";
 
 /** Tip presets (percent of the bill) offered in the tender sheet. */
 const TIP_PCTS = [0, 5, 10, 15];
-/** Comp reasons — all recorded server-side as `manager_comp` (the note carries
- *  the specific reason), so the per-shift comp cap counts them all. */
-const COMP_REASONS = ["Kitchen error", "Manager goodwill", "Birthday", "VIP / regular", "Long wait"];
+/** Comp reason codes (audit §3 — Quality · Wait · Goodwill · Error). All are
+ *  recorded server-side as `manager_comp` (the note carries the specific
+ *  reason), so the per-shift comp cap counts them all. */
+const COMP_REASONS = ["Quality", "Wait", "Goodwill", "Error"];
 
 /** Client tender payload sent to PATCH /api/admin/pos/orders. The server
  *  re-derives the bill and clamps every figure — this is only a proposal. */
@@ -74,6 +75,7 @@ type TenderInput = {
   payments?: { method: "cash" | "card"; amount: number }[];
   cashTenderedGrosze?: number;
   defaultMethod?: "cash" | "card";
+  compOverridePin?: string;
 };
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
@@ -124,6 +126,10 @@ export function CorePos({
   }, [location, menusByLocation]);
 
   const menu = useMemo(() => menusByLocation[pageLoc] ?? [], [menusByLocation, pageLoc]);
+  // Live 86 set — polled from the kitchen's authoritative override list so a
+  // sold-out item greys/strikes/sinks on the till within one poll, no reload.
+  // Declared up here because the availability filter below reads it.
+  const [eightySix, setEightySix] = useState<Set<string>>(new Set());
   const config = upsellByLocation[pageLoc] ?? null;
   const byId = useCallback((id: string) => menu.find((m) => m.id === id), [menu]);
 
@@ -131,8 +137,34 @@ export function CorePos({
     const present = new Set(menu.filter((m) => m.available).map((m) => m.category));
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [menu]);
-  const [cat, setCat] = useState<MenuCategory | "all" | null>(null);
-  const activeCat = cat && (cat === "all" || categories.includes(cat)) ? cat : categories[0] ?? null;
+  // ★ Popular / Smart — top item ids by real order frequency for the current
+  // daypart (server-computed). Shown as the FIRST category so the ~8 SKUs that
+  // are the bulk of taps are zero-scroll. Empty → the chip is simply hidden.
+  const [popularIds, setPopularIds] = useState<string[]>([]);
+  const loadPopular = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/pos/popular?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = (await res.json()) as { popular?: string[] };
+      setPopularIds(d.popular ?? []);
+    } catch {
+      /* non-fatal — the till just drops the Popular chip */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadPopular();
+  }, [loadPopular]);
+  // Popular items present on THIS menu, most-ordered first (ids the menu knows).
+  const popularItems = useMemo(
+    () => popularIds.map((id) => menu.find((m) => m.id === id)).filter((m): m is MenuItem => !!m),
+    [popularIds, menu],
+  );
+  const hasPopular = popularItems.length > 0;
+  const [cat, setCat] = useState<MenuCategory | "all" | "popular" | null>(null);
+  const catValid = (c: typeof cat) =>
+    c && (c === "all" || (c === "popular" && hasPopular) || (c !== "popular" && categories.includes(c)));
+  const activeCat = catValid(cat) ? cat : hasPopular ? "popular" : categories[0] ?? null;
 
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
@@ -711,12 +743,17 @@ export function CorePos({
   );
 
   const [tenderOpen, setTenderOpen] = useState(false);
+  // Bumped on a rejected charge → the open tender sheet shakes + stays put so
+  // the operator can retry on the same (failed) tender (recoverable, not a
+  // dead-end).
+  const [payErrorNonce, setPayErrorNonce] = useState(0);
   const pay = useCallback(
     async (tender: TenderInput, label: string) => {
       const t = getActive();
       if (!t || busyTabId) return;
       setBusyTabId(t.id);
-      setTenderOpen(false);
+      // Keep the tender sheet OPEN during the request — on reject it shakes and
+      // stays for a retry; it closes only on success (or when queued offline).
       try {
         const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
         const { res, queued } = await durableMutate({
@@ -735,14 +772,20 @@ export function CorePos({
         if (queued) {
           // Offline: close the check optimistically; the outbox charges it (once,
           // under its idempotency key) when the network returns.
+          setTenderOpen(false);
           closeTab();
           return toast(`Saved offline — charges ${label} on reconnect · #${t.id}`, "default");
         }
         const data = (await res!.json().catch(() => ({}))) as {
           error?: string; totalAmount?: number; tip?: number; comp?: number; change?: number;
         };
-        if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
+        if (!res!.ok) {
+          // Recoverable: shake the still-open sheet and invite another tender.
+          setPayErrorNonce((n) => n + 1);
+          return toast(`${data.error || "Payment declined"} — try another tender?`, "danger");
+        }
         const amt = data.totalAmount ?? grandG(t);
+        setTenderOpen(false);
         closeTab();
         const extras = [
           data.comp && data.comp > 0 ? `comp ${fmtPLN(data.comp)}` : "",
@@ -922,11 +965,35 @@ export function CorePos({
     }
   };
 
-  // Channel-true available menu; "all" shows every category stacked.
-  const channelMenu = menu.filter((m) => m.available && (active?.channel === "delivery" || !m.deliveryOnly));
-  const items = activeCat === "all" ? channelMenu : channelMenu.filter((m) => m.category === activeCat);
+  // Channel-appropriate + availability. A sold-out item (base-unavailable OR
+  // live-86'd) is NOT hidden — it stays on the grid greyed/struck and sinks to
+  // the bottom, so the line never taps it but always sees the gap.
+  const channelOk = (m: MenuItem) => active?.channel === "delivery" || !m.deliveryOnly;
+  const isAvail = (m: MenuItem) => m.available && !eightySix.has(m.id) && channelOk(m);
+  // available-only list — combos, cross-sell and every add-path use this.
+  const channelMenu = menu.filter(isAvail);
+  // grid list — channel-appropriate incl. sold-out; available first, 86'd sunk.
+  const gridSource = menu.filter(channelOk);
+  const items = (
+    activeCat === "popular"
+      ? popularItems.filter(channelOk)
+      : activeCat === "all"
+        ? gridSource
+        : gridSource.filter((m) => m.category === activeCat)
+  )
+    .slice()
+    .sort((a, b) => Number(isAvail(b)) - Number(isAvail(a)));
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
+  // Smart-default fire: the earliest course that has lines and isn't fired yet.
+  // A coursed check's primary action fires THIS (Starters first) instead of the
+  // whole check, so the common case is a single confirm; held courses follow.
+  const nextUnfiredCourse = useMemo(() => {
+    if (!active || !isCoursed) return null;
+    const fired = new Set(active.firedCourses ?? []);
+    const present = new Set(active.items.map((l) => courseOf(l)));
+    return POS_COURSE_ORDER.find((c) => present.has(c) && !fired.has(c)) ?? null;
+  }, [active, isCoursed]);
 
   // Combo-completion offer — a partially-matched deal one or two items short.
   const combo = active ? comboOf(active) : null;
@@ -997,6 +1064,22 @@ export function CorePos({
     void loadSteer();
   }, [loadSteer]);
   usePolling(loadSteer, 15000, { enabled: !!pageLoc });
+
+  const loadEightySix = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/kds/eighty-six?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = (await res.json()) as { eightySixed?: { id: string }[] };
+      setEightySix(new Set((d.eightySixed ?? []).map((x) => x.id)));
+    } catch {
+      /* non-fatal — the till just keeps the last known 86 set */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadEightySix();
+  }, [loadEightySix]);
+  usePolling(loadEightySix, 15000, { enabled: !!pageLoc });
 
   // --- Drag-to-recourse + fullscreen kiosk --------------------------------
   const dragItem = useRef<string | null>(null);
@@ -1071,12 +1154,16 @@ export function CorePos({
   // Tapping a card that has modifier groups opens the editor to configure the
   // line; a plain item adds straight to the check (the fast path is unchanged).
   const customisable = (m: MenuItem) => !!m.modifierGroups && m.modifierGroups.length > 0;
-  const productCard = (m: MenuItem) => (
+  const productCard = (m: MenuItem) => {
+    const soldOut = !isAvail(m);
+    return (
     <button
       key={m.id}
       type="button"
-      className="core-prod"
-      onClick={() => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
+      className={`core-prod${soldOut ? " sold-out" : ""}`}
+      disabled={soldOut}
+      title={soldOut ? "86'd — sold out" : undefined}
+      onClick={soldOut ? undefined : () => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
     >
       <div className="pn">
         {m.name}
@@ -1084,19 +1171,21 @@ export function CorePos({
       </div>
       <div className="pd">{m.description}</div>
       <div className="core-tagrow">
+        {soldOut && <span className="core-tag off">86 · sold out</span>}
         {m.tags.map((t) => (
           <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
         ))}
         {customisable(m) && <span className="core-tag opt">options</span>}
-        {steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
-        {steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
+        {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
+        {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
       </div>
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>{customisable(m) ? "⋯" : "+"}</span>
+        <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
       </div>
     </button>
-  );
+    );
+  };
 
   const lineRow = (l: PosTabLine, coursed: boolean) => {
     const m = byId(l.menuItemId);
@@ -1150,6 +1239,7 @@ export function CorePos({
           </div>
           <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
             {m.name}
+            {l.guestPending && <span className="ln-guest" title="Guest added via QR — review & fire">🛎 guest</span>}
             <span className="ln-pen" aria-hidden>✎</span>
           </button>
           <span className="lp mono">{zl(lineUnit * l.quantity)}</span>
@@ -1220,6 +1310,12 @@ export function CorePos({
         {/* category rail */}
         <aside className="core-rail">
           <div className="lbl">Menu</div>
+          {hasPopular && (
+            <button type="button" className={activeCat === "popular" ? "core-cat pop on" : "core-cat pop"} onClick={() => setCat("popular")}>
+              ★ Popular
+              <span className="n">{popularItems.filter(channelOk).length}</span>
+            </button>
+          )}
           <button type="button" className={activeCat === "all" ? "core-cat on" : "core-cat"} onClick={() => setCat("all")}>
             All
             <span className="n">{channelMenu.length}</span>
@@ -1491,12 +1587,29 @@ export function CorePos({
                   <span className="tl">Total</span>
                   <span className="tv mono">{zl(grandG(active))}</span>
                 </div>
+                {/* fire-moment upsell — the top cross-sell right at the Fire
+                    button, before the check goes away. One tap adds it to the
+                    check so it fires with the (next) course. */}
+                {!active.sentKds && offers.length > 0 && (
+                  <button type="button" className="core-fire-upsell" onClick={() => addLine(offers[0].item.id)} title="Adds it to the check so it fires with this course">
+                    <span className="u-plus">＋</span>
+                    <span className="u-t">Add <b>{offers[0].item.name}</b> before firing?</span>
+                    <span className="u-p mono">+{zl(offers[0].item.price)}</span>
+                  </button>
+                )}
                 <div className="core-foot-actions">
                   {!active.sentKds && (
-                    <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
-                      <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
-                      Send to KDS
-                    </button>
+                    nextUnfiredCourse ? (
+                      <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void fireCourse(nextUnfiredCourse)} title="Fires the earliest un-fired course; later courses stay held">
+                        <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
+                        Fire {POS_COURSE_LABELS[nextUnfiredCourse]} →
+                      </button>
+                    ) : (
+                      <button type="button" className="core-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
+                        <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
+                        Send to KDS
+                      </button>
+                    )
                   )}
                   <button
                     type="button"
@@ -1547,6 +1660,9 @@ export function CorePos({
       {tenderOpen && active && (
         <TenderDialog
           billG={grandG(active)}
+          location={pageLoc}
+          lines={cartOf(active).map((ci, i) => ({ key: String(i), label: ci.menuItem.name, qty: ci.quantity, amountG: effectiveUnitPrice(ci) * ci.quantity }))}
+          errorNonce={payErrorNonce}
           subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
           covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
           busy={!!busyTabId}
@@ -1874,6 +1990,9 @@ function LineEditorDialog({
 /* ── tender sheet — tip · comp · split · cash change ────────────────────── */
 function TenderDialog({
   billG,
+  location,
+  lines,
+  errorNonce,
   subtitle,
   covers,
   busy,
@@ -1881,18 +2000,48 @@ function TenderDialog({
   onCharge,
 }: {
   billG: number;
+  location: string;
+  lines: { key: string; label: string; qty: number; amountG: number }[];
+  errorNonce: number;
   subtitle: string;
   covers: number;
   busy: boolean;
   onClose: () => void;
   onCharge: (tender: TenderInput, label: string) => void;
 }) {
+  const [splitMode, setSplitMode] = useState<"even" | "item">("even");
+  // By-item: each line assigned to a payer (0-based). Per-payer share = their
+  // lines' weight × the actual total (so tip/comp distribute proportionally and
+  // the payments still sum to the charge).
+  const [assign, setAssign] = useState<Record<string, number>>({});
+  const payerOf = (k: string) => assign[k] ?? 0;
+  // Directional shake on a rejected charge (see payErrorNonce) — a brief,
+  // reduced-motion-guarded nudge that says "that tender didn't take, try again".
+  const [shake, setShake] = useState(false);
+  useEffect(() => {
+    if (errorNonce === 0) return;
+    setShake(true);
+    const id = setTimeout(() => setShake(false), 450);
+    return () => clearTimeout(id);
+  }, [errorNonce]);
   const [tipPct, setTipPct] = useState<number | "custom">(0);
   const [tipCustom, setTipCustom] = useState(""); // zł text
   const [compOpen, setCompOpen] = useState(false);
   const [compZl, setCompZl] = useState("");
   const [compReason, setCompReason] = useState(COMP_REASONS[0]);
+  const [compPin, setCompPin] = useState(""); // manager PIN for an over-cap comp
   const [splitN, setSplitN] = useState(1);
+  // Live per-shift comp status for the acting user (drives the cap meter).
+  const [compStatus, setCompStatus] = useState<{ compTodayGrosze: number; capGrosze: number; singleMaxGrosze: number; bypasses: boolean } | null>(null);
+  useEffect(() => {
+    if (!location) return;
+    let live = true;
+    fetch(`/api/admin/pos/comp-status?location=${encodeURIComponent(location)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d) setCompStatus(d); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [location]);
   const [shareMethods, setShareMethods] = useState<("cash" | "card")[]>([]);
   const [cashOpen, setCashOpen] = useState(false);
   const [cashGiven, setCashGiven] = useState(""); // zł text
@@ -1903,11 +2052,39 @@ function TenderDialog({
   const tip = tipPct === "custom" ? Math.max(0, zlToG(tipCustom)) : Math.round((net * tipPct) / 100);
   const total = net + tip;
 
+  // Comp-cap meter — the running shift total + where this comp would land.
+  const capG = compStatus?.capGrosze ?? 0;
+  const compTodayG = compStatus?.compTodayGrosze ?? 0;
+  const bypasses = compStatus?.bypasses ?? false;
+  const wouldBeG = compTodayG + comp;
+  const overCap = !bypasses && capG > 0 && comp > 0 && wouldBeG > capG;
+
+  // Split presets — Whole · ÷2 · ÷3 · ÷4 · By seat (all even; each share equal,
+  // last absorbs the rounding). Deduped + clamped to the cover count.
+  const splitPresets = [
+    { label: "Whole", n: 1 },
+    { label: "÷2", n: 2 },
+    { label: "÷3", n: 3 },
+    { label: "÷4", n: 4 },
+    { label: "By seat", n: Math.max(1, covers) },
+  ].filter((p) => p.n <= Math.max(1, covers)).filter((p, i, a) => a.findIndex((x) => x.n === p.n) === i);
+
   // Even split — each share equal, the last absorbs the rounding remainder.
   const shareOf = (i: number) => {
     const base = Math.floor(total / splitN);
     return i === splitN - 1 ? total - base * (splitN - 1) : base;
   };
+  // By-item split — per-payer share = their lines' weight × the actual total.
+  const billSub = Math.max(1, lines.reduce((s, l) => s + l.amountG, 0));
+  const payerSub = (p: number) => lines.filter((l) => payerOf(l.key) === p).reduce((s, l) => s + l.amountG, 0);
+  const itemShares = (): number[] => {
+    const raw = Array.from({ length: covers }, (_, p) => Math.round((total * payerSub(p)) / billSub));
+    const drift = total - raw.reduce((a, b) => a + b, 0);
+    if (drift !== 0 && raw.length) raw[raw.indexOf(Math.max(...raw))] += drift; // land exactly on total
+    return raw;
+  };
+  // The shares actually charged — even (splitN slices) or by-item (per payer).
+  const shareArr = splitMode === "item" ? itemShares() : Array.from({ length: splitN }, (_, i) => shareOf(i));
   const methodFor = (i: number) => shareMethods[i] ?? "card";
   const setMethod = (i: number, m: "cash" | "card") =>
     setShareMethods((cur) => { const next = [...cur]; next[i] = m; return next; });
@@ -1921,6 +2098,7 @@ function TenderDialog({
     const tender: TenderInput = {
       ...(tip > 0 ? { tipGrosze: tip } : {}),
       ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      ...(overCap && compPin ? { compOverridePin: compPin } : {}),
       payments: [{ method, amount: total }],
       defaultMethod: method,
       ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
@@ -1929,15 +2107,16 @@ function TenderDialog({
   };
 
   const chargeSplit = () => {
-    const payments = Array.from({ length: splitN }, (_, i) => ({ method: methodFor(i), amount: shareOf(i) }));
+    const payments = shareArr.map((amount, i) => ({ method: methodFor(i), amount })).filter((p) => p.amount > 0);
     const cashShares = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0);
     const tender: TenderInput = {
       ...(tip > 0 ? { tipGrosze: tip } : {}),
       ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      ...(overCap && compPin ? { compOverridePin: compPin } : {}),
       payments,
       ...(cashShares > 0 && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
     };
-    onCharge(tender, `Split ${splitN}`);
+    onCharge(tender, splitMode === "item" ? "By item" : `Split ${splitN}`);
   };
 
   return (
@@ -1948,7 +2127,7 @@ function TenderDialog({
       width={520}
       footer={<button type="button" className="core-btn ghost" onClick={onClose}>Cancel</button>}
     >
-      <div className="core-tender">
+      <div className={`core-tender${shake ? " shake" : ""}`}>
         <div className="core-tender-tot">
           <span>{comp > 0 || tip > 0 ? "To collect" : "Total due"}</span>
           <b className="mono">{fmtPLN(total)}</b>
@@ -1997,45 +2176,86 @@ function TenderDialog({
                 Amount comped
                 <input className="core-inp" inputMode="decimal" value={compZl} onChange={(e) => setCompZl(e.target.value)} placeholder={`whole bill · ${fmtPLN(billG)}`} />
               </label>
-              <div className="core-alrg-banner" style={{ background: "var(--brand-wash)", color: "var(--brand-bright)" }}>
-                Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.
-              </div>
+              {bypasses ? (
+                <div className="core-tender-note">Owner — comp caps don't apply. Logged as a manager comp ({compReason}).</div>
+              ) : capG > 0 ? (
+                <div className={`core-comp-cap${overCap ? " over" : ""}`}>
+                  <div className="cc-row"><span>Comps this shift</span><span className="mono">{fmtPLN(compTodayG)} / {fmtPLN(capG)}</span></div>
+                  <div className="cc-bar"><i style={{ width: `${Math.min(100, capG ? (wouldBeG / capG) * 100 : 0)}%` }} /></div>
+                  {overCap ? (
+                    <div className="cc-gate">
+                      🔒 <b>Over the {fmtPLN(capG)} shift cap</b> — this comp takes the shift to {fmtPLN(wouldBeG)}. A manager PIN authorises it.
+                      <input
+                        className="core-inp cc-pin"
+                        inputMode="numeric"
+                        type="password"
+                        autoComplete="off"
+                        value={compPin}
+                        onChange={(e) => setCompPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                        placeholder="Manager PIN"
+                      />
+                    </div>
+                  ) : (
+                    <div className="cc-note">This comp fits — takes the shift to {fmtPLN(wouldBeG)}.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="core-tender-note">Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.</div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Split */}
+        {/* Split — presets + by-item */}
         {covers > 1 && (
           <div className="core-tender-sec">
-            <div className="core-tender-sec-h">
-              Split evenly
-              <div className="core-qstep">
-                <button type="button" onClick={() => setSplitN((n) => Math.max(1, n - 1))} aria-label="Fewer ways">−</button>
-                <span className="q mono">{splitN === 1 ? "1" : `${splitN}×`}</span>
-                <button type="button" onClick={() => setSplitN((n) => Math.min(covers, n + 1))} aria-label="More ways">+</button>
-              </div>
+            <div className="core-tender-sec-h">Split</div>
+            <div className="core-tender-chips">
+              {splitPresets.map((p) => (
+                <button key={p.label} type="button" className={`core-tchip${splitMode === "even" && splitN === p.n ? " on" : ""}`} onClick={() => { setSplitMode("even"); setSplitN(p.n); }}>{p.label}</button>
+              ))}
+              {lines.length > 1 && (
+                <button type="button" className={`core-tchip${splitMode === "item" ? " on" : ""}`} onClick={() => setSplitMode("item")}>By item</button>
+              )}
             </div>
-            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} guests)</div>}
+            {splitMode === "even" && splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} ways)</div>}
+            {splitMode === "item" && (
+              <div className="core-split-items">
+                {lines.map((l) => (
+                  <div key={l.key} className="core-split-item">
+                    <span className="si-l"><span className="q mono">{l.qty}×</span> {l.label}</span>
+                    <span className="si-a mono">{fmtPLN(l.amountG)}</span>
+                    <div className="core-seg xs">
+                      {Array.from({ length: covers }, (_, p) => (
+                        <button key={p} type="button" className={payerOf(l.key) === p ? "on" : ""} onClick={() => setAssign((a) => ({ ...a, [l.key]: p }))}>{p + 1}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Tender action */}
-        {splitN > 1 ? (
+        {splitMode === "item" || splitN > 1 ? (
           <>
             <div className="core-split-rows">
-              {Array.from({ length: splitN }, (_, i) => (
-                <div key={i} className="core-split-row">
-                  <span className="sr-l">Guest {i + 1}</span>
-                  <span className="sr-a mono">{fmtPLN(shareOf(i))}</span>
-                  <div className="core-seg sm">
-                    <button className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
-                    <button className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+              {shareArr.map((amt, i) =>
+                splitMode === "item" && amt === 0 ? null : (
+                  <div key={i} className="core-split-row">
+                    <span className="sr-l">Guest {i + 1}</span>
+                    <span className="sr-a mono">{fmtPLN(amt)}</span>
+                    <div className="core-seg sm">
+                      <button type="button" className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
+                      <button type="button" className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
             <button type="button" className="core-charge" disabled={busy} onClick={chargeSplit}>
-              Charge split · {fmtPLN(total)}
+              Charge {splitMode === "item" ? "by item" : "split"} · {fmtPLN(total)}
             </button>
           </>
         ) : cashOpen ? (

@@ -39,7 +39,11 @@ inside the shell body: **rail · menu · ticket**.
   tells staff a send/charge made offline is saved and will land on
   reconnect — the visible end of the Phase 2b durable-queue path.
 
-- **`.core-rail`** — the category rail. An **All** chip (stacks every
+- **`.core-rail`** — the category rail. A **★ Popular** chip first when
+  present (`.core-cat.pop`, ember fill, the default landing category) —
+  frequency-ranked top items for the current daypart from
+  `GET /api/admin/pos/popular` (real orders, Rule #1; hidden when empty) —
+  then an **All** chip (stacks every
   category as `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over
   the per-category `.core-cat` buttons — each lists only categories present
   on the active location's menu, with a live item count (`.n`) and, when
@@ -58,7 +62,12 @@ inside the shell body: **rail · menu · ticket**.
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates. Tapping a plain
   card adds it straight to the check; a **customisable** card opens the line
-  editor first (see *Line editor* below).
+  editor first (see *Line editor* below). A **sold-out** card
+  (`.core-prod.sold-out` — base-unavailable OR live-86'd) is **not hidden**:
+  it stays greyed + struck with a danger `.core-tag.off` "86 · sold out"
+  chip, is disabled, and **sinks to the bottom** of its category (available
+  first). The 86 set is polled live from `/api/admin/kds/eighty-six`, so an
+  item 86'd on the pass greys on the till within one poll — no reload.
 - **`.core-ticket`** — the open-check panel. Today it shows
   `.core-ticket-empty` (the no-open-check state).
 
@@ -180,13 +189,21 @@ already renders `selectedModifiers` (`.mod` / `.mod.flag`) and the per-line
 It composes the tender and PATCHes it as `{ tabId, tender }`:
 
 - **Tip** — `.core-tchip` presets (None / 5 / 10 / 15 % of the net) + Custom zł.
-- **Comp** — a `.core-tender-toggle` reveals reason chips (`COMP_REASONS`) + an
-  amount (defaults to the whole bill). Recorded server-side as a single
-  `manager_comp` (the chip is the note), so it shows in Reports and counts toward
-  the per-shift comp cap (`getActorCompTotalToday`, audit action `pos.comp`).
-- **Split evenly** — a stepper up to the cover count; each guest share is an
-  equal slice (last absorbs the rounding remainder) with its own Cash/Card
-  `.core-seg.sm` toggle. `Charge split` sends one `payments[]` entry per share.
+- **Comp** — a `.core-tender-toggle` reveals reason-code chips (`COMP_REASONS`
+  = **Quality · Wait · Goodwill · Error**) + an amount (defaults to the whole
+  bill), over a **live per-shift comp-cap meter** (`.core-comp-cap` — fed by
+  `GET /api/admin/pos/comp-status`: the actor's real audit-log comp total vs the
+  `refundControls` cap). The bar turns danger + shows a 🔒 over-cap gate when the
+  comp would breach; owners see a "caps don't apply" note. Recorded server-side
+  as a single `manager_comp` (the chip is the note), so it shows in Reports and
+  counts toward the cap (`getActorCompTotalToday`, audit action `pos.comp`).
+- **Split** — `.core-tchip` presets (**Whole · ÷2 · ÷3 · ÷4 · By seat**, clamped
+  to the cover count); each guest share is an equal slice (last absorbs the
+  rounding remainder) with its own Cash/Card `.core-seg.sm` toggle. `Charge
+  split` sends one `payments[]` entry per share. **By item** shows the check's
+  lines (`.core-split-item` + per-line payer chips); each payer's amount is
+  their assigned lines' weight × the actual total, so tip/comp distribute
+  proportionally and the payments still sum to the charge.
 - **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
   quick denomination chips + a free amount, a live `.core-change-row` change-due,
   and a Confirm gated until the cash covers the total.

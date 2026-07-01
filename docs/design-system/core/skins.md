@@ -50,6 +50,33 @@ it will stick without being overridden on mount.
 - **Reset specificity.** Redefine tokens, don't re-declare component
   classes, so the `:where()` reset and the `.core .core-foo` component
   rules keep working (see `theme/README.md`).
+- **Watch for surface tokens used as *text* colours.** A few base rules use
+  a *surface* token as a label colour on an inverted fill —
+  `.core-cat.on { color: var(--panel) }` (dark-on-cream in Core Dark). A
+  skin that makes that surface token translucent (glass) turns the label
+  invisible. `liquid-glass` pins these back (`.core-cat.on:not(.pop) { color:
+  var(--bg) }`). When a token flips from opaque→translucent, grep base for
+  it used as `color:` and re-anchor those.
+- **An aurora skin must un-paint the base's opaque scroll containers.**
+  The `liquid-glass` skin paints its ambient aurora on the `.core` root
+  and makes panels translucent so they refract it. But the base theme
+  fills several *scroll/content* containers with an opaque `var(--bg)`
+  (`.core-menu`, `.core-pos-embed`, `.core-thread`, `.core-cap-inspect`,
+  the `.core-bottomnav` band). Painted on top of the root, they bury the
+  aurora — the frosted panels then have only flat black to refract and the
+  skin collapses to the dark base look. The skin resets those to
+  `background: transparent` (see the "let the aurora through" block).
+  **Exclude `.core-kds` / `.core-kiosk`** — they stay a dark wall (rule
+  above). If you add a new opaque full-bleed scroll container to Core, add
+  it to that transparent list too, or the glass will look flat over it.
+- **Sell the glass with a sheen, not just translucency.** A translucent
+  fill over a dark aurora still reads flat without a highlight. The skin
+  adds `--lg-sheen` (a diagonal top-left specular) as an extra **background
+  layer** on the glass primitives (`--lg-sheen, --lg-fill`) — a background
+  layer, not an `::after` overlay, so it paints *under* the card text and
+  never washes it out — plus a brighter top `--lg-rim`. The aurora also
+  carries a soft central wash so cards down the middle column have colour
+  to refract, not just the corners.
 
 ## Skins
 

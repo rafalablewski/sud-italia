@@ -7,6 +7,7 @@ import {
   getUpsellSettings,
   getSettings,
   getActorCompTotalToday,
+  findAdminUserByPin,
   appendAuditLog,
   withIdempotency,
 } from "@/lib/store";
@@ -16,7 +17,7 @@ import { manualDiscountGrosze } from "@/lib/pos-discount";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { POS_COURSE_ORDER, courseOf } from "@/lib/pos-coursing";
 import { DEFAULT_REFUND_CONTROLS, evaluateRefundGuard } from "@/lib/refund-guard";
-import type { AdminRole } from "@/lib/admin-roles";
+import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
 import type {
   CartItem,
   FulfillmentType,
@@ -42,6 +43,11 @@ export interface PosTender {
   /** Cash physically handed over (grosze) — drives the change-due figure. */
   cashTenderedGrosze?: number;
   defaultMethod?: "cash" | "card";
+  /** A manager/owner terminal PIN that authorises an OVER-CAP comp — the inline
+   *  gate the tender sheet shows when the running comp would breach the cap.
+   *  Verified server-side against an active manager+ account; the authoriser is
+   *  recorded on the comp audit entry. */
+  compOverridePin?: string;
 }
 
 const clampG = (v: unknown, max: number): number => {
@@ -278,6 +284,7 @@ export async function chargeTab(opts: {
     // Comp guard — a manager can't comp the whole shift away (audit §11.2). Same
     // pure decision the refund dialog/route use; owners bypass. Checked before
     // the order is stamped paid so a blocked comp never settles the check.
+    let compOverrideBy: string | null = null;
     if (comp > 0 && opts.role) {
       const actor = opts.actor ?? "pos";
       const limits = (await getSettings()).refundControls ?? DEFAULT_REFUND_CONTROLS;
@@ -289,7 +296,17 @@ export async function chargeTab(opts: {
         actorCompTotalTodayGrosze: compTotalToday,
         limits,
       });
-      if (!guard.allowed) throw new PosActionError(403, guard.message ?? "Comp not allowed");
+      if (!guard.allowed) {
+        // Inline manager-PIN override: an over-cap comp settles only if an
+        // active manager+ authorises it with their terminal PIN. Server-verified
+        // (the client PIN is never trusted) and stamped onto the comp audit.
+        const pin = tender?.compOverridePin?.trim();
+        const authorizer = pin ? await findAdminUserByPin(locationSlug, pin) : null;
+        if (!authorizer || ROLE_RANK[authorizer.role] < ROLE_RANK.manager) {
+          throw new PosActionError(403, guard.message ?? "Comp not allowed");
+        }
+        compOverrideBy = authorizer.email || authorizer.id;
+      }
     }
 
     // Tender breakdown. Default to a single payment of the net due + tip in the
@@ -332,7 +349,7 @@ export async function chargeTab(opts: {
         entityType: "order",
         entityId: order.id,
         before: { totalAmount: bill },
-        after: { refundAmount: comp, reasonCode: "manager_comp", locationSlug, note: tender?.compNote ?? null },
+        after: { refundAmount: comp, reasonCode: "manager_comp", locationSlug, note: tender?.compNote ?? null, ...(compOverrideBy ? { overrideAuthorizedBy: compOverrideBy } : {}) },
       });
     }
 
