@@ -39,12 +39,14 @@
   background: var(--panel); border-bottom: 1px solid var(--line); flex: none; box-shadow: var(--sh-1);
   z-index: 5; font-family: var(--mono); font-size: 12px; }
 
-/* traffic-light chrome (decorative) — tokenised red · amber · green */
+/* traffic-light chrome (decorative) — vivid macOS dots with a specular top
+   highlight so they read as glossy buttons over the glass (matching the mockup),
+   not flat tokenised discs. */
 .core .cm-lights { display: flex; gap: 6px; flex: none; }
-.core .cm-lights i { width: 10px; height: 10px; border-radius: 50%; }
-.core .cm-lights i:nth-child(1) { background: var(--danger); }
-.core .cm-lights i:nth-child(2) { background: var(--amber); }
-.core .cm-lights i:nth-child(3) { background: var(--basil); }
+.core .cm-lights i { width: 11px; height: 11px; border-radius: 50%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45); }
+.core .cm-lights i:nth-child(1) { background: #ff5f57; }
+.core .cm-lights i:nth-child(2) { background: #febc2e; }
+.core .cm-lights i:nth-child(3) { background: #28c840; }
 .core .cm-div { width: 1px; height: 18px; background: var(--line-2); flex: none; }
 
 /* live shell prompt — core ❯ surface:tab, then a blinking block caret */
@@ -311,7 +313,7 @@
 /* Cards stretch to equal height per row (grid default), with the description
    clamped to two lines and the price footer pinned to the bottom — so a long
    description (Tartufata) can't make its card taller than its row-mates. */
-.core .core-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 8px; align-items: stretch; }
+.core .core-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 9px; align-items: stretch; }
 /* "All" view — categories stacked with section headers */
 .core .core-menu-sec + .core-menu-sec { margin-top: 14px; }
 .core .core-menu-sec-h { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin: 0 2px 7px; }
@@ -321,10 +323,13 @@
 .core .core-prod .pn { font-family: var(--display); font-weight: 600; font-size: 12.5px; letter-spacing: -.01em; line-height: 1.12; }
 .core .core-prod .pd { font-size: 10px; color: var(--ink-3); margin-top: 3px; line-height: 1.35; min-height: 26px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.core .core-prod .pf { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 7px; }
+.core .core-prod .pf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 7px; }
 .core .core-prod .pp { font-family: var(--mono); font-weight: 600; font-size: 12.5px; color: var(--ink); }
-.core .core-prod .add { width: 22px; height: 22px; border-radius: 6px; background: var(--brand); color: var(--on-accent); display: grid; place-items: center;
-  font-size: 14px; line-height: 1; box-shadow: var(--sh-1); transition: opacity var(--fast), background var(--fast); flex: none; }
+/* dietary tags ride the price row (right), like the mockup — compact V/VG/GF */
+.core .core-prod .core-prod-tags { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+/* add glyph is a corner affordance (top-right), not in the price row */
+.core .core-prod .add { position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; border-radius: 6px; background: var(--brand); color: var(--on-accent); display: grid; place-items: center;
+  font-size: 13px; line-height: 1; box-shadow: var(--sh-1); transition: opacity var(--fast), background var(--fast); flex: none; }
 .core .core-prod:hover .add { background: var(--brand-bright); }
 /* Calm at rest like the mockup — the whole card is tap-to-add, so on hover-
    capable devices the ember + button and the menu-engineering role badge only
@@ -444,6 +449,15 @@
 .core .core-qstep button { width: 22px; height: 22px; border-radius: 6px; color: var(--ink-2); font-size: 14px; }
 .core .core-qstep button:hover { background: var(--hover); color: var(--ink); }
 .core .core-qstep .q { min-width: 22px; text-align: center; font-weight: 600; font-size: 12.5px; }
+/* Calm ticket lines like the mockup: the qty stepper is borderless + dimmed at
+   rest and only lights up when the line is hovered — width is stable so nothing
+   jumps. Touch tills always show it (no hover). */
+@media (hover: hover) {
+  .core .core-line .core-qstep { background: transparent; border-color: transparent; }
+  .core .core-line .core-qstep button { opacity: .35; transition: opacity var(--fast); }
+  .core .core-line-main:hover .core-qstep { background: var(--panel-3); border-color: var(--line); }
+  .core .core-line-main:hover .core-qstep button { opacity: 1; }
+}
 .core .core-qstep.big button { width: 34px; height: 34px; font-size: 18px; }
 .core .core-qstep.big .q { min-width: 34px; font-size: 15px; }
 /* tappable line name → opens the line editor (modifiers + note) */
@@ -452,11 +466,14 @@
 .core .core-line .ln-edit .ln-pen { color: var(--ink-3); font-size: 11px; opacity: 0; transition: opacity var(--fast); }
 .core .core-line-main:hover .ln-edit .ln-pen { opacity: 1; }
 /* per-line modifier chips + note, under the line name */
-.core .core-line-mods { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 16px 9px 92px; }
-.core .core-mod-chip { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
-.core .core-mod-chip.flag { background: var(--amber-wash); color: var(--amber); }
-.core .core-mod-note { font-size: 10.5px; font-style: italic; padding: 2px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
-.core .core-mod-note.alrg { background: var(--amber-wash); color: var(--amber); font-style: normal; font-weight: 600; }
+/* Modifiers read as inline grey text under the line name (mockup style), not
+   pills — "· extra chilli", the flagged ones amber. Only an allergy note keeps
+   the emphasised safety chip (it must not read as a normal preference). */
+.core .core-line-mods { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 0 16px 7px 74px; margin-top: -3px; }
+.core .core-mod-chip { font-size: 10.5px; font-weight: 500; padding: 0; background: transparent; color: var(--ink-3); }
+.core .core-mod-chip.flag { background: transparent; color: var(--amber); font-weight: 600; }
+.core .core-mod-note { font-size: 10.5px; font-style: italic; padding: 0; background: transparent; color: var(--ink-3); }
+.core .core-mod-note.alrg { background: var(--amber-wash); color: var(--amber); font-style: normal; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
 .core .core-tag.opt { background: var(--info-wash); color: var(--info); }
 
 /* ---------- line editor (modifiers + special request) ---------- */

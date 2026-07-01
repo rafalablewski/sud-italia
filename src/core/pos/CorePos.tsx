@@ -100,9 +100,9 @@ const CHANNELS: { key: FulfillmentType; label: string }[] = [
   { key: "delivery", label: "Delivery" },
 ];
 const TAG_META: Record<MenuItem["tags"][number], { label: string; cls: string }> = {
-  vegetarian: { label: "veg", cls: "veg" },
-  vegan: { label: "vegan", cls: "veg" },
-  spicy: { label: "spicy", cls: "hot" },
+  vegetarian: { label: "V", cls: "veg" },
+  vegan: { label: "VG", cls: "veg" },
+  spicy: { label: "S", cls: "hot" },
   "gluten-free": { label: "GF", cls: "fast" },
 };
 
@@ -1231,23 +1231,27 @@ export function CorePos({
       title={soldOut ? "86'd — sold out" : undefined}
       onClick={soldOut ? undefined : () => (!active ? toast("Open a check first") : customisable(m) ? openEditor(m) : addLine(m.id))}
     >
+      <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
       <div className="pn">
         {m.name}
         {m.menuRole && <span className={`core-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
       </div>
       <div className="pd">{m.description}</div>
-      <div className="core-tagrow">
-        {soldOut && <span className="core-tag off">86 · sold out</span>}
-        {m.tags.map((t) => (
-          <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
-        ))}
-        {customisable(m) && <span className="core-tag opt">options</span>}
-        {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
-        {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
-      </div>
+      {(soldOut || (steer?.active && (makeNowSet.has(m.id) || throttleSet.has(m.id)))) && (
+        <div className="core-tagrow">
+          {soldOut && <span className="core-tag off">86 · sold out</span>}
+          {!soldOut && steer?.active && makeNowSet.has(m.id) && <span className="core-steer-tag now">★ make now</span>}
+          {!soldOut && steer?.active && throttleSet.has(m.id) && <span className="core-steer-tag ease">▼ ease</span>}
+        </div>
+      )}
       <div className="pf">
         <span className="pp">{zl(m.price)}</span>
-        <span className="add" aria-hidden>{soldOut ? "—" : customisable(m) ? "⋯" : "+"}</span>
+        <span className="core-prod-tags">
+          {customisable(m) && <span className="core-tag opt" title="Has options">◦</span>}
+          {m.tags.map((t) => (
+            <span key={t} className={`core-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
+          ))}
+        </span>
       </div>
     </button>
     );
@@ -1424,12 +1428,19 @@ export function CorePos({
           </div>
         )}
         <div className="core-tabrail">
-          {tabs.map((t) => (
-            <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
-              <span className="tt">{t.name}</span>
-              <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const tn = tableById(t.tableId)?.number;
+            const n = t.items.reduce((s, l) => s + l.quantity, 0);
+            // Context line reads like the mockup: dine-in shows its table (· T10),
+            // takeaway/delivery show the channel, otherwise the live item count.
+            const ctx = tn ? `· T${tn}` : t.channel === "takeout" ? "takeaway" : t.channel === "delivery" ? "delivery" : n > 0 ? `${n} ${n === 1 ? "item" : "items"}` : "empty";
+            return (
+              <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
+                <span className="tt">{t.name}</span>
+                <span className="ts">{ctx}</span>
+              </button>
+            );
+          })}
           <button type="button" className="core-ttab core-ttab-new" onClick={() => void newTab()}>
             <span className="tt">+ New</span>
             <span className="ts">open check</span>
