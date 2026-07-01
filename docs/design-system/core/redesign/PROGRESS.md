@@ -26,6 +26,10 @@ Last updated: **2026-07-01** — sketches phase.
 | 8 | Pass lens (KDS) + pressure-adaptive density | ☐ | |
 | 9 | Book lens (timeline + live conflict) | ☐ | |
 | 10 | `<CourseSpine>` + fire-moment upsell | ☐ | |
+| 10a | **Deep-dive: Order & item detail** | ☑ | POS `LineEditorDialog` already covered modifiers/notes/comp/void; added the read-only declared-allergen row to match the sketch. |
+| 10b | **Deep-dive: Guest ordering journey** | ☑ | Verified already built + live: `QrOrder` (browse→customize→cart→pay) → `OrderTracker` (live SSE status + 10s poll fallback, mirrors kitchen). No net-new change needed (would be cosmetic on the homepage theme). |
+| 10c | **Deep-dive: Booking** | ☑ | Verified already built: `CoreBook` — slot + table in one move, live `findReservationConflicts`, create `POST /api/admin/booking`, cancel. |
+| 10d | **Deep-dive: Service/handoff + Delivery dispatch** | ☐ | Shift handover exists (`/admin/handover`); KDS shows at-risk, Floor shows seating recommend. **Net-new** (needs scoping): a unified Core timing-alert/expo console + a delivery dispatch board (driver assign). Larger feature builds — flagged for explicit go-ahead. |
 | 11 | `<TenderSheet>` (split/pay/comp + guard) | ☐ | |
 | 12 | Guest sync (QR → same check, SSE mirror) | ☐ | |
 | 13 | Micro-interactions + optimistic reconcile | ☐ | |
