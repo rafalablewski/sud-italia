@@ -1659,6 +1659,7 @@ export function CorePos({
         <TenderDialog
           billG={grandG(active)}
           location={pageLoc}
+          lines={cartOf(active).map((ci, i) => ({ key: String(i), label: ci.menuItem.name, qty: ci.quantity, amountG: effectiveUnitPrice(ci) * ci.quantity }))}
           errorNonce={payErrorNonce}
           subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
           covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
@@ -1988,6 +1989,7 @@ function LineEditorDialog({
 function TenderDialog({
   billG,
   location,
+  lines,
   errorNonce,
   subtitle,
   covers,
@@ -1997,6 +1999,7 @@ function TenderDialog({
 }: {
   billG: number;
   location: string;
+  lines: { key: string; label: string; qty: number; amountG: number }[];
   errorNonce: number;
   subtitle: string;
   covers: number;
@@ -2004,6 +2007,12 @@ function TenderDialog({
   onClose: () => void;
   onCharge: (tender: TenderInput, label: string) => void;
 }) {
+  const [splitMode, setSplitMode] = useState<"even" | "item">("even");
+  // By-item: each line assigned to a payer (0-based). Per-payer share = their
+  // lines' weight × the actual total (so tip/comp distribute proportionally and
+  // the payments still sum to the charge).
+  const [assign, setAssign] = useState<Record<string, number>>({});
+  const payerOf = (k: string) => assign[k] ?? 0;
   // Directional shake on a rejected charge (see payErrorNonce) — a brief,
   // reduced-motion-guarded nudge that says "that tender didn't take, try again".
   const [shake, setShake] = useState(false);
@@ -2062,6 +2071,17 @@ function TenderDialog({
     const base = Math.floor(total / splitN);
     return i === splitN - 1 ? total - base * (splitN - 1) : base;
   };
+  // By-item split — per-payer share = their lines' weight × the actual total.
+  const billSub = Math.max(1, lines.reduce((s, l) => s + l.amountG, 0));
+  const payerSub = (p: number) => lines.filter((l) => payerOf(l.key) === p).reduce((s, l) => s + l.amountG, 0);
+  const itemShares = (): number[] => {
+    const raw = Array.from({ length: covers }, (_, p) => Math.round((total * payerSub(p)) / billSub));
+    const drift = total - raw.reduce((a, b) => a + b, 0);
+    if (drift !== 0 && raw.length) raw[raw.indexOf(Math.max(...raw))] += drift; // land exactly on total
+    return raw;
+  };
+  // The shares actually charged — even (splitN slices) or by-item (per payer).
+  const shareArr = splitMode === "item" ? itemShares() : Array.from({ length: splitN }, (_, i) => shareOf(i));
   const methodFor = (i: number) => shareMethods[i] ?? "card";
   const setMethod = (i: number, m: "cash" | "card") =>
     setShareMethods((cur) => { const next = [...cur]; next[i] = m; return next; });
@@ -2083,7 +2103,7 @@ function TenderDialog({
   };
 
   const chargeSplit = () => {
-    const payments = Array.from({ length: splitN }, (_, i) => ({ method: methodFor(i), amount: shareOf(i) }));
+    const payments = shareArr.map((amount, i) => ({ method: methodFor(i), amount })).filter((p) => p.amount > 0);
     const cashShares = payments.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0);
     const tender: TenderInput = {
       ...(tip > 0 ? { tipGrosze: tip } : {}),
@@ -2091,7 +2111,7 @@ function TenderDialog({
       payments,
       ...(cashShares > 0 && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
     };
-    onCharge(tender, `Split ${splitN}`);
+    onCharge(tender, splitMode === "item" ? "By item" : `Split ${splitN}`);
   };
 
   return (
@@ -2170,36 +2190,56 @@ function TenderDialog({
           )}
         </div>
 
-        {/* Split — presets */}
+        {/* Split — presets + by-item */}
         {covers > 1 && (
           <div className="core-tender-sec">
             <div className="core-tender-sec-h">Split</div>
             <div className="core-tender-chips">
               {splitPresets.map((p) => (
-                <button key={p.label} type="button" className={`core-tchip${splitN === p.n ? " on" : ""}`} onClick={() => setSplitN(p.n)}>{p.label}</button>
+                <button key={p.label} type="button" className={`core-tchip${splitMode === "even" && splitN === p.n ? " on" : ""}`} onClick={() => { setSplitMode("even"); setSplitN(p.n); }}>{p.label}</button>
               ))}
+              {lines.length > 1 && (
+                <button type="button" className={`core-tchip${splitMode === "item" ? " on" : ""}`} onClick={() => setSplitMode("item")}>By item</button>
+              )}
             </div>
-            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} ways)</div>}
+            {splitMode === "even" && splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} ways)</div>}
+            {splitMode === "item" && (
+              <div className="core-split-items">
+                {lines.map((l) => (
+                  <div key={l.key} className="core-split-item">
+                    <span className="si-l"><span className="q mono">{l.qty}×</span> {l.label}</span>
+                    <span className="si-a mono">{fmtPLN(l.amountG)}</span>
+                    <div className="core-seg xs">
+                      {Array.from({ length: covers }, (_, p) => (
+                        <button key={p} type="button" className={payerOf(l.key) === p ? "on" : ""} onClick={() => setAssign((a) => ({ ...a, [l.key]: p }))}>{p + 1}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Tender action */}
-        {splitN > 1 ? (
+        {splitMode === "item" || splitN > 1 ? (
           <>
             <div className="core-split-rows">
-              {Array.from({ length: splitN }, (_, i) => (
-                <div key={i} className="core-split-row">
-                  <span className="sr-l">Guest {i + 1}</span>
-                  <span className="sr-a mono">{fmtPLN(shareOf(i))}</span>
-                  <div className="core-seg sm">
-                    <button className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
-                    <button className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+              {shareArr.map((amt, i) =>
+                splitMode === "item" && amt === 0 ? null : (
+                  <div key={i} className="core-split-row">
+                    <span className="sr-l">Guest {i + 1}</span>
+                    <span className="sr-a mono">{fmtPLN(amt)}</span>
+                    <div className="core-seg sm">
+                      <button type="button" className={methodFor(i) === "card" ? "on" : ""} onClick={() => setMethod(i, "card")}>Card</button>
+                      <button type="button" className={methodFor(i) === "cash" ? "on" : ""} onClick={() => setMethod(i, "cash")}>Cash</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
             <button type="button" className="core-charge" disabled={busy} onClick={chargeSplit}>
-              Charge split · {fmtPLN(total)}
+              Charge {splitMode === "item" ? "by item" : "split"} · {fmtPLN(total)}
             </button>
           </>
         ) : cashOpen ? (

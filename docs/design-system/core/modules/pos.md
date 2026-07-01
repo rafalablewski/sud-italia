@@ -200,7 +200,10 @@ It composes the tender and PATCHes it as `{ tabId, tender }`:
 - **Split** — `.core-tchip` presets (**Whole · ÷2 · ÷3 · ÷4 · By seat**, clamped
   to the cover count); each guest share is an equal slice (last absorbs the
   rounding remainder) with its own Cash/Card `.core-seg.sm` toggle. `Charge
-  split` sends one `payments[]` entry per share. (By-item allocation is TODO.)
+  split` sends one `payments[]` entry per share. **By item** shows the check's
+  lines (`.core-split-item` + per-line payer chips); each payer's amount is
+  their assigned lines' weight × the actual total, so tip/comp distribute
+  proportionally and the payments still sum to the charge.
 - **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
   quick denomination chips + a free amount, a live `.core-change-row` change-due,
   and a Confirm gated until the cash covers the total.
