@@ -15,7 +15,8 @@ Last updated: **2026-07-01** — sketches phase.
 | 0 | Design spec (IA + flows + patterns) | ☑ | `README.md` |
 | 1 | Feature-parity ledger (nothing may be lost) | ☑ | This file, below |
 | 2 | Standalone HTML sketches for sign-off | ◐ | `/tests/sketches/service-os-*.html` (Liquid Glass) |
-| 2b | Responsive sketches + web⇄mobile parity showcase | ◐ | phone = bottom tab bar + dock sheet; `service-os-responsive.html` |
+| 2b | Responsive sketches + web⇄mobile parity showcase | ☑ | phone = bottom tab bar + dock sheet; `service-os-responsive.html` |
+| 2c | Deep-dive sketches (order detail · guest journey · service/handoff · booking/delivery) | ☑ | 4 more `service-os-*.html` in glass + responsive |
 | 3 | **Sign-off gate** — user accepts sketches | ⏸ | Implementation starts only after this |
 | 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ☐ | Highest-leverage first build |
 | 5 | `<ContextDock>` (peek→expand, shared across lenses) | ☐ | The spine |
