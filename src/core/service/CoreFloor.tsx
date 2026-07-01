@@ -89,6 +89,7 @@ export function CoreFloor({
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [party, setParty] = useState("2");
+  const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<TwinTableRow | "new" | null>(null);
   const [orders, setOrders] = useState<FloorOrderRow[]>([]);
   const [lookup, setLookup] = useState("");
@@ -345,12 +346,24 @@ export function CoreFloor({
         </div>
 
         <div className="core-floor">
+          {zones.length > 1 && (
+            <div className="core-zonetabs">
+              <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
+                All<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+              </button>
+              {zones.map(([z, ts]) => (
+                <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
+                  {z}<span className="n">{ts.length}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {!twin ? (
             <div className="core-ctx-empty pad">Loading floor…</div>
           ) : zones.length === 0 ? (
             <div className="core-ctx-empty pad">No tables yet — add one to start modelling the floor.</div>
           ) : (
-            zones.map(([zone, tbls]) => (
+            (zoneFilter ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => (
               <div key={zone}>
                 <div className="core-zone-h">
                   <span className="zt">{zone}</span>
