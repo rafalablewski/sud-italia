@@ -115,7 +115,7 @@ surface toolbar.
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
 - **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
-  Service/Guest/Orders `.core-kpi-strip` and POS's `.core-statstrip` are
+  Guest/Slots `.core-kpi-strip` and POS's / Floor's / Orders' `.core-statstrip` are
   hairline-divided columns with an uppercase mono label and a big **mono
   tabular** value. `.core-kpi-strip` lays its cells out with `grid-auto-flow:
   column` (auto `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all
@@ -123,7 +123,7 @@ surface toolbar.
   component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
   identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
-    surface body (POS, **Floor**): a bordered glass panel of `.cell`s, each an
+    surface body (POS, **Floor**, **Orders**): a bordered glass panel of `.cell`s, each an
     uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
     `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
     colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).

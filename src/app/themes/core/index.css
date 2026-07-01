@@ -1289,7 +1289,54 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-orders { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .core .core-tpay.info { background: var(--info-wash); color: var(--info); }
 .core .core-tpay.muted { background: var(--panel-3); color: var(--ink-3); }
-/* Orders surface (core) */
+/* Orders surface (core) — dense-console filterbar + table (mockup 03-orders) */
+.core .core-filterbar { display: flex; align-items: center; gap: 10px; margin: 0 16px 10px; flex-wrap: wrap; flex: none; }
+.core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
+.core .core-searchfield input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
+.core .core-searchfield input::placeholder { color: var(--ink-3); }
+.core .core-chanset { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); cursor: pointer; }
+.core .core-chan:hover { color: var(--ink-2); }
+.core .core-chan.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); }
+.core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
+.core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--panel); }
+.core .core-otable table { width: 100%; border-collapse: collapse; }
+.core .core-otable thead th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.core .core-otable thead th.r { text-align: right; }
+.core .core-otable tbody td { padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-2); vertical-align: middle; }
+.core .core-otable tbody tr { cursor: pointer; }
+.core .core-otable tbody tr:last-child td { border-bottom: 0; }
+.core .core-otable tbody tr:hover td { background: var(--panel-2); }
+.core .core-otable tbody tr.sel td { background: var(--brand-wash); }
+.core .core-otable .id { font-family: var(--mono); font-size: 11.5px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+.core .core-otable .tm { font-family: var(--mono); font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+.core .core-otable .guest { font-size: 12px; color: var(--ink); font-weight: 500; }
+.core .core-otable .otbl { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-otable .otbl.none { color: var(--ink-3); }
+.core .core-otable .items { font-size: 11px; color: var(--ink-2); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.core .core-otable .total { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 600; text-align: right; white-space: nowrap; }
+.core .core-chanchip { font-family: var(--mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: var(--pill); white-space: nowrap; color: var(--ink-3); background: var(--panel-3); }
+.core .core-chanchip.dinein { color: var(--basil); background: var(--basil-wash); }
+.core .core-chanchip.takeaway { color: var(--amber); background: var(--amber-wash); }
+.core .core-chanchip.delivery { color: var(--info); background: var(--info-wash); }
+.core .core-chanchip.qr { color: var(--info); background: var(--info-wash); box-shadow: inset 0 0 0 1px rgba(84,188,224,.4); }
+.core .core-stpill { font-family: var(--mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 2px 9px; border-radius: var(--pill); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--ink-3); background: var(--panel-2); }
+.core .core-stpill.new { color: var(--info); background: var(--info-wash); }
+.core .core-stpill.preparing { color: var(--amber); background: var(--amber-wash); }
+.core .core-stpill.ready { color: var(--basil); background: var(--basil-wash); }
+.core .core-stpill.paid { color: var(--ink-2); background: var(--panel-2); }
+.core .core-stpill.cancelled { color: var(--danger); background: var(--danger-wash); }
+/* order-detail status timeline (mockup modal) */
+.core .core-od-track { display: flex; align-items: flex-start; gap: 0; margin: 4px 0 14px; }
+.core .core-od-track .step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative; }
+.core .core-od-track .step::before { content: ""; position: absolute; top: 6px; left: -50%; width: 100%; height: 2px; background: var(--line); z-index: 0; }
+.core .core-od-track .step:first-child::before { display: none; }
+.core .core-od-track .step.done::before { background: var(--basil); }
+.core .core-od-track .dot { width: 13px; height: 13px; border-radius: 50%; background: var(--panel-3); border: 2px solid var(--line-2); z-index: 1; }
+.core .core-od-track .step.done .dot { background: var(--basil); border-color: var(--basil); }
+.core .core-od-track .step.at .dot { background: var(--info); border-color: var(--info); box-shadow: 0 0 8px -1px var(--info); }
+.core .core-od-track .lbl { font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.core .core-od-track .tm { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); }
 .core .core-switch.sm { display: inline-flex; gap: 2px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 2px; }
 .core .core-switch.sm button { appearance: none; border: none; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 13px; border-radius: var(--pill); cursor: pointer; }
 .core .core-switch.sm button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); }
