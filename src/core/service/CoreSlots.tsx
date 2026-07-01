@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -299,7 +300,7 @@ export function CoreSlots() {
             </div>
           )}
           {tab === "manage" && (
-            <button type="button" className="core-chip" style={{ height: 32 }} onClick={() => setCreateOpen(true)}>+ New</button>
+            <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
           )}
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
         </>

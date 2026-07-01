@@ -81,7 +81,13 @@ surface's own controls · ⌘K launcher · telemetry cluster · global tools.
   refresh · sound · pause) come from
   [`src/core/shell/toolIcons.tsx`](../../../src/core/shell/toolIcons.tsx) — one
   24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
-  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.)
+  glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.) The rest of
+  `.cm-surf` speaks terminal too: `.core-seg` filters (KDS lanes · Slots range)
+  and `.core-chip` status flags go mono/lowercase with a `--basil` active
+  state, and `.core-inp` date pickers get the mono terminal field.
+- **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
+  a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. The
+  mockup's `cm-primary`, tokenised.
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
   `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**

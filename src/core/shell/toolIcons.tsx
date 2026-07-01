@@ -66,3 +66,12 @@ export function PauseIcon({ paused = false }: { paused?: boolean }) {
     </svg>
   );
 }
+
+/** Plus — the leading glyph on a primary surface action (`.cm-primary`). */
+export function PlusIcon() {
+  return (
+    <svg {...base} strokeWidth={2.1}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
