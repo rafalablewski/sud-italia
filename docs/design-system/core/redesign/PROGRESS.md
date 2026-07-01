@@ -17,8 +17,9 @@ Last updated: **2026-07-01** — sketches phase.
 | 2 | Standalone HTML sketches for sign-off | ◐ | `/tests/sketches/service-os-*.html` (Liquid Glass) |
 | 2b | Responsive sketches + web⇄mobile parity showcase | ☑ | phone = bottom tab bar + dock sheet; `service-os-responsive.html` |
 | 2c | Deep-dive sketches (order detail · guest journey · service/handoff · booking/delivery) | ☑ | 4 more `service-os-*.html` in glass + responsive |
-| 3 | **Sign-off gate** — user accepts sketches | ⏸ | Implementation starts only after this |
-| 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ☐ | Highest-leverage first build |
+| 3 | **Sign-off gate** — user accepts sketches | ☑ | Approved; glass + responsive + parity locked |
+| 3b | Liquid-glass material foundation (Core skin) | ☑ | `themes/core/skins/liquid-glass.css`, default skin, frosts all surfaces; KDS wall stays dark. Build green. |
+| 4 | `<ServiceCanvas>` shell + Lens Rail + Command Bar | ◐ | Highest-leverage first build |
 | 5 | `<ContextDock>` (peek→expand, shared across lenses) | ☐ | The spine |
 | 6 | Floor lens (tiles + Twin urgency + radial actions) | ☐ | |
 | 7 | Line lens (POS) on the shared dock | ☐ | |
