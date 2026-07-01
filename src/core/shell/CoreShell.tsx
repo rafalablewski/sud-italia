@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CoreNav } from "./CoreNav";
 import { CoreClock, CoreThemeToggle, CoreLocationChip } from "./CoreChrome";
+import { PressureBadge } from "./PressureBadge";
 import { CoreNotificationsBell } from "./CoreNotificationsBell";
 import { CoreDock } from "./CoreDock";
 
@@ -71,6 +72,7 @@ export function CoreShell({
           {subRight}
         </div>
         <div className="core-right">
+          <PressureBadge />
           <CoreLocationChip />
           <CoreClock />
           <CoreNotificationsBell />
