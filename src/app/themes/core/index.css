@@ -411,6 +411,16 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .tip-inp { width: 92px; height: 38px; }
 .core .core-comp-body { display: flex; flex-direction: column; gap: 11px; }
 .core .core-comp-amt { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink-2); }
+/* live per-shift comp-cap meter — the running budget at the comp moment. */
+.core .core-comp-cap { display: flex; flex-direction: column; gap: 7px; padding: 11px 12px; border-radius: var(--r-md); background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-comp-cap .cc-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); }
+.core .core-comp-cap .cc-bar { height: 7px; border-radius: 4px; background: rgba(0,0,0,.35); overflow: hidden; }
+.core .core-comp-cap .cc-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), #ffca6e); transition: width var(--fast); }
+.core .core-comp-cap .cc-note { font-size: 11.5px; color: var(--ink-3); }
+.core .core-comp-cap .cc-gate { font-size: 12px; color: var(--ink); }
+.core .core-comp-cap.over { border-color: rgba(229,72,74,.5); background: rgba(229,72,74,.12); }
+.core .core-comp-cap.over .cc-bar i { background: linear-gradient(90deg, var(--t-late), #ff8a8b); }
+.core .core-comp-cap.over .cc-gate b { color: var(--t-late); }
 .core .core-split-rows { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; }
 .core .core-split-row { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
 .core .core-split-row .sr-l { font-size: 12.5px; font-weight: 600; } .core .core-split-row .sr-a { margin-left: auto; font-size: 13.5px; font-weight: 700; }

@@ -61,9 +61,10 @@ const ALLERGY_CHIP = "⚠ ALLERGY: ";
 
 /** Tip presets (percent of the bill) offered in the tender sheet. */
 const TIP_PCTS = [0, 5, 10, 15];
-/** Comp reasons — all recorded server-side as `manager_comp` (the note carries
- *  the specific reason), so the per-shift comp cap counts them all. */
-const COMP_REASONS = ["Kitchen error", "Manager goodwill", "Birthday", "VIP / regular", "Long wait"];
+/** Comp reason codes (audit §3 — Quality · Wait · Goodwill · Error). All are
+ *  recorded server-side as `manager_comp` (the note carries the specific
+ *  reason), so the per-shift comp cap counts them all. */
+const COMP_REASONS = ["Quality", "Wait", "Goodwill", "Error"];
 
 /** Client tender payload sent to PATCH /api/admin/pos/orders. The server
  *  re-derives the bill and clamps every figure — this is only a proposal. */
@@ -1646,6 +1647,7 @@ export function CorePos({
       {tenderOpen && active && (
         <TenderDialog
           billG={grandG(active)}
+          location={pageLoc}
           subtitle={`${active.name} · ${CHANNELS.find((c) => c.key === active.channel)?.label ?? "no channel"}${active.channel === "dine-in" && active.tableId ? ` · Table ${tableById(active.tableId)?.number}` : ""}`}
           covers={active.channel === "dine-in" ? active.covers ?? 2 : 1}
           busy={!!busyTabId}
@@ -1973,6 +1975,7 @@ function LineEditorDialog({
 /* ── tender sheet — tip · comp · split · cash change ────────────────────── */
 function TenderDialog({
   billG,
+  location,
   subtitle,
   covers,
   busy,
@@ -1980,6 +1983,7 @@ function TenderDialog({
   onCharge,
 }: {
   billG: number;
+  location: string;
   subtitle: string;
   covers: number;
   busy: boolean;
@@ -1992,6 +1996,17 @@ function TenderDialog({
   const [compZl, setCompZl] = useState("");
   const [compReason, setCompReason] = useState(COMP_REASONS[0]);
   const [splitN, setSplitN] = useState(1);
+  // Live per-shift comp status for the acting user (drives the cap meter).
+  const [compStatus, setCompStatus] = useState<{ compTodayGrosze: number; capGrosze: number; singleMaxGrosze: number; bypasses: boolean } | null>(null);
+  useEffect(() => {
+    if (!location) return;
+    let live = true;
+    fetch(`/api/admin/pos/comp-status?location=${encodeURIComponent(location)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d) setCompStatus(d); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [location]);
   const [shareMethods, setShareMethods] = useState<("cash" | "card")[]>([]);
   const [cashOpen, setCashOpen] = useState(false);
   const [cashGiven, setCashGiven] = useState(""); // zł text
@@ -2001,6 +2016,23 @@ function TenderDialog({
   const net = Math.max(0, billG - comp);
   const tip = tipPct === "custom" ? Math.max(0, zlToG(tipCustom)) : Math.round((net * tipPct) / 100);
   const total = net + tip;
+
+  // Comp-cap meter — the running shift total + where this comp would land.
+  const capG = compStatus?.capGrosze ?? 0;
+  const compTodayG = compStatus?.compTodayGrosze ?? 0;
+  const bypasses = compStatus?.bypasses ?? false;
+  const wouldBeG = compTodayG + comp;
+  const overCap = !bypasses && capG > 0 && comp > 0 && wouldBeG > capG;
+
+  // Split presets — Whole · ÷2 · ÷3 · ÷4 · By seat (all even; each share equal,
+  // last absorbs the rounding). Deduped + clamped to the cover count.
+  const splitPresets = [
+    { label: "Whole", n: 1 },
+    { label: "÷2", n: 2 },
+    { label: "÷3", n: 3 },
+    { label: "÷4", n: 4 },
+    { label: "By seat", n: Math.max(1, covers) },
+  ].filter((p) => p.n <= Math.max(1, covers)).filter((p, i, a) => a.findIndex((x) => x.n === p.n) === i);
 
   // Even split — each share equal, the last absorbs the rounding remainder.
   const shareOf = (i: number) => {
@@ -2096,25 +2128,35 @@ function TenderDialog({
                 Amount comped
                 <input className="core-inp" inputMode="decimal" value={compZl} onChange={(e) => setCompZl(e.target.value)} placeholder={`whole bill · ${fmtPLN(billG)}`} />
               </label>
-              <div className="core-alrg-banner" style={{ background: "var(--brand-wash)", color: "var(--brand-bright)" }}>
-                Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.
-              </div>
+              {bypasses ? (
+                <div className="core-tender-note">Owner — comp caps don't apply. Logged as a manager comp ({compReason}).</div>
+              ) : capG > 0 ? (
+                <div className={`core-comp-cap${overCap ? " over" : ""}`}>
+                  <div className="cc-row"><span>Comps this shift</span><span className="mono">{fmtPLN(compTodayG)} / {fmtPLN(capG)}</span></div>
+                  <div className="cc-bar"><i style={{ width: `${Math.min(100, capG ? (wouldBeG / capG) * 100 : 0)}%` }} /></div>
+                  {overCap ? (
+                    <div className="cc-gate">🔒 <b>Over the {fmtPLN(capG)} shift cap</b> — needs a manager. This comp would take the shift to {fmtPLN(wouldBeG)}; the till will refuse it.</div>
+                  ) : (
+                    <div className="cc-note">This comp fits — takes the shift to {fmtPLN(wouldBeG)}.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="core-tender-note">Logged as a manager comp ({compReason}) — counts toward the per-shift comp cap.</div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Split */}
+        {/* Split — presets */}
         {covers > 1 && (
           <div className="core-tender-sec">
-            <div className="core-tender-sec-h">
-              Split evenly
-              <div className="core-qstep">
-                <button type="button" onClick={() => setSplitN((n) => Math.max(1, n - 1))} aria-label="Fewer ways">−</button>
-                <span className="q mono">{splitN === 1 ? "1" : `${splitN}×`}</span>
-                <button type="button" onClick={() => setSplitN((n) => Math.min(covers, n + 1))} aria-label="More ways">+</button>
-              </div>
+            <div className="core-tender-sec-h">Split</div>
+            <div className="core-tender-chips">
+              {splitPresets.map((p) => (
+                <button key={p.label} type="button" className={`core-tchip${splitN === p.n ? " on" : ""}`} onClick={() => setSplitN(p.n)}>{p.label}</button>
+              ))}
             </div>
-            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} guests)</div>}
+            {splitN > 1 && <div className="core-tender-note">{fmtPLN(shareOf(0))} each ({splitN} ways)</div>}
           </div>
         )}
 

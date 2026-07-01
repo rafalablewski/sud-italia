@@ -189,13 +189,18 @@ already renders `selectedModifiers` (`.mod` / `.mod.flag`) and the per-line
 It composes the tender and PATCHes it as `{ tabId, tender }`:
 
 - **Tip** — `.core-tchip` presets (None / 5 / 10 / 15 % of the net) + Custom zł.
-- **Comp** — a `.core-tender-toggle` reveals reason chips (`COMP_REASONS`) + an
-  amount (defaults to the whole bill). Recorded server-side as a single
-  `manager_comp` (the chip is the note), so it shows in Reports and counts toward
-  the per-shift comp cap (`getActorCompTotalToday`, audit action `pos.comp`).
-- **Split evenly** — a stepper up to the cover count; each guest share is an
-  equal slice (last absorbs the rounding remainder) with its own Cash/Card
-  `.core-seg.sm` toggle. `Charge split` sends one `payments[]` entry per share.
+- **Comp** — a `.core-tender-toggle` reveals reason-code chips (`COMP_REASONS`
+  = **Quality · Wait · Goodwill · Error**) + an amount (defaults to the whole
+  bill), over a **live per-shift comp-cap meter** (`.core-comp-cap` — fed by
+  `GET /api/admin/pos/comp-status`: the actor's real audit-log comp total vs the
+  `refundControls` cap). The bar turns danger + shows a 🔒 over-cap gate when the
+  comp would breach; owners see a "caps don't apply" note. Recorded server-side
+  as a single `manager_comp` (the chip is the note), so it shows in Reports and
+  counts toward the cap (`getActorCompTotalToday`, audit action `pos.comp`).
+- **Split** — `.core-tchip` presets (**Whole · ÷2 · ÷3 · ÷4 · By seat**, clamped
+  to the cover count); each guest share is an equal slice (last absorbs the
+  rounding remainder) with its own Cash/Card `.core-seg.sm` toggle. `Charge
+  split` sends one `payments[]` entry per share. (By-item allocation is TODO.)
 - **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
   quick denomination chips + a free amount, a live `.core-change-row` change-due,
   and a Confirm gated until the cash covers the total.
