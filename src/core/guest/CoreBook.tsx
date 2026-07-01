@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { findReservationConflicts } from "@/lib/floor";
@@ -24,6 +25,7 @@ function todayLocal(): string {
  */
 export function CoreBook() {
   const toast = useCoreToast();
+  const { selected } = useSelection();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
   // Seed the date on the client only — todayLocal() reads the local timezone,
@@ -171,7 +173,7 @@ export function CoreBook() {
               {tables.map((t) => {
                 const st = tableState(t);
                 return (
-                  <button key={t.id} className={`core-pk ${tableId === t.id ? "on" : ""} ${st.ok ? "" : "off"}`} disabled={!st.ok && !override} onClick={() => setTableId(t.id)} title={st.label}>
+                  <button key={t.id} className={`core-pk ${tableId === t.id ? "on" : ""} ${st.ok ? "" : "off"}${selected?.kind === "table" && selected.id === t.id ? " is-focus" : ""}`} disabled={!st.ok && !override} onClick={() => setTableId(t.id)} title={st.label}>
                     {t.number}
                     <span className="sub">{st.label}</span>
                   </button>

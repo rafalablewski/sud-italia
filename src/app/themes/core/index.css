@@ -515,6 +515,27 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tk-hend { display: flex; align-items: center; gap: 7px; }
 .core .core-tk-risk { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--t-risk); background: rgba(155,127,214,.16); border-radius: 5px; padding: 2px 6px; }
 .core .core-tk.sim { border-style: dashed; }
+
+/* ---- cross-lens selection focus ----
+   A table picked on any lens (Floor tile / Context Dock) is the shared
+   selected entity; its Pass ticket and Floor tile ring + pulse in ember so
+   the operator's focus follows them across surfaces (Service OS spine). */
+@keyframes core-focus-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--brand), 0 0 0 6px rgba(232,107,62,0); }
+  50% { box-shadow: 0 0 0 2px var(--brand), 0 0 0 6px rgba(232,107,62,.28); }
+}
+.core .core-tk.is-focus,
+.core .core-tbl2.is-focus,
+.core .core-pk.is-focus {
+  border-left-color: var(--brand);
+  animation: core-focus-pulse 1.6s ease-in-out infinite;
+}
+.core .core-tbl2.is-focus, .core .core-pk.is-focus { border-color: var(--brand); }
+@media (prefers-reduced-motion: reduce) {
+  .core .core-tk.is-focus, .core .core-tbl2.is-focus, .core .core-pk.is-focus {
+    animation: none; box-shadow: 0 0 0 2px var(--brand);
+  }
+}
 .core .core-tk-sim { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
 .core .core-tk-course { font-size: 11.5px; color: var(--ink-2); margin-bottom: 6px; }
 .core .core-tk-grp-block + .core-tk-grp-block { margin-top: 5px; }

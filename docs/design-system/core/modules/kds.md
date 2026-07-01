@@ -73,6 +73,12 @@ Below, in order, the **safety-relevant** content the line needs:
   big mono figure cooks track from.)
 - `.core-tk-note` — the order's special instructions (`Note …`).
 
+`.core-tk.is-focus` — the ticket rings + ember-pulses (`@keyframes
+core-focus-pulse`, reduced-motion-guarded) when its table is the cross-lens
+selected entity (`KdsTicket.tableId === selection.id`), so a table picked on
+the Floor lens is visible here without hunting. Shared with `.core-tbl2.is-focus`
+(Floor tile) and `.core-pk.is-focus` (Book picker).
+
 Then a `.core-meter` cook-time bar and a `.core-bump` button. SLA **tone**
 drives the left border, due colour and meter fill: `queued · firing ·
 warn · risk · late · ready`.

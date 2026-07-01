@@ -34,7 +34,7 @@ Last updated: **2026-07-01** — sketches phase.
 | 11 | `<TenderSheet>` (split/pay/comp + guard) | ☐ | |
 | 12 | Guest sync (QR → same check, SSE mirror) | ☐ | |
 | 13 | Micro-interactions + optimistic reconcile | ☐ | |
-| 14 | Cross-lens selection persistence + entity event bus | ☐ | Wires it all together |
+| 14 | Cross-lens selection persistence + entity event bus | ◐ | **Selection focus shipped:** the shared `SelectionContext` entity now *drives focus* on every lens, not just the dock — the selected table's **Floor tile**, its **Pass/KDS ticket** (via new `KdsTicket.tableId`), and its **Book picker** option ring + ember-pulse (`.is-focus`, `@keyframes core-focus-pulse`, reduced-motion-guarded, in `themes/core/index.css`). Verified live: pick a table on Floor → navigate to KDS → its ticket pulses; dock follows. Entity **event bus** (push deltas so a POS fire lights up Pass + guest in one tick) still pending — see milestone 8/12 + this file's W2. |
 | 15 | Docs sync (`docs/design-system/core/**`) + Capabilities entry | ☐ | Rules #9 & #11 |
 
 ---

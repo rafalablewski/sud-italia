@@ -148,12 +148,15 @@ const TicketCard = memo(function TicketCard({
   t,
   station,
   updating,
+  focused,
   onAdvance,
   onPick,
 }: {
   t: KdsTicket;
   station: MenuCategory | "all";
   updating: boolean;
+  /** True when this ticket's table is the cross-lens selected entity. */
+  focused?: boolean;
   onAdvance: (t: KdsTicket) => void;
   /** Pin this ticket to the persistent Context Dock (stable setter from the
    *  board's single useSelection() — keeps memoised tickets from re-rendering). */
@@ -172,7 +175,7 @@ const TicketCard = memo(function TicketCard({
   const held = t.coursing?.held ?? [];
   const next = nextStatus(t.status);
   return (
-    <div className={`core-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
+    <div className={`core-tk t-${due.tone}${t.simulated ? " sim" : ""}${focused ? " is-focus" : ""}`}>
       <div
         className="core-tk-h"
         onClick={() => {
@@ -258,7 +261,7 @@ export function CoreKds() {
   // Single context read for the whole board — the stable `select` setter is
   // passed to each memoised TicketCard, so pinning a ticket to the Context Dock
   // never re-renders the other tickets.
-  const { select } = useSelection();
+  const { select, selected } = useSelection();
   const [view, setView] = useState<View>("floor");
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [lane, setLane] = useState<OrderStatus | "all">("all");
@@ -553,8 +556,20 @@ export function CoreKds() {
     { label: "Chef", active: view === "chef", onClick: () => setView("chef") },
   ];
 
+  // Cross-lens focus: a table selected on any lens (Floor/dock) pulses its
+  // ticket here. Computed per-card so the memoised TicketCard only re-renders
+  // the cards whose focus actually flipped.
+  const focusTableId = selected?.kind === "table" ? selected.id : null;
   const renderTicket = (t: KdsTicket) => (
-    <TicketCard key={t.id} t={t} station={station} updating={updatingId === t.id} onAdvance={advance} onPick={select} />
+    <TicketCard
+      key={t.id}
+      t={t}
+      station={station}
+      updating={updatingId === t.id}
+      focused={!!focusTableId && t.tableId === focusTableId}
+      onAdvance={advance}
+      onPick={select}
+    />
   );
 
   const controls =

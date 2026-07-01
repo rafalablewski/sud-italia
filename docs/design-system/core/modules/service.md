@@ -13,7 +13,10 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   **spend / hr** · freeing ≤15m) over zoned table tiles. Each `.core-tbl2`
   is toned by state — free · seated · **freeing** (predicted ≤15m) ·
   reserved · out-of-service — and shows party / dwell / open check; hover
-  reveals a `⋯` **edit** affordance.
+  reveals a `⋯` **edit** affordance. The tile of the **cross-lens selected
+  table** rings + ember-pulses via `.core-tbl2.is-focus` (shared
+  `@keyframes core-focus-pulse`, reduced-motion-guarded) — so the entity in
+  focus is visible on the Floor even after it was picked on another lens.
 - **Tap a table → its check opens as a panel over the floor** — the core IA
   move. The tile's main tap mounts the **embedded till** (`<CorePos embedded>`)
   in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled

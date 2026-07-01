@@ -61,7 +61,7 @@ export function CoreFloor({
   upsellByLocation: Record<string, UpsellConfig | null>;
 }) {
   const toast = useCoreToast();
-  const { select } = useSelection();
+  const { select, selected } = useSelection();
   const { location, activeLocations } = useLocation();
   // The table whose check is open over the floor (the docked check panel).
   const [checkTable, setCheckTable] = useState<TwinTableRow | null>(null);
@@ -363,10 +363,11 @@ export function CoreFloor({
                     const tUnpaid = tOrders.filter((o) => !o.paid);
                     const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
                     const hasQr = tOrders.some((o) => o.channel === "qr");
+                    const isFocus = selected?.kind === "table" && selected.id === t.id;
                     return (
                       <div key={t.id} className="core-tbl2-wrap">
                         <button
-                          className={`core-tbl2 ${st.cls}`}
+                          className={`core-tbl2 ${st.cls}${isFocus ? " is-focus" : ""}`}
                           onClick={() => {
                             if (t.status === "out-of-service") return;
                             setCheckTable(t);
