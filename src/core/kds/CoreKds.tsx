@@ -527,11 +527,14 @@ export function CoreKds() {
   type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
   const [ops, setOps] = useState<{ throughputLastHour: number; coversLastHour: number; revenueLastHourGrosze: number; onShift: number; stations: StationLoad[] } | null>(null);
   useEffect(() => {
-    if (view === "fleet" || !location) return;
+    if (view === "fleet") return;
     let cancelled = false;
     const load = async () => {
       try {
-        const r = await fetch(`/api/admin/kds/floor-ops?location=${encodeURIComponent(location)}`);
+        // At "all locations" (no slug) floor-ops aggregates every truck, so the
+        // Throughput/Covers/Revenue cells read live numbers instead of "—".
+        const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+        const r = await fetch(`/api/admin/kds/floor-ops${qs}`);
         if (!r.ok) return;
         const d = await r.json();
         if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, coversLastHour: d.coversLastHour ?? 0, revenueLastHourGrosze: d.revenueLastHourGrosze ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
