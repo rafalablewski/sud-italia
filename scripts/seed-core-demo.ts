@@ -251,7 +251,7 @@ async function seedAgentCalls(): Promise<void> {
     for (let i = 0; i < m.n; i++) {
       seq++;
       // Spread across the last ~10h of today; jitter latency; ~2% errors.
-      const at = new Date(Date.now() - min(seq * 4) % (60 * 10)).toISOString();
+      const at = new Date(Date.now() - min((seq * 4) % (60 * 10))).toISOString();
       const jitter = m.ms + Math.round((Math.sin(seq) * m.ms) / 6);
       await logAgentCall({ capability: m.cap, latencyMs: Math.max(40, jitter), ok: seq % 47 !== 0, at });
     }
