@@ -1112,7 +1112,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-gem.plat, .core .core-gem.platinum { background: linear-gradient(135deg, #cfeef2, #7fb4c9); color: #a9dbe6; }
 .core .core-crm-grid { display: grid; grid-template-columns: 1fr 356px; gap: 12px; align-items: start; margin: 0 16px 18px; }
 .core .core-crm-grid.solo { grid-template-columns: 1fr; }
-.core .core-roster { padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+.core .core-roster { padding: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
 .core .core-roster table { width: 100%; border-collapse: collapse; }
 .core .core-roster thead th { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .core .core-roster thead th.num { text-align: right; }
@@ -1381,7 +1381,13 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-svc-res .m { flex: 1; min-width: 0; } .core .core-svc-res .m .nm { font-weight: 600; font-size: 13px; }
 .core .core-svc-res .x { color: var(--ink-3); font-size: 12px; } .core .core-svc-res .x:hover { color: var(--danger); }
 
-@media (max-width: 1000px) { .core .core-book { grid-template-columns: 1fr; } .core .core-book-side { border-left: 0; border-top: 1px solid var(--line); } }
+@media (max-width: 1000px) {
+  .core .core-book { grid-template-columns: 1fr; }
+  /* stack: the explicit grid-column: 2 on the form would otherwise force an
+     implicit second column and spill the rail off-screen on narrow viewports. */
+  .core .core-book-tlpanel, .core .core-book-form, .core .core-book-side { grid-column: 1 / -1; }
+  .core .core-book-side { border-left: 0; border-top: 1px solid var(--line); }
+}
 
 /* ============================================================
    Service · Floor + Slots
@@ -1471,7 +1477,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-chan:hover { color: var(--ink-2); }
 .core .core-chan.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); }
 .core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
-.core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--panel); }
+.core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: var(--panel); }
 .core .core-otable table { width: 100%; border-collapse: collapse; }
 .core .core-otable thead th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .core .core-otable thead th.r { text-align: right; }
