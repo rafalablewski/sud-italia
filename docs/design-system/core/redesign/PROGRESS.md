@@ -4,7 +4,7 @@
 > Legend: ☐ not started · ◐ in progress · ☑ done · ⏸ blocked/awaiting decision.
 > Companion: [`README.md`](./README.md) (the design spec).
 
-Last updated: **2026-07-01** — sketches phase.
+Last updated: **2026-07-02** — full live 1:1 audit of all 11 suite pages against the dense-console mockup; suite confirmed implemented and functional, CRM inspector defaulted-open to match the mockup's populated state.
 
 ---
 
@@ -159,6 +159,19 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **Full live 1:1 audit of the dense-console suite.** Ran every one of the 11 suite pages
+  (`/core/{pos,kds,orders,service/{floor,slots,dispatch},guest/{inbox,guests,loyalty,concierge},book}`) side-by-side
+  against the uploaded mockup (byte-identical to `tests/sketches/core-dense-console-suite.html`) with a headless
+  Chromium pass, authenticated as owner. Finding: the suite is **already implemented and functional 1:1** — every page
+  carries the dense-console chrome (`.core-crumb`, `.core-statstrip`, glass filter/section heads, per-lens rails). The
+  "empty-looking" areas are honest live-data states, **not** design gaps: POS shows no open check because the seed has
+  0 open checks; Inbox is empty because no WhatsApp convos are seeded; Book lands on a day with no slots. KDS defaulting
+  to **Fleet** for owners (vs the mockup's **Floor**) is the intended role-shaped default (milestone 4) — a line/kitchen
+  session lands on Floor, matching the mockup. **One real divergence fixed:** the **CRM** guest inspector (`.core-drawer`)
+  only rendered after a row click, whereas the mockup shows it populated by default; `CoreCrm` now **auto-selects the top
+  visible guest on load** (and re-homes to the first row when the current pick is filtered out — a manual pick wins), so
+  the customer book reads populated like the mockup. Verified live (inspector present on first paint, screenshotted).
+  Doc synced (`modules/guest.md`, Rule #11).
 - **2026-07-02** — **Orders brought 1:1** with `03-orders.html`: `.core-crumb` + a 7-up `.core-statstrip`
   (open · revenue · avg check · refunds · dine-in/takeaway/delivery %), a `.core-filterbar` (search + channel chips
   + date + refresh), a `.core-otable` HTML table (`.core-chanchip` / `.core-stpill`), and a `.core-od-track` status
