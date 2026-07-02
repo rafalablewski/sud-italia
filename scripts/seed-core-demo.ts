@@ -38,6 +38,7 @@ import {
   addLoyaltyMember,
   getMenuOverrides,
   setMenuOverride,
+  logAgentCall,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
 import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus, TimeSlot } from "@/data/types";
@@ -232,6 +233,32 @@ async function seedAllergens(menu: MenuItem[]): Promise<void> {
   }
 }
 
+/** Seed a day of Concierge agent-endpoint hits so the MCP inspector's
+ *  telemetry (requests today · avg latency · deflection · errors · per-cap) has
+ *  real data out of the box. These are genuine call records the endpoint would
+ *  write; a live agent adds to them. */
+async function seedAgentCalls(): Promise<void> {
+  const mix: { cap: string; n: number; ms: number }[] = [
+    { cap: "get_menu", n: 62, ms: 310 },
+    { cap: "check_availability", n: 48, ms: 402 },
+    { cap: "get_allergens", n: 41, ms: 288 },
+    { cap: "place_order", n: 37, ms: 540 },
+    { cap: "create_payment", n: 19, ms: 256 },
+    { cap: "locate_truck", n: 7, ms: 184 },
+  ];
+  let seq = 0;
+  for (const m of mix) {
+    for (let i = 0; i < m.n; i++) {
+      seq++;
+      // Spread across the last ~10h of today; jitter latency; ~2% errors.
+      const at = new Date(Date.now() - min(seq * 4) % (60 * 10)).toISOString();
+      const jitter = m.ms + Math.round((Math.sin(seq) * m.ms) / 6);
+      await logAgentCall({ capability: m.cap, latencyMs: Math.max(40, jitter), ok: seq % 47 !== 0, at });
+    }
+  }
+  console.log(`agent-call telemetry seeded (${mix.reduce((s, m) => s + m.n, 0)} calls)`);
+}
+
 async function main() {
   console.log(`store mode: ${useDB ? "Neon Postgres (DATABASE_URL set)" : "filesystem (.data)"}`);
   if (useDB && process.env.ALLOW_DB_SEED !== "1") {
@@ -318,6 +345,8 @@ async function main() {
     });
   }
   console.log("\nloyalty members seeded");
+
+  await seedAgentCalls();
 
   console.log("\n✓ Core demo seed complete.");
 }

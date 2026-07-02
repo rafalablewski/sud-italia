@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   CONCIERGE_CAPABILITY_IDS,
+  logAgentCall,
   type ConciergeCapabilityId,
 } from "@/lib/store";
 import {
@@ -25,13 +26,18 @@ export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ capability: string }> },
 ) {
+  const started = Date.now();
   const { capability } = await ctx.params;
   if (!isCapabilityId(capability)) {
     return NextResponse.json({ error: "Unknown capability" }, { status: 404 });
   }
+  // Log real usage for the Concierge inspector telemetry (Rule #1). Fire-and-
+  // forget so it never adds latency or fails the request; ok = 2xx served.
+  const track = (ok: boolean) => { void logAgentCall({ capability, latencyMs: Date.now() - started, ok }); };
 
   const meta = CAPABILITY_META[capability];
   if (meta.transport !== "public") {
+    track(false);
     return NextResponse.json(
       {
         error: "Not exposed over the read endpoint",
@@ -43,6 +49,7 @@ export async function GET(
   }
 
   if (!(await isCapabilityExposed(capability))) {
+    track(false);
     return NextResponse.json(
       { error: "Capability disabled by operator", capability },
       { status: 403 },
@@ -51,10 +58,12 @@ export async function GET(
 
   const slug = (req.nextUrl.searchParams.get("location") || "krakow").toLowerCase();
   if (!ACTIVE.has(slug)) {
+    track(false);
     return NextResponse.json({ error: "Unknown location" }, { status: 400 });
   }
 
   const data = await buildCapabilityResponse(capability, slug);
+  track(true);
   return NextResponse.json(data, {
     headers: { "Cache-Control": "public, max-age=30" },
   });

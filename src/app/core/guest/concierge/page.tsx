@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { CONCIERGE_CAPABILITY_IDS, getConciergeSettings } from "@/lib/store";
+import { CONCIERGE_CAPABILITY_IDS, getConciergeSettings, getAgentCallStats } from "@/lib/store";
 import { CAPABILITY_META, CAPABILITY_ORDER, buildAllergenMatrix, buildCapabilityResponse } from "@/lib/concierge/capabilities";
 import { CoreConcierge } from "@/core/guest/CoreConcierge";
 
 export default async function CoreConciergePage() {
   if (!(await isAuthenticated())) redirect("/login");
   const slugs = ["krakow", "warszawa"] as const;
-  const [settings, locationEntries] = await Promise.all([
+  const [settings, stats, locationEntries] = await Promise.all([
     getConciergeSettings(),
+    getAgentCallStats(),
     Promise.all(
       slugs.map(async (slug) => {
         const [sampleEntries, matrix] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function CoreConciergePage() {
       settings={settings}
       byLocation={byLocation}
       waConfigured={waConfigured}
+      stats={stats}
     />
   );
 }
