@@ -34,7 +34,8 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   portaled to the `.core` root per Rule #4) offers 3-4 verbs for that table's
   state (seated → Open check · Move · Free · Edit; free/reserved → Seat · Reserve ·
   Edit; out-of-service → Restore · Edit). The tap also feeds the Context Dock.
-  Zones are filterable via `.core-zonetabs` (All + one chip per zone).
+  Zones are filterable via the mockup's **`Zone` subbar** (`.core-zonetabs`
+  with a `.core-zone-lbl` label — `Zone · All zones · <zone>×N`).
 - **Open check → the check opens as a panel over the floor** — the core IA
   move. The radial's **Open check** verb mounts the **embedded till** (`<CorePos embedded>`)
   in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled

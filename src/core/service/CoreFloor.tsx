@@ -495,8 +495,9 @@ export function CoreFloor({
         <div className="core-floor">
           {zones.length > 1 && (
             <div className="core-zonetabs">
+              <span className="core-zone-lbl">Zone</span>
               <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
-                All<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+                All zones<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
               </button>
               {zones.map(([z, ts]) => (
                 <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
