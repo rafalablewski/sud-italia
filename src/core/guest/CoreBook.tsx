@@ -224,8 +224,9 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
           <span className="core-surf-tb-lbl">Day</span>
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
         </div>
-        {/* timeline — tables (rows) × hours (cols); drag a block to reassign,
-            overlaps hatch red live via findReservationConflicts */}
+        {/* timeline panel (left) — the tlbar header + the tables×hours grid,
+            grouped so the new-reservation form can sit as a right rail. */}
+        <div className="core-book-tlpanel">
         <div className="core-book-tlbar">
           <span className="t">Reservations timeline</span>
           <div className="core-tl-legend">
@@ -278,8 +279,9 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
             )}
           </div>
         </div>
+        </div>{/* /core-book-tlpanel */}
 
-        {/* form */}
+        {/* new reservation — right rail (mockup) */}
         <div className="core-book-form">
           <h4 className="core-profile-h">Dine-in slot</h4>
           {loading ? (

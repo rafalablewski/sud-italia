@@ -100,10 +100,13 @@ and **toned by status** (`.core-tl-block.confirmed` basil / `.seated` info),
 **overlaps hatch red** live (`.core-tl-block.conflict`, one
 `findReservationConflicts` pass per booking), and a block **drags to another
 table row to reassign** (HTML5 drag → the reservations `POST` upsert with
-`override`, so the conflict check re-runs on the result). Below: pick a dine-in
-slot (`.core-pk`) + party size, then a table — live fit/conflict (booked/too-small
+`override`, so the conflict check re-runs on the result). The timeline panel
+(`.core-book-tlpanel`) sits **left**; the **new-reservation form is the right
+rail** (`.core-book-form` at grid col 2, mockup layout): pick a dine-in slot
+(`.core-pk`) + party size, then a table — live fit/conflict (booked/too-small
 tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
-confirm. Today's bookings on the right with cancel. Engine: `GET
+confirm. **Today's bookings** (`.core-book-side`) is a **full-width list below**,
+with cancel. Engine: `GET
 /api/admin/{slots,floor/tables,floor/reservations}`; create `POST
 /api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
 

@@ -1320,7 +1320,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ============================================================
    Guest · Book (shared with Service) — slot + table console
    ============================================================ */
-.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 300px; align-content: start; }
+.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; align-content: start; }
+/* dense-console Book layout (mockup 11-book): timeline left, new-reservation
+   form as the right rail, today's bookings full-width below. */
+.core .core-book-tlpanel { grid-column: 1; min-width: 0; }
+.core .core-book-form { grid-column: 2; }
+.core .core-book-side { grid-column: 1 / -1; }
 /* dense-console header rows span the full width above the form/side row */
 .core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 .core .core-book-form { padding: 18px; }
