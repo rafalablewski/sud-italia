@@ -104,7 +104,11 @@
   box-shadow: 0 6px 18px -4px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, .22);
 }
 /* Lens Rail — frosted glass column so the aurora refracts through it. */
-.core[data-skin="liquid-glass"] .core-lens {
+/* Collapsed Lens Rail is fully transparent — no fill, no blur, no divider — so
+   it shows the same `.core` aurora as the (transparent) body and reads as one
+   continuous background. Only the pinned/expanded rail frosts. */
+.core[data-skin="liquid-glass"] .core-lens { background: transparent; }
+.core[data-skin="liquid-glass"] .core-lens.open {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   border-right-color: var(--line-2);
