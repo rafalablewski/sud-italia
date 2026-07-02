@@ -293,6 +293,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
               {dineInSlots.map((s) => (
                 <button key={s.id} className={slotId === s.id ? "core-pk on" : "core-pk"} onClick={() => setSlotId(s.id)}>
                   {s.time}
+                  <span className="sub">{s.currentOrders}/{s.maxOrders}</span>
                 </button>
               ))}
             </div>

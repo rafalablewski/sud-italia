@@ -4,7 +4,7 @@
 > Legend: ☐ not started · ◐ in progress · ☑ done · ⏸ blocked/awaiting decision.
 > Companion: [`README.md`](./README.md) (the design spec).
 
-Last updated: **2026-07-01** — sketches phase.
+Last updated: **2026-07-02** — full live 1:1 audit of all 11 suite pages against the dense-console mockup; suite confirmed implemented and functional, CRM inspector defaulted-open to match the mockup's populated state.
 
 ---
 
@@ -159,6 +159,48 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **POS order panel finished to the mockup.** After a headless side-by-side exposed real gaps: the
+  **channel** selector and **kitchen-timing** toggle became one labelled full-width ember segmented control each
+  (`.core-oseg`/`.core-miniseg`), a density pass tightened the header/covers/segments/courses/lines, ticket lines gained
+  the menu **descriptor** sub, the header title now reads **`Tab N · T{table}`** (content-sized name + `.core-th-tbl`
+  suffix) with an **info-cyan** table pill (`.core-chan-aux`); the redundant channel sub was dropped (removing the
+  orphan `.th-s`) while the sent-check order ref moved inline into the title (`.core-th-ord`). For the coursing states, the demo seed now **fires the starter** of one dine-in check
+  via the real `fireTab` (not a faked flag) — so the panel shows served ✓ (basil) · next ⚡Fire (ember) · held ◷Hold
+  (amber) like the mockup, and the fired course also seeds a real KDS ticket; cleanup deletes the spawned order via the
+  tab link so re-seeds stay idempotent. Verified with repeated headless side-by-side crops. Docs synced (`modules/pos.md`).
+- **2026-07-02** — **POS order-panel coursing spine brought 1:1 with the mockup.** Course labels now read in
+  **Neapolitan** (`POS_COURSE_LABELS`: Antipasti · Primi · Dolci · Bevande) across POS + KDS + toasts, and each
+  `.core-course-h` gained a status **dot** + contextual chip matching the mockup: basil `✓ Fired` (served), an ember
+  `⚡ Fire` on the earliest un-fired course (the actionable one), and a muted amber `◷ Hold` on later courses (still
+  fireable — tap to jump the queue). New CSS: `.core-course-h .cdot.{done,next,hold}` + `.fire.hold`. Verified live
+  (order panel screenshotted: Antipasti ⚡Fire · Primi ◷Hold · Bevande ◷Hold). Doc synced (`modules/pos.md`, Rule #11).
+- **2026-07-02** — **Made the live suite render as full as the mockup (visual parity, real data).** The demo seed
+  was pinning `TODAY` to a hardcoded `2026-06-07`, which had drifted a month into the past — so slots + bookings landed
+  on a dead day and **Book** / **Service · Slots** read empty against the mockup's populated boards. `TODAY` now resolves
+  to the **actual current day**, so both fill in (Slots: 245/384 booked, surge banner, pace levers; Book: today's
+  bookings on the timeline + slot picker). The seed also created **no open POS checks**, so **POS · Order** showed the
+  "No open check" empty state instead of the mockup's live board; added `seedOpenTabs` — four open checks per location
+  (three coursed dine-in tabs on tables + one takeaway), so POS now lands on the tab bar + coursed ticket
+  (Starters/Mains/Drinks with per-course Fire) + combo/cross-sell offers + charge dock, matching the mockup. Book slot
+  chips (`.core-pk`) now carry a `currentOrders/maxOrders` capacity `.sub` so the picker reads tinted-by-fill like the
+  mockup. All from **real store rows** (Rule #1) — nothing baked into components. POS stat-strip keeps its honest live
+  metrics (To pay / Open value / In kitchen / Pace) rather than the mockup's Table-turns / Sales-hr, which the till
+  component has no data for and won't fabricate. WhatsApp **Inbox** left as-is: its sessions carry a 90-min TTL and the
+  channel is Needs-config, so seeded convos aren't durable. Verified live (POS/Book/Slots screenshotted populated).
+  Doc synced (`modules/guest.md`, seed header; Rule #11).
+- **2026-07-02** — **Full live 1:1 audit of the dense-console suite.** Ran every one of the 11 suite pages
+  (`/core/{pos,kds,orders,service/{floor,slots,dispatch},guest/{inbox,guests,loyalty,concierge},book}`) side-by-side
+  against the uploaded mockup (byte-identical to `tests/sketches/core-dense-console-suite.html`) with a headless
+  Chromium pass, authenticated as owner. Finding: the suite is **already implemented and functional 1:1** — every page
+  carries the dense-console chrome (`.core-crumb`, `.core-statstrip`, glass filter/section heads, per-lens rails). The
+  "empty-looking" areas are honest live-data states, **not** design gaps: POS shows no open check because the seed has
+  0 open checks; Inbox is empty because no WhatsApp convos are seeded; Book lands on a day with no slots. KDS defaulting
+  to **Fleet** for owners (vs the mockup's **Floor**) is the intended role-shaped default (milestone 4) — a line/kitchen
+  session lands on Floor, matching the mockup. **One real divergence fixed:** the **CRM** guest inspector (`.core-drawer`)
+  only rendered after a row click, whereas the mockup shows it populated by default; `CoreCrm` now **auto-selects the top
+  visible guest on load** (and re-homes to the first row when the current pick is filtered out — a manual pick wins), so
+  the customer book reads populated like the mockup. Verified live (inspector present on first paint, screenshotted).
+  Doc synced (`modules/guest.md`, Rule #11).
 - **2026-07-02** — **Orders brought 1:1** with `03-orders.html`: `.core-crumb` + a 7-up `.core-statstrip`
   (open · revenue · avg check · refunds · dine-in/takeaway/delivery %), a `.core-filterbar` (search + channel chips
   + date + refresh), a `.core-otable` HTML table (`.core-chanchip` / `.core-stpill`), and a `.core-od-track` status

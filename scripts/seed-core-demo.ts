@@ -3,8 +3,11 @@
  * (filesystem fallback, no DATABASE_URL) with REAL records through the real
  * store functions so the live `/core/*` surfaces show a full picture:
  *   - floor tables  → POS table-assign, Service · Floor, Book
- *   - dine-in slots → Service · Slots, Book
+ *   - dine-in slots → Service · Slots, Book (dated to the real current day)
  *   - orders        → KDS (active) + Fleet KPIs + CRM rollups + loyalty + spend
+ *   - open checks   → POS · Order (tab bar + coursed ticket + charge dock); one
+ *                     lands mid-service (starter fired via the real fireTab) so
+ *                     the coursing spine shows served/next/held + a KDS ticket
  *   - loyalty members + a family wallet
  *   - reservations  → Book + Service · Floor (booked tables)
  *
@@ -39,11 +42,22 @@ import {
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
+  savePosTab,
+  getPosTabs,
+  deletePosTab,
 } from "@/lib/store";
+import { fireTab } from "@/lib/pos/fireTab";
 import { createBooking } from "@/lib/booking";
-import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus, TimeSlot } from "@/data/types";
+import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus, PosCourse, PosTabLine, TimeSlot } from "@/data/types";
 
-const TODAY = "2026-06-07";
+// The live floor moves in real time — slots, bookings and open checks must land
+// on the ACTUAL current day or Service · Slots / Book / POS read empty. (This was
+// pinned to a fixed date, which silently drifted a month into the past.)
+// Use LOCAL calendar parts, not toISOString() (UTC): near local midnight the UTC
+// date can be the previous/next day, which would date the rows to the wrong day
+// vs the app's local-time "today" and read empty — the very failure this fixes.
+const _today = new Date();
+const TODAY = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, "0")}-${String(_today.getDate()).padStart(2, "0")}`;
 const useDB = !!process.env.DATABASE_URL;
 const now = Date.now();
 const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
@@ -167,6 +181,73 @@ async function seedSlots(locationSlug: string): Promise<void> {
   }
 }
 
+// menu category → POS course lane (the till groups lines ANTIPASTI/PRIMI/DOLCI/…).
+function tabLine(menu: MenuItem[], cat: string, course: PosCourse, qty: number): PosTabLine | null {
+  const pool = menu.filter((m) => m.available && m.category === cat);
+  if (pool.length === 0) return null;
+  const item = pool[Math.floor(Math.random() * pool.length)];
+  return { menuItemId: item.id, quantity: qty, course };
+}
+
+/** Open, un-fired checks on the till — so POS · Order lands on a live board
+ *  (tab bar + coursed ticket + charge dock) instead of an empty "No open check"
+ *  screen. Dine-in tabs are coursed; one takeaway rounds out the strip. Tables
+ *  chosen to avoid the ones the bookings take (indices 4–6). */
+async function seedOpenTabs(slug: string, menu: MenuItem[], tableIds: string[]): Promise<number> {
+  type Spec = {
+    name: string;
+    channel: FulfillmentType;
+    table?: string;
+    covers: number;
+    guest?: (typeof GUESTS)[number];
+    lines: [string, PosCourse, number][];
+    // Fire the starter so the check lands mid-service — the coursing spine then
+    // shows all three states (served ✓ · next ⚡Fire · held ◷Hold) like the mockup,
+    // and the fired course also seeds a real KDS ticket (honest, not faked).
+    fireStarter?: boolean;
+  };
+  const specs: Spec[] = [
+    { name: "Tab 1", channel: "dine-in", table: tableIds[1], covers: 2, guest: GUESTS[1], fireStarter: true,
+      lines: [["antipasti", "starter", 1], ["pizza", "main", 2], ["desserts", "dessert", 1], ["drinks", "drink", 2]] },
+    { name: "Tab 2", channel: "dine-in", table: tableIds[2], covers: 4, guest: GUESTS[2],
+      lines: [["antipasti", "starter", 2], ["pizza", "main", 2], ["pasta", "main", 1], ["drinks", "drink", 3]] },
+    { name: "Tab 4", channel: "dine-in", table: tableIds[7] ?? tableIds[3], covers: 3, guest: GUESTS[0],
+      lines: [["pizza", "main", 2], ["desserts", "dessert", 2], ["drinks", "drink", 1]] },
+    { name: "Takeaway", channel: "takeout", covers: 1,
+      lines: [["pizza", "main", 1], ["antipasti", "starter", 1]] },
+  ];
+  let n = 0;
+  for (const s of specs) {
+    const items = s.lines.map(([cat, course, qty]) => tabLine(menu, cat, course, qty)).filter((l): l is PosTabLine => !!l);
+    if (items.length === 0) continue;
+    const saved = await savePosTab({
+      id: rid("demo-tab"),
+      locationSlug: slug,
+      name: s.name,
+      channel: s.channel,
+      status: "open",
+      items,
+      tableId: s.table,
+      covers: s.covers,
+      customerPhone: s.guest?.phone,
+      customerName: s.guest?.name,
+      coursed: s.channel === "dine-in",
+    });
+    // Fire the starter only if it actually has lines (a menu without an
+    // antipasti item would fire an empty course → fireTab throws), and never let
+    // a fire failure abort the rest of the seed (other location, bookings, etc.).
+    if (s.fireStarter && saved.coursed && items.some((l) => l.course === "starter")) {
+      try {
+        await fireTab({ tabId: saved.id, locationSlug: slug, courses: ["starter"] });
+      } catch (e) {
+        console.log(`  fireTab(${s.name}) skipped: ${(e as Error).message}`);
+      }
+    }
+    n++;
+  }
+  return n;
+}
+
 const GUEST_PHONES = new Set(GUESTS.map((g) => g.phone));
 
 /** Remove only this seeder's own demo rows, so a re-run (or seeding a shared
@@ -175,6 +256,13 @@ async function cleanup(): Promise<void> {
   const orders = await getOrders(undefined, undefined, { includeSimulated: true });
   let n = 0;
   for (const o of orders) if (o.id.startsWith("demo-ord")) { await deleteOrder(o.id); n++; }
+  const tabs = await getPosTabs();
+  for (const t of tabs) if (t.id.startsWith("demo-tab")) {
+    // a mid-service demo tab spawned a real (non-demo-id) order when its starter
+    // fired — delete it via the tab's link so re-seeds don't orphan/accumulate it.
+    if (t.orderId) await deleteOrder(t.orderId);
+    await deletePosTab(t.id, t.locationSlug);
+  }
   const tables = await getTables();
   for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
   const slots = await getSlots();
@@ -307,6 +395,10 @@ async function main() {
       n++;
     }
     console.log(`[${slug}] orders seeded: ${n}`);
+
+    // Open checks on the till → POS · Order shows a live board, not an empty screen.
+    const openTabs = await seedOpenTabs(slug, menu, tableIds);
+    console.log(`[${slug}] open POS checks seeded: ${openTabs}`);
 
     // Bookings tonight against the 20:00 slot + window tables.
     const slots = await getSlots(slug, TODAY);

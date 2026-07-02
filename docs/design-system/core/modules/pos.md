@@ -105,34 +105,54 @@ The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
 top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
 **active** check only:
 
-- **`.core-thead`** — `.core-th-name` (the check name is an **inline editable
-  input** — click to rename, persisted via the same debounced `PUT`) ·
-  channel/order tag · a `.core-tabpromise` per-check ETA (max
-  `promiseSecondsByCategory` across the lines, toned by the bottleneck
-  tier) · the `.core-covers` stepper (dine-in) and, right beside it, the
-  `.core-chan-aux` button — **Assign table / Table N** (dine-in, opens the
-  in-pane table picker) or **Add / Edit address** (delivery, opens the
-  address dialog). Both sit next to the covers count so the seating /
-  destination control lives with the party size. A `.core-delivery-paused`
+- **`.core-thead`** — the title reads **`Tab N · T{table}`** like the mockup: a
+  content-sized `.core-th-name` (the check name is an **inline editable input** —
+  click to rename, persisted via the same debounced `PUT`, `size` tracks the value)
+  followed by a static `.core-th-tbl` table suffix (dine-in, when a table is
+  assigned) and — once the check is sent — a muted `.core-th-ord` order reference
+  (`#XXXXX`, kept for KDS / receipt / refund reconciliation). Then a
+  `.core-tabpromise` per-check ETA (max `promiseSecondsByCategory`
+  across the lines, toned by the bottleneck tier) · the **info-cyan** `.core-chan-aux`
+  button — **＋ Assign table / ⇄ Table N** (dine-in, opens the in-pane table picker)
+  or **Add / Edit address** (delivery, opens the address dialog). Channel moved to
+  the segment below, so the title stays one line. A `.core-delivery-paused`
   banner shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
-- **`.core-chanrow` / `.core-chan`** — the channel selector (dine-in /
-  takeaway / delivery), now just the three channel buttons.
-- **`.core-timing` / `.core-seg`** — dine-in **kitchen-timing** toggle
-  (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
-  renderer reads to course or flat-list the ticket.
+- **`.core-tcovers`** — a **labelled covers row** (dine-in), on its own line like
+  the mockup: a `.core-tcovers-l` "COVERS" caption + the `.core-covers` stepper,
+  with the attached guest name pushed right (`.core-tcovers-g`) when the check
+  carries one. (Moved off the header so the party size reads as its own control.)
+- **`.core-oseg` / `.core-miniseg`** — the **channel** selector and the dine-in
+  **kitchen-timing** toggle share one pattern, matching the mockup's `.order-seg`:
+  a mono `.core-oseg-l` caption (CHANNEL · KITCHEN TIMING) stacked over a single
+  full-width connected segment (`.core-miniseg` — pill track, options `flex:1`),
+  the active option ember-tinted (`.on`). Channel writes `tab.channel`; timing
+  writes `tab.coursed`, which the `.core-lines` renderer reads to course or
+  flat-list the ticket. (Replaces the old separate `.core-chan` pills + inline
+  `.core-timing` toggle so both read identically to the mockup.)
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
-  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter, the **tappable
-  line name** (`.ln-edit`, reveals a `✎` on hover → opens the line editor) and a
-  mono line price (modifier deltas included). Under the name, `.core-line-mods`
+  `.core-lqz` quantity zone that reads a clean **`N×`** (`.core-lqty`) at rest like
+  the mockup and swaps to the live `.core-qstep` −/＋ counter on hover (touch tills
+  have no hover, so they show the stepper outright); a `.core-grip` handle (`⠿`,
+  also hover-revealed on desktop); the **tappable line name** (`.ln-edit`, reveals
+  a `✎` on hover → opens the line editor) and a mono line price (modifier deltas
+  included). Under the name, `.core-line-mods`
   renders the chosen modifiers as `.core-mod-chip` chips (a `flagOnKds` pick →
   `.flag` amber) and the special-request note as `.core-mod-note` (amber `.alrg`
-  when it names an allergy). **Line identity** is the item + its modifier picks +
+  when it names an allergy); when a line has neither, it falls back to the menu
+  item's **descriptor** (truncated) as the sub-line, like the mockup
+  ("San Marzano · fior di latte"). **Line identity** is the item + its modifier picks +
   its note (`posLineKey`, `@/lib/pos-line`), so a plain item and a customised one
   sit on separate rows and the stepper / re-course / edit target the right line.
   Dine-in coursed checks group lines into `.core-course` blocks with a
-  `.core-course-h` header and a per-course **Fire** button; fired courses dim
-  (`.core-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
+  `.core-course-h` header. Courses read in **Neapolitan** (`POS_COURSE_LABELS` —
+  Antipasti · Primi · Dolci · Bevande) and each header carries a status **dot**
+  (`.cdot`) + a contextual chip mirroring the mockup's coursing spine: a fired
+  course dims (`.core-course.fired`) with a basil `.cdot.done` + `✓ Fired`; the
+  **earliest un-fired** course is the actionable one — ember `.cdot.next` + the
+  prominent `⚡ Fire` button (`nextUnfiredCourse`); later un-fired courses read
+  amber `.cdot.hold` + a muted `◷ Hold` chip (`.fire.hold`) that stays fireable
+  (tap to jump the queue). **Re-coursing is touch-first:** on
   a coursed line the grip is a `<button>` that toggles `.core-line.picking`,
   revealing an inline `.core-recourse` chooser (`.core-recourse-opt` per course,
   current one `.on`) — one tap moves the line. Native drag stays as a

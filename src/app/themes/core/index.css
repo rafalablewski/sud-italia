@@ -411,19 +411,28 @@
 .core .core-ttab-new { background: transparent; border-style: dashed; }
 
 /* ---------- ticket: header + channel ---------- */
-.core .core-thead { display: flex; align-items: center; gap: 10px; padding: 11px 14px 9px; border-bottom: 1px solid var(--line); flex: none; }
+.core .core-thead { display: flex; align-items: center; gap: 10px; padding: 10px 14px 7px; border-bottom: 1px solid var(--line); flex: none; }
 .core .core-thead .th-id { min-width: 0; flex: 1; }
-.core .core-thead .th-t { font-family: var(--display); font-weight: 600; font-size: 15px; }
-.core .core-th-name { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; max-width: 100%; }
+.core .core-thead .th-t { font-family: var(--display); font-weight: 700; font-size: 17px; }
+.core .core-thead .th-name-row { display: flex; align-items: baseline; gap: 2px; min-width: 0; }
+.core .core-th-tbl { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink-3); white-space: nowrap; }
+.core .core-th-ord { font-family: var(--mono); font-size: 10px; color: var(--ink-3); align-self: center; margin-left: 2px; white-space: nowrap; }
+.core .core-th-name { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; max-width: 100%; }
 .core .core-th-name:hover { border-color: var(--line); }
 .core .core-th-name:focus { outline: none; border-color: var(--brand); background: var(--panel-2); }
-.core .core-thead .th-s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; padding-left: 6px; }
 /* "Held" flag on a parked check — relocated here from the command bar (the
    mockup keeps POS bar tools to qr + fullscreen only). */
 .core .core-thead .core-th-held { height: 24px; flex: none; font-size: 11px; padding: 0 9px; }
-/* dine-in kitchen-timing toggle */
-.core .core-timing { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; }
-.core .core-timing-l { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+/* labelled full-width segmented control — channel + kitchen-timing (mockup
+   .order-seg / .miniseg): a mono caption stacked over one connected segment
+   whose active option is ember-tinted. Replaces the old separate channel pills
+   and the inline timing toggle so both read identically to the mockup. */
+.core .core-oseg { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.core .core-oseg-l { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.core .core-miniseg { display: flex; gap: 3px; padding: 3px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-miniseg button { flex: 1; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: transparent; border: 0; padding: 4px 4px; border-radius: var(--pill); cursor: pointer; }
+.core .core-miniseg button:hover { color: var(--ink-2); }
+.core .core-miniseg button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4); font-weight: 600; }
 .core .core-seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--panel-3); gap: 2px; }
 .core .core-seg button { height: 26px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; }
 .core .core-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); }
@@ -431,26 +440,35 @@
 .core .core-covers button { width: 24px; height: 24px; border-radius: 50%; color: var(--ink-2); font-size: 15px; }
 .core .core-covers button:hover { background: var(--hover); color: var(--ink); }
 .core .core-covers .mono { min-width: 18px; text-align: center; font-weight: 600; font-size: 13px; }
-.core .core-chanrow { display: flex; gap: 6px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; flex: none; }
-.core .core-chan { height: 30px; padding: 0 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 550; font-size: 12.5px; color: var(--ink-2); }
-.core .core-chan:hover { color: var(--ink); }
-.core .core-chan.on { background: var(--brand); border-color: var(--brand); color: var(--on-accent); font-weight: 600; }
-.core .core-chan-aux { height: 30px; padding: 0 13px; border-radius: 8px; border: 1px dashed var(--line-2); background: transparent; font-weight: 550; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; flex: none; }
-.core .core-chan-aux:hover { color: var(--ink); background: var(--hover); }
+/* labelled covers row (mockup: COVERS [− 2 +] ......... guest/party on the right) */
+.core .core-tcovers { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.core .core-tcovers-l { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.core .core-tcovers-g { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* table / address action pill — info-cyan like the mockup's "+ Assign table". */
+.core .core-chan-aux { height: 28px; padding: 0 12px; border-radius: var(--pill); border: 1px solid rgba(84,188,224,.4); background: var(--info-wash); font-weight: 550; font-size: 12px; color: var(--info); white-space: nowrap; flex: none; }
+.core .core-chan-aux:hover { color: var(--info); background: rgba(84,188,224,.28); }
 
 /* ---------- ticket: lines + coursing ---------- */
-.core .core-lines { flex: 1; overflow-y: auto; padding: 6px 0; }
+.core .core-lines { flex: 1; overflow-y: auto; padding: 4px 0; }
 .core .core-lines-empty { padding: 24px 16px; text-align: center; color: var(--ink-3); font-size: 12.5px; }
-.core .core-course { border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.core .core-course { border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .core .core-course.fired { opacity: .62; }
-.core .core-course-h { display: flex; align-items: center; gap: 9px; padding: 9px 14px 4px; }
+.core .core-course-h { display: flex; align-items: center; gap: 9px; padding: 7px 14px 3px; }
 .core .core-course-h .c-n { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
 .core .core-course-h .fire { margin-left: auto; height: 26px; padding: 0 12px; border-radius: 7px; background: var(--brand); color: var(--on-accent); font-weight: 650; font-size: 11.5px; }
 .core .core-course-h .fire:hover { background: var(--brand-bright); }
 .core .core-course-h .fire:disabled { opacity: .5; cursor: default; }
 .core .core-course-h .fire.done { background: var(--basil-wash); color: var(--basil); }
+/* coursing status dot — served (basil) · next-to-fire (ember) · held (amber),
+   mirroring the dense-console mockup's per-course header dots. */
+.core .core-course-h .cdot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.core .core-course-h .cdot.done { background: var(--basil); box-shadow: 0 0 7px var(--basil); }
+.core .core-course-h .cdot.next { background: var(--brand-bright); box-shadow: 0 0 8px var(--brand); }
+.core .core-course-h .cdot.hold { background: var(--amber); box-shadow: 0 0 7px var(--amber-wash); }
+.core .core-course-h .fire.hold { background: var(--amber-wash); color: var(--amber); }
+.core .core-course-h .fire.hold:hover { background: var(--brand); color: var(--on-accent); }
 .core .core-line { display: flex; flex-direction: column; }
-.core .core-line-main { display: flex; align-items: center; gap: 10px; padding: 6px 14px; }
+.core .core-line-main { display: flex; align-items: center; gap: 10px; padding: 4px 14px; }
 .core .core-line-main:hover { background: var(--hover); }
 .core .core-line.picking .core-line-main { background: var(--brand-wash); }
 .core .core-line .ln { flex: 1; min-width: 0; font-weight: 500; font-size: 12.5px; }
@@ -459,14 +477,27 @@
 .core .core-qstep button { width: 22px; height: 22px; border-radius: 6px; color: var(--ink-2); font-size: 14px; }
 .core .core-qstep button:hover { background: var(--hover); color: var(--ink); }
 .core .core-qstep .q { min-width: 22px; text-align: center; font-weight: 600; font-size: 12.5px; }
-/* Calm ticket lines like the mockup: the qty stepper is borderless + dimmed at
-   rest and only lights up when the line is hovered — width is stable so nothing
-   jumps. Touch tills always show it (no hover). */
+/* Calm ticket lines like the mockup: at rest the line reads "N×" (clean, no
+   controls); hovering a line swaps in the live stepper + grip. Touch tills have
+   no hover, so they always show the stepper (the "N×" is hidden there). */
+.core .core-line .core-lqz { display: flex; align-items: center; flex: none; }
+.core .core-line .core-lqty { display: none; min-width: 26px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-3); }
 @media (hover: hover) {
-  .core .core-line .core-qstep { background: transparent; border-color: transparent; }
-  .core .core-line .core-qstep button { opacity: .35; transition: opacity var(--fast); }
-  .core .core-line-main:hover .core-qstep { background: var(--panel-3); border-color: var(--line); }
-  .core .core-line-main:hover .core-qstep button { opacity: 1; }
+  /* at rest the qty reads "N×" (mockup); hovering OR keyboard-focusing the line
+     swaps in the live stepper in-flow (never overlaps) and blooms the grip.
+     :focus-within keeps the −/＋ buttons + grip reachable for keyboard-only
+     operators (a display:none stepper would drop out of the tab order). Both the
+     grip and the stepper key off .core-line-main (the row) — not .core-line — so
+     hovering the modifiers/recourse sub-rows doesn't reveal them. */
+  .core .core-line .core-lqty { display: inline; }
+  .core .core-line .core-lqz .core-qstep { display: none; }
+  .core .core-line-main:hover .core-lqz .core-lqty,
+  .core .core-line-main:focus-within .core-lqz .core-lqty { display: none; }
+  .core .core-line-main:hover .core-lqz .core-qstep,
+  .core .core-line-main:focus-within .core-lqz .core-qstep { display: inline-flex; background: var(--panel-3); border-color: var(--line); }
+  .core .core-line .core-grip { opacity: 0; }
+  .core .core-line-main:hover .core-grip,
+  .core .core-line-main:focus-within .core-grip { opacity: 1; }
 }
 .core .core-qstep.big button { width: 34px; height: 34px; font-size: 18px; }
 .core .core-qstep.big .q { min-width: 34px; font-size: 15px; }

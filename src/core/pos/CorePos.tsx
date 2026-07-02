@@ -1298,14 +1298,19 @@ export function CorePos({
           ) : (
             <span className="core-grip" aria-hidden>⠿</span>
           )}
-          <div className="core-qstep">
-            <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
-              −
-            </button>
-            <span className="q mono">{l.quantity}</span>
-            <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
-              +
-            </button>
+          <div className="core-lqz">
+            {/* resting: a clean "N×" like the mockup; on hover (desktop) it swaps
+                to the live stepper. Touch tills always show the stepper. */}
+            <span className="core-lqty mono" aria-hidden>{l.quantity}×</span>
+            <div className="core-qstep">
+              <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
+                −
+              </button>
+              <span className="q mono">{l.quantity}</span>
+              <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
+                +
+              </button>
+            </div>
           </div>
           <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
             {m.name}
@@ -1314,7 +1319,7 @@ export function CorePos({
           </button>
           <span className="lp mono">{zl(lineUnit * l.quantity)}</span>
         </div>
-        {(modChips.length > 0 || l.notes) && (
+        {(modChips.length > 0 || l.notes) ? (
           <div className="core-line-mods">
             {modChips.map((c, i) => (
               <span key={i} className={`core-mod-chip${c.flag ? " flag" : ""}`}>
@@ -1323,7 +1328,13 @@ export function CorePos({
             ))}
             {l.notes && <span className={`core-mod-note${allergy ? " alrg" : ""}`}>{allergy ? "⚠ " : "“"}{l.notes}{allergy ? "" : "”"}</span>}
           </div>
-        )}
+        ) : m.description ? (
+          // No modifiers/notes → show the dish descriptor as the line sub, like
+          // the mockup ("San Marzano · fior di latte"). Truncated so it stays one line.
+          <div className="core-line-mods">
+            <span className="core-mod-chip">{m.description.length > 38 ? `${m.description.slice(0, 36).trimEnd()}…` : m.description}</span>
+          </div>
+        ) : null}
         {picking && coursed && (
           <div className="core-recourse" role="group" aria-label="Move to course">
             {POS_COURSE_ORDER.map((c) => {
@@ -1590,17 +1601,29 @@ export function CorePos({
             <>
               <div className="core-thead">
                 <div className="th-id">
-                  <input
-                    className="core-th-name"
-                    value={active.name ?? ""}
-                    maxLength={40}
-                    onChange={(e) => setName(e.target.value)}
-                    aria-label="Check name"
-                    title="Rename this check"
-                  />
-                  <div className="th-s">
-                    {active.channel ? CHANNELS.find((c) => c.key === active.channel)?.label : "No channel"}
-                    {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
+                  {/* title reads "Tab N · T{table}" like the mockup: a
+                      content-sized editable name + a static table suffix. Channel
+                      moved to the segment below, so the title sits on one line. */}
+                  <div className="th-name-row">
+                    <input
+                      className="core-th-name"
+                      value={active.name ?? ""}
+                      size={Math.max(3, (active.name ?? "").length)}
+                      maxLength={40}
+                      onChange={(e) => setName(e.target.value)}
+                      aria-label="Check name"
+                      title="Rename this check"
+                    />
+                    {active.channel === "dine-in" && active.tableId && (
+                      <span className="core-th-tbl">· T{tableById(active.tableId)?.number ?? "?"}</span>
+                    )}
+                    {/* order ref, once the check is sent — kept for KDS/receipt/refund
+                        reconciliation; muted so the title still reads clean. */}
+                    {active.orderId && (
+                      <span className="core-th-ord" title="Order reference">
+                        #{active.orderId.replace(/[^a-zA-Z0-9]/g, "").slice(-5)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}
@@ -1610,19 +1633,8 @@ export function CorePos({
                   </span>
                 )}
                 {active.channel === "dine-in" && (
-                  <div className="core-covers">
-                    <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">
-                      −
-                    </button>
-                    <span className="mono">{active.covers ?? 2}</span>
-                    <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">
-                      +
-                    </button>
-                  </div>
-                )}
-                {active.channel === "dine-in" && (
                   <button type="button" className="core-chan-aux" onClick={() => setTableOpen(true)}>
-                    {active.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : "Assign table"}
+                    {active.tableId ? `⇄ Table ${tableById(active.tableId)?.number ?? "?"}` : "＋ Assign table"}
                   </button>
                 )}
                 {active.channel === "delivery" && (
@@ -1639,18 +1651,34 @@ export function CorePos({
                 )}
               </div>
 
-              {/* channel selector */}
-              <div className="core-chanrow">
-                {CHANNELS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={active.channel === c.key ? "core-chan on" : "core-chan"}
-                    onClick={() => setChannel(c.key)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+              {/* covers row — labelled, on its own line like the mockup */}
+              {active.channel === "dine-in" && (
+                <div className="core-tcovers">
+                  <span className="core-tcovers-l">Covers</span>
+                  <div className="core-covers">
+                    <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">−</button>
+                    <span className="mono">{active.covers ?? 2}</span>
+                    <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">+</button>
+                  </div>
+                  {active.customerName && <span className="core-tcovers-g">{active.customerName}</span>}
+                </div>
+              )}
+
+              {/* channel — labelled full-width segmented control (mockup .order-seg) */}
+              <div className="core-oseg">
+                <span className="core-oseg-l">Channel</span>
+                <div className="core-miniseg">
+                  {CHANNELS.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className={active.channel === c.key ? "on" : ""}
+                      onClick={() => setChannel(c.key)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {deliveryPaused && (
@@ -1659,11 +1687,11 @@ export function CorePos({
                 </div>
               )}
 
-              {/* dine-in kitchen timing — coursed vs all-together */}
+              {/* dine-in kitchen timing — labelled full-width segment (mockup .order-seg) */}
               {active.channel === "dine-in" && (
-                <div className="core-timing">
-                  <span className="core-timing-l">Kitchen timing</span>
-                  <div className="core-seg">
+                <div className="core-oseg">
+                  <span className="core-oseg-l">Kitchen timing</span>
+                  <div className="core-miniseg">
                     <button type="button" className={isCoursed ? "on" : ""} onClick={() => !isCoursed && toggleCoursed()}>Coursed</button>
                     <button type="button" className={!isCoursed ? "on" : ""} onClick={() => isCoursed && toggleCoursed()}>All together</button>
                   </div>
@@ -1692,12 +1720,21 @@ export function CorePos({
                         }}
                       >
                         <div className="core-course-h">
+                          {/* status dot + contextual chip — mirrors the mockup's coursing
+                              spine: fired = served (basil), the earliest un-fired course is
+                              the actionable Fire (ember), later courses read Hold (amber) but
+                              stay fireable so a server can still jump the queue. */}
+                          <span className={`cdot ${fired ? "done" : g.course === nextUnfiredCourse ? "next" : "hold"}`} aria-hidden />
                           <span className="c-n">{POS_COURSE_LABELS[g.course]}</span>
                           {fired ? (
                             <span className="fire done">✓ Fired</span>
-                          ) : (
+                          ) : g.course === nextUnfiredCourse ? (
                             <button type="button" className="fire" disabled={!!busyTabId} onClick={() => void fireCourse(g.course)}>
                               ⚡ Fire
+                            </button>
+                          ) : (
+                            <button type="button" className="fire hold" disabled={!!busyTabId} onClick={() => void fireCourse(g.course)} title="Held until the earlier course fires — tap to fire now">
+                              ◷ Hold
                             </button>
                           )}
                         </div>

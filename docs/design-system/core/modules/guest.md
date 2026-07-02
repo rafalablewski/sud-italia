@@ -75,7 +75,7 @@ The guest engagement hub. `/core/guest`.
 `src/core/guest/CoreCrm.tsx`. Rendered in the **dense-console** language (1:1 with `tests/sketches/core-pages/08-guest-crm.html`): a `.core-crumb` breadcrumb + `.core-sectionhead`, then a **6-up `.core-statstrip`** — **guests · VIPs · new · at-risk · avg spend · repeat rate** (all derived from the live book: at-risk = RFM health < 34, repeat = 2+ orders; coloured values + mono deltas, Rule #1).
 - **Filter bar** (`.core-crm-filterbar`): a `.core-crm-search`, **labelled segment chips** `.core-segchips` with live counts (All · VIP · Regular · New · At-risk — see `inSeg`/`segCounts`), **loyalty-tier gems** `.core-gems`/`.core-gemchip` (Bronze · Silver · Gold · Platinum, toggling `tierF` via `gemClass`), a **sort** `.core-seg` (recent · spend · visits → `recent`/`ltv`/`orders`), and refresh.
 - **Roster** (`.core-crm-grid` → `.core-roster` table): **Guest** (`.core-g-av` tier-tinted avatar + `.core-g-nm`/`.core-g-meta`) · **Phone** · **Visits** · **Last seen** · **Spend** · **Tier** (`.core-gem` + label) · **RFM health** (`.core-rfm` bar `hi`/`mid`/`lo` + score). The selected row highlights via `tr.sel`.
-- **Persistent profile panel** (`.core-drawer`, replaces the old dialog — the grid drops to one column and the panel hides when nothing is selected): a `.dh` header (avatar + name + tier gem), **Lifetime** `.core-dstat-grid` (visits · spend · avg · points), **Consent** `.core-tog` switches (SMS · Email), a **Recent orders** `.core-dtimeline`, an **Adjust points** `.core-dstepper` + Apply, a **Notes** textarea + Save, and a **Data** section (**GDPR export** + **Erase**, Art. 17 via the confirm `CoreDialog`).
+- **Persistent profile panel** (`.core-drawer`, replaces the old dialog — the grid drops to one column and the panel hides only when the book is empty; otherwise the **top visible guest is auto-selected on load** so the inspector reads populated by default like the mockup, and it re-homes to the first row whenever the current pick falls out of the active filter/segment — a manual pick always wins): a `.dh` header (avatar + name + tier gem), **Lifetime** `.core-dstat-grid` (visits · spend · avg · points), **Consent** `.core-tog` switches (SMS · Email), a **Recent orders** `.core-dtimeline`, an **Adjust points** `.core-dstepper` + Apply, a **Notes** textarea + Save, and a **Data** section (**GDPR export** + **Erase**, Art. 17 via the confirm `CoreDialog`).
 Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/points` (POST), `customers/{phone}/consent` (PATCH), `gdpr/export` (GET) + `gdpr/delete` (POST `{ phone, confirm }`). `health`/`rfm`/`inSeg`/`gemClass` mirror the live classification. (The ad-hoc SMS/email composer moved off the CRM panel to match the mockup; guest messaging lives on the Inbox surface.)
 
 ## Loyalty (`/core/guest/loyalty`) — wired
@@ -103,7 +103,8 @@ table row to reassign** (HTML5 drag → the reservations `POST` upsert with
 `override`, so the conflict check re-runs on the result). The timeline panel
 (`.core-book-tlpanel`) sits **left**; the **new-reservation form is the right
 rail** (`.core-book-form` at grid col 2, mockup layout): pick a dine-in slot
-(`.core-pk`) + party size, then a table — live fit/conflict (booked/too-small
+(`.core-pk`, each carrying a `.sub` capacity read `currentOrders/maxOrders` so the
+picker is tinted by fill like the mockup) + party size, then a table — live fit/conflict (booked/too-small
 tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
 confirm. **Today's bookings** (`.core-book-side`) is a **full-width list below**,
 with cancel. Engine: `GET

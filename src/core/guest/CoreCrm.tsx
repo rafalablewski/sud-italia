@@ -168,6 +168,17 @@ export function CoreCrm() {
     return rows;
   }, [data, query, seg, tierF, sort]);
 
+  // Land with the top guest already open in the inspector — the mockup shows the
+  // customer book with a profile in view, not an empty rail. Auto-select the
+  // first visible row when nothing is selected (or the current pick fell out of
+  // the active filter/segment), so the inspector reads populated on load and
+  // stays populated as the operator filters. A manual pick always wins.
+  useEffect(() => {
+    if (loading || visible.length === 0) return;
+    if (selected && visible.some((c) => c.phone === selected)) return;
+    setSelected(visible[0].phone);
+  }, [loading, visible, selected]);
+
   // Live counts for the labelled segment chips (mockup).
   const segCounts = useMemo(() => ({
     all: data.length,
