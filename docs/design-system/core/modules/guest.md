@@ -103,7 +103,8 @@ table row to reassign** (HTML5 drag → the reservations `POST` upsert with
 `override`, so the conflict check re-runs on the result). The timeline panel
 (`.core-book-tlpanel`) sits **left**; the **new-reservation form is the right
 rail** (`.core-book-form` at grid col 2, mockup layout): pick a dine-in slot
-(`.core-pk`) + party size, then a table — live fit/conflict (booked/too-small
+(`.core-pk`, each carrying a `.sub` capacity read `currentOrders/maxOrders` so the
+picker is tinted by fill like the mockup) + party size, then a table — live fit/conflict (booked/too-small
 tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
 confirm. **Today's bookings** (`.core-book-side`) is a **full-width list below**,
 with cancel. Engine: `GET

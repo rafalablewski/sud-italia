@@ -159,6 +159,20 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **Made the live suite render as full as the mockup (visual parity, real data).** The demo seed
+  was pinning `TODAY` to a hardcoded `2026-06-07`, which had drifted a month into the past — so slots + bookings landed
+  on a dead day and **Book** / **Service · Slots** read empty against the mockup's populated boards. `TODAY` now resolves
+  to the **actual current day**, so both fill in (Slots: 245/384 booked, surge banner, pace levers; Book: today's
+  bookings on the timeline + slot picker). The seed also created **no open POS checks**, so **POS · Order** showed the
+  "No open check" empty state instead of the mockup's live board; added `seedOpenTabs` — four open checks per location
+  (three coursed dine-in tabs on tables + one takeaway), so POS now lands on the tab bar + coursed ticket
+  (Starters/Mains/Drinks with per-course Fire) + combo/cross-sell offers + charge dock, matching the mockup. Book slot
+  chips (`.core-pk`) now carry a `currentOrders/maxOrders` capacity `.sub` so the picker reads tinted-by-fill like the
+  mockup. All from **real store rows** (Rule #1) — nothing baked into components. POS stat-strip keeps its honest live
+  metrics (To pay / Open value / In kitchen / Pace) rather than the mockup's Table-turns / Sales-hr, which the till
+  component has no data for and won't fabricate. WhatsApp **Inbox** left as-is: its sessions carry a 90-min TTL and the
+  channel is Needs-config, so seeded convos aren't durable. Verified live (POS/Book/Slots screenshotted populated).
+  Doc synced (`modules/guest.md`, seed header; Rule #11).
 - **2026-07-02** — **Full live 1:1 audit of the dense-console suite.** Ran every one of the 11 suite pages
   (`/core/{pos,kds,orders,service/{floor,slots,dispatch},guest/{inbox,guests,loyalty,concierge},book}`) side-by-side
   against the uploaded mockup (byte-identical to `tests/sketches/core-dense-console-suite.html`) with a headless
