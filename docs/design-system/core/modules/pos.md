@@ -131,8 +131,14 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   its note (`posLineKey`, `@/lib/pos-line`), so a plain item and a customised one
   sit on separate rows and the stepper / re-course / edit target the right line.
   Dine-in coursed checks group lines into `.core-course` blocks with a
-  `.core-course-h` header and a per-course **Fire** button; fired courses dim
-  (`.core-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
+  `.core-course-h` header. Courses read in **Neapolitan** (`POS_COURSE_LABELS` —
+  Antipasti · Primi · Dolci · Bevande) and each header carries a status **dot**
+  (`.cdot`) + a contextual chip mirroring the mockup's coursing spine: a fired
+  course dims (`.core-course.fired`) with a basil `.cdot.done` + `✓ Fired`; the
+  **earliest un-fired** course is the actionable one — ember `.cdot.next` + the
+  prominent `⚡ Fire` button (`nextUnfiredCourse`); later un-fired courses read
+  amber `.cdot.hold` + a muted `◷ Hold` chip (`.fire.hold`) that stays fireable
+  (tap to jump the queue). **Re-coursing is touch-first:** on
   a coursed line the grip is a `<button>` that toggles `.core-line.picking`,
   revealing an inline `.core-recourse` chooser (`.core-recourse-opt` per course,
   current one `.on`) — one tap moves the line. Native drag stays as a

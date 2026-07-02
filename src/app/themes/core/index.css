@@ -449,6 +449,14 @@
 .core .core-course-h .fire:hover { background: var(--brand-bright); }
 .core .core-course-h .fire:disabled { opacity: .5; cursor: default; }
 .core .core-course-h .fire.done { background: var(--basil-wash); color: var(--basil); }
+/* coursing status dot — served (basil) · next-to-fire (ember) · held (amber),
+   mirroring the dense-console mockup's per-course header dots. */
+.core .core-course-h .cdot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.core .core-course-h .cdot.done { background: var(--basil); box-shadow: 0 0 7px var(--basil); }
+.core .core-course-h .cdot.next { background: var(--brand-bright); box-shadow: 0 0 8px var(--brand); }
+.core .core-course-h .cdot.hold { background: var(--amber); box-shadow: 0 0 7px var(--amber-wash); }
+.core .core-course-h .fire.hold { background: var(--amber-wash); color: var(--amber); }
+.core .core-course-h .fire.hold:hover { background: var(--brand); color: var(--on-accent); }
 .core .core-line { display: flex; flex-direction: column; }
 .core .core-line-main { display: flex; align-items: center; gap: 10px; padding: 6px 14px; }
 .core .core-line-main:hover { background: var(--hover); }

@@ -1692,12 +1692,21 @@ export function CorePos({
                         }}
                       >
                         <div className="core-course-h">
+                          {/* status dot + contextual chip — mirrors the mockup's coursing
+                              spine: fired = served (basil), the earliest un-fired course is
+                              the actionable Fire (ember), later courses read Hold (amber) but
+                              stay fireable so a server can still jump the queue. */}
+                          <span className={`cdot ${fired ? "done" : g.course === nextUnfiredCourse ? "next" : "hold"}`} aria-hidden />
                           <span className="c-n">{POS_COURSE_LABELS[g.course]}</span>
                           {fired ? (
                             <span className="fire done">✓ Fired</span>
-                          ) : (
+                          ) : g.course === nextUnfiredCourse ? (
                             <button type="button" className="fire" disabled={!!busyTabId} onClick={() => void fireCourse(g.course)}>
                               ⚡ Fire
+                            </button>
+                          ) : (
+                            <button type="button" className="fire hold" disabled={!!busyTabId} onClick={() => void fireCourse(g.course)} title="Held until the earlier course fires — tap to fire now">
+                              ◷ Hold
                             </button>
                           )}
                         </div>

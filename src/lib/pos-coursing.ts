@@ -12,11 +12,14 @@ export const POS_COURSE_ORDER: PosCourse[] = ["starter", "main", "dessert", "dri
 
 export const POS_COURSES = new Set<PosCourse>(POS_COURSE_ORDER);
 
+// Neapolitan course names — the coursing spine reads in Italian to match the
+// dense-console mockup and the brand (a Napoli pizzeria courses antipasti → primi
+// → dolci, drinks alongside as bevande).
 export const POS_COURSE_LABELS: Record<PosCourse, string> = {
-  starter: "Starters",
-  main: "Mains",
-  dessert: "Dessert",
-  drink: "Drinks",
+  starter: "Antipasti",
+  main: "Primi",
+  dessert: "Dolci",
+  drink: "Bevande",
 };
 
 /** The course a freshly-added line lands in, derived from its menu category so

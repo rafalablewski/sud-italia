@@ -159,6 +159,12 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **POS order-panel coursing spine brought 1:1 with the mockup.** Course labels now read in
+  **Neapolitan** (`POS_COURSE_LABELS`: Antipasti · Primi · Dolci · Bevande) across POS + KDS + toasts, and each
+  `.core-course-h` gained a status **dot** + contextual chip matching the mockup: basil `✓ Fired` (served), an ember
+  `⚡ Fire` on the earliest un-fired course (the actionable one), and a muted amber `◷ Hold` on later courses (still
+  fireable — tap to jump the queue). New CSS: `.core-course-h .cdot.{done,next,hold}` + `.fire.hold`. Verified live
+  (order panel screenshotted: Antipasti ⚡Fire · Primi ◷Hold · Bevande ◷Hold). Doc synced (`modules/pos.md`, Rule #11).
 - **2026-07-02** — **Made the live suite render as full as the mockup (visual parity, real data).** The demo seed
   was pinning `TODAY` to a hardcoded `2026-06-07`, which had drifted a month into the past — so slots + bookings landed
   on a dead day and **Book** / **Service · Slots** read empty against the mockup's populated boards. `TODAY` now resolves
