@@ -118,19 +118,23 @@ surface toolbar.
   own full-bleed background (KDS).
 - **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
   Guest `.core-kpi-strip` and POS's / Floor's / Orders' / Slots' `.core-statstrip` are
-  hairline-divided columns with an uppercase mono label and a big **mono
-  tabular** value. `.core-kpi-strip` lays its cells out with `grid-auto-flow:
-  column` (auto `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all
-  distribute evenly in one row — no fixed column count to overflow. Same
-  component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
-  identically.
+  **undivided** columns (no inter-cell hairlines — the cells read as one open,
+  continuous row, held apart by their own padding) with an uppercase mono label
+  and a big **mono tabular** value. `.core-kpi` / `.core-kpi-strip` use `gap: 0`
+  over a transparent track (the per-cell `.k` fill tiles seamlessly);
+  `.core-kpi-strip` lays its cells out with `grid-auto-flow: column` (auto
+  `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all distribute evenly
+  in one row — no fixed column count to overflow. Only a single `border-bottom`
+  hairline separates the strip from the content below. Same component language
+  everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
     surface body (POS, **Floor**, **Orders**, **Slots**, **CRM**, **Loyalty**, **Book**, **Inbox**, **Dispatch**): a bordered glass panel of `.cell`s, each an
     uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
     `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
     colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
-    Divider is a `.cell + .cell::before` hairline. Every figure MUST be real
-    surface data (Rule #1). Matches the mockup's `.statstrip`.
+    The cells carry **no divider** — the panel border frames them and the cell
+    padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
+    Matches the mockup's `.statstrip`.
 - **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
   uppercase mono `CORE — SURFACE · … · liquid glass · [context]`, with `b`
   basil and a `.fix` ember pill for the location/mode tag. Sits directly above

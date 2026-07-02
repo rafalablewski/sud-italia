@@ -25,7 +25,8 @@ The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
 dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
 over a three-column grid inside the shell body: **rail · menu · ticket**.
 
-- **`.core-statstrip`** — a hairline-divided glass panel of six live cells
+- **`.core-statstrip`** — an **undivided** glass panel of six live cells (no
+  inter-cell hairlines — a clean, open row spaced by cell padding)
   (label · big mono value · colour-coded delta), every figure derived from the
   till's **real, live state** (Rule #1 — no fetch, no invented numbers, the same
   state the rail + ticket already show): **Open checks** (count · N parked) ·
@@ -39,10 +40,14 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
 - **`.core-checkbar`** — spans the whole width above the panes (so it sits
   over the menu's steering banner): an optional `.core-sync-pill`, then the
   `.core-tabrail-sum` rollup
-  (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
-  `.core-tabrail` of `.core-ttab` open-check chips + `+ New`. The active check
-  gets a brand outline; the rail wraps (capped height + scroll) so a busy
-  till's checks stay browsable without a horizontal hunt. **`+ New` opens
+  (`N tabs · R ready to pay · P parked · VALUE open`) over the
+  `.core-tabrail` of `.core-ttab` open-check pills + `+ New`. The pills follow
+  the mockup's `.checkstrip`: **compact single-line mono pills** (`.tt` name +
+  a muted inline `.ts` context — `· T{table}`, channel, item count or `empty`)
+  laid in **one horizontally-scrolling row** (`flex-wrap: nowrap; overflow-x`),
+  not a wrapping multi-row block. The active check gets the ember treatment
+  (`.on` = `--brand-wash` fill + ember ring + glow, `.ts` → `--brand-bright`);
+  `+ New` (`.core-ttab-new`) is a dashed basil pill. **`+ New` opens
   optimistically** — the check appears and goes active instantly under a
   client `tmp-` id, then reconciles to the server id when the background
   `POST` returns (carrying over anything rung in the meantime), so the till
