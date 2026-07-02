@@ -295,7 +295,7 @@
    colour-coded delta line. Wired to REAL surface data (Rule #1) — the shared
    visual language for POS's live metrics, matching the mockup's `.statstrip`.
    See docs → theme "Stat strip". */
-.core .core-statstrip { display: flex; align-items: stretch; margin: 10px 16px 6px; flex: none; overflow: hidden;
+.core .core-statstrip { display: flex; align-items: stretch; margin: 10px 14px; flex: none; overflow: hidden;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
 .core .core-statstrip .cell { flex: 1; min-width: 0; padding: 9px 15px; position: relative; display: flex; flex-direction: column; gap: 3px; }
 .core .core-statstrip .lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -310,8 +310,11 @@
 /* ============================================================
    POS surface
    ============================================================ */
-.core .core-pos { flex: 1; display: grid; grid-template-columns: 56px 1fr 344px; min-height: 0; }
-.core .core-rail { background: var(--panel); border-right: 1px solid var(--line); padding: 8px 6px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* Three floating glass cards (rail · menu · ticket) with gaps, inset from the
+   body edges — matches the mockup's `pos-grid { gap:10px }` + `.glass` columns,
+   not flush panes divided by hairlines. */
+.core .core-pos { flex: 1; display: grid; grid-template-columns: 56px 1fr 344px; min-height: 0; gap: 10px; padding: 0 14px 12px; align-items: stretch; }
+.core .core-rail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); padding: 8px 6px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; align-self: start; max-height: 100%; }
 .core .core-rail .lbl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 6px 10px 4px; }
 .core .core-cat { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border-radius: 9px;
   font-weight: 550; font-size: 13.5px; color: var(--ink-2); transition: all var(--fast); text-align: left; width: 100%; }
@@ -333,7 +336,7 @@
 .core .core-rail-icons .core-cat.pop.on .n { background: rgba(255, 255, 255, .28); color: var(--on-accent); border-color: transparent; }
 .core .core-rail-icons .core-cat-promise { position: absolute; left: 0; right: 0; bottom: 1px; margin: 0; text-align: center; font-size: 8.5px; line-height: 1; }
 
-.core .core-menu { overflow-y: auto; padding: 12px; background: var(--bg); }
+.core .core-menu { overflow-y: auto; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
 /* Cards stretch to equal height per row (grid default), with the description
    clamped to two lines and the price footer pinned to the bottom — so a long
    description (Tartufata) can't make its card taller than its row-mates. */
@@ -401,7 +404,7 @@
 /* delivery-paused capacity warning */
 .core .core-delivery-paused { padding: 9px 16px; font-size: 12px; font-weight: 600; color: var(--amber); background: var(--amber-wash); border-bottom: 1px solid var(--line); flex: none; }
 
-.core .core-ticket { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.core .core-ticket { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 .core .core-ticket-empty { flex: 1; display: grid; place-items: center; padding: 30px; text-align: center; }
 .core .core-ticket-empty .ti { width: 48px; height: 48px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); display: grid; place-items: center; margin: 0 auto 14px; }
 .core .core-ticket-empty .ti svg { width: 22px; height: 22px; color: var(--ink-3); }
@@ -410,7 +413,7 @@
 
 /* ---------- ticket: tabs ---------- */
 /* full-width open-check bar, above the three panes */
-.core .core-checkbar { flex: none; background: var(--panel); border-bottom: 1px solid var(--line); }
+.core .core-checkbar { flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); margin: 0 14px 10px; }
 .core .core-sync-pill { margin: 8px 14px 0; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
   color: var(--amber); background: var(--amber-wash); display: inline-flex; align-items: center; gap: 6px; flex: none; align-self: flex-start; }
 .core .core-tabrail-sum { padding: 9px 16px 0; font-size: 11px; color: var(--ink-3); letter-spacing: .01em; flex: none; }

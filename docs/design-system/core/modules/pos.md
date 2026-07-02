@@ -26,6 +26,16 @@ like the mockup) over the **`.core-statstrip`** — the
 dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
 over a three-column grid inside the shell body: **rail · menu · ticket**.
 
+Every region is a **separate rounded, bordered glass card** — the stat strip,
+the check-bar, and the three grid columns each float with **10px gaps** and a
+14px inset from the body edges (`.core-pos { gap:10px; padding:0 14px 12px }`),
+matching the mockup's `pos-grid` + `.glass` columns rather than flush panes cut
+by hairlines. Under the liquid-glass skin all five (plus the rail) get the
+frosted `--lg-fill` + blur + `--lg-float`/`--lg-rim` treatment so they read as
+layered glass; in the flat skins the border + `--sh-1` defines each card. The
+rail is `align-self:start` (content-height, floating at the top); the ticket
+is `overflow:hidden` so its footer clips to the card's rounded corners.
+
 - **`.core-statstrip`** — an **undivided** glass panel of six live cells (no
   inter-cell hairlines — a clean, open row spaced by cell padding)
   (label · big mono value · colour-coded delta), every figure derived from the

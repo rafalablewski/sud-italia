@@ -136,14 +136,13 @@
 /* POS middle column reads as layered glass like the mockup: a frosted menu
    surface (the translucent fill still refracts the aurora through the blur) with
    the cards sitting ON it, and the open-check strip as its own frosted bar. */
-.core[data-skin="liquid-glass"] .core-menu {
+.core[data-skin="liquid-glass"] .core-menu,
+.core[data-skin="liquid-glass"] .core-checkbar,
+.core[data-skin="liquid-glass"] .core-rail,
+.core[data-skin="liquid-glass"] .core-statstrip {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
-}
-.core[data-skin="liquid-glass"] .core-checkbar {
-  background: var(--lg-fill);
-  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
-  border-bottom-color: var(--line-2);
+  box-shadow: var(--lg-float), var(--lg-rim);
 }
 /* cards stay subtle over the frosted menu (panel-2, not the full sheen) so the
    surface reads layered, not frosted-on-frosted */
