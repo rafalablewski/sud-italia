@@ -1163,6 +1163,25 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ============================================================
    Guest · Loyalty
    ============================================================ */
+/* dense-console members grid: roster + right rail (family wallet + tier mix) */
+.core .core-loy-grid { display: grid; grid-template-columns: 1fr 340px; gap: 12px; align-items: start; margin: 0 16px 18px; }
+.core .core-loy-grid .core-crm-table-wrap { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+.core .core-loy-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+.core .core-loy-pool { font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: -.02em; line-height: 1; color: var(--basil); }
+.core .core-loy-pool small { font-family: var(--mono); font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.core .core-loy-poolsub { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin-top: 4px; }
+.core .core-loy-wmembers { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+.core .core-loy-wmembers .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.core .core-loy-wmembers .who { flex: 1; min-width: 0; }
+.core .core-loy-wmembers .who .nm { font-size: 12px; color: var(--ink); }
+.core .core-loy-wmembers .who .mt { font-family: var(--mono); font-size: 9px; text-transform: capitalize; color: var(--ink-3); }
+.core .core-loy-wmembers .pts { font-family: var(--mono); font-size: 11px; color: var(--ink-2); font-weight: 600; }
+.core .core-tiermix { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.core .core-tiermix .track { flex: 1; height: 8px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
+.core .core-tiermix .track i { display: block; height: 100%; border-radius: 99px; background: var(--panel-3); }
+.core .core-tiermix .track i.platinum { background: linear-gradient(90deg, #7fb4c9, #cfeef2); } .core .core-tiermix .track i.gold { background: linear-gradient(90deg, #c99a25, #f6d47a); } .core .core-tiermix .track i.silver { background: linear-gradient(90deg, #9aa4ae, #e9edf2); } .core .core-tiermix .track i.bronze { background: linear-gradient(90deg, #8a4f27, #d9915a); }
+.core .core-tiermix .n { font-family: var(--mono); font-size: 11px; color: var(--ink-2); min-width: 32px; text-align: right; }
+@media (max-width: 1040px) { .core .core-loy-grid { grid-template-columns: 1fr; } .core .core-loy-rail { position: static; } }
 .core .core-tierbadge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: var(--pill); text-transform: capitalize; background: var(--panel-3); color: var(--ink-2); }
 .core .core-tierbadge.platinum { background: var(--tier-platinum-wash); color: var(--tier-platinum); }
 .core .core-tierbadge.gold { background: var(--amber-wash); color: var(--amber); }

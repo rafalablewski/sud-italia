@@ -132,16 +132,39 @@ export function CoreLoyalty() {
       .catch(() => setWinback([]));
   }, [tab, winback]);
 
-  const kpis = useMemo(() => {
-    // Outstanding points are a real liability: the standard 100 pts = 1 zł.
+  // Dense-console stat strip + tier mix — every figure from live loyalty data
+  // (Rule #1). Outstanding points are a real liability (100 pts = 1 zł).
+  const stat = useMemo(() => {
     const liability = members.reduce((s, m) => s + m.points, 0);
-    return [
-      { l: "Members", v: String(members.length) },
-      { l: "Points out", v: liability.toLocaleString("pl-PL"), s: `≈ ${Math.round(liability / 100).toLocaleString("pl-PL")} zł liability` },
-      { l: "Redemptions", v: String(redemptions.length) },
-      { l: "Wallets", v: String(wallets.length) },
-    ] as { l: string; v: string; s?: string }[];
+    const goldPlus = members.filter((m) => ["gold", "platinum"].includes(m.tier.toLowerCase())).length;
+    const avg = members.length ? Math.round(liability / members.length) : 0;
+    return {
+      members: members.length,
+      liability,
+      redemptions: redemptions.length,
+      goldPlus,
+      goldPct: members.length ? Math.round((goldPlus / members.length) * 100) : 0,
+      avg,
+      wallets: wallets.length,
+    };
   }, [members, redemptions, wallets]);
+  // Tier-mix breakdown for the right rail (mockup).
+  const tierMix = useMemo(() => {
+    const order = ["platinum", "gold", "silver", "bronze"] as const;
+    const counts = Object.fromEntries(order.map((t) => [t, 0])) as Record<string, number>;
+    for (const m of members) { const t = m.tier.toLowerCase(); if (t in counts) counts[t]++; }
+    const max = Math.max(1, ...order.map((t) => counts[t]));
+    return order.map((t) => ({ tier: t, count: counts[t], pct: Math.round((counts[t] / max) * 100) }));
+  }, [members]);
+  // Primary family wallet — the shared-balance panel, real when a wallet exists.
+  const primaryWallet = useMemo(() => {
+    const w = wallets[0];
+    if (!w) return null;
+    const ptsByPhone = new Map(members.map((m) => [m.phone, m.points]));
+    const rows = w.members.map((mm) => ({ phone: mm.phone, name: mm.name ?? mm.phone, status: mm.status ?? "member", points: ptsByPhone.get(mm.phone) ?? 0 }));
+    const pool = w.spendablePool ?? rows.reduce((s, r) => s + r.points, 0);
+    return { id: w.id, rows, pool };
+  }, [wallets, members]);
 
   const visibleMembers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -213,14 +236,45 @@ export function CoreLoyalty() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="core-guest-inbox">
-        <div className="core-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-          {kpis.map((k) => (
-            <div className="k" key={k.l}>
-              <div className="kl">{k.l}</div>
-              <div className="kv mono">{k.v}</div>
-              {k.s && <div className="core-kpi-sub">{k.s}</div>}
-            </div>
-          ))}
+        <div className="core-crumb">
+          CORE — GUEST · LOYALTY · <b>liquid glass</b> · <span className="fix">dense console</span>
+        </div>
+        <div className="core-sectionhead">
+          <h1>Guest · Loyalty</h1>
+          <span className="sub">members · wallets · redemptions · win-back</span>
+        </div>
+        {/* dense-console 6-up stat strip — every figure from live loyalty data (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Loyalty metrics">
+          <div className="cell">
+            <span className="lab">Members</span>
+            <span className="val">{stat.members}</span>
+            <span className="delta">{stat.wallets} wallet{stat.wallets === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Points outstanding</span>
+            <span className="val info">{stat.liability.toLocaleString("pl-PL")}</span>
+            <span className="delta">≈ {Math.round(stat.liability / 100).toLocaleString("pl-PL")} zł liability</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Redemptions</span>
+            <span className="val basil">{stat.redemptions}</span>
+            <span className="delta">to date</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Gold+</span>
+            <span className="val amber">{stat.goldPlus}</span>
+            <span className="delta">{stat.goldPct}% of members</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg points</span>
+            <span className="val">{stat.avg.toLocaleString("pl-PL")}</span>
+            <span className="delta">per member</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Wallets</span>
+            <span className="val brand">{stat.wallets}</span>
+            <span className="delta">shared balances</span>
+          </div>
         </div>
 
         <div className="core-gfilters">
@@ -281,7 +335,7 @@ export function CoreLoyalty() {
         </div>
 
         {tab === "members" && (
-          <>
+          <div className="core-loy-grid">
             <div className="core-crm-table-wrap">
               <table className="core-tbl">
                 <thead>
@@ -312,7 +366,44 @@ export function CoreLoyalty() {
                 </tbody>
               </table>
             </div>
-          </>
+
+            {/* right rail — family wallet (real when one exists) + tier mix */}
+            <div className="core-loy-rail">
+              {primaryWallet && (
+                <div className="core-frame">
+                  <div className="core-frame-h">
+                    <span className="t">🎁 Family wallet</span>
+                    <span className="fbadge">shared · {primaryWallet.rows.length}</span>
+                  </div>
+                  <div className="core-frame-b">
+                    <div className="core-loy-pool">{primaryWallet.pool.toLocaleString("pl-PL")}<small> pts</small></div>
+                    <div className="core-loy-poolsub">combined balance</div>
+                    <div className="core-loy-wmembers">
+                      {primaryWallet.rows.map((r) => (
+                        <div className="row" key={r.phone}>
+                          <span className={`core-g-av ${r.status === "owner" ? "g" : "s"}`}>{r.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
+                          <div className="who"><div className="nm">{r.name}</div><div className="mt">{r.status}</div></div>
+                          <span className="pts mono">{r.points.toLocaleString("pl-PL")} pts</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="core-frame">
+                <div className="core-frame-h"><span className="t">Tier mix</span></div>
+                <div className="core-frame-b">
+                  {tierMix.map((t) => (
+                    <div className="core-tiermix" key={t.tier}>
+                      <span className={`core-tierbadge ${t.tier}`} style={{ minWidth: 78, textAlign: "center" }}>{t.tier}</span>
+                      <div className="track"><i className={t.tier} style={{ width: `${t.pct}%` }} /></div>
+                      <span className="mono n">{t.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {tab === "wallets" && (
