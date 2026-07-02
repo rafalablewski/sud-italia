@@ -48,6 +48,11 @@ import {
   appendWaMessage,
   clearWaSession,
   deleteWaTranscript,
+  createFamilyWallet,
+  inviteFamilyWalletMember,
+  storeWalletInviteOtp,
+  confirmFamilyWalletMember,
+  findWalletByPhone,
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
@@ -451,6 +456,23 @@ async function seedWhatsApp(menu: MenuItem[], slug: string): Promise<number> {
   return n;
 }
 
+/** A shared family wallet so Guest · Loyalty's Wallets tab lands populated (owner
+ *  + confirmed members, shared balance). Real store rows (Rule #1) via the actual
+ *  create → invite → confirm flow (a known OTP is stored then consumed).
+ *  Idempotent: skips if the owner already holds a wallet. */
+async function seedFamilyWallet(): Promise<number> {
+  const head = GUESTS[0].phone; // Lucia Bianchi — the household owner
+  if (await findWalletByPhone(head)) return 0;
+  const w = await createFamilyWallet(head);
+  if (!w) return 0;
+  for (const m of [GUESTS[1].phone, GUESTS[2].phone]) {
+    await inviteFamilyWalletMember(w.id, head, m);
+    await storeWalletInviteOtp(m, w.id, "000000");
+    await confirmFamilyWalletMember(m, "000000");
+  }
+  return 1;
+}
+
 async function main() {
   console.log(`store mode: ${useDB ? "Neon Postgres (DATABASE_URL set)" : "filesystem (.data)"}`);
   if (useDB && process.env.ALLOW_DB_SEED !== "1") {
@@ -567,6 +589,9 @@ async function main() {
   const waMenu = await getMenuWithOverrides(locations[0].slug);
   const waCount = await seedWhatsApp(waMenu, locations[0].slug);
   console.log(`whatsapp conversations seeded (${waCount})`);
+
+  const walletCount = await seedFamilyWallet();
+  console.log(`family wallet seeded (${walletCount})`);
 
   await seedAgentCalls();
 
