@@ -39,15 +39,20 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
 
 - **`.core-checkbar`** — spans the whole width above the panes (so it sits
   over the menu's steering banner): an optional `.core-sync-pill`, then the
-  `.core-tabrail-sum` rollup
-  (`N tabs · R ready to pay · P parked · VALUE open`) over the
-  `.core-tabrail` of `.core-ttab` open-check pills + `+ New`. The pills follow
+  `.core-tabrail` of `.core-ttab` open-check pills + `+ New`. **No rollup line**
+  — count · ready · parked · open value already live in the stat strip (Open
+  checks / To pay / Open value), so a summary here would only duplicate it; like
+  the mockup, the pills sit straight under the KPIs. The pills follow
   the mockup's `.checkstrip`: **compact single-line mono pills** (`.tt` name +
   a muted inline `.ts` context — `· T{table}`, channel, item count or `empty`)
   laid in **one horizontally-scrolling row** (`flex-wrap: nowrap; overflow-x`),
   not a wrapping multi-row block. The active check gets the ember treatment
   (`.on` = `--brand-wash` fill + ember ring + glow, `.ts` → `--brand-bright`);
-  `+ New` (`.core-ttab-new`) is a dashed basil pill. **`+ New` opens
+  an **off-premise** check (takeaway / delivery) reads info-blue with a channel
+  glyph (`.away` + a `.tico` bag/van icon, mockup `.ct.away`) — `.on` is ordered
+  after `.away` so an active takeaway still wins the ember treatment;
+  `+ New` (`.core-ttab-new`) is a dashed basil pill (label only, no sub-line).
+  **`+ New` opens
   optimistically** — the check appears and goes active instantly under a
   client `tmp-` id, then reconciles to the server id when the background
   `POST` returns (carrying over anything rung in the meantime), so the till
@@ -81,7 +86,8 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
   gluten-free → `.fast`, plus an `.opt` **options** chip when the item has
   `modifierGroups`) plus a live `.core-steer-tag` pace cue (**★ make
   now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
-  with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
+  with the `.pp` mono price — **unit-suffixed `NN,NN zł`** (`fmtPLN`), like the
+  mockup, not a bare number — and the ember `.add` button (a `⋯` glyph when
   the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates. **Calm at rest**
@@ -106,7 +112,7 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
 Wired 1:1 to the shared server engine — fresh `core-`
 UI, identical contract.
 
-The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
+The open-check selector (`.core-tabrail`) lives in the
 top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
 **active** check only:
 
@@ -319,11 +325,13 @@ over-capacity table.
 
 ## At parity
 
-Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
+Pace-steering banner (`GET /api/admin/pace/steering` — `.core-steer` shows
+**only on an active bottleneck**; a clear line renders no banner, since the
+stat strip's Pace cell already reads "Clear · line clear"), park/resume,
 tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
 or drop a line on a course header), kitchen-timing toggle,
 inline check rename, optimistic check open + void/delete, double-seat /
-over-capacity guards, the tab-rail rollup, a hydration-aware empty state,
+over-capacity guards, a hydration-aware empty state,
 and the fullscreen kiosk are all wired — feature-for-feature with today's
 `/core/pos`.
 

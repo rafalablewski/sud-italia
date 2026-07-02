@@ -1245,7 +1245,7 @@ export function CorePos({
         </div>
       )}
       <div className="pf">
-        <span className="pp">{zl(m.price)}</span>
+        <span className="pp">{fmtPLN(m.price)}</span>
         <span className="core-prod-tags">
           {customisable(m) && <span className="core-tag opt" title="Has options">◦</span>}
           {m.tags.map((t) => (
@@ -1428,7 +1428,7 @@ export function CorePos({
           <span className={`val ${posStats.paceTier === "calm" ? "basil" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "danger" : "amber"}`}>
             {steer?.active ? `${posStats.util}%` : "Clear"}
           </span>
-          <span className="delta">{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
+          <span className={`delta ${posStats.paceTier === "calm" ? "up" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "dn" : "warn"}`}>{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
         </div>
       </div>
 
@@ -1439,21 +1439,38 @@ export function CorePos({
             ↻ {pendingWrites} {pendingWrites === 1 ? "write" : "writes"} syncing
           </div>
         )}
-        {tabs.length > 0 && (
-          <div className="core-tabrail-sum">
-            {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
-            <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
-          </div>
-        )}
+        {/* No rollup line — count · ready · parked · open value already live in
+            the stat strip above (Open checks / To pay / Open value), so a
+            summary here would just duplicate it. Matches the mockup, which
+            drops it and lets the pills sit straight under the KPIs. */}
         <div className="core-tabrail">
           {tabs.map((t) => {
             const tn = tableById(t.tableId)?.number;
             const n = t.items.reduce((s, l) => s + l.quantity, 0);
-            // Context line reads like the mockup: dine-in shows its table (· T10),
-            // takeaway/delivery show the channel, otherwise the live item count.
+            // Off-premise checks (takeaway / delivery) read like the mockup's
+            // info-tinted `.ct.away` pill: a channel glyph + label. Dine-in shows
+            // its table (· T10), otherwise the live item count.
+            const offPremise = t.channel === "takeout" || t.channel === "delivery";
             const ctx = tn ? `· T${tn}` : t.channel === "takeout" ? "takeaway" : t.channel === "delivery" ? "delivery" : n > 0 ? `${n} ${n === 1 ? "item" : "items"}` : "empty";
+            const on = t.id === activeTabId;
+            // `away` tints the pill info-blue; `on` (ember) wins when it's the
+            // active check — its rule is ordered after `.away` in the theme.
+            const cls = ["core-ttab", offPremise ? "away" : "", on ? "on" : ""].filter(Boolean).join(" ");
             return (
-              <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
+              <button key={t.id} type="button" className={cls} onClick={() => setActiveTabId(t.id)}>
+                {offPremise && (
+                  <svg className="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    {t.channel === "delivery" ? (
+                      <>
+                        <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" />
+                        <circle cx="7" cy="18" r="1.6" />
+                        <circle cx="18" cy="18" r="1.6" />
+                      </>
+                    ) : (
+                      <path d="M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2" />
+                    )}
+                  </svg>
+                )}
                 <span className="tt">{t.name}</span>
                 <span className="ts">{ctx}</span>
               </button>
@@ -1461,7 +1478,6 @@ export function CorePos({
           })}
           <button type="button" className="core-ttab core-ttab-new" onClick={() => void newTab()}>
             <span className="tt">+ New</span>
-            <span className="ts">open check</span>
           </button>
         </div>
       </div>
@@ -1544,19 +1560,16 @@ export function CorePos({
             </div>
           ) : (
             <>
-              {steer && (
-                steer.active && steer.bottleneck ? (
-                  <div className={`core-steer ${steer.bottleneck.tier}`}>
-                    <span className="dot" />
-                    <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
-                    <span className="cap">cap · {windowMin}m</span>
-                  </div>
-                ) : (
-                  <div className="core-steer calm">
-                    <span className="dot" />
-                    <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
-                  </div>
-                )
+              {/* Steering banner only when there's an actual bottleneck — like
+                  the mockup, a clear line shows NO banner (the KPI strip's Pace
+                  cell already reads "Clear · line clear"), so the menu grid
+                  starts straight away instead of under a redundant green bar. */}
+              {steer?.active && steer.bottleneck && (
+                <div className={`core-steer ${steer.bottleneck.tier}`}>
+                  <span className="dot" />
+                  <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
+                  <span className="cap">cap · {windowMin}m</span>
+                </div>
               )}
               {activeCat === "all" ? (
                 categories.map((c) => {
