@@ -1401,12 +1401,12 @@ export function CorePos({
         <div className="cell">
           <span className="lab">Open checks</span>
           <span className="val">{railSummary.count}</span>
-          <span className="delta">{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
+          <span className={railSummary.parked > 0 ? "delta warn" : "delta up"}>{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
         </div>
         <div className="cell">
           <span className="lab">Covers seated</span>
           <span className="val basil">{posStats.covers}</span>
-          <span className="delta">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
+          <span className="delta up">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
         </div>
         <div className="cell">
           <span className="lab">To pay</span>
