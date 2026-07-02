@@ -25,10 +25,11 @@ import { MENU_CATEGORY_LABELS, type MenuCategory, type OrderStatus } from "@/dat
 
 type View = "fleet" | "floor" | "chef";
 
+// Mockup verbs: New → Start, Firing → Bump, Ready → Pass.
 const BUMP_LABEL: Partial<Record<OrderStatus, string>> = {
-  confirmed: "Start firing",
-  preparing: "Mark ready",
-  ready: "Bump to pass",
+  confirmed: "Start",
+  preparing: "Bump",
+  ready: "Pass",
 };
 
 // Canonical station order for grouping a multi-station ticket's lines.
@@ -524,7 +525,7 @@ export function CoreKds() {
 
   // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
   type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
-  const [ops, setOps] = useState<{ throughputLastHour: number; onShift: number; stations: StationLoad[] } | null>(null);
+  const [ops, setOps] = useState<{ throughputLastHour: number; coversLastHour: number; revenueLastHourGrosze: number; onShift: number; stations: StationLoad[] } | null>(null);
   useEffect(() => {
     if (view === "fleet" || !location) return;
     let cancelled = false;
@@ -533,7 +534,7 @@ export function CoreKds() {
         const r = await fetch(`/api/admin/kds/floor-ops?location=${encodeURIComponent(location)}`);
         if (!r.ok) return;
         const d = await r.json();
-        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
+        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, coversLastHour: d.coversLastHour ?? 0, revenueLastHourGrosze: d.revenueLastHourGrosze ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
       } catch {
         /* non-fatal — manager-only endpoint; the band just shows — */
       }
@@ -545,13 +546,6 @@ export function CoreKds() {
       clearInterval(id);
     };
   }, [view, location]);
-
-  // Oldest + mean age across the open (non-ready) tickets — the floor pressure.
-  const ageStats = useMemo(() => {
-    const ages = allTickets.filter((t) => t.status !== "ready").map((t) => Math.max(0, (now - t.paidAtMs) / 1000));
-    if (ages.length === 0) return { oldest: 0, avg: 0 };
-    return { oldest: Math.max(...ages), avg: ages.reduce((a, b) => a + b, 0) / ages.length };
-  }, [allTickets, now]);
 
   // The cook's focused-station depth: how many tickets touch this station and
   // the oldest one waiting — the Chef view's queue pressure.
@@ -730,19 +724,24 @@ export function CoreKds() {
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
 
-            <div className="core-kpi">
-              <div className="k"><div className="kl">Open</div><div className="kv">{counts.all}</div></div>
-              <div className="k"><div className="kl">New</div><div className="kv">{counts.confirmed}</div></div>
-              <div className="k"><div className="kl">Firing</div><div className="kv i">{counts.preparing}</div></div>
-              <div className="k"><div className="kl">Ready</div><div className="kv ok">{counts.ready}</div></div>
-              <div className="k"><div className="kl">At risk</div><div className={counts.risk ? "kv warn" : "kv"}>{counts.risk}</div></div>
-              <div className="k"><div className="kl">Late</div><div className={counts.late ? "kv bad" : "kv"}>{counts.late}</div></div>
-              <div className="k"><div className="kl">Oldest</div><div className={ageStats.oldest >= 600 ? "kv bad" : "kv"}>{ageStats.oldest ? fmtClock(ageStats.oldest) : "—"}</div></div>
-              <div className="k"><div className="kl">Avg age</div><div className="kv">{ageStats.avg ? fmtClock(ageStats.avg) : "—"}</div></div>
-              <div className="k"><div className="kl">Done/hr</div><div className="kv ok">{ops?.throughputLastHour ?? "—"}</div></div>
-              <div className="k"><div className="kl">On shift</div><div className="kv">{ops?.onShift ?? "—"}</div></div>
+            {/* Unified 7-cell frosted stat strip (mockup 02-kds): Active · At risk
+                · Late · Ready · Throughput/hr · Covers/hr · Revenue/hr. All live —
+                counts from the board stream, per-hour figures from floor-ops
+                (real completed orders, Rule #1). "—" until a location is picked. */}
+            <div className="core-statstrip" role="group" aria-label="Kitchen metrics">
+              <div className="cell"><span className="lab">Active</span><span className="val">{counts.all}</span></div>
+              <div className="cell"><span className="lab">At risk</span><span className={counts.risk ? "val amber" : "val"}>{counts.risk}</span></div>
+              <div className="cell"><span className="lab">Late</span><span className={counts.late ? "val danger" : "val"}>{counts.late}</span></div>
+              <div className="cell"><span className="lab">Ready</span><span className={counts.ready ? "val basil" : "val"}>{counts.ready}</span></div>
+              <div className="cell"><span className="lab">Throughput</span><span className="val">{ops ? ops.throughputLastHour : "—"}<small> /hr</small></span></div>
+              <div className="cell"><span className="lab">Covers</span><span className="val">{ops ? ops.coversLastHour : "—"}<small> /hr</small></span></div>
+              <div className="cell"><span className="lab">Revenue</span><span className="val info">{ops ? Math.round(ops.revenueLastHourGrosze / 100).toLocaleString("pl-PL") : "—"}<small> zł/hr</small></span></div>
             </div>
 
+            {/* DARK BOARD (mockup: .kds-wall) — the stations + lanes live on a
+                near-black frosted-off panel so the SLA-toned tickets pop; the KPI
+                strip above stays frosted glass, matching the mockup exactly. */}
+            <div className="core-kds-wall">
             {/* station strip — each present station shows its LIVE LOAD (mockup:
                 Forno 88% …) from the same predictive engine the board colours
                 from, and stays a one-tap filter. Load lookup by category. */}
@@ -826,6 +825,7 @@ export function CoreKds() {
                 {(visibleByStatus.get(lane) ?? []).map(renderTicket)}
               </div>
             )}
+            </div>{/* /core-kds-wall */}
           </>
         )}
     </div>

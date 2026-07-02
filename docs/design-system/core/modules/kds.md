@@ -23,13 +23,20 @@ KITCHEN WALL · liquid glass · dark board · frosted kpis`) + a `.core-sectionh
 (`KDS · Pass — Floor|Chef`), matching the dense-console mockup while keeping the
 kitchen wall dark (the KPIs, not the surface, are what's frosted).
 
-- **Floor** (default) — the expo board. A manager **ops band** (the
-  responsive `.core-kpi`: Open · New · Firing · Ready · At risk · Late ·
-  Oldest · Avg age · Done/hr · On shift) over three `.core-lane` columns
-  (**New → Firing → Ready·Expo**). Counts + Oldest/Avg-age are derived
-  from the live ticket stream; **Done/hr** and **On shift** come from
-  `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
-  the subbar focuses a single lane into the dense `.core-chefq` wrap.
+- **Floor** (default) — the expo board. A **7-cell frosted stat strip**
+  (the shared `.core-statstrip`: Active · At risk · Late · Ready ·
+  Throughput /hr · Covers /hr · Revenue zł/hr) — brought 1:1 with the
+  dense-console mockup (was the 10-cell `.core-kpi`). Active/At risk/Late/Ready
+  are derived from the live ticket stream; **Throughput**, **Covers** and
+  **Revenue** per hour come from `GET /api/admin/kds/floor-ops?location=`
+  (15s poll — real completed orders in the last hour, Rule #1; `—` until a
+  location is picked). The strip stays frosted glass while the board itself is a
+  **dark board** (`.core-kds-wall`, near-black overlay + rim) wrapping the station
+  strip + three `.core-lane` columns (**New → Firing → Ready·Pass**), so the
+  SLA-toned tickets lift off it — matching the mockup's "dark board · frosted KPIs
+  only". The board scrolls as one; lanes size to content (no per-lane scrollbars).
+  Bump verbs read **Start / Bump / Pass**. A stage filter in the subbar focuses a
+  single lane into the dense `.core-chefq` wrap.
 - **Station strip** (`.core-stations` / `.core-stn`) — each present station is
   a one-tap filter chip that also shows its **live load** (mockup: `Forno 88%`):
   a `.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/

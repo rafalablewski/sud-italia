@@ -39,6 +39,7 @@ import {
   deleteSlot,
   deleteReservation,
   addLoyaltyMember,
+  recomputeCustomerRollupsBulk,
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
@@ -128,7 +129,14 @@ async function makeOrder(
     paidAt: createdAt,
     channel: Math.random() > 0.7 ? "whatsapp" : "web",
   };
-  await createOrder(order, { suppressNotifications: true });
+  // suppressCascades: the fire-and-forget rollup + fireKdsTickets (→ updateOrder)
+  // race the next insert on the shared kv orders blob (filesystem/sim) and clobber
+  // just-inserted rows — the seed was losing ~85% of its orders this way, leaving
+  // the whole /core suite reading empty. We fire ONE awaited bulk rollup after all
+  // orders land (see main()); the KDS board derives tickets live from the orders,
+  // so it needs no per-order ticket write, and leaving estimatedReadyAt unset lets
+  // the board show the fresh *predicted* SLA instead of a stale fired time.
+  await createOrder(order, { suppressNotifications: true, suppressCascades: true });
 }
 
 async function seedTables(locationSlug: string): Promise<string[]> {
@@ -437,6 +445,13 @@ async function main() {
     });
   }
   console.log("\nloyalty members seeded");
+
+  // One awaited CRM/loyalty rollup after all orders + members land — replaces the
+  // per-order fire-and-forget rollups we suppressed above (which raced + clobbered
+  // the orders blob). This is what makes CRM lifetime-spend / repeat-rate and the
+  // loyalty points/tier boards read populated instead of all-zero.
+  await recomputeCustomerRollupsBulk(GUESTS.map((g) => g.phone));
+  console.log("customer rollups computed");
 
   await seedAgentCalls();
 
