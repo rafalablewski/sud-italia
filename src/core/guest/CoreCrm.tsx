@@ -196,16 +196,27 @@ export function CoreCrm() {
     return rows;
   }, [data, query, seg, chan, recency, sort]);
 
-  const kpis = useMemo(() => {
-    const members = data.filter((c) => c.member).length;
+  // Dense-console stat strip — every figure derived from the live customer book
+  // (Rule #1): guests · VIPs · new · at-risk (RFM health < 34) · avg spend ·
+  // repeat rate (guests with 2+ orders).
+  const stat = useMemo(() => {
+    const n = data.length;
     const vip = data.filter((c) => c.vip).length;
-    const ltv = data.reduce((s, c) => s + c.totalSpent, 0);
-    return [
-      { l: "Customers", v: String(data.length) },
-      { l: "Members", v: String(members) },
-      { l: "VIP", v: String(vip) },
-      { l: "Total LTV", v: `${zl(ltv)} zł` },
-    ];
+    const fresh = data.filter((c) => c.lifecycle === "new").length;
+    const atRisk = data.filter((c) => c.orderCount > 0 && health(c) < 34).length;
+    const withOrders = data.filter((c) => c.orderCount > 0);
+    const avgSpend = withOrders.length ? Math.round(withOrders.reduce((s, c) => s + c.totalSpent, 0) / withOrders.length) : 0;
+    const repeat = data.filter((c) => c.orderCount > 1).length;
+    return {
+      guests: n,
+      members: data.filter((c) => c.member).length,
+      vip,
+      vipPct: n ? Math.round((vip / n) * 100) : 0,
+      fresh,
+      atRisk,
+      avgSpend,
+      repeatPct: n ? Math.round((repeat / n) * 100) : 0,
+    };
   }, [data]);
 
   const cust = data.find((c) => c.phone === selected) ?? null;
@@ -303,13 +314,45 @@ export function CoreCrm() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
-        <div className="core-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-          {kpis.map((k) => (
-            <div className="k" key={k.l}>
-              <div className="kl">{k.l}</div>
-              <div className="kv mono">{k.v}</div>
-            </div>
-          ))}
+        <div className="core-crumb">
+          CORE — GUEST · CRM · <b>customer book</b> · <span className="fix">{stat.guests} guests</span>
+        </div>
+        <div className="core-sectionhead">
+          <h1>Guest · CRM</h1>
+          <span className="sub">customer book · rfm health · consent &amp; points</span>
+        </div>
+        {/* dense-console 6-up stat strip — every figure from the live book (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Customer-book metrics">
+          <div className="cell">
+            <span className="lab">Guests</span>
+            <span className="val">{stat.guests}</span>
+            <span className="delta">{stat.members} member{stat.members === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">VIPs</span>
+            <span className="val brand">{stat.vip}</span>
+            <span className="delta">{stat.vipPct}% of book</span>
+          </div>
+          <div className="cell">
+            <span className="lab">New</span>
+            <span className="val info">{stat.fresh}</span>
+            <span className="delta">first-time guests</span>
+          </div>
+          <div className="cell">
+            <span className="lab">At-risk</span>
+            <span className={stat.atRisk > 0 ? "val danger" : "val"}>{stat.atRisk}</span>
+            <span className={stat.atRisk > 0 ? "delta dn" : "delta"}>{stat.atRisk > 0 ? "win-back due" : "book healthy"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg spend</span>
+            <span className="val basil">{zl(stat.avgSpend)}<small> zł</small></span>
+            <span className="delta">per active guest</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Repeat rate</span>
+            <span className="val amber">{stat.repeatPct}<small>%</small></span>
+            <span className="delta">2+ orders</span>
+          </div>
         </div>
 
         {/* one unified, glyph-only filter bar — search grows to fill, the rest

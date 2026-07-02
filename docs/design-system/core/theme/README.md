@@ -123,7 +123,7 @@ surface toolbar.
   component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
   identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
-    surface body (POS, **Floor**, **Orders**, **Slots**): a bordered glass panel of `.cell`s, each an
+    surface body (POS, **Floor**, **Orders**, **Slots**, **CRM**): a bordered glass panel of `.cell`s, each an
     uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
     `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
     colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
