@@ -794,13 +794,14 @@ export function CoreInbox() {
     [loadAll],
   );
 
+  // Dense-console stat strip — every figure from live WhatsApp metrics (Rule #1).
   const kpis = metrics
     ? [
-        { l: "Paid · 7d", v: String(metrics.windows.last7d.orders.paid) },
-        { l: "Conversion", v: `${Math.round(metrics.windows.last7d.conversionRate * 100)}%` },
-        { l: "Live", v: String(metrics.activeSessions.totalSessions) },
-        { l: "Awaiting", v: String(metrics.activeSessions.awaitingPayment) },
-        { l: "Conversations", v: String(metrics.historicConversations) },
+        { l: "Open convos", v: String(metrics.activeSessions.totalSessions), tone: "", d: `${metrics.historicConversations} all-time` },
+        { l: "Awaiting reply", v: String(metrics.activeSessions.awaitingPayment), tone: metrics.activeSessions.awaitingPayment > 0 ? "amber" : "", d: metrics.activeSessions.awaitingPayment > 0 ? "needs a reply" : "all answered", dTone: metrics.activeSessions.awaitingPayment > 0 ? "warn" : "" },
+        { l: "Live", v: String(metrics.activeSessions.totalSessions), tone: "info", d: "active now" },
+        { l: "Conversion", v: `${Math.round(metrics.windows.last7d.conversionRate * 100)}%`, tone: "basil", d: "last 7d" },
+        { l: "Paid · 7d", v: String(metrics.windows.last7d.orders.paid), tone: "brand", d: "orders" },
       ]
     : [];
 
@@ -824,16 +825,20 @@ export function CoreInbox() {
       }
     >
       <div className="core-guest-inbox">
+        <div className="core-crumb">
+          CORE — GUEST · INBOX · <b>whatsapp live</b> · <span className="fix">reached via ⌘K</span>
+        </div>
         <div className="core-sectionhead">
           <h1>Guest · Inbox</h1>
-          <span className="sub">WhatsApp · live conversations</span>
+          <span className="sub">whatsapp · 3-pane over unified stat strip</span>
         </div>
         {kpis.length > 0 && (
-          <div className="core-kpi-strip">
+          <div className="core-statstrip" role="group" aria-label="Inbox metrics">
             {kpis.map((k) => (
-              <div className="k" key={k.l}>
-                <div className="kl">{k.l}</div>
-                <div className="kv mono">{k.v}</div>
+              <div className="cell" key={k.l}>
+                <span className="lab">{k.l}</span>
+                <span className={k.tone ? `val ${k.tone}` : "val"}>{k.v}</span>
+                <span className={k.dTone ? `delta ${k.dTone}` : "delta"}>{k.d}</span>
               </div>
             ))}
           </div>

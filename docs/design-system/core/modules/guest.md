@@ -18,9 +18,14 @@ The guest engagement hub. `/core/guest`.
 ## Inbox (`/core/guest/inbox`) — wired
 
 - **Live code:** `src/core/guest/CoreInbox.tsx`.
-- **Theme:** `.core-guest-inbox` / `.core-kpi-strip` / `.core-inbox` (3-pane:
-  `.core-convs` · `.core-thread` · `.core-ctx`) in `themes/core/index.css`.
-- **Layout:** a 5-up KPI strip over the 3-pane console — conversation list
+- **Theme:** `.core-crumb` · `.core-sectionhead` · `.core-statstrip` ·
+  `.core-guest-inbox` / `.core-inbox` (3-pane: `.core-convs` · `.core-thread`
+  · `.core-ctx`) in `themes/core/index.css`.
+- **Layout:** dense-console (mockup 07-guest-inbox) — a `.core-crumb`
+  breadcrumb + `.core-sectionhead`, then a **5-up `.core-statstrip`** (open
+  convos · awaiting reply · live · conversion · paid 7d — all from live
+  WhatsApp metrics, Rule #1; coloured values + deltas) over the 3-pane console
+  — conversation list
   (`.core-conv` rows with avatar, LIVE/PAY badges; the list header is a
   `.core-convs-h.core-gfilters` unified bar — a search field with a leading
   magnifier glyph that flex-grows, then a **glyph-only `.core-seg.icons`**
