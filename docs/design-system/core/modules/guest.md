@@ -83,9 +83,15 @@ Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/point
 
 ## Book (`/core/guest/book`) — wired
 
-`src/core/guest/CoreBook.tsx` (shared with Service). Tops the lens with a
-**timeline-over-tables grid** (`.core-book-timeline` — tables as rows,
-11:00–23:00 as columns): reservation **blocks** are positioned by time/duration,
+`src/core/guest/CoreBook.tsx` (shared with Service). Rendered in the
+**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
+`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
+covers · seated · upcoming · no-shows · fill** (all from the day's reservations
+— Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
+timeline a title + a status **legend** (confirmed · seated · pending · conflict).
+Then the **timeline-over-tables grid** (`.core-book-timeline` — tables as rows,
+11:00–23:00 as columns): reservation **blocks** are positioned by time/duration
+and **toned by status** (`.core-tl-block.confirmed` basil / `.seated` info),
 **overlaps hatch red** live (`.core-tl-block.conflict`, one
 `findReservationConflicts` pass per booking), and a block **drags to another
 table row to reassign** (HTML5 drag → the reservations `POST` upsert with
