@@ -42,14 +42,18 @@ is `overflow:hidden` so its footer clips to the card's rounded corners.
 
 - **`.core-statstrip`** — an **undivided** glass panel of six live cells (no
   inter-cell hairlines — a clean, open row spaced by cell padding)
-  (label · big mono value · colour-coded delta), every figure derived from the
-  till's **real, live state** (Rule #1 — no fetch, no invented numbers, the same
-  state the rail + ticket already show): **Open checks** (count · N parked) ·
-  **Covers seated** (dine-in covers · N dine-in checks) · **To pay** (ready
-  count · zł outstanding) · **Open value** (total open zł · avg check) ·
-  **In kitchen** (fired-check count) · **Pace** (the live server steering-plan
-  bottleneck util %, or "Clear" · bottleneck label). Toned by `--basil` /
-  `--amber` / `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
+  (label · big mono value · colour-coded delta), the mockup's six-KPI set, every
+  figure **real** (Rule #1 — no invented numbers): **Open checks** (count · N
+  parked / all active) · **Covers seated** (live dine-in covers · `N% floor` from
+  the table seats) · **Avg check** (today's AOV · trailing-7-day delta) ·
+  **Prep queue** (item units on fired checks · "on time" or the bottleneck at
+  risk) · **Table turns** (covers ÷ tables · delta) · **Sales /hr** (today's
+  revenue rate · delta). The three live counts (open checks · covers · prep
+  queue) come straight from till state; **avg check · table turns · sales/hr**
+  are server-computed from real orders (`getPosKpis` → `GET /api/admin/pos/kpis`,
+  polled 30s) with honest **same-time-of-day trailing-7-day deltas** (`—` until a
+  baseline exists — never a fabricated trend). Toned by `--basil` / `--amber` /
+  `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
   visual is documented in the theme README ("Stat strip").
 
 - **`.core-checkbar`** — the `bar` grid area: a glass bar **above the menu in
@@ -151,8 +155,11 @@ The open-check selector (`.core-tabrail`) lives in the
   (`deliveryCapNextWindow === 0`).
 - **`.core-tcovers`** — a **labelled covers row** (dine-in), on its own line like
   the mockup: a `.core-tcovers-l` "COVERS" caption + the `.core-covers` stepper,
-  with the attached guest name pushed right (`.core-tcovers-g`) when the check
-  carries one. (Moved off the header so the party size reads as its own control.)
+  with the attached guest name (`.core-tcovers-g`) and the **`SERVER · <name>`**
+  label (`.core-tcovers-srv`, the signed-in till operator from
+  `getCurrentAdminUser`, passed as the `operatorName` prop) pushed right —
+  matching the mockup. (Moved off the header so the party size reads as its own
+  control.)
 - **`.core-oseg` / `.core-miniseg`** — the **channel** selector and the dine-in
   **kitchen-timing** toggle share one pattern, matching the mockup's `.order-seg`:
   a mono `.core-oseg-l` caption (CHANNEL · KITCHEN TIMING) stacked over a single

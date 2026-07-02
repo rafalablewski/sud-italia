@@ -2482,6 +2482,94 @@ export async function getSummary(
   };
 }
 
+/** Live till KPIs derived from REAL orders (Rule #1) — the analytical figures the
+ *  POS stat strip shows beside its live counts. Each "today" figure is measured
+ *  up to the current time-of-day and its delta compares to the average of the
+ *  prior 7 days *up to the same time of day*, so a mid-service reading is judged
+ *  against a like-for-like window (not a full day), and never fabricated. */
+export interface PosKpis {
+  /** Today's average check (grosze) — revenue ÷ orders so far. */
+  avgCheck: number;
+  /** % vs the trailing-7-day AOV at this time of day; null when no baseline. */
+  avgCheckDeltaPct: number | null;
+  /** Today's sales rate (grosze/hour) since the first order. */
+  salesPerHour: number;
+  /** % vs the trailing-7-day revenue-by-now; null when no baseline. */
+  salesDeltaPct: number | null;
+  /** Covers seated today ÷ table count (turns, 1 dp). */
+  tableTurns: number;
+  /** % vs the trailing-7-day covers-by-now; null when no baseline. */
+  tableTurnsDeltaPct: number | null;
+  tableCount: number;
+  generatedAt: string;
+}
+
+export async function getPosKpis(locationSlug: string): Promise<PosKpis> {
+  const now = new Date();
+  const since = new Date(now.getTime() - 8 * 86_400_000).toISOString();
+  const [orders, tables] = await Promise.all([getOrders(locationSlug, since), getTables(locationSlug)]);
+  const tableCount = tables.length;
+
+  // UTC day boundaries, matching getAnalytics' `createdAt.split("T")[0]` grouping.
+  const dayKey = (iso: string) => iso.slice(0, 10);
+  const msIntoDay = (iso: string) => Date.parse(iso) - Date.parse(`${dayKey(iso)}T00:00:00.000Z`);
+  const todayKey = dayKey(now.toISOString());
+  const nowIntoDay = msIntoDay(now.toISOString());
+
+  // Revenue orders mirror getAnalytics: exclude the unpaid queue + voided.
+  type Agg = { rev: number; count: number; covers: number };
+  const today: Agg = { rev: 0, count: 0, covers: 0 };
+  const priorByDay = new Map<string, Agg>();
+  let firstOrderTodayMs: number | null = null;
+
+  for (const o of orders) {
+    if (o.status === "pending" || o.status === "cancelled") continue;
+    if (msIntoDay(o.createdAt) > nowIntoDay) continue; // only up to "now" time-of-day
+    const covers = o.fulfillmentType === "dine-in" ? o.partySize ?? 0 : 0;
+    const k = dayKey(o.createdAt);
+    if (k === todayKey) {
+      today.rev += o.totalAmount;
+      today.count += 1;
+      today.covers += covers;
+      const ms = Date.parse(o.createdAt);
+      if (firstOrderTodayMs === null || ms < firstOrderTodayMs) firstOrderTodayMs = ms;
+    } else {
+      const a = priorByDay.get(k) ?? { rev: 0, count: 0, covers: 0 };
+      a.rev += o.totalAmount;
+      a.count += 1;
+      a.covers += covers;
+      priorByDay.set(k, a);
+    }
+  }
+
+  const priorDays = priorByDay.size;
+  const priorTot = [...priorByDay.values()].reduce(
+    (s, a) => ({ rev: s.rev + a.rev, count: s.count + a.count, covers: s.covers + a.covers }),
+    { rev: 0, count: 0, covers: 0 },
+  );
+  const priorAvgRev = priorDays > 0 ? priorTot.rev / priorDays : null;
+  const priorAvgCovers = priorDays > 0 ? priorTot.covers / priorDays : null;
+  const priorAOV = priorTot.count > 0 ? priorTot.rev / priorTot.count : null;
+  const pct = (cur: number, base: number | null): number | null =>
+    base && base > 0 ? Math.round(((cur - base) / base) * 100) : null;
+
+  const avgCheck = today.count > 0 ? Math.round(today.rev / today.count) : 0;
+  const hoursElapsed = firstOrderTodayMs !== null ? Math.max(0.5, (now.getTime() - firstOrderTodayMs) / 3_600_000) : 0;
+  const salesPerHour = hoursElapsed > 0 ? Math.round(today.rev / hoursElapsed) : 0;
+  const tableTurns = tableCount > 0 ? today.covers / tableCount : 0;
+
+  return {
+    avgCheck,
+    avgCheckDeltaPct: today.count > 0 ? pct(avgCheck, priorAOV) : null,
+    salesPerHour,
+    salesDeltaPct: today.rev > 0 ? pct(today.rev, priorAvgRev) : null,
+    tableTurns: Math.round(tableTurns * 10) / 10,
+    tableTurnsDeltaPct: today.covers > 0 ? pct(today.covers, priorAvgCovers) : null,
+    tableCount,
+    generatedAt: now.toISOString(),
+  };
+}
+
 // --- Insights ---
 
 export interface SlotUtilization {

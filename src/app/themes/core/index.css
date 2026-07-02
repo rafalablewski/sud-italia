@@ -477,6 +477,10 @@
 .core .core-tcovers { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1px solid var(--line); flex: none; }
 .core .core-tcovers-l { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .core .core-tcovers-g { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the check's server (till operator) — uppercase mono, right of the covers row
+   (mockup "SERVER · MAREK"). Auto-margin only when it's the sole right item. */
+.core .core-tcovers-srv { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; flex: none; }
+.core .core-tcovers-g + .core-tcovers-srv { margin-left: 12px; }
 /* table / address action pill — info-cyan like the mockup's "+ Assign table". */
 .core .core-chan-aux { height: 28px; padding: 0 12px; border-radius: var(--pill); border: 1px solid rgba(84,188,224,.4); background: var(--info-wash); font-weight: 550; font-size: 12px; color: var(--info); white-space: nowrap; flex: none; }
 .core .core-chan-aux:hover { color: var(--info); background: rgba(84,188,224,.28); }

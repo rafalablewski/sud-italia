@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
+import type { PosKpis } from "@/lib/store"; // type-only (erased) — no server code bundled
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -84,6 +85,10 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   lto: { label: "LTO", cls: "lto" },
 };
 const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+// Signed % delta chip for the analytical KPIs — up (basil) when ≥0, dn (danger)
+// when negative, neutral em-dash while the figure is still loading (null).
+const pctChip = (p: number | null | undefined): { txt: string; cls: string } =>
+  p == null ? { txt: "—", cls: "delta" } : { txt: `${p >= 0 ? "+" : ""}${p}%`, cls: p >= 0 ? "delta up" : "delta dn" };
 
 /** A line note that names an allergy / dietary risk gets the amber safety
  *  treatment on the check + KDS — it can't read as a normal preference. */
@@ -135,12 +140,16 @@ function Gly({ children }: { children: ReactNode }) {
 export function CorePos({
   menusByLocation,
   upsellByLocation,
+  operatorName,
   embedded = false,
   initialTableId,
   onClose,
 }: {
   menusByLocation: Record<string, MenuItem[]>;
   upsellByLocation: Record<string, UpsellConfig | null>;
+  /** The signed-in till operator (server-rendered) — shown as the check's
+   *  "SERVER · <name>" in the ticket header, like the mockup. */
+  operatorName?: string;
   /** Mounted inside the Floor's check panel (no CoreShell chrome) rather than as
    *  the standalone /core/pos surface. */
   embedded?: boolean;
@@ -1102,6 +1111,25 @@ export function CorePos({
   }, [loadSteer]);
   usePolling(loadSteer, 15000, { enabled: !!pageLoc });
 
+  // Analytical KPIs (avg check · table turns · sales/hr) — server-computed from
+  // real orders (Rule #1). The live counts stay client-side; this only fills the
+  // three figures that need order history. Polls slower than the till state.
+  const [kpis, setKpis] = useState<PosKpis | null>(null);
+  const loadKpis = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/pos/kpis?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      setKpis((await res.json()) as PosKpis);
+    } catch {
+      /* non-fatal — the strip shows "…" for the fetched figures until it lands */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadKpis();
+  }, [loadKpis]);
+  usePolling(loadKpis, 30000, { enabled: !!pageLoc });
+
   const loadEightySix = useCallback(async () => {
     if (!pageLoc) return;
     try {
@@ -1342,11 +1370,15 @@ export function CorePos({
     const dineIn = live.filter((t) => t.channel === "dine-in").length;
     const readyValue = tabs.filter((t) => t.status === "pay").reduce((s, t) => s + grandG(t), 0);
     const inKitchen = tabs.filter((t) => t.sentKds).length;
+    // Prep queue = item units currently in the kitchen (on fired/sent checks).
+    const prepItems = tabs.filter((t) => t.sentKds).reduce((s, t) => s + t.items.reduce((a, l) => a + l.quantity, 0), 0);
     const avg = live.length ? Math.round(railSummary.openValue / live.length) : 0;
     const util = steer?.bottleneck ? Math.round((steer.bottleneck.util ?? 0) * 100) : 0;
     const paceTier = steer?.active ? (steer.bottleneck?.tier ?? "warn") : "calm";
-    return { covers, dineIn, readyValue, inKitchen, avg, util, paceTier };
+    return { covers, dineIn, readyValue, inKitchen, prepItems, avg, util, paceTier };
   }, [tabs, grandG, railSummary.openValue, steer]);
+  // Floor occupancy for the Covers KPI delta (mockup "82% floor").
+  const totalSeats = useMemo(() => tables.reduce((s, t) => s + (t.seats ?? 0), 0), [tables]);
 
   const posBody = (
     <>
@@ -1365,9 +1397,11 @@ export function CorePos({
         <span className="sub">{pageLoc} · dine-in service</span>
       </div>
 
-      {/* live stat strip — the dense-console KPI row, every figure from real
-          till state (Rule #1): open checks · covers · to pay · open value ·
-          pace · avg check. Matches the mockup's `.statstrip`. */}
+      {/* live stat strip — the mockup's KPI row, every figure REAL (Rule #1):
+          open checks · covers seated (+floor%) · avg check · prep queue · table
+          turns · sales/hr. The live counts come from till state; avg-check /
+          table-turns / sales-hr are server-computed from real orders (getPosKpis,
+          with honest trailing-7-day deltas). Matches the mockup's `.statstrip`. */}
       <div className="core-statstrip" role="group" aria-label="Till metrics">
         <div className="cell">
           <span className="lab">Open checks</span>
@@ -1377,29 +1411,27 @@ export function CorePos({
         <div className="cell">
           <span className="lab">Covers seated</span>
           <span className="val basil">{posStats.covers}</span>
-          <span className="delta up">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
+          <span className="delta up">{totalSeats > 0 ? `${Math.round((posStats.covers / totalSeats) * 100)}% floor` : `${posStats.dineIn} dine-in`}</span>
         </div>
         <div className="cell">
-          <span className="lab">To pay</span>
-          <span className={railSummary.ready > 0 ? "val amber" : "val"}>{railSummary.ready}</span>
-          <span className={railSummary.ready > 0 ? "delta warn" : "delta"}>{fmtPLN(posStats.readyValue)}</span>
+          <span className="lab">Avg check</span>
+          <span className="val brand">{kpis ? <>{zl(kpis.avgCheck)}<small> zł</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.avgCheckDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
         <div className="cell">
-          <span className="lab">Open value</span>
-          <span className="val brand">{zl(railSummary.openValue)}<small> zł</small></span>
-          <span className="delta">avg {zl(posStats.avg)} zł</span>
+          <span className="lab">Prep queue</span>
+          <span className={posStats.prepItems > 0 ? "val amber" : "val"}>{posStats.prepItems}</span>
+          <span className={steer?.active && steer.bottleneck ? "delta dn" : "delta up"}>{steer?.active && steer.bottleneck ? `${steer.bottleneck.label} at risk` : "on time"}</span>
         </div>
         <div className="cell">
-          <span className="lab">In kitchen</span>
-          <span className={posStats.inKitchen > 0 ? "val info" : "val"}>{posStats.inKitchen}</span>
-          <span className="delta">fired {posStats.inKitchen === 1 ? "check" : "checks"}</span>
+          <span className="lab">Table turns</span>
+          <span className="val basil">{kpis ? <>{kpis.tableTurns.toFixed(1)}<small>×</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.tableTurnsDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
         <div className="cell">
-          <span className="lab">Pace</span>
-          <span className={`val ${posStats.paceTier === "calm" ? "basil" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "danger" : "amber"}`}>
-            {steer?.active ? `${posStats.util}%` : "Clear"}
-          </span>
-          <span className={`delta ${posStats.paceTier === "calm" ? "up" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "dn" : "warn"}`}>{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
+          <span className="lab">Sales /hr</span>
+          <span className="val info">{kpis ? <>{zl(kpis.salesPerHour)}<small> zł</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.salesDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
       </div>
 
@@ -1649,6 +1681,7 @@ export function CorePos({
                     <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">+</button>
                   </div>
                   {active.customerName && <span className="core-tcovers-g">{active.customerName}</span>}
+                  {operatorName && <span className="core-tcovers-srv">Server · {operatorName}</span>}
                 </div>
               )}
 
