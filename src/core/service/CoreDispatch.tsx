@@ -96,8 +96,29 @@ export function CoreDispatch() {
     const kitchen = orders.filter((o) => o.status === "confirmed" || o.status === "preparing").length;
     const ready = orders.filter((o) => o.status === "ready").length;
     const road = orders.filter((o) => o.status === "assigned" || o.status === "picked_up").length;
-    return { kitchen, ready, road };
+    const unassigned = orders.filter((o) => o.status === "ready" && !o.assignedDriverId).length;
+    // Delivered today — completed delivery orders dated today (real, Rule #1).
+    const today = new Date().toDateString();
+    const deliveredToday = orders.filter((o) => (o.status === "delivered" || o.status === "completed") && new Date(o.createdAt).toDateString() === today).length;
+    return { kitchen, ready, road, unassigned, deliveredToday };
   }, [orders]);
+
+  // Live driver status derived from the order board (en route / loading / idle) —
+  // no separate driver-telemetry store, so it's read off real assignments.
+  const driverState = useCallback((id: string): { label: string; tone: string; sub: string } => {
+    const o = orders.find((x) => x.assignedDriverId === id && (x.status === "assigned" || x.status === "picked_up"));
+    if (!o) return { label: "idle", tone: "idle", sub: "— idle" };
+    if (o.status === "picked_up") return { label: "en route", tone: "route", sub: `#${shortId(o.id)}` };
+    return { label: "loading", tone: "loading", sub: `at pass · #${shortId(o.id)}` };
+  }, [orders]);
+  const driversOut = useMemo(() => drivers.filter((d) => orders.some((o) => o.assignedDriverId === d.id && (o.status === "assigned" || o.status === "picked_up"))).length, [drivers, orders]);
+  // Auto-assign the earliest unassigned ready order to the first idle driver.
+  const autoAssignNearest = useCallback(() => {
+    const order = orders.find((o) => o.status === "ready" && !o.assignedDriverId);
+    const driver = drivers.find((d) => driverState(d.id).tone === "idle");
+    if (!order || !driver) { toast(order ? "No idle driver free" : "Nothing waiting on a driver", "default"); return; }
+    void mutate(order.id, { driverId: driver.id, status: "assigned" }, `Auto-assigned #${shortId(order.id)} → ${driver.name}`);
+  }, [orders, drivers, driverState, mutate, toast]);
 
   const nextStatus = (o: Order): Order["status"] | null => {
     if (!o.assignedDriverId) return null;
@@ -110,47 +131,41 @@ export function CoreDispatch() {
       eyebrow="Service · Dispatch"
       tabs={serviceTabs("dispatch")}
       subRight={
-        <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
-          <RefreshIcon />
-        </button>
+        <>
+          <button type="button" className="core-pill qr" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">⚡ Auto-assign nearest</button>
+          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
+            <RefreshIcon />
+          </button>
+        </>
       }
     >
-      <div style={{ padding: 16, overflow: "auto" }}>
-        {/* KPI strip */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-          {[
-            { l: "In kitchen", v: kpis.kitchen, c: "var(--amber)" },
-            { l: "Ready to go", v: kpis.ready, c: "var(--basil)" },
-            { l: "On the road", v: kpis.road, c: "var(--info)" },
-          ].map((k) => (
-            <div
-              key={k.l}
-              style={{
-                flex: "1 1 120px",
-                minWidth: 120,
-                background: "var(--panel)",
-                border: "1px solid var(--line)",
-                borderRadius: "var(--r-md, 12px)",
-                padding: "11px 15px",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,.14)",
-              }}
-            >
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-3)" }}>{k.l}</div>
-              <div className="mono" style={{ fontFamily: "var(--mono)", fontSize: 24, fontWeight: 700, marginTop: 2, color: k.c }}>
-                {k.v}
-              </div>
-            </div>
-          ))}
+      <div className="core-guest-inbox">
+        <div className="core-crumb">
+          CORE — SERVICE · DISPATCH · <b>liquid glass</b> · <span className="fix">pass → road</span>
+        </div>
+        <div className="core-sectionhead">
+          <h1>Service · Dispatch</h1>
+          <span className="sub">{location} · pass → road</span>
+        </div>
+        {/* dense-console 6-up stat strip — every figure from the live board (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Dispatch metrics">
+          <div className="cell"><span className="lab">In kitchen</span><span className="val amber">{kpis.kitchen}</span><span className="delta">cooking</span></div>
+          <div className="cell"><span className="lab">Ready</span><span className="val basil">{kpis.ready}</span><span className="delta">{kpis.unassigned} awaiting driver</span></div>
+          <div className="cell"><span className="lab">On road</span><span className="val info">{kpis.road}</span><span className="delta">{driversOut} assigned</span></div>
+          <div className="cell"><span className="lab">Delivered today</span><span className="val">{kpis.deliveredToday}</span><span className="delta">completed</span></div>
+          <div className="cell"><span className="lab">Drivers</span><span className="val brand">{drivers.length}</span><span className="delta">{driversOut} out · {drivers.length - driversOut} idle</span></div>
+          <div className="cell"><span className="lab">Unassigned</span><span className={kpis.unassigned > 0 ? "val danger" : "val"}>{kpis.unassigned}</span><span className={kpis.unassigned > 0 ? "delta dn" : "delta"}>{kpis.unassigned > 0 ? "need a driver" : "all covered"}</span></div>
         </div>
 
-        {loading ? (
-          <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)" }}>Loading dispatch…</div>
-        ) : orders.length === 0 ? (
-          <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)" }}>
-            No active delivery orders. New delivery checks appear here the moment they’re confirmed.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+        <div className="core-disp-grid">
+          <div className="core-disp-queue">
+            <div className="core-frame-h"><span className="t">Pass · delivery queue</span><span className="fbadge">{orders.length} order{orders.length === 1 ? "" : "s"}</span></div>
+            {loading ? (
+              <div className="core-kds-empty pad">Loading dispatch…</div>
+            ) : orders.length === 0 ? (
+              <div className="core-kds-empty pad">No active delivery orders. New delivery checks appear here the moment they’re confirmed.</div>
+            ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, padding: 10 }}>
             {orders.map((o) => {
               const next = nextStatus(o);
               const tone = STATUS_TONE[o.status] ?? "var(--ink-3)";
@@ -257,7 +272,30 @@ export function CoreDispatch() {
               );
             })}
           </div>
-        )}
+            )}
+          </div>
+
+          {/* Drivers panel — status derived live from the order board */}
+          <aside className="core-frame core-disp-drivers">
+            <div className="core-frame-h"><span className="t">Drivers</span><span className="fbadge">{drivers.length} on shift · {driversOut} out</span></div>
+            <div className="core-frame-b">
+              {drivers.length === 0 ? (
+                <div className="core-kds-empty">No drivers on shift — add one under Staff.</div>
+              ) : (
+                drivers.map((d) => {
+                  const st = driverState(d.id);
+                  return (
+                    <div className="core-disp-driver" key={d.id}>
+                      <span className="core-g-av s">{d.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
+                      <div className="who"><div className="nm">{d.name}</div><div className="mt">{d.role} · {st.sub}</div></div>
+                      <span className={`core-disp-dstat ${st.tone}`}>{st.label}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     </CoreShell>
   );

@@ -1182,6 +1182,21 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tiermix .track i.platinum { background: linear-gradient(90deg, #7fb4c9, #cfeef2); } .core .core-tiermix .track i.gold { background: linear-gradient(90deg, #c99a25, #f6d47a); } .core .core-tiermix .track i.silver { background: linear-gradient(90deg, #9aa4ae, #e9edf2); } .core .core-tiermix .track i.bronze { background: linear-gradient(90deg, #8a4f27, #d9915a); }
 .core .core-tiermix .n { font-family: var(--mono); font-size: 11px; color: var(--ink-2); min-width: 32px; text-align: right; }
 @media (max-width: 1040px) { .core .core-loy-grid { grid-template-columns: 1fr; } .core .core-loy-rail { position: static; } }
+/* dense-console Dispatch — queue + drivers panel (mockup 06-service-dispatch) */
+.core .core-disp-grid { display: grid; grid-template-columns: 1fr 340px; gap: 12px; align-items: start; margin: 0 16px 18px; }
+.core .core-disp-queue { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
+.core .core-disp-drivers { position: sticky; top: 12px; }
+.core .core-disp-driver { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.core .core-disp-driver:first-child { border-top: 0; }
+.core .core-disp-driver .who { flex: 1; min-width: 0; }
+.core .core-disp-driver .who .nm { font-size: 12.5px; color: var(--ink); font-weight: 500; }
+.core .core-disp-driver .who .mt { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
+.core .core-disp-dstat { font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+.core .core-disp-dstat.route { color: var(--info); background: var(--info-wash); }
+.core .core-disp-dstat.loading { color: var(--amber); background: var(--amber-wash); }
+.core .core-disp-dstat.returning { color: var(--basil); background: var(--basil-wash); }
+.core .core-disp-dstat.idle { color: var(--ink-3); background: var(--panel-2); }
+@media (max-width: 1040px) { .core .core-disp-grid { grid-template-columns: 1fr; } .core .core-disp-drivers { position: static; } }
 .core .core-tierbadge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: var(--pill); text-transform: capitalize; background: var(--panel-3); color: var(--ink-2); }
 .core .core-tierbadge.platinum { background: var(--tier-platinum-wash); color: var(--tier-platinum); }
 .core .core-tierbadge.gold { background: var(--amber-wash); color: var(--amber); }

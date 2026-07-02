@@ -138,17 +138,24 @@ The Floor board pairs the predictive twin with the table's **live orders**:
 - **Live code:** `src/core/service/CoreDispatch.tsx`; API
   `src/app/api/admin/dispatch/route.ts`; store helper `assignOrderDriver`
   (`src/lib/store.ts`).
-- **Theme:** token-styled inline (no new `.core-*` classes) so it inherits the
-  active skin's glass; reuses `.core-btn` / `.core-chip` / `.core-iconbtn`.
+- **Theme:** dense-console (mockup 06-service-dispatch): `.core-crumb` +
+  `.core-sectionhead` + `.core-statstrip`, then a `.core-disp-grid` (queue +
+  drivers). The order cards stay token-styled inline; `.core-disp-drivers` /
+  `.core-disp-driver` / `.core-disp-dstat` style the drivers panel.
 - The delivery driver board. `GET /api/admin/dispatch?location=` returns the
   active delivery orders (`fulfillmentType==="delivery"`, status in
   confirmed→preparing→ready→assigned→picked_up, non-simulated) plus the
   location's **drivers** (staff whose role is in the `delivery` group —
   `driver`/`courier` — and `status==="active"`).
-- Three KPIs (in kitchen · ready to go · on the road) over a card grid. Each
-  card shows `#shortId`, delivery address, item count + total + customer, a
-  status chip, and driver controls: unassigned cards show one-tap **assign
-  chips**; an assigned card shows the driver + **Unassign**.
+- A **6-up `.core-statstrip`** (in kitchen · ready · on road · delivered today
+  · drivers · unassigned — all live, Rule #1) and a command-bar **⚡ Auto-assign
+  nearest** action (assigns the earliest unassigned ready order to the first
+  idle driver). Left column **Pass · delivery queue**: each card shows
+  `#shortId`, address, items + total + customer, a status chip, and driver
+  controls (unassigned → one-tap **assign chips**; assigned → driver +
+  **Unassign**). Right column **Drivers** panel: each driver with a status
+  derived live from the board — **en route** (a picked-up order) / **loading**
+  (assigned, at pass) / **idle** — via `driverState`.
 - Writes go through `PUT /api/admin/dispatch` — `{orderId, driverId}` calls
   `assignOrderDriver` (sets `Order.assignedDriverId`; the `assigned_driver_id`
   column + row mappers already existed) and `{orderId, status}` advances the
