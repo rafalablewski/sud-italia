@@ -36,9 +36,11 @@ import {
   deleteSlot,
   deleteReservation,
   addLoyaltyMember,
+  getMenuOverrides,
+  setMenuOverride,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
-import type { CartItem, FulfillmentType, MenuItem, Order, OrderStatus, TimeSlot } from "@/data/types";
+import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus, TimeSlot } from "@/data/types";
 
 const TODAY = "2026-06-07";
 const useDB = !!process.env.DATABASE_URL;
@@ -181,6 +183,55 @@ async function cleanup(): Promise<void> {
   console.log(`cleanup: removed ${n} prior demo orders + demo tables/slots/bookings`);
 }
 
+/**
+ * Declare EU-1169/2011 allergens for the demo menu so the Concierge allergen
+ * matrix + `get_allergens` MCP tool have real data to read (Rule #1 — the
+ * feature must actually function). These are the standard, factual allergens
+ * for these classic Italian dishes; an operator overrides them per sourcing in
+ * the admin Menu editor (this only writes the `allergens` field of the
+ * menu-override, preserving any other override). Values are derived from the
+ * item's category + name — conservative and per-recipe accurate.
+ */
+function allergensFor(item: MenuItem): Allergen[] {
+  const n = item.name.toLowerCase();
+  const set = new Set<Allergen>();
+  const add = (...a: Allergen[]) => a.forEach((x) => set.add(x));
+  // Base by category — a wheat crust/pasta carries gluten; cheese carries dairy.
+  if (item.category === "pizza") add("gluten", "dairy");
+  else if (item.category === "pasta") add("gluten");
+  else if (item.category === "panini") add("gluten", "dairy");
+  else if (item.category === "desserts") add("dairy");
+  // Name refinements (factual for the classic recipe).
+  if (/napoli|acciugh|anchov|tonno|tuna|sardin/.test(n)) add("fish");
+  if (/pesto|genovese/.test(n)) add("nuts");
+  if (/carbonara/.test(n)) add("gluten", "eggs", "dairy");
+  if (/formagg|cheese|bufala|mozzarella|parmigian|burrata|gorgonzola|ricotta|mascarpone|cacio|panna|gelato|crema/.test(n)) add("dairy");
+  if (/vongole|frutti di mare|cozze|clam|mussel|mare/.test(n)) add("molluscs");
+  if (/gamber|shrimp|prawn|calamar|squid|seafood|scampi/.test(n)) add("shellfish");
+  if (/arancin/.test(n)) add("gluten", "dairy", "eggs");
+  if (/tiramis|cannol|profiterol|zeppol|semifreddo/.test(n)) add("gluten", "dairy", "eggs");
+  if (/bruschetta|garlic bread|focaccia|crostini|grissin|panino|bread|pane/.test(n)) add("gluten");
+  if (/sesam/.test(n)) add("sesame");
+  if (/mostard|mustard|senape/.test(n)) add("mustard");
+  // Fresh egg pasta ribbons + filled/baked pasta carry eggs (+ usually dairy).
+  if (item.category === "pasta" && /tagliatell|tagliolin|fettuccin|ravioli|tortellin|lasagn|gnocch|carbonara|alfredo/.test(n)) add("eggs", "dairy");
+  // Drinks, bottled oil + still/sparkling water carry no major allergen; beer is gluten.
+  if (item.category === "drinks" || /olio|olive oil|extra virgin/.test(n)) {
+    set.clear();
+    if (/birra|beer|peroni|nastro|lager|ale/.test(n)) add("gluten");
+  }
+  return [...set];
+}
+
+async function seedAllergens(menu: MenuItem[]): Promise<void> {
+  const overrides = await getMenuOverrides();
+  for (const item of menu) {
+    const allergens = allergensFor(item);
+    // Merge into any existing override so we only touch the allergens field.
+    await setMenuOverride(item.id, { ...(overrides[item.id] ?? {}), allergens });
+  }
+}
+
 async function main() {
   console.log(`store mode: ${useDB ? "Neon Postgres (DATABASE_URL set)" : "filesystem (.data)"}`);
   if (useDB && process.env.ALLOW_DB_SEED !== "1") {
@@ -200,6 +251,9 @@ async function main() {
     const slug = loc.slug;
     const menu = await getMenuWithOverrides(slug);
     console.log(`\n[${slug}] menu items: ${menu.length}`);
+
+    await seedAllergens(menu);
+    console.log(`[${slug}] EU-14 allergens declared`);
 
     const tableIds = await seedTables(slug);
     await seedSlots(slug);

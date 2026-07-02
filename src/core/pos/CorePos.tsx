@@ -1368,6 +1368,13 @@ export function CorePos({
 
   const posBody = (
     <>
+      {/* dense-console breadcrumb — matches the mockup's `.cap` line, shared with
+          every other Core surface (Rule: one chrome across the suite). */}
+      {!embedded && (
+        <div className="core-crumb">
+          CORE — POS · ORDER · <b>liquid glass</b> · <span className="fix">dense console</span>
+        </div>
+      )}
       {/* surface section header — dense-console page title + context sub */}
       <div className="core-sectionhead">
         <h1>POS · Order</h1>
