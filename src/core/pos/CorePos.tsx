@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
+import type { PosKpis } from "@/lib/store"; // type-only (erased) — no server code bundled
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -38,61 +39,32 @@ const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini",
  * label rides along as a `title`/`aria-label` tooltip. One 24-viewBox,
  * 1.9-weight line set, matching the Core icon language.
  */
+// Category glyphs are the dense-console mockup's set, 1:1 (viewBox 0 0 24 24,
+// stroke 2) — pizza dome · pasta fork · antipasti basket · panini box · dessert
+// cloche · drinks cup. Keep these in lock-step with the mockup.
 const CAT_ICON: Record<string, ReactNode> = {
-  popular: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L4.5 9.7l5.9-.9z" />,
+  popular: <path d="m12 2 3 6.3 6.9.9-5 4.8 1.3 6.9L12 17.6 5.8 20.9 7.1 14l-5-4.8 6.9-.9z" />,
   all: (
     <>
-      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
     </>
   ),
   pizza: (
     <>
-      <path d="M12 3.2 3.6 18.5a1 1 0 0 0 1 1.5h14.8a1 1 0 0 0 .9-1.5z" />
-      <path d="M5.8 10.4h12.4" />
-      <circle cx="10" cy="14" r="1" />
-      <circle cx="14" cy="14.5" r="1" />
-      <circle cx="12" cy="9" r="1" />
+      <path d="M12 3a9 9 0 0 0-9 9c4 0 5 5 9 5s5-5 9-5a9 9 0 0 0-9-9z" />
+      <circle cx="9" cy="11" r="1" />
+      <circle cx="14" cy="9" r="1" />
+      <circle cx="15" cy="14" r="1" />
     </>
   ),
-  pasta: (
-    <>
-      <path d="M4 11h16v1a8 8 0 0 1-16 0z" />
-      <path d="M2.5 20h19" />
-      <path d="M8 11c0-3 .5-6 1.5-7M12 11c0-3.5.3-6.5 1.3-8M16 11c0-3 .5-5.5 1.4-7" />
-    </>
-  ),
-  antipasti: (
-    <>
-      <ellipse cx="12" cy="13" rx="8.5" ry="4" />
-      <circle cx="9" cy="12.4" r="1.1" />
-      <circle cx="13" cy="13.4" r="1.1" />
-      <circle cx="15.5" cy="12" r="1.1" />
-      <path d="M8 9.2c1-1.6 2.4-2.4 4-2.4s3 .8 4 2.4" />
-    </>
-  ),
-  panini: (
-    <>
-      <path d="M3.5 9.5c0-2 3.8-3.5 8.5-3.5s8.5 1.5 8.5 3.5z" />
-      <path d="M3.5 14.5c0 2 3.8 3.5 8.5 3.5s8.5-1.5 8.5-3.5z" />
-      <path d="M4.5 11.8c2.4 1 12.6 1 15 0" />
-    </>
-  ),
-  desserts: (
-    <>
-      <path d="M6 20h12l-1-8H7z" />
-      <path d="M9.5 12c0-2 1-3 2.5-3s2.5 1 2.5 3" />
-      <path d="M12 6.2V4M12 4a1.2 1.2 0 1 0 0-.1z" />
-    </>
-  ),
-  drinks: (
-    <>
-      <path d="M6 4h12l-1.5 5.5a5 5 0 0 1-9 0z" />
-      <path d="M12 15v4M8.5 20h7" />
-    </>
-  ),
+  pasta: <path d="M4 20c2-6 3-9 8-9s6 3 8 9M8 11V5M12 11V4M16 11V5" />,
+  antipasti: <path d="M5 11h14l-1 9H6zM9 11V7a3 3 0 0 1 6 0v4" />,
+  panini: <path d="M4 7h16l-2 12H6zM4 7l2-4h12l2 4" />,
+  desserts: <path d="M4 16a8 8 0 0 1 16 0zM2 20h20M12 8V4M9 5l3-2 3 2" />,
+  drinks: <path d="M6 3h12l-1 4H7zM7 7l1 13h8l1-13M9 12h6" />,
 };
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
   { key: "dine-in", label: "Dine-in" },
@@ -113,6 +85,10 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   lto: { label: "LTO", cls: "lto" },
 };
 const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+// Signed % delta chip for the analytical KPIs — up (basil) when ≥0, dn (danger)
+// when negative, neutral em-dash while the figure is still loading (null).
+const pctChip = (p: number | null | undefined): { txt: string; cls: string } =>
+  p == null ? { txt: "—", cls: "delta" } : { txt: `${p >= 0 ? "+" : ""}${p}%`, cls: p >= 0 ? "delta up" : "delta dn" };
 
 /** A line note that names an allergy / dietary risk gets the amber safety
  *  treatment on the check + KDS — it can't read as a normal preference. */
@@ -164,12 +140,16 @@ function Gly({ children }: { children: ReactNode }) {
 export function CorePos({
   menusByLocation,
   upsellByLocation,
+  operatorName,
   embedded = false,
   initialTableId,
   onClose,
 }: {
   menusByLocation: Record<string, MenuItem[]>;
   upsellByLocation: Record<string, UpsellConfig | null>;
+  /** The signed-in till operator (server-rendered) — shown as the check's
+   *  "SERVER · <name>" in the ticket header, like the mockup. */
+  operatorName?: string;
   /** Mounted inside the Floor's check panel (no CoreShell chrome) rather than as
    *  the standalone /core/pos surface. */
   embedded?: boolean;
@@ -1131,6 +1111,25 @@ export function CorePos({
   }, [loadSteer]);
   usePolling(loadSteer, 15000, { enabled: !!pageLoc });
 
+  // Analytical KPIs (avg check · table turns · sales/hr) — server-computed from
+  // real orders (Rule #1). The live counts stay client-side; this only fills the
+  // three figures that need order history. Polls slower than the till state.
+  const [kpis, setKpis] = useState<PosKpis | null>(null);
+  const loadKpis = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/pos/kpis?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      setKpis((await res.json()) as PosKpis);
+    } catch {
+      /* non-fatal — the strip shows "…" for the fetched figures until it lands */
+    }
+  }, [pageLoc]);
+  useEffect(() => {
+    void loadKpis();
+  }, [loadKpis]);
+  usePolling(loadKpis, 30000, { enabled: !!pageLoc });
+
   const loadEightySix = useCallback(async () => {
     if (!pageLoc) return;
     try {
@@ -1245,7 +1244,7 @@ export function CorePos({
         </div>
       )}
       <div className="pf">
-        <span className="pp">{zl(m.price)}</span>
+        <span className="pp">{fmtPLN(m.price)}</span>
         <span className="core-prod-tags">
           {customisable(m) && <span className="core-tag opt" title="Has options">◦</span>}
           {m.tags.map((t) => (
@@ -1371,11 +1370,15 @@ export function CorePos({
     const dineIn = live.filter((t) => t.channel === "dine-in").length;
     const readyValue = tabs.filter((t) => t.status === "pay").reduce((s, t) => s + grandG(t), 0);
     const inKitchen = tabs.filter((t) => t.sentKds).length;
+    // Prep queue = item units currently in the kitchen (on fired/sent checks).
+    const prepItems = tabs.filter((t) => t.sentKds).reduce((s, t) => s + t.items.reduce((a, l) => a + l.quantity, 0), 0);
     const avg = live.length ? Math.round(railSummary.openValue / live.length) : 0;
     const util = steer?.bottleneck ? Math.round((steer.bottleneck.util ?? 0) * 100) : 0;
     const paceTier = steer?.active ? (steer.bottleneck?.tier ?? "warn") : "calm";
-    return { covers, dineIn, readyValue, inKitchen, avg, util, paceTier };
+    return { covers, dineIn, readyValue, inKitchen, prepItems, avg, util, paceTier };
   }, [tabs, grandG, railSummary.openValue, steer]);
+  // Floor occupancy for the Covers KPI delta (mockup "82% floor").
+  const totalSeats = useMemo(() => tables.reduce((s, t) => s + (t.seats ?? 0), 0), [tables]);
 
   const posBody = (
     <>
@@ -1386,74 +1389,96 @@ export function CorePos({
           CORE — POS · ORDER · <b>liquid glass</b> · <span className="fix">dense console</span>
         </div>
       )}
-      {/* surface section header — dense-console page title + context sub */}
+      {/* surface section header — dense-console page title + context sub. The
+          till/service context moved to the body sub-toolbar's left label
+          (mockup: "TILL 1 · DINNER SERVICE"), so the head stays left-aligned. */}
       <div className="core-sectionhead">
         <h1>POS · Order</h1>
         <span className="sub">{pageLoc} · dine-in service</span>
-        <div className="core-sp" />
-        <span className="sub">Till · {CHANNELS.find((c) => c.key === active?.channel)?.label ?? "dinner service"}</span>
       </div>
 
-      {/* live stat strip — the dense-console KPI row, every figure from real
-          till state (Rule #1): open checks · covers · to pay · open value ·
-          pace · avg check. Matches the mockup's `.statstrip`. */}
+      {/* live stat strip — the mockup's KPI row, every figure REAL (Rule #1):
+          open checks · covers seated (+floor%) · avg check · prep queue · table
+          turns · sales/hr. The live counts come from till state; avg-check /
+          table-turns / sales-hr are server-computed from real orders (getPosKpis,
+          with honest trailing-7-day deltas). Matches the mockup's `.statstrip`. */}
       <div className="core-statstrip" role="group" aria-label="Till metrics">
         <div className="cell">
           <span className="lab">Open checks</span>
           <span className="val">{railSummary.count}</span>
-          <span className="delta">{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
+          <span className={railSummary.parked > 0 ? "delta warn" : "delta up"}>{railSummary.parked > 0 ? `${railSummary.parked} parked` : "all active"}</span>
         </div>
         <div className="cell">
           <span className="lab">Covers seated</span>
           <span className="val basil">{posStats.covers}</span>
-          <span className="delta">{posStats.dineIn} dine-in {posStats.dineIn === 1 ? "check" : "checks"}</span>
+          <span className="delta up">{totalSeats > 0 ? `${Math.round((posStats.covers / totalSeats) * 100)}% floor` : `${posStats.dineIn} dine-in`}</span>
         </div>
         <div className="cell">
-          <span className="lab">To pay</span>
-          <span className={railSummary.ready > 0 ? "val amber" : "val"}>{railSummary.ready}</span>
-          <span className={railSummary.ready > 0 ? "delta warn" : "delta"}>{fmtPLN(posStats.readyValue)}</span>
+          <span className="lab">Avg check</span>
+          <span className="val brand">{kpis ? <>{zl(kpis.avgCheck)}<small> zł</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.avgCheckDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
         <div className="cell">
-          <span className="lab">Open value</span>
-          <span className="val brand">{zl(railSummary.openValue)}<small> zł</small></span>
-          <span className="delta">avg {zl(posStats.avg)} zł</span>
+          <span className="lab">Prep queue</span>
+          <span className={posStats.prepItems > 0 ? "val amber" : "val"}>{posStats.prepItems}</span>
+          <span className={steer?.active && steer.bottleneck ? "delta dn" : "delta up"}>{steer?.active && steer.bottleneck ? `${steer.bottleneck.label} at risk` : "on time"}</span>
         </div>
         <div className="cell">
-          <span className="lab">In kitchen</span>
-          <span className={posStats.inKitchen > 0 ? "val info" : "val"}>{posStats.inKitchen}</span>
-          <span className="delta">fired {posStats.inKitchen === 1 ? "check" : "checks"}</span>
+          <span className="lab">Table turns</span>
+          <span className="val basil">{kpis ? <>{kpis.tableTurns.toFixed(1)}<small>×</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.tableTurnsDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
         <div className="cell">
-          <span className="lab">Pace</span>
-          <span className={`val ${posStats.paceTier === "calm" ? "basil" : posStats.paceTier === "risk" || posStats.paceTier === "late" ? "danger" : "amber"}`}>
-            {steer?.active ? `${posStats.util}%` : "Clear"}
-          </span>
-          <span className="delta">{steer?.active ? (steer.bottleneck?.label ?? "at capacity") : "line clear"}</span>
+          <span className="lab">Sales /hr</span>
+          <span className="val info">{kpis ? <>{zl(kpis.salesPerHour)}<small> zł</small></> : "…"}</span>
+          {(() => { const d = pctChip(kpis?.salesDeltaPct); return <span className={d.cls}>{d.txt}</span>; })()}
         </div>
       </div>
 
-      {/* open-check bar — spans the full width, above the panes */}
+      {/* POS grid — rail · [check-bar over menu] · ticket, as three floating
+          glass cards. The check-bar sits above the menu in the MIDDLE column
+          (grid areas) so the rail + ticket top-align with it, matching the
+          mockup's `pos-grid` exactly. */}
+      <div className="core-pos">
+      {/* open-check bar — above the menu, inside the middle column */}
       <div className="core-checkbar">
         {pendingWrites > 0 && (
           <div className="core-sync-pill" role="status" title="Saved locally — will sync when the connection returns">
             ↻ {pendingWrites} {pendingWrites === 1 ? "write" : "writes"} syncing
           </div>
         )}
-        {tabs.length > 0 && (
-          <div className="core-tabrail-sum">
-            {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
-            <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
-          </div>
-        )}
+        {/* No rollup line — count · ready · parked · open value already live in
+            the stat strip above (Open checks / To pay / Open value), so a
+            summary here would just duplicate it. Matches the mockup, which
+            drops it and lets the pills sit straight under the KPIs. */}
         <div className="core-tabrail">
           {tabs.map((t) => {
             const tn = tableById(t.tableId)?.number;
             const n = t.items.reduce((s, l) => s + l.quantity, 0);
-            // Context line reads like the mockup: dine-in shows its table (· T10),
-            // takeaway/delivery show the channel, otherwise the live item count.
+            // Off-premise checks (takeaway / delivery) read like the mockup's
+            // info-tinted `.ct.away` pill: a channel glyph + label. Dine-in shows
+            // its table (· T10), otherwise the live item count.
+            const offPremise = t.channel === "takeout" || t.channel === "delivery";
             const ctx = tn ? `· T${tn}` : t.channel === "takeout" ? "takeaway" : t.channel === "delivery" ? "delivery" : n > 0 ? `${n} ${n === 1 ? "item" : "items"}` : "empty";
+            const on = t.id === activeTabId;
+            // `away` tints the pill info-blue; `on` (ember) wins when it's the
+            // active check — its rule is ordered after `.away` in the theme.
+            const cls = ["core-ttab", offPremise ? "away" : "", on ? "on" : ""].filter(Boolean).join(" ");
             return (
-              <button key={t.id} type="button" className={t.id === activeTabId ? "core-ttab on" : "core-ttab"} onClick={() => setActiveTabId(t.id)}>
+              <button key={t.id} type="button" className={cls} onClick={() => setActiveTabId(t.id)}>
+                {offPremise && (
+                  <svg className="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    {t.channel === "delivery" ? (
+                      <>
+                        <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" />
+                        <circle cx="7" cy="18" r="1.6" />
+                        <circle cx="18" cy="18" r="1.6" />
+                      </>
+                    ) : (
+                      <path d="M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2" />
+                    )}
+                  </svg>
+                )}
                 <span className="tt">{t.name}</span>
                 <span className="ts">{ctx}</span>
               </button>
@@ -1461,11 +1486,9 @@ export function CorePos({
           })}
           <button type="button" className="core-ttab core-ttab-new" onClick={() => void newTab()}>
             <span className="tt">+ New</span>
-            <span className="ts">open check</span>
           </button>
         </div>
       </div>
-      <div className="core-pos">
         {/* category rail — pure icon-only (collapsed); label rides as a tooltip */}
         <aside className="core-rail core-rail-icons" aria-label="Menu categories">
           {hasPopular && (
@@ -1477,7 +1500,7 @@ export function CorePos({
               aria-label="Popular"
               aria-pressed={activeCat === "popular"}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 {CAT_ICON.popular}
               </svg>
               <span className="n">{popularItems.filter(channelOk).length}</span>
@@ -1491,7 +1514,7 @@ export function CorePos({
             aria-label="All"
             aria-pressed={activeCat === "all"}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               {CAT_ICON.all}
             </svg>
             <span className="n">{channelMenu.length}</span>
@@ -1506,7 +1529,7 @@ export function CorePos({
               aria-label={MENU_CATEGORY_LABELS[c]}
               aria-pressed={c === activeCat}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 {CAT_ICON[c]}
               </svg>
               {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
@@ -1544,19 +1567,16 @@ export function CorePos({
             </div>
           ) : (
             <>
-              {steer && (
-                steer.active && steer.bottleneck ? (
-                  <div className={`core-steer ${steer.bottleneck.tier}`}>
-                    <span className="dot" />
-                    <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
-                    <span className="cap">cap · {windowMin}m</span>
-                  </div>
-                ) : (
-                  <div className="core-steer calm">
-                    <span className="dot" />
-                    <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
-                  </div>
-                )
+              {/* Steering banner only when there's an actual bottleneck — like
+                  the mockup, a clear line shows NO banner (the KPI strip's Pace
+                  cell already reads "Clear · line clear"), so the menu grid
+                  starts straight away instead of under a redundant green bar. */}
+              {steer?.active && steer.bottleneck && (
+                <div className={`core-steer ${steer.bottleneck.tier}`}>
+                  <span className="dot" />
+                  <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
+                  <span className="cap">cap · {windowMin}m</span>
+                </div>
               )}
               {activeCat === "all" ? (
                 categories.map((c) => {
@@ -1661,6 +1681,7 @@ export function CorePos({
                     <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">+</button>
                   </div>
                   {active.customerName && <span className="core-tcovers-g">{active.customerName}</span>}
+                  {operatorName && <span className="core-tcovers-srv">Server · {operatorName}</span>}
                 </div>
               )}
 
@@ -1834,22 +1855,28 @@ export function CorePos({
                     Charge {fmtPLN(grandG(active))}
                   </button>
                 </div>
-                <div className="core-foot-actions2">
-                  <button type="button" className="core-foot-aux core-foot-aux-wide" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
+                {/* utility strip — Park · Discount · Membership · Void collapse to
+                    one row of labelled icon buttons (idea 03): the low-frequency
+                    actions stop eating three full rows, active state shows as an
+                    ember tint, and Void is danger-tinted + set apart by a spacer so
+                    it's deliberate. Every action + state carries over 1:1. */}
+                <div className="core-foot-strip">
+                  <button type="button" className="core-foot-ic" data-on={active.status === "parked"} onClick={() => togglePark()} aria-label={active.status === "parked" ? "Held — tap to resume" : "Park / hold this check"}>
                     <Gly><rect width="6" height="14" x="6" y="5" rx="1" /><rect width="6" height="14" x="12" y="5" rx="1" /></Gly>
-                    {active.status === "parked" ? "Held" : "Park / hold"}
+                    <span className="tip" aria-hidden>{active.status === "parked" ? "Held" : "Park / hold"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
+                  <button type="button" className="core-foot-ic" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)} aria-label={manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}>
                     <Gly><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".6" fill="currentColor" /></Gly>
-                    {manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}
+                    <span className="tip" aria-hidden>{manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)}>
+                  <button type="button" className="core-foot-ic" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)} aria-label={active.customerPhone ? "Member attached" : "Add membership"}>
                     <Gly><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Gly>
-                    {active.customerPhone ? "Member ✓" : "Add membership"}
+                    <span className="tip" aria-hidden>{active.customerPhone ? "Member ✓" : "Add membership"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux danger core-foot-aux-wide" disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
+                  <span className="core-foot-strip-sp" />
+                  <button type="button" className="core-foot-ic danger" disabled={!!busyTabId} onClick={requestVoid} aria-label="Void / delete this check">
                     <Gly><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" /></Gly>
-                    Void check
+                    <span className="tip" aria-hidden>Void check</span>
                   </button>
                 </div>
               </div>
@@ -2025,6 +2052,7 @@ export function CorePos({
           onClick: () => (active && active.items.length > 0 ? setTenderOpen(true) : toast("Add items first")),
         },
       ]}
+      subLeft="Till 1 · dinner service"
       subRight={
         <>
           <CoreQrQueue location={pageLoc} />

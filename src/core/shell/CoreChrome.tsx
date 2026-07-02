@@ -48,6 +48,10 @@ export function CmdkLauncher() {
       title="Search — tables, lenses, dishes (⌘K)"
       onClick={() => window.dispatchEvent(new Event("core:cmdk"))}
     >
+      <svg className="cm-k-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.2-3.2" />
+      </svg>
       <span className="cm-k-label">search</span>
       <kbd>⌘K</kbd>
     </button>

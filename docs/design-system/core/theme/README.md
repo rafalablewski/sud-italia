@@ -103,8 +103,9 @@ surface toolbar.
 - **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
   a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. Lives
   in the `.core-surf-toolbar`, not the command bar.
-- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
-  `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
+- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`): a
+  leading **`.cm-k-ico`** magnifier glyph + `.cm-k-label` (the "search" word,
+  collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
   (an optional leading **`.cm-tel-glyph`** + `.lbl` dim key + `.val` bright
   value): `▲ risk N` from `PressureBadge` (`.ok`/`.warn`/`.risk` colour the
@@ -118,19 +119,23 @@ surface toolbar.
   own full-bleed background (KDS).
 - **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
   Guest `.core-kpi-strip` and POS's / Floor's / Orders' / Slots' `.core-statstrip` are
-  hairline-divided columns with an uppercase mono label and a big **mono
-  tabular** value. `.core-kpi-strip` lays its cells out with `grid-auto-flow:
-  column` (auto `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all
-  distribute evenly in one row — no fixed column count to overflow. Same
-  component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
-  identically.
+  **undivided** columns (no inter-cell hairlines — the cells read as one open,
+  continuous row, held apart by their own padding) with an uppercase mono label
+  and a big **mono tabular** value. `.core-kpi` / `.core-kpi-strip` use `gap: 0`
+  over a transparent track (the per-cell `.k` fill tiles seamlessly);
+  `.core-kpi-strip` lays its cells out with `grid-auto-flow: column` (auto
+  `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all distribute evenly
+  in one row — no fixed column count to overflow. Only a single `border-bottom`
+  hairline separates the strip from the content below. Same component language
+  everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
     surface body (POS, **Floor**, **Orders**, **Slots**, **CRM**, **Loyalty**, **Book**, **Inbox**, **Dispatch**): a bordered glass panel of `.cell`s, each an
     uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
     `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
     colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
-    Divider is a `.cell + .cell::before` hairline. Every figure MUST be real
-    surface data (Rule #1). Matches the mockup's `.statstrip`.
+    The cells carry **no divider** — the panel border frames them and the cell
+    padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
+    Matches the mockup's `.statstrip`.
 - **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
   uppercase mono `CORE — SURFACE · … · liquid glass · [context]`, with `b`
   basil and a `.fix` ember pill for the location/mode tag. Sits directly above
@@ -170,8 +175,12 @@ surface toolbar.
 
 ### POS
 
-`.core-pos` grid (rail · menu · ticket): `.core-rail.core-rail-icons` (the
-**pure icon-only** 72px category rail) + `.core-cat` icon buttons (glyph +
+`.core-pos` grid (rail · [check-bar over menu] · ticket) — **floating rounded
+glass cards** with `gap:10px` + a 14px body inset (mockup `pos-grid`), laid out
+with **grid-template-areas** (`"rail bar tkt" / "rail menu tkt"`) so the
+check-bar sits above the menu and the rail + ticket top-align with it. Each is
+frosted under liquid-glass: `.core-rail.core-rail-icons` (the
+**pure icon-only** 56px category rail, `align-self:start`) + `.core-cat` icon buttons (glyph +
 corner count badge, label as tooltip) · `.core-menu` + `.core-menu-grid` +
 `.core-prod` cards (`.pn` name ·
 `.pd` desc · `.core-tagrow`/`.core-tag` · `.pp` price · `.add`) · `.core-ticket`
@@ -227,7 +236,9 @@ wordmark, no second subbar row, no bottom switcher:
   `.cm-tabs` scrolls; everything else is `flex:none`.
 - **`.core-surf-toolbar`** — the surface sub-toolbar at the top of the Canvas
   body that carries the surface's own controls (`subRight` right-aligned, plus
-  any filters/segments/date the surface builds). Keeps the command bar standard.
+  any filters/segments/date the surface builds). An optional **`subLeft`** slot
+  renders a left-aligned **`.core-surf-tb-lbl`** context label (POS's
+  "TILL 1 · DINNER SERVICE", mockup toolbar). Keeps the command bar standard.
 - **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
   lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass"),
   then a `.core-lens-div` divider and the two ops adjacencies the dense-console
@@ -236,7 +247,10 @@ wordmark, no second subbar row, no bottom switcher:
   split pass panel, Book = calendar, Reports = line chart, Settings = gear. Each
   row is `.core-lens-ico` + a `.core-lens-txt` (mono label + `.core-lens-sub`
   caption); the **active** lens gets the ember `--brand-wash` fill, an inset
-  ring, and an ember `::before` left accent bar. Collapsed by default; it
+  ring, and an ember `::before` left accent bar. Collapsed, the rail is
+  **transparent with no divider** — the icons float on the aurora, like the
+  mockup (no panel fill, no `border-right`); it becomes a readable floating glass
+  panel (`--panel` + border + shadow) only in the `.open` state. It
   expands to labels only when **pinned** — a click on the `.core-lens-pin`
   toggle adds `.open` — never on hover, so a stray cursor never shoves the
   Canvas. The pinned choice persists (localStorage, `core-lens-pinned`). It

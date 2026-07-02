@@ -104,7 +104,11 @@
   box-shadow: 0 6px 18px -4px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, .22);
 }
 /* Lens Rail — frosted glass column so the aurora refracts through it. */
-.core[data-skin="liquid-glass"] .core-lens {
+/* Collapsed Lens Rail is fully transparent — no fill, no blur, no divider — so
+   it shows the same `.core` aurora as the (transparent) body and reads as one
+   continuous background. Only the pinned/expanded rail frosts. */
+.core[data-skin="liquid-glass"] .core-lens { background: transparent; }
+.core[data-skin="liquid-glass"] .core-lens.open {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   border-right-color: var(--line-2);
@@ -136,14 +140,13 @@
 /* POS middle column reads as layered glass like the mockup: a frosted menu
    surface (the translucent fill still refracts the aurora through the blur) with
    the cards sitting ON it, and the open-check strip as its own frosted bar. */
-.core[data-skin="liquid-glass"] .core-menu {
+.core[data-skin="liquid-glass"] .core-menu,
+.core[data-skin="liquid-glass"] .core-checkbar,
+.core[data-skin="liquid-glass"] .core-rail,
+.core[data-skin="liquid-glass"] .core-statstrip {
   background: var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
-}
-.core[data-skin="liquid-glass"] .core-checkbar {
-  background: var(--lg-fill);
-  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
-  border-bottom-color: var(--line-2);
+  box-shadow: var(--lg-float), var(--lg-rim);
 }
 /* cards stay subtle over the frosted menu (panel-2, not the full sheen) so the
    surface reads layered, not frosted-on-frosted */

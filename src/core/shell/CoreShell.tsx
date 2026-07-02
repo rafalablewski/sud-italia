@@ -29,12 +29,15 @@ export interface CoreTab {
 export function CoreShell({
   eyebrow,
   tabs,
+  subLeft,
   subRight,
   bleed = false,
   children,
 }: {
   eyebrow: string;
   tabs?: CoreTab[];
+  /** Left-aligned label in the body sub-toolbar (POS "TILL 1 · DINNER SERVICE"). */
+  subLeft?: ReactNode;
   subRight?: ReactNode;
   /** Surface paints its own full-bleed background (KDS dark wall). */
   bleed?: boolean;
@@ -93,8 +96,9 @@ export function CoreShell({
       <div className="core-main">
         <CoreNav />
         <div className={bleed ? "core-body bleed" : "core-body"}>
-          {subRight && (
+          {(subLeft || subRight) && (
             <div className="core-surf-toolbar">
+              {subLeft && <div className="core-surf-tb-lbl">{subLeft}</div>}
               <div className="core-sp" />
               {subRight}
             </div>

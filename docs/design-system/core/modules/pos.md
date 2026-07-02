@@ -20,29 +20,59 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 ## Layout
 
 The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
-+ an uppercase-mono `<location> · dine-in service` sub, with a right-aligned
-`Till · <channel>` context tag) over the **`.core-statstrip`** — the
-dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
-over a three-column grid inside the shell body: **rail · menu · ticket**.
++ an uppercase-mono `<location> · dine-in service` sub, left-aligned — the
+`TILL 1 · DINNER SERVICE` context now rides the sub-toolbar's `subLeft` label,
+like the mockup) over the **`.core-statstrip`** — the
+dense-console KPI row. Then the **`.core-pos`** grid inside the shell body:
+**rail · [check-bar over menu] · ticket**.
 
-- **`.core-statstrip`** — a hairline-divided glass panel of six live cells
-  (label · big mono value · colour-coded delta), every figure derived from the
-  till's **real, live state** (Rule #1 — no fetch, no invented numbers, the same
-  state the rail + ticket already show): **Open checks** (count · N parked) ·
-  **Covers seated** (dine-in covers · N dine-in checks) · **To pay** (ready
-  count · zł outstanding) · **Open value** (total open zł · avg check) ·
-  **In kitchen** (fired-check count) · **Pace** (the live server steering-plan
-  bottleneck util %, or "Clear" · bottleneck label). Toned by `--basil` /
-  `--amber` / `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
+Every region is a **separate rounded, bordered glass card** — the stat strip,
+the check-bar, and the three grid columns each float with **10px gaps** and a
+14px inset from the body edges (`.core-pos { gap:10px; padding:0 14px 12px }`),
+matching the mockup's `pos-grid` + `.glass` columns rather than flush panes cut
+by hairlines. `.core-pos` is a **grid-template-areas** layout
+(`"rail bar tkt" / "rail menu tkt"`): the **open-check bar sits above the menu in
+the middle column**, and the rail + ticket span both rows so all three columns
+**top-align with the check-bar** — exactly like the mockup. (On phones the areas
+reset and the cards stack: check-bar · rail strip · menu, ticket as a drawer.) Under the liquid-glass skin all five (plus the rail) get the
+frosted `--lg-fill` + blur + `--lg-float`/`--lg-rim` treatment so they read as
+layered glass; in the flat skins the border + `--sh-1` defines each card. The
+rail is `align-self:start` (content-height, floating at the top); the ticket
+is `overflow:hidden` so its footer clips to the card's rounded corners.
+
+- **`.core-statstrip`** — an **undivided** glass panel of six live cells (no
+  inter-cell hairlines — a clean, open row spaced by cell padding)
+  (label · big mono value · colour-coded delta), the mockup's six-KPI set, every
+  figure **real** (Rule #1 — no invented numbers): **Open checks** (count · N
+  parked / all active) · **Covers seated** (live dine-in covers · `N% floor` from
+  the table seats) · **Avg check** (today's AOV · trailing-7-day delta) ·
+  **Prep queue** (item units on fired checks · "on time" or the bottleneck at
+  risk) · **Table turns** (covers ÷ tables · delta) · **Sales /hr** (today's
+  revenue rate · delta). The three live counts (open checks · covers · prep
+  queue) come straight from till state; **avg check · table turns · sales/hr**
+  are server-computed from real orders (`getPosKpis` → `GET /api/admin/pos/kpis`,
+  polled 30s) with honest **same-time-of-day trailing-7-day deltas** (`—` until a
+  baseline exists — never a fabricated trend). Toned by `--basil` / `--amber` /
+  `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
   visual is documented in the theme README ("Stat strip").
 
-- **`.core-checkbar`** — spans the whole width above the panes (so it sits
-  over the menu's steering banner): an optional `.core-sync-pill`, then the
-  `.core-tabrail-sum` rollup
-  (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
-  `.core-tabrail` of `.core-ttab` open-check chips + `+ New`. The active check
-  gets a brand outline; the rail wraps (capped height + scroll) so a busy
-  till's checks stay browsable without a horizontal hunt. **`+ New` opens
+- **`.core-checkbar`** — the `bar` grid area: a glass bar **above the menu in
+  the middle column** (over the menu's steering banner), top-aligned with the
+  rail + ticket: an optional `.core-sync-pill`, then the
+  `.core-tabrail` of `.core-ttab` open-check pills + `+ New`. **No rollup line**
+  — count · ready · parked · open value already live in the stat strip (Open
+  checks / To pay / Open value), so a summary here would only duplicate it; like
+  the mockup, the pills sit straight under the KPIs. The pills follow
+  the mockup's `.checkstrip`: **compact single-line mono pills** (`.tt` name +
+  a muted inline `.ts` context — `· T{table}`, channel, item count or `empty`)
+  laid in **one horizontally-scrolling row** (`flex-wrap: nowrap; overflow-x`),
+  not a wrapping multi-row block. The active check gets the ember treatment
+  (`.on` = `--brand-wash` fill + ember ring + glow, `.ts` → `--brand-bright`);
+  an **off-premise** check (takeaway / delivery) reads info-blue with a channel
+  glyph (`.away` + a `.tico` bag/van icon, mockup `.ct.away`) — `.on` is ordered
+  after `.away` so an active takeaway still wins the ember treatment;
+  `+ New` (`.core-ttab-new`) is a dashed basil pill (label only, no sub-line).
+  **`+ New` opens
   optimistically** — the check appears and goes active instantly under a
   client `tmp-` id, then reconciles to the server id when the background
   `POST` returns (carrying over anything rung in the meantime), so the till
@@ -55,10 +85,14 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
 
 - **`.core-rail.core-rail-icons`** — the category rail, **pure icon-only**
   (collapsed, 56px): each category is a 44px boxed `.core-cat` icon button
-  (glyph from `CAT_ICON` in `CorePos.tsx`, `--panel-2` fill + hairline, ember
-  `.on`, count as a corner badge that sits just outside the box) with the label
-  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present (`.core-cat.pop`, ember
-  fill, the default landing category) — frequency-ranked top items for the
+  (18px glyph from `CAT_ICON` in `CorePos.tsx` — the dense-console mockup's set
+  1:1: dome pizza · fork pasta · basket antipasti · box panini · cloche dessert ·
+  cup drinks — `--panel-2` fill + hairline, ember-**wash** `.on`, count as a
+  corner badge that sits just outside the box) with the label
+  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present
+  (`.core-cat.pop`, styled identically to every category — the star glyph carries
+  the "special / default landing category" meaning, no extra ember fill) —
+  frequency-ranked top items for the
   current daypart from `GET /api/admin/pos/popular` (real orders, Rule #1;
   hidden when empty) — then an **All** chip (stacks every category as
   `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over the
@@ -76,7 +110,8 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
   gluten-free → `.fast`, plus an `.opt` **options** chip when the item has
   `modifierGroups`) plus a live `.core-steer-tag` pace cue (**★ make
   now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
-  with the `.pp` mono price and the ember `.add` button (a `⋯` glyph when
+  with the `.pp` mono price — **unit-suffixed `NN,NN zł`** (`fmtPLN`), like the
+  mockup, not a bare number — and the ember `.add` button (a `⋯` glyph when
   the item is customisable). Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates. **Calm at rest**
@@ -101,8 +136,8 @@ over a three-column grid inside the shell body: **rail · menu · ticket**.
 Wired 1:1 to the shared server engine — fresh `core-`
 UI, identical contract.
 
-The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
-top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
+The open-check selector (`.core-tabrail`) lives in the
+`.core-checkbar` above the menu (see Layout) — the `.core-ticket` column shows the
 **active** check only:
 
 - **`.core-thead`** — the title reads **`Tab N · T{table}`** like the mockup: a
@@ -120,8 +155,11 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   (`deliveryCapNextWindow === 0`).
 - **`.core-tcovers`** — a **labelled covers row** (dine-in), on its own line like
   the mockup: a `.core-tcovers-l` "COVERS" caption + the `.core-covers` stepper,
-  with the attached guest name pushed right (`.core-tcovers-g`) when the check
-  carries one. (Moved off the header so the party size reads as its own control.)
+  with the attached guest name (`.core-tcovers-g`) and the **`SERVER · <name>`**
+  label (`.core-tcovers-srv`, the signed-in till operator from
+  `getCurrentAdminUser`, passed as the `operatorName` prop) pushed right —
+  matching the mockup. (Moved off the header so the party size reads as its own
+  control.)
 - **`.core-oseg` / `.core-miniseg`** — the **channel** selector and the dine-in
   **kitchen-timing** toggle share one pattern, matching the mockup's `.order-seg`:
   a mono `.core-oseg-l` caption (CHANNEL · KITCHEN TIMING) stacked over a single
@@ -168,14 +206,19 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
 - **`.core-foot`** — an optional `.core-frow.member` chip (attached loyalty
   guest, with a remove ✕), `.core-frow` subtotal, `.core-frow.disc` combo
   discount **and** a `.core-frow.disc` manual-discount line, `.core-ftot` total,
-  then `.core-foot-actions` (`.core-send` Send to KDS + `.core-charge`) and a
-  -- each button carries an inline `.core-glyph` line-SVG (send · card ·
-  park-bars · tag · person · trash, core's own glyphs, not lucide) --
-  secondary `.core-foot-actions2` grid of `.core-foot-aux` buttons (`data-on`
-  when active): **Park / hold** full-width (`.core-foot-aux-wide`; the park
-  toggle now lives by Charge, not the top bar) over a 2-column row of
-  **Add / Edit discount** | **Add membership / Member ✓**, then a
-  full-width **Void check** (`.core-foot-aux.danger.core-foot-aux-wide`).
+  then `.core-foot-actions` (`.core-send` Fire course / Send to KDS +
+  `.core-charge`) over the secondary **`.core-foot-strip`** — each button carries
+  an inline `.core-glyph` line-SVG (send · card · park-bars · tag · person ·
+  trash, core's own glyphs, not lucide). The strip collapses the four
+  low-frequency utilities into **one 40px row of labelled icon buttons**
+  (`.core-foot-ic`) instead of three full-width rows (~90px reclaimed):
+  **Park / hold** · **Add / Edit discount** · **Add membership / Member ✓**,
+  then a `.core-foot-strip-sp` spacer and the danger-tinted **Void check**
+  (`.core-foot-ic.danger`) set apart at the far end so it's deliberate. Each
+  button keeps its `data-on` ember tint when active (parked / discount set /
+  member attached) and shows its label as a hover/focus `.tip` tooltip, so no
+  action name is lost. Park's held state is also mirrored by the header's
+  `▣ Held` chip.
 - **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
   optional reason) and `MemberDialog` (phone + optional name) write
   `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal
@@ -314,11 +357,13 @@ over-capacity table.
 
 ## At parity
 
-Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
+Pace-steering banner (`GET /api/admin/pace/steering` — `.core-steer` shows
+**only on an active bottleneck**; a clear line renders no banner, since the
+stat strip's Pace cell already reads "Clear · line clear"), park/resume,
 tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
 or drop a line on a course header), kitchen-timing toggle,
 inline check rename, optimistic check open + void/delete, double-seat /
-over-capacity guards, the tab-rail rollup, a hydration-aware empty state,
+over-capacity guards, a hydration-aware empty state,
 and the fullscreen kiosk are all wired — feature-for-feature with today's
 `/core/pos`.
 
@@ -326,11 +371,13 @@ and the fullscreen kiosk are all wired — feature-for-feature with today's
 
 Live code: `src/core/pos/CoreQrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
 
-A **QR pill** in the POS sub-header (`subRight`, beside the channel chip +
-Park) surfaces the dine-in orders guests placed by scanning a table QR
-(`channel: "qr"`, from `/qr`). It polls `GET /api/admin/pos/qr-orders?location=`
-every 8s; the pill goes `on` and shows an "N to pay" count when any are
-unpaid. Opening it lists each order in a `CoreDialog` — table number,
+A **QR pill** (`.core-qrpill`) in the POS sub-toolbar (`subRight`) surfaces the
+dine-in orders guests placed by scanning a table QR (`channel: "qr"`, from
+`/qr`). Like the mockup's `.pill.qr` it's a labelled info-tinted pill — a grid
+glyph + "QR orders" + a live `.core-qrpill-n` count badge — not a bare icon. It
+polls `GET /api/admin/pos/qr-orders?location=` every 8s; the pill goes `on`
+(brighter info ring + glow) and the count shows the "N to pay" tally when any
+are unpaid. Opening it lists each order in a `CoreDialog` — table number,
 guest, party size, line items, elapsed time, total and a paid/unpaid·status
 chip. **Take payment** expands an inline `QrTenderPanel` (`.core-qr-tender`) —
 method (Card/Cash), tip presets, and a cash change-due — and **Settle** posts
