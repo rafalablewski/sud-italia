@@ -40,6 +40,10 @@ import {
   deleteReservation,
   addLoyaltyMember,
   recomputeCustomerRollupsBulk,
+  saveStaff,
+  getStaff,
+  deleteStaff,
+  assignOrderDriver,
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
@@ -166,6 +170,33 @@ async function seedTables(locationSlug: string): Promise<string[]> {
   return ids;
 }
 
+/** Delivery-group staff so Service · Dispatch shows a live driver roster
+ *  (getStaff filtered to the "delivery" role group) instead of "No drivers on
+ *  shift". Fixed ids → idempotent upsert on re-seed. */
+const DRIVERS: { name: string; role: "driver" | "courier" }[] = [
+  { name: "Tomek Wójcik", role: "driver" },
+  { name: "Kasia Lewandowska", role: "courier" },
+  { name: "Piotr Zieliński", role: "driver" },
+  { name: "Ola Dąbrowska", role: "courier" },
+];
+async function seedDrivers(locationSlug: string): Promise<string[]> {
+  const ids: string[] = [];
+  for (let i = 0; i < DRIVERS.length; i++) {
+    const d = DRIVERS[i];
+    const saved = await saveStaff({
+      id: `demo-drv-${locationSlug}-${i}`,
+      name: d.name,
+      role: d.role,
+      locationSlug,
+      hourlyRateGrosze: 2800,
+      status: "active",
+      hireDate: TODAY,
+    });
+    ids.push(saved.id);
+  }
+  return ids;
+}
+
 async function seedSlots(locationSlug: string): Promise<void> {
   const windows = [
     { time: "12:00", max: 60, cur: 40 },
@@ -273,6 +304,8 @@ async function cleanup(): Promise<void> {
   }
   const tables = await getTables();
   for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
+  const staff = await getStaff();
+  for (const s of staff) if (s.id.startsWith("demo-drv")) await deleteStaff(s.id);
   const slots = await getSlots();
   for (const s of slots) if (s.id.startsWith("demo-slot")) await deleteSlot(s.id);
   const resvs = await getReservations(undefined, TODAY);
@@ -380,7 +413,8 @@ async function main() {
 
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
-    console.log(`[${slug}] tables + slots seeded`);
+    const driverIds = await seedDrivers(slug);
+    console.log(`[${slug}] tables + slots + ${driverIds.length} drivers seeded`);
 
     // History — completed orders over the last 30 days (CRM LTV + loyalty).
     let n = 0;
@@ -403,6 +437,18 @@ async function main() {
       n++;
     }
     console.log(`[${slug}] orders seeded: ${n}`);
+
+    // Put a couple of active delivery orders on drivers so Dispatch shows the
+    // assigned-to-driver state (not just unassigned cards). Awaited, single
+    // calls — no cascade race.
+    try {
+      const activeDeliv = (await getOrders(slug)).filter(
+        (o) => o.fulfillmentType === "delivery" && ["confirmed", "preparing", "ready"].includes(o.status),
+      );
+      for (let i = 0; i < Math.min(2, activeDeliv.length) && i < driverIds.length; i++) {
+        await assignOrderDriver(activeDeliv[i].id, driverIds[i]);
+      }
+    } catch { /* non-fatal */ }
 
     // Open checks on the till → POS · Order shows a live board, not an empty screen.
     const openTabs = await seedOpenTabs(slug, menu, tableIds);

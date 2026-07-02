@@ -1,0 +1,43 @@
+/* Core parity (orders) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* Refunded status pill — the mockup's danger-toned dot pill. index.css defines
+   .core-stpill (+ new/preparing/ready/paid/cancelled); this adds the refunded
+   variant with a glowing danger dot to match #pg-orders .stpill.refunded. */
+.core .core-stpill.refunded { color: var(--danger); background: var(--danger-wash); }
+.core .core-stpill.refunded::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+/* Detail dialog header — big order id + single meta row (guest · T{n} ·
+   channel · time · server). Channel segment in basil, dot separators in line-2. */
+.core .core-od-dlgh { display: flex; flex-direction: column; gap: 5px; }
+.core .core-od-idbig { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -.01em; color: var(--ink); }
+.core .core-od-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-3); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.core .core-od-meta .dot { color: var(--line-2); }
+.core .core-od-meta .ch { color: var(--basil); }
+
+/* Ticket lines — quantity · body(name + ingredient subtitle) · line price. */
+.core .core-od-lines .core-od-line { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.core .core-od-lines .core-od-line:last-child { border-bottom: 0; }
+.core .core-od-line .core-od-q { font-family: var(--mono); font-size: 11px; color: var(--ink-3); min-width: 20px; }
+.core .core-od-line .b { flex: 1; }
+.core .core-od-line .b .n { font-size: 12.5px; color: var(--ink); font-weight: 500; }
+.core .core-od-line .b .m { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); margin-top: 2px; }
+.core .core-od-line .lp { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+
+/* Totals block — subtotal, fee/tip, discount (basil), VAT, grand total,
+   refund (danger). Replaces the single-row .core-od-total. */
+.core .core-od-totals { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.core .core-od-totals .tr { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-od-totals .tr.disc { color: var(--basil); }
+.core .core-od-totals .tr.refund { color: var(--danger); }
+.core .core-od-totals .tr.grand { font-size: 15px; color: var(--ink); font-weight: 600; padding-top: 6px; border-top: 1px dashed var(--line); margin-top: 2px; }
+
+/* Action row — full-width buttons: Mark paid (green, check icon) first, then
+   Print receipt (printer icon). Wrapper fills the dialog footer. */
+.core .core-od-actions { display: flex; gap: 9px; width: 100%; }
+.core .core-od-btn { flex: 1; height: 40px; border: 0; border-radius: var(--r-md); cursor: pointer; font-family: var(--mono); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.core .core-od-btn.pay { color: var(--on-basil); background: var(--basil); box-shadow: 0 6px 18px -6px var(--basil); }
+.core .core-od-btn.pay:hover:not(:disabled) { filter: brightness(1.06); }
+.core .core-od-btn.print { color: var(--ink); background: var(--panel-3); border: 1px solid var(--line-2); }
+.core .core-od-btn.print:hover:not(:disabled) { background: var(--hover); }
+.core .core-od-btn.paid-flag { color: var(--basil); background: var(--basil-wash); cursor: default; }
+.core .core-od-btn:disabled { opacity: .6; cursor: default; }

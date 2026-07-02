@@ -6,8 +6,15 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
-import { GuestGlyph, type GuestGlyphName } from "./glyphs";
+import { GuestGlyph } from "./glyphs";
 
+/** One itemised live-order line, if the sessions API ever exposes the cart
+ *  breakdown (today it returns only count + subtotal — see DATA NEEDED). */
+interface OrderLine {
+  name: string;
+  qty: number;
+  priceGrosze: number;
+}
 interface WaSessionRow {
   phone: string;
   locationSlug: "krakow" | "warszawa" | null;
@@ -15,7 +22,9 @@ interface WaSessionRow {
   cartSubtotalGrosze: number;
   customerName: string | null;
   fulfillmentType: "takeout" | "delivery" | null;
+  pendingOrderId: string | null;
   pendingPaymentUrl: string | null;
+  items?: OrderLine[];
   lastTurnAt: string;
   simulated: boolean;
 }
@@ -33,9 +42,12 @@ interface ConversationRow {
   cartCount: number;
   cartSubtotalGrosze: number;
   fulfillmentType: "takeout" | "delivery" | null;
+  pendingOrderId: string | null;
   pendingPaymentUrl: string | null;
+  items?: OrderLine[];
   messageCount: number;
   lastBody: string;
+  hasInbound: boolean;
   hasActiveSession: boolean;
 }
 interface WaMessage {
@@ -48,25 +60,33 @@ interface WaMessage {
 }
 interface GuestRollup {
   name: string | null;
-  tier: string;
+  /** Loyalty metal (Gold / …). Not returned by the customer endpoint today, so
+   *  it is null until a computed tier is exposed there — see DATA NEEDED. */
+  tier: string | null;
   ltv: number;
   visits: number;
   isMember: boolean;
+  memberSince: string | null;
+}
+/** A concierge Next-Best-Action for the selected guest. There is no source for
+ *  these yet (see DATA NEEDED); the card structure renders 1:1 once one exists. */
+interface Nba {
+  kind: string;
+  title: string;
+  rationale: string;
+  message: string;
 }
 interface Metrics {
   windows: { last7d: { orders: { paid: number }; conversionRate: number } };
-  activeSessions: { totalSessions: number; awaitingPayment: number };
+  activeSessions: { totalSessions: number; awaitingPayment: number; cartHasItems: number };
   historicConversations: number;
+  /** Optional — rendered when the metrics endpoint starts supplying them
+   *  (see DATA NEEDED); until then the cells fall back to a muted em dash. */
+  responseTimeMinutes?: number | null;
+  optInRate?: number | null;
 }
-type Filter = "inbox" | "live" | "awaiting" | "archived";
-const CONV_FILTERS: { key: Filter; label: string; icon: GuestGlyphName }[] = [
-  { key: "inbox", label: "Inbox", icon: "inbox" },
-  { key: "live", label: "Live · window open", icon: "live" },
-  { key: "awaiting", label: "Awaiting reply", icon: "awaiting" },
-  { key: "archived", label: "Archived", icon: "archive" },
-];
+type Filter = "all" | "unread" | "live" | "archived";
 
-const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 function clock(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -77,6 +97,64 @@ function clock(iso: string): string {
 function initials(name: string | null, phone: string): string {
   if (name) return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return phone.slice(-2);
+}
+// Whole-złoty formatter (pl-PL groups thousands with a space): "1 240".
+function plInt(grosze: number): string {
+  return Math.round(grosze / 100).toLocaleString("pl-PL");
+}
+// Deterministic avatar tint so a given phone always draws the same colour.
+const AV_VARIANTS = ["brand", "basil", "info", "amber"] as const;
+function avatarVariant(phone: string): (typeof AV_VARIANTS)[number] {
+  let h = 0;
+  for (let i = 0; i < phone.length; i++) h = (h * 31 + phone.charCodeAt(i)) >>> 0;
+  return AV_VARIANTS[h % AV_VARIANTS.length];
+}
+// Mask the middle of a phone for the guest-context read ("+48 512 ••• 340").
+function maskPhone(phone: string): string {
+  const d = phone.replace(/\s+/g, "");
+  if (d.length < 6) return phone;
+  const last3 = d.slice(-3);
+  let head = d.slice(0, Math.min(6, d.length - 3));
+  if (head.startsWith("+") && head.length >= 6) head = `${head.slice(0, 3)} ${head.slice(3)}`;
+  return `${head} ••• ${last3}`;
+}
+// Loyalty metal → tier-badge colour class (gold gradient is the default).
+function tierClass(tier: string | null): string {
+  const t = (tier ?? "").toLowerCase();
+  if (t.includes("platinum")) return "platinum";
+  if (t.includes("silver")) return "silver";
+  if (t.includes("bronze")) return "bronze";
+  return "gold";
+}
+interface CardRow { label: string; value: string; tone?: string }
+// Structured order/product card carried on a message's meta, rendered in-bubble.
+// Shape (see DATA NEEDED): meta.card = [{ label|l, value|v, tone? }, …].
+function messageCard(m: WaMessage): CardRow[] | null {
+  const raw = (m.meta as Record<string, unknown> | undefined)?.card;
+  if (!Array.isArray(raw)) return null;
+  const rows = raw
+    .map((r) => {
+      const o = (r ?? {}) as Record<string, unknown>;
+      return {
+        label: String(o.label ?? o.l ?? ""),
+        value: String(o.value ?? o.v ?? ""),
+        tone: typeof o.tone === "string" ? o.tone : undefined,
+      };
+    })
+    .filter((r) => r.label || r.value);
+  return rows.length ? rows : null;
+}
+// Named-actor label + WhatsApp actor group for a message bubble.
+function actorLabel(m: WaMessage): { group: string; label: string } {
+  const meta = m.meta as Record<string, unknown> | undefined;
+  const staff = typeof meta?.staffName === "string" ? meta.staffName : typeof meta?.actorName === "string" ? meta.actorName : null;
+  switch (m.actor) {
+    case "customer": return { group: "guest", label: "Guest" };
+    case "bot": return { group: "bot", label: "Concierge bot" };
+    case "system": return { group: "system", label: "System" };
+    case "operator":
+    default: return { group: "staff", label: staff ? `${staff} · staff` : "You" };
+  }
 }
 // Non-text message kinds get a small badge so the operator sees the interaction
 // type (a template send, an interactive menu, a shared pin) at a glance.
@@ -103,12 +181,14 @@ interface FunnelStage { stage: string; label: string; count: number; pctOfStart:
 interface FunnelData { startedCount: number; paidCount: number; conversionRate: number; uniqueConversations: number; stages: FunnelStage[] }
 type FunnelWindow = "7d" | "30d" | "all";
 
-// Operator quick-reply starters; "Payment link" injects the live pay URL.
-const QUICK_REPLIES: { label: string; text: (payUrl: string | null) => string | null }[] = [
-  { label: "Menu", text: () => "Here's our menu — what are you craving today? 🍕 Just send the dishes and I'll start your order." },
-  { label: "Payment link", text: (u) => u },
-  { label: "Reservation", text: () => "Happy to book you a table — which day, time and how many guests?" },
-  { label: "Comp dessert", text: () => "On us today: a complimentary tiramisù with your order. 🍰" },
+// Operator quick-reply starters (mockup phrasings). "Share live order link"
+// injects the live pay/order URL; the rest are canned openers. `tone: "b"`
+// tints the chip basil, matching the golden.
+const QUICK_REPLIES: { label: string; tone?: string; text: (payUrl: string | null) => string | null }[] = [
+  { label: "Plating in 5 min 🍕", tone: "b", text: () => "Your order is plating now — about 5 minutes to go! 🍕" },
+  { label: "Share live order link", text: (u) => u },
+  { label: "Offer free tiramisù", text: () => "On us today: a complimentary tiramisù with your order. 🍰" },
+  { label: "Ask for feedback ⭐", text: () => "We'd love your feedback — how was everything today? ⭐" },
 ];
 
 function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): ConversationRow[] {
@@ -121,16 +201,19 @@ function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): 
       cartCount: 0,
       cartSubtotalGrosze: 0,
       fulfillmentType: null,
+      pendingOrderId: null,
       pendingPaymentUrl: null,
+      items: undefined,
       messageCount: h.messageCount,
       lastBody: h.lastBody,
+      hasInbound: h.hasInbound,
       hasActiveSession: false,
     });
   }
   for (const s of sessions) {
     const ex = byPhone.get(s.phone);
     const row: ConversationRow = ex
-      ? { ...ex, customerName: s.customerName ?? ex.customerName, hasActiveSession: true, cartCount: s.cartCount, cartSubtotalGrosze: s.cartSubtotalGrosze, fulfillmentType: s.fulfillmentType, pendingPaymentUrl: s.pendingPaymentUrl }
+      ? { ...ex, customerName: s.customerName ?? ex.customerName, hasActiveSession: true, cartCount: s.cartCount, cartSubtotalGrosze: s.cartSubtotalGrosze, fulfillmentType: s.fulfillmentType, pendingOrderId: s.pendingOrderId, pendingPaymentUrl: s.pendingPaymentUrl, items: s.items }
       : {
           phone: s.phone,
           lastAt: s.lastTurnAt,
@@ -138,9 +221,12 @@ function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): 
           cartCount: s.cartCount,
           cartSubtotalGrosze: s.cartSubtotalGrosze,
           fulfillmentType: s.fulfillmentType,
+          pendingOrderId: s.pendingOrderId,
           pendingPaymentUrl: s.pendingPaymentUrl,
+          items: s.items,
           messageCount: 0,
           lastBody: "",
+          hasInbound: false,
           hasActiveSession: true,
         };
     byPhone.set(s.phone, row);
@@ -164,19 +250,29 @@ const ConvRow = memo(function ConvRow({
   selected: boolean;
   onSelect: (phone: string) => void;
 }) {
+  // No per-conversation read state exists yet (see DATA NEEDED); "unread" is
+  // proxied by "the guest has sent at least one inbound message".
+  const unread = c.hasInbound;
   return (
-    <button className={selected ? "core-conv on" : "core-conv"} onClick={() => onSelect(c.phone)}>
-      <span className="core-av">{initials(c.customerName, c.phone)}</span>
-      <span className="cm">
-        <span className="cn">
-          {c.customerName || c.phone}
-          <span className="ct">{clock(c.lastAt)}</span>
+    <button
+      className={`core-conv${selected ? " on" : ""}${unread ? " unread" : ""}`}
+      onClick={() => onSelect(c.phone)}
+    >
+      <span className={`core-av v-${avatarVariant(c.phone)}`}>{initials(c.customerName, c.phone)}</span>
+      <span className="cbody">
+        <span className="crow">
+          <span className="nm">{c.customerName || c.phone}</span>
+          <span className="tm">{clock(c.lastAt)}</span>
         </span>
-        <span className="cp">
-          {c.hasActiveSession && <span className="badge live">LIVE</span>}
-          {c.pendingPaymentUrl && <span className="badge pay">PAY</span>}
-          {c.lastBody || "—"}
-        </span>
+        <span className="pv">{c.lastBody || "—"}</span>
+        {(c.hasActiveSession || c.pendingPaymentUrl) && (
+          <span className="cbadges">
+            {c.hasActiveSession && (
+              <span className="core-cbadge live">● live{c.pendingOrderId ? ` #${c.pendingOrderId}` : ""}</span>
+            )}
+            {c.pendingPaymentUrl && <span className="core-cbadge pay">pay pending</span>}
+          </span>
+        )}
       </span>
     </button>
   );
@@ -194,17 +290,35 @@ const MessageBubble = memo(function MessageBubble({
   sep: boolean;
   sepLabel: string;
 }) {
+  const { group, label } = actorLabel(m);
+  const card = messageCard(m);
+  const outbound = m.direction === "out";
   return (
     <>
       {sep && <div className="core-day-sep"><span>{sepLabel}</span></div>}
-      <div className={`core-bub ${m.actor}`}>
-        {m.kind && m.kind !== "text" && KIND_BADGE[m.kind] && (
-          <span className="core-bub-kind">{KIND_BADGE[m.kind]}</span>
-        )}
-        {m.body}
-        <span className="t">
-          {m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : m.actor === "system" ? "System" : ""} {clock(m.at)}
-        </span>
+      <div className={`core-msg ${group}`}>
+        <div className="core-bub">
+          {m.kind && m.kind !== "text" && KIND_BADGE[m.kind] && (
+            <span className="core-bub-kind">{KIND_BADGE[m.kind]}</span>
+          )}
+          {m.body}
+          {card && (
+            <div className="core-card">
+              {card.map((r, i) => (
+                <div className="r" key={i}>
+                  <span>{r.label}</span>
+                  <span className={r.tone ? "st" : ""}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="core-msg-meta">
+          {group !== "staff" && <span className="actor">{label}</span>}
+          <span>{clock(m.at)}</span>
+          {outbound && <span>✓✓</span>}
+          {group === "staff" && <span className="actor">{label}</span>}
+        </div>
       </div>
     </>
   );
@@ -222,12 +336,14 @@ const Composer = memo(function Composer({
   pendingPaymentUrl,
   onSend,
   onNeedPayLink,
+  onAttach,
 }: {
   windowOpen: boolean;
   sending: boolean;
   pendingPaymentUrl: string | null;
   onSend: (body: string) => Promise<boolean>;
   onNeedPayLink: () => void;
+  onAttach: () => void;
 }) {
   const [reply, setReply] = useState("");
   const insert = (text: string | null) => {
@@ -243,15 +359,15 @@ const Composer = memo(function Composer({
     if (!ok) setReply((cur) => (cur.trim() ? cur : body));
   };
   return (
-    <>
+    <div className="core-composer-wrap">
       <div className="core-quickreplies">
         {QUICK_REPLIES.map((q) => (
-          <button key={q.label} type="button" onClick={() => insert(q.text(pendingPaymentUrl))}>
+          <button key={q.label} type="button" className={q.tone === "b" ? "b" : undefined} onClick={() => insert(q.text(pendingPaymentUrl))}>
             {q.label}
           </button>
         ))}
       </div>
-      <div className="core-composer">
+      <div className="core-composebar">
         <textarea
           value={reply}
           onChange={(e) => setReply(e.target.value)}
@@ -264,11 +380,18 @@ const Composer = memo(function Composer({
           placeholder={windowOpen ? "Type a reply… (Enter to send)" : "24h window closed — a template is needed to reopen"}
           rows={1}
         />
-        <button className="core-send-msg" disabled={!reply.trim() || sending} onClick={() => void submit()}>
-          ➤
+        <button type="button" className="core-clip" title="Attach" aria-label="Attach a file" onClick={onAttach}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M21 11.5 12 20a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10 17a1.5 1.5 0 0 1-2-2l7.5-7.5" />
+          </svg>
+        </button>
+        <button className="core-send-msg" title="Send" aria-label="Send message" disabled={!reply.trim() || sending} onClick={() => void submit()}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 11l18-7-7 18-2.5-7z" />
+          </svg>
         </button>
       </div>
-    </>
+    </div>
   );
 });
 
@@ -622,8 +745,9 @@ export function CoreInbox() {
   const [thread, setThread] = useState<WaMessage[]>([]);
   const [rollup, setRollup] = useState<GuestRollup | null>(null);
   const [sending, setSending] = useState(false);
-  const [filter, setFilter] = useState<Filter>("inbox");
+  const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [nbaSkipped, setNbaSkipped] = useState(false);
   const [funnelOpen, setFunnelOpen] = useState(false);
   const [funnelWindow, setFunnelWindow] = useState<FunnelWindow>("7d");
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
@@ -679,10 +803,25 @@ export function CoreInbox() {
       setRollup(null);
       return;
     }
+    setNbaSkipped(false);
     void loadThread(selected);
+    // Maps the real /customers/{phone} shape: { member, totals } (the loyalty
+    // member row carries name + signup date; totals carry spend + order count).
     fetch(`/api/admin/customers/${encodeURIComponent(selected)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setRollup({ name: d.name ?? null, tier: d.tier ?? "—", ltv: d.ltv ?? d.totalSpent ?? 0, visits: d.visits ?? d.orderCount ?? 0, isMember: !!(d.isMember ?? d.member) }))
+      .then((d) => {
+        if (!d) return;
+        const m = d.member as { name?: string; lastName?: string; signedUpAt?: string; tier?: string } | null;
+        const totals = (d.totals ?? {}) as { totalSpent?: number; orderCount?: number };
+        setRollup({
+          name: m ? [m.name, m.lastName].filter(Boolean).join(" ") || null : (d.customerName ?? null),
+          tier: m?.tier ?? d.tier ?? null,
+          ltv: totals.totalSpent ?? 0,
+          visits: totals.orderCount ?? 0,
+          isMember: !!m,
+          memberSince: m?.signedUpAt ?? null,
+        });
+      })
       .catch(() => {});
   }, [selected, loadThread]);
   // Visibility-aware thread refresh; skipped while a reply is on the wire so it
@@ -708,18 +847,34 @@ export function CoreInbox() {
     const q = query.trim().toLowerCase();
     return conversations.filter((c) => {
       if (filter === "archived" ? !archivedSet.has(c.phone) : archivedSet.has(c.phone)) return false;
+      if (filter === "unread" && !c.hasInbound) return false;
       if (filter === "live" && !c.hasActiveSession) return false;
-      if (filter === "awaiting" && !c.pendingPaymentUrl) return false;
       if (q && !(c.phone.includes(q) || (c.customerName ?? "").toLowerCase().includes(q))) return false;
       return true;
     });
   }, [conversations, filter, query, archivedSet]);
+
+  // Filter-chip counts (over non-archived conversations), plus the archived tally.
+  const chipCounts = useMemo(() => {
+    const open = conversations.filter((c) => !archivedSet.has(c.phone));
+    return {
+      all: open.length,
+      unread: open.filter((c) => c.hasInbound).length,
+      live: open.filter((c) => c.hasActiveSession).length,
+      archived: archivedSet.size,
+    };
+  }, [conversations, archivedSet]);
 
   const selectedConv = useMemo(
     () => conversations.find((c) => c.phone === selected) ?? null,
     [conversations, selected],
   );
   const onSelect = useCallback((phone: string) => setSelected(phone), []);
+
+  // Next-Best-Action for the selected guest. There is no recommendation source
+  // yet (see DATA NEEDED); rather than fabricate a tip we surface none, and the
+  // card renders 1:1 the moment a real NBA is supplied here.
+  const nba = useMemo<Nba | null>(() => null, []);
 
   // Day-separated thread rows, derived once per thread change (not re-walked on
   // every render). Message identities are reused across appends, so a memoised
@@ -744,6 +899,7 @@ export function CoreInbox() {
   }, [thread]);
 
   const onNeedPayLink = useCallback(() => toast("No payment link on this conversation yet", "danger"), [toast]);
+  const onAttach = useCallback(() => toast("Attachments aren't supported on this channel yet", "danger"), [toast]);
 
   // Send a reply. Returns false on failure so the Composer can restore its draft.
   const send = useCallback(
@@ -794,14 +950,21 @@ export function CoreInbox() {
     [loadAll],
   );
 
-  // Dense-console stat strip — every figure from live WhatsApp metrics (Rule #1).
-  const kpis = metrics
+  // Dense-console stat strip — mockup cell order. Figures 1–3 are live WhatsApp
+  // metrics (Rule #1). Response time + opt-ins have no source in the metrics
+  // endpoint yet (see DATA NEEDED): they render a muted em dash until supplied,
+  // never a fabricated number.
+  const kpis: { l: string; v: string; tone: string; d: string; small?: string; dTone?: string }[] = metrics
     ? [
         { l: "Open convos", v: String(metrics.activeSessions.totalSessions), tone: "", d: `${metrics.historicConversations} all-time` },
         { l: "Awaiting reply", v: String(metrics.activeSessions.awaitingPayment), tone: metrics.activeSessions.awaitingPayment > 0 ? "amber" : "", d: metrics.activeSessions.awaitingPayment > 0 ? "needs a reply" : "all answered", dTone: metrics.activeSessions.awaitingPayment > 0 ? "warn" : "" },
-        { l: "Live", v: String(metrics.activeSessions.totalSessions), tone: "info", d: "active now" },
-        { l: "Conversion", v: `${Math.round(metrics.windows.last7d.conversionRate * 100)}%`, tone: "basil", d: "last 7d" },
-        { l: "Paid · 7d", v: String(metrics.windows.last7d.orders.paid), tone: "brand", d: "orders" },
+        { l: "Live orders", v: String(metrics.activeSessions.cartHasItems ?? 0), tone: "info", d: "with items" },
+        metrics.responseTimeMinutes != null
+          ? { l: "Response time", v: String(metrics.responseTimeMinutes), small: "m", tone: "basil", d: "" }
+          : { l: "Response time", v: "—", tone: "muted", d: "needs metric" },
+        metrics.optInRate != null
+          ? { l: "Opt-ins", v: String(Math.round(metrics.optInRate * 100)), small: "%", tone: "", d: "" }
+          : { l: "Opt-ins", v: "—", tone: "muted", d: "needs metric" },
       ]
     : [];
 
@@ -809,6 +972,7 @@ export function CoreInbox() {
     <CoreShell
       eyebrow="Guest Engagement"
       tabs={guestTabs("inbox")}
+      subLeft={<span className="core-inbox-sublbl"><span className="dot" />whatsapp · live</span>}
       subRight={
         <>
           <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
@@ -837,7 +1001,7 @@ export function CoreInbox() {
             {kpis.map((k) => (
               <div className="cell" key={k.l}>
                 <span className="lab">{k.l}</span>
-                <span className={k.tone ? `val ${k.tone}` : "val"}>{k.v}</span>
+                <span className={k.tone ? `val ${k.tone}` : "val"}>{k.v}{k.small && <small>{k.small}</small>}</span>
                 <span className={k.dTone ? `delta ${k.dTone}` : "delta"}>{k.d}</span>
               </div>
             ))}
@@ -846,24 +1010,30 @@ export function CoreInbox() {
         <div className="core-inbox">
           {/* conversation list */}
           <section className="core-convs">
-            <div className="core-convs-h core-gfilters">
+            <div className="core-pane-h">
+              <span className="t">Conversations</span>
+              <span className="badge">{chipCounts.all} open</span>
+            </div>
+            <div className="core-fchips" role="group" aria-label="Filter conversations">
+              <button type="button" className={`core-fchip${filter === "all" ? " on" : ""}`} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+                all <span className="ct">{chipCounts.all}</span>
+              </button>
+              <button type="button" className={`core-fchip${filter === "unread" ? " on" : ""}`} aria-pressed={filter === "unread"} onClick={() => setFilter("unread")}>
+                unread <span className="ct">{chipCounts.unread}</span>
+              </button>
+              <button type="button" className={`core-fchip${filter === "live" ? " on" : ""}`} aria-pressed={filter === "live"} onClick={() => setFilter("live")}>
+                live <span className="ct">{chipCounts.live}</span>
+              </button>
+              {chipCounts.archived > 0 && (
+                <button type="button" className={`core-fchip${filter === "archived" ? " on" : ""}`} aria-pressed={filter === "archived"} onClick={() => setFilter("archived")}>
+                  archived <span className="ct">{chipCounts.archived}</span>
+                </button>
+              )}
+            </div>
+            <div className="core-convs-search">
               <div className="core-search">
                 <GuestGlyph name="search" />
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or phone…" aria-label="Search conversations" />
-              </div>
-              <div className="core-seg icons" role="group" aria-label="Filter conversations">
-                {CONV_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    className={filter === f.key ? "on" : ""}
-                    onClick={() => setFilter(f.key)}
-                    title={f.label}
-                    aria-label={f.label}
-                    aria-pressed={filter === f.key}
-                  >
-                    <GuestGlyph name={f.icon} />
-                  </button>
-                ))}
               </div>
             </div>
             <div className="core-conv-list">
@@ -912,6 +1082,7 @@ export function CoreInbox() {
                   pendingPaymentUrl={selectedConv.pendingPaymentUrl}
                   onSend={send}
                   onNeedPayLink={onNeedPayLink}
+                  onAttach={onAttach}
                 />
               </>
             )}
@@ -921,27 +1092,92 @@ export function CoreInbox() {
           <aside className="core-ctx">
             {selectedConv ? (
               <>
-                <h4>Live order</h4>
-                <div className="core-ctx-card">
+                <div className="core-pane-h">
+                  <span className="t">Guest context</span>
+                  {selectedConv.pendingOrderId && <span className="badge">#{selectedConv.pendingOrderId}</span>}
+                </div>
+                <div className="core-ctx-body">
+                  {/* guest card */}
+                  {(() => {
+                    const gName = rollup?.name || selectedConv.customerName || "Walk-in";
+                    const since = rollup?.memberSince ? new Date(rollup.memberSince) : null;
+                    const sinceYear = since && !Number.isNaN(since.getTime()) ? since.getFullYear() : null;
+                    return (
+                      <div className="core-ctx-guest">
+                        <span className={`core-av v-${avatarVariant(selectedConv.phone)}`}>{initials(gName === "Walk-in" ? null : gName, selectedConv.phone)}</span>
+                        <div className="g">
+                          <div className="n">
+                            {gName}
+                            {rollup?.isMember && <span className={`core-tierbadge2 ${tierClass(rollup.tier)}`}>★ {rollup.tier ?? "Member"}</span>}
+                          </div>
+                          <div className="p">{maskPhone(selectedConv.phone)}{sinceYear ? ` · member since ${sinceYear}` : ""}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* lifetime stats */}
+                  <div className="core-lifestats">
+                    <div className="core-lifestat"><div className="l">Visits</div><div className="v">{rollup?.visits ?? 0}</div></div>
+                    <div className="core-lifestat"><div className="l">Lifetime spend</div><div className="v">{plInt(rollup?.ltv ?? 0)}<small> zł</small></div></div>
+                  </div>
+
+                  {/* live order — itemised when the session exposes lines, else summary */}
+                  <div className="core-ctxlab">Live order</div>
                   {selectedConv.cartCount > 0 ? (
-                    <>
-                      <div className="kv"><span>Cart</span><span className="mono">{selectedConv.cartCount} items · {zl(selectedConv.cartSubtotalGrosze)} zł</span></div>
-                      <div className="kv"><span>Channel</span><span>{selectedConv.fulfillmentType ?? "—"}</span></div>
-                      <div className="kv"><span>Payment</span><span className={selectedConv.pendingPaymentUrl ? "mono pay" : "mono"}>{selectedConv.pendingPaymentUrl ? "Awaiting" : "—"}</span></div>
-                    </>
+                    <div className="core-liveorder">
+                      <div className="oh">
+                        <span className="id">
+                          {selectedConv.pendingOrderId ? `#${selectedConv.pendingOrderId}` : "Live cart"}
+                          {selectedConv.fulfillmentType ? ` · ${selectedConv.fulfillmentType}` : ""}
+                        </span>
+                        <span className={`stt ${selectedConv.pendingPaymentUrl ? "pay" : "live"}`}>
+                          <span className="d" />{selectedConv.pendingPaymentUrl ? "to pay" : "live"}
+                        </span>
+                      </div>
+                      {selectedConv.items && selectedConv.items.length > 0 ? (
+                        selectedConv.items.map((li, i) => (
+                          <div className="oli" key={i}>
+                            <span><span className="q">{li.qty}×</span>{li.name}</span>
+                            <span className="lp">{plInt(li.priceGrosze)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="oli">
+                          <span>{selectedConv.cartCount} item{selectedConv.cartCount === 1 ? "" : "s"}</span>
+                          <span className="lp">{plInt(selectedConv.cartSubtotalGrosze)}</span>
+                        </div>
+                      )}
+                      <div className="ot"><span>Total</span><span>{plInt(selectedConv.cartSubtotalGrosze)} zł</span></div>
+                    </div>
                   ) : (
                     <div className="core-ctx-empty">No active cart.</div>
                   )}
-                </div>
-                <h4>Guest</h4>
-                <div className="core-ctx-card">
-                  {rollup ? (
-                    <>
-                      <div className="kv"><b>{rollup.name || "Walk-in"}</b>{rollup.isMember && <span className="core-tier">★ {rollup.tier}</span>}</div>
-                      <div className="kv"><span>Lifetime</span><span className="mono">{zl(rollup.ltv)} zł · {rollup.visits} orders</span></div>
-                    </>
+
+                  {/* next best action */}
+                  <div className="core-ctxlab">Next best action</div>
+                  {nba && !nbaSkipped ? (
+                    <div className="core-nba">
+                      <div className="nh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="m12 2 3 6.3 6.9.9-5 4.8 1.3 6.9L12 17.6 5.8 20.9 7.1 14l-5-4.8 6.9-.9z" />
+                        </svg>
+                        NBA · {nba.kind}
+                      </div>
+                      <div className="nt">{nba.title}</div>
+                      <div className="nw">{nba.rationale}</div>
+                      <div className="nrow">
+                        <button type="button" className="send" disabled={sending} onClick={() => void send(nba.message).then((ok) => ok && setNbaSkipped(true))}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M3 11l18-7-7 18-2.5-7z" />
+                          </svg>
+                          Send
+                        </button>
+                        <button type="button" className="skip" onClick={() => setNbaSkipped(true)}>Skip</button>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="core-ctx-empty">Loading…</div>
+                    <div className="core-ctx-empty">No suggested action.</div>
                   )}
                 </div>
               </>

@@ -20,8 +20,10 @@ interface CrmCustomer {
   avgOrderValue: number;
   points: number;
   tier: string;
+  firstOrderAt: string | null;
   lastOrderAt: string | null;
   lastDays: number | null;
+  locations: string[];
   channels: string[];
   noShows: number;
   reliability: number;
@@ -30,6 +32,9 @@ interface CrmCustomer {
   recent: { id: string; createdAt: string; total: number; fulfillment: string; location: string; items: { name: string; qty: number }[] }[];
   smsOptIn: boolean;
   emailOptIn: boolean;
+  // whatsappOptIn is surfaced for parity with the mockup consent row; the CRM
+  // payload + consent endpoint don't persist it yet (see DATA NEEDED).
+  whatsappOptIn?: boolean;
 }
 interface NoteRow {
   id: string;
@@ -39,15 +44,11 @@ interface NoteRow {
   createdAt: string;
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  "dine-in": "Dine-in",
-  takeout: "Takeaway",
-  takeaway: "Takeaway",
-  delivery: "Delivery",
-  whatsapp: "WhatsApp",
-  web: "Web",
-};
-const chanLabel = (k: string) => (k ? CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1) : "");
+// Location slug → display label (the roster meta + drawer subtitle read
+// "segment · location" per the mockup, e.g. "VIP · Kraków").
+const LOC_LABEL: Record<string, string> = { krakow: "Kraków", warszawa: "Warszawa" };
+const locLabel = (s: string) => (s ? LOC_LABEL[s.toLowerCase()] ?? s.charAt(0).toUpperCase() + s.slice(1) : "");
+const custLoc = (c: CrmCustomer) => locLabel(c.locations?.[0] ?? c.recent?.[0]?.location ?? "");
 
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const seen = (d: number | null) => (d == null ? "never" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`);
@@ -83,6 +84,15 @@ function inSeg(c: CrmCustomer, seg: string): boolean {
     default: return c.vip ? false : c.lifecycle === seg;
   }
 }
+// Segment label mirroring inSeg() priority — drives the roster meta + drawer
+// subtitle "segment · location" (mockup). VIP → At-risk → New → Regular.
+function segLabel(c: CrmCustomer): string {
+  if (c.vip) return "VIP";
+  if (c.orderCount > 0 && health(c) < 34) return "At-risk";
+  if (c.lifecycle === "new") return "New";
+  if (c.orderCount > 0) return "Regular";
+  return c.member ? "Member" : "Guest";
+}
 // Loyalty tier → gem class + avatar tint (bronze/silver/gold/platinum).
 function gemClass(tier: string): string {
   const t = (tier || "").toLowerCase();
@@ -93,7 +103,7 @@ function gemClass(tier: string): string {
 }
 function avClass(c: CrmCustomer): string {
   const g = gemClass(c.tier);
-  return g === "plat" ? "p" : g === "silver" ? "s" : "g";
+  return g === "plat" ? "p" : g === "silver" ? "s" : g === "bronze" ? "b" : "g";
 }
 function initials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -112,7 +122,7 @@ export function CoreCrm() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [seg, setSeg] = useState("all");
-  const [sort, setSort] = useState("ltv");
+  const [sort, setSort] = useState("recent");
   const [tierF, setTierF] = useState<string | null>(null);
   const [eraseOpen, setEraseOpen] = useState(false);
   const [erasing, setErasing] = useState(false);
@@ -271,7 +281,7 @@ export function CoreCrm() {
     }
   };
 
-  const toggleConsent = async (patch: { smsOptIn?: boolean; emailOptIn?: boolean }) => {
+  const toggleConsent = async (patch: { smsOptIn?: boolean; emailOptIn?: boolean; whatsappOptIn?: boolean }) => {
     if (!selected) return;
     const res = await fetch(`/api/admin/customers/${encodeURIComponent(selected)}/consent`, {
       method: "PATCH",
@@ -395,7 +405,7 @@ export function CoreCrm() {
                           <span className={`core-g-av ${avClass(c)}`}>{initials(c.name)}</span>
                           <div>
                             <div className="core-g-nm">{c.name}</div>
-                            <div className="core-g-meta">{c.vip ? "VIP" : c.member ? "Member" : "Guest"}{c.channels[0] ? ` · ${chanLabel(c.channels[0])}` : ""}</div>
+                            <div className="core-g-meta">{segLabel(c)}{custLoc(c) ? ` · ${custLoc(c)}` : ""}</div>
                           </div>
                         </div>
                       </td>
@@ -427,7 +437,7 @@ export function CoreCrm() {
                 <span className={`av ${avClass(cust)}`}>{initials(cust.name)}</span>
                 <div className="who">
                   <div className="n">{cust.name} <span className={`core-gem ${gemClass(cust.tier)}`} style={{ width: 11, height: 11 }} /></div>
-                  <div className="sub">{cust.vip ? "VIP · " : ""}{cust.member ? cust.tier : `Contact · ${cust.source}`}{cust.email ? ` · ${cust.email}` : ""}</div>
+                  <div className="sub">{[segLabel(cust), custLoc(cust), cust.firstOrderAt ? `guest since ${new Date(cust.firstOrderAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}` : null].filter(Boolean).join(" · ")}</div>
                 </div>
               </div>
 
@@ -452,16 +462,20 @@ export function CoreCrm() {
                     <span className="cn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>Email</span>
                     <div className={cust.emailOptIn ? "core-tog on" : "core-tog"} role="switch" aria-checked={cust.emailOptIn} tabIndex={0} onClick={() => void toggleConsent({ emailOptIn: !cust.emailOptIn })} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void toggleConsent({ emailOptIn: !cust.emailOptIn }); } }}><i /></div>
                   </div>
+                  <div className="row">
+                    <span className="cn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.7A8.4 8.4 0 1 1 21 11.5z" /></svg>WhatsApp</span>
+                    <div className={cust.whatsappOptIn ? "core-tog on" : "core-tog"} role="switch" aria-checked={!!cust.whatsappOptIn} tabIndex={0} onClick={() => void toggleConsent({ whatsappOptIn: !cust.whatsappOptIn })} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void toggleConsent({ whatsappOptIn: !cust.whatsappOptIn }); } }}><i /></div>
+                  </div>
                 </div>
               </div>
 
               {cust.recent.length > 0 && (
                 <div className="core-dsec">
-                  <div className="core-dsec-lab">Recent orders</div>
+                  <div className="core-dsec-lab">Recent orders <span className="more">view all ›</span></div>
                   <div className="core-dtimeline">
                     {cust.recent.slice(0, 3).map((o) => (
                       <div className="core-dtl" key={o.id}>
-                        <span className="dot" />
+                        <span className="dot on" />
                         <div className="body">
                           <div className="t">{o.items.map((i) => i.name).join(" · ") || "Order"} <b>{zl(o.total)} zł</b></div>
                           <div className="m">{o.fulfillment} · {o.location} · {new Date(o.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
@@ -488,7 +502,7 @@ export function CoreCrm() {
               <div className="core-dsec">
                 <div className="core-dsec-lab">Notes {notes.length > 0 && <span className="more" onClick={() => void delNote(notes[0].id)}>clear latest</span>}</div>
                 <textarea className="core-dnotes" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add a private note…" />
-                <button type="button" className="core-dsave" onClick={() => void addNote()}>Save note</button>
+                <button type="button" className="core-dsave" onClick={() => void addNote()}>Save profile</button>
                 {notes.length > 0 && (
                   <div className="core-notes" style={{ marginTop: 9 }}>
                     {notes.slice(0, 4).map((n) => (
@@ -501,9 +515,9 @@ export function CoreCrm() {
                 )}
               </div>
 
-              <div className="core-dsec">
+              <div className="core-dsec core-gdpr">
                 <div className="core-dsec-lab">Data <a className="more" href={`/api/admin/gdpr/export?phone=${encodeURIComponent(cust.phone)}`} target="_blank" rel="noreferrer">export ↗</a></div>
-                <button type="button" className="core-dsave" style={{ color: "var(--danger)", borderColor: "rgba(255,90,92,.4)" }} onClick={() => setEraseOpen(true)}>Erase customer (GDPR Art. 17)</button>
+                <button type="button" className="core-dsave core-gdpr-erase" onClick={() => setEraseOpen(true)}>Erase customer (GDPR Art. 17)</button>
               </div>
             </aside>
           )}

@@ -43,3 +43,7 @@ Mutations reuse the floor settle endpoint; the single Order stays the source
 of truth (no duplicate ticket). Verified live: the 7-cell strip, filterbar,
 `.core-otable` rows, and the detail-modal status timeline all render against
 real orders (Warszawa demo set screenshotted).
+
+## Dense-console 1:1 parity pass (2026-07-02)
+
+Parity layer: `src/app/themes/core/parity/orders.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`. Detail dialog: header is `.core-od-idbig` + a single `.core-od-meta` row (guest · T · channel · time); ticket lines carry a `.m` ingredient subtitle; `.core-od-totals` renders Subtotal / fees / Discount / VAT / Total (+ Refund); actions are Mark paid (green, check) then Print (printer); `.core-stpill.refunded` added. Server name / stored discount-reason / per-location VAT are not on the Order model (VAT shown at the statutory 8%).

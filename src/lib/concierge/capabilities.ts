@@ -115,9 +115,9 @@ export interface AllergenMatrix {
 
 export async function buildAllergenMatrix(slug: string): Promise<AllergenMatrix> {
   const menu = await getMenuWithOverrides(slug);
-  const present = new Set<Allergen>();
-  for (const m of menu) for (const a of m.allergens ?? []) present.add(a);
-  // Stable EU-14 ordering, only columns that actually appear on this menu.
+  // Always emit the full EU-14 (FIC Annex II) column set — a proper allergen
+  // matrix has consistent columns; absent allergens render as empty cells. This
+  // matches the dense-console mockup's 14-column grid.
   const order: Allergen[] = [
     "gluten",
     "dairy",
@@ -135,7 +135,6 @@ export async function buildAllergenMatrix(slug: string): Promise<AllergenMatrix>
     "lupin",
   ];
   const columns = order
-    .filter((a) => present.has(a))
     .map((a) => ({ key: a, label: ALLERGEN_LABELS[a].en, emoji: ALLERGEN_LABELS[a].emoji }));
   const rows = menu.map((m) => ({
     id: m.id,

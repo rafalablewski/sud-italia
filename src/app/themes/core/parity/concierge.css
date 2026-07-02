@@ -1,0 +1,117 @@
+/* Core parity (concierge) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* ===== two-pane MCP inspector layout ===== */
+.core .core-concierge { display: grid; grid-template-columns: 340px 1fr; gap: 10px; align-items: start; }
+
+/* ---- left: capability pane (glass card, own header + spaced rows) ---- */
+.core .core-caps {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+  box-shadow: var(--sh-1); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.core .core-caps-h {
+  padding: 11px 12px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.core .core-caps-h .t { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.core .core-caps-h .live {
+  font-family: var(--mono); font-size: 10px; color: var(--basil);
+  border: 1px solid rgba(125, 196, 100, .4); background: var(--basil-wash);
+  border-radius: var(--pill); padding: 2px 9px; white-space: nowrap;
+}
+.core .core-caplist { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+
+/* capability row — friendly label + leading icon, no kind chip / no desc / no transport */
+.core .core-cap {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  cursor: pointer; position: relative; transition: background var(--fast), border-color var(--fast);
+}
+.core .core-cap:hover { background: var(--panel-3); border-color: var(--line-2); }
+.core .core-cap.on {
+  background: var(--brand-wash); border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .45), 0 0 18px -8px var(--brand);
+}
+.core .core-cap.on::before {
+  content: ""; position: absolute; left: -1px; top: 9px; bottom: 9px; width: 3px;
+  border-radius: 99px; background: var(--brand-bright); box-shadow: 0 0 10px var(--brand);
+}
+.core .core-cap-ico {
+  flex: 0 0 30px; height: 30px; display: grid; place-items: center;
+  border-radius: var(--r-sm); background: var(--panel-3); border: 1px solid var(--line); color: var(--ink-2);
+}
+.core .core-cap-ico svg { display: block; }
+.core .core-cap.on .core-cap-ico { color: var(--brand-bright); }
+.core .core-cap-body { flex: 1; min-width: 0; }
+.core .core-cap-nm { font-size: 12.5px; font-weight: 500; line-height: 1.15; color: var(--ink); }
+.core .core-cap-meta {
+  font-family: var(--mono); font-size: 9.5px; color: var(--ink-3);
+  margin-top: 2px; display: flex; align-items: center; gap: 6px;
+}
+.core .core-cap-meta .lat { color: var(--ink-2); }
+.core .core-cap-meta .st { display: flex; align-items: center; gap: 4px; color: var(--basil); }
+.core .core-cap-meta .st .d { width: 6px; height: 6px; border-radius: 50%; background: var(--basil); box-shadow: 0 0 6px var(--basil); }
+.core .core-cap-meta .st.off { color: var(--ink-3); }
+.core .core-cap-meta .st.off .d { background: var(--ink-3); box-shadow: none; }
+
+/* ---- right: inspector (json pane + matrix stacked, no transports block) ---- */
+.core .core-cap-inspect { display: flex; flex-direction: column; gap: 10px; padding: 0; background: transparent; overflow: visible; }
+
+/* JSON pane */
+.core .core-json-pane { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); overflow: hidden; }
+.core .core-json-h { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.core .core-json-h .t { font-family: var(--display); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; color: var(--ink); min-width: 0; }
+.core .core-json-h .t .meth {
+  font-family: var(--mono); font-size: 9px; color: var(--basil);
+  border: 1px solid rgba(125, 196, 100, .45); background: var(--basil-wash);
+  border-radius: 99px; padding: 2px 8px; letter-spacing: .05em; white-space: nowrap;
+}
+.core .core-json-h .t .callname { font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.core .core-testbtn {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--on-basil);
+  background: var(--basil); border: 0; border-radius: var(--pill); padding: 6px 15px;
+  cursor: pointer; display: flex; align-items: center; gap: 6px; flex: none;
+  box-shadow: 0 4px 14px -4px var(--basil);
+}
+.core .core-testbtn:hover { filter: brightness(1.06); }
+.core .core-testbtn:disabled { opacity: .6; cursor: default; }
+.core .core-testbtn svg { display: block; }
+
+/* code block + syntax highlighting (override base .core-json) */
+.core .core-json {
+  font-family: var(--mono); font-size: 11px; line-height: 1.55; color: var(--ink-2);
+  padding: 12px 14px; background: rgba(0, 0, 0, .34);
+  border: 0; border-radius: 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+  overflow-x: auto; white-space: pre; max-height: 460px;
+}
+.core .core-json .cmt { color: var(--ink-3); }
+.core .core-json .key { color: var(--amber); }
+.core .core-json .str { color: var(--basil); }
+.core .core-json .num { color: var(--brand-bright); }
+.core .core-json .bool { color: var(--amber); }
+.core .core-json .punc { color: var(--ink-3); }
+
+/* ---- allergen matrix ---- */
+.core .core-matrix-pane { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); overflow: hidden; }
+.core .core-matrix-h { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.core .core-matrix-h .t { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.core .core-matrix-h .note { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.core .core-matrix-h .note b { color: var(--basil); font-weight: 600; }
+.core .core-matrix-wrap { overflow-x: auto; border: 0; border-radius: 0; padding: 2px 0; }
+.core .core-matrix { border-collapse: collapse; font-family: var(--mono); font-size: 10px; width: 100%; min-width: 640px; }
+.core .core-matrix th, .core .core-matrix td { padding: 6px 5px; text-align: center; border-bottom: 1px solid var(--line); }
+.core .core-matrix thead th { color: var(--ink-3); font-weight: 500; text-transform: uppercase; letter-spacing: .03em; font-size: 8.5px; white-space: nowrap; vertical-align: bottom; position: static; background: transparent; min-width: 0; }
+.core .core-matrix thead th.dishcol, .core .core-matrix td.dish { text-align: left; padding-left: 12px; }
+.core .core-matrix td.dish { font-family: var(--display); font-weight: 600; font-size: 11.5px; color: var(--ink); white-space: nowrap; min-width: 0; }
+.core .core-matrix tbody tr:hover { background: var(--panel-2); }
+.core .core-matrix tbody tr:hover td { background: transparent; }
+.core .core-matrix td { color: var(--ink-3); }
+.core .core-matrix td .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--brand); box-shadow: 0 0 7px -1px var(--brand); }
+.core .core-matrix td.abs { color: var(--ink-3); }
+.core .core-matrix tr.off { opacity: .4; }
+.core .core-matrix-legend { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
+.core .core-matrix-legend .lg { display: flex; align-items: center; gap: 6px; }
+.core .core-matrix-legend .lg .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 7px -1px var(--brand); }
+
+@media (max-width: 1000px) { .core .core-concierge { grid-template-columns: 1fr; } }

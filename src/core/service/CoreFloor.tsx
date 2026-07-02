@@ -344,7 +344,10 @@ export function CoreFloor({
       if (t.occupied) covers += t.party ?? t.seats;
       else if (t.status === "available") { free++; if (t.seats >= 4) freeFourtops++; }
     }
-    return { free, freeFourtops, billing, dueGrosze, covers };
+    // Waitlist: no live waiting-party feed exists on the twin/order model yet,
+    // so this is a graceful 0 (never fabricated) — see DATA NEEDED.
+    const waitlist = 0;
+    return { free, freeFourtops, billing, dueGrosze, covers, waitlist };
   }, [twin, ordersByTable]);
   const stateOf = (t: TwinTableRow): { cls: string; label: string } => {
     if (t.status === "out-of-service") return { cls: "oos", label: "Out of service" };
@@ -374,8 +377,41 @@ export function CoreFloor({
           <h1>Service · Floor</h1>
           <span className="sub">{s ? `${s.totalTables} tables` : "live floor"}{zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}</span>
         </div>
+        {/* Zone selector — kept in the subbar region under the section head
+            (mockup), not buried mid-floor. Filters the zoned tile groups. */}
+        {zones.length > 1 && (
+          <div className="core-zonetabs">
+            <span className="core-zone-lbl">Zone</span>
+            <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
+              All zones<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+            </button>
+            {zones.map(([z, ts]) => (
+              <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
+                {z}<span className="n">{ts.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Kitchen-bottleneck banner — renders ABOVE the stat strip (mockup). */}
+        {kitchen && kitchen.tier !== "calm" && (
+          <div className={`core-bottleneck ${kitchen.tier}`} role="status">
+            <span className="bn-ic" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+              </svg>
+            </span>
+            <span className="bn-msg">
+              <b>{kitchen.label ?? "Kitchen"} {kitchen.tier === "risk" ? "backed up" : "warming"}</b> — {Math.round(kitchen.util)}% loaded
+              <span className="rec"> · seat new covers toward <em>a calmer station</em> and pace the floor</span>
+            </span>
+            <span className="bn-tag">bottleneck</span>
+            <button type="button" className="bn-act" onClick={() => setParty(String(Math.max(2, partyN)))}>Pace seating</button>
+          </div>
+        )}
+
         {/* dense-console stat strip — every figure from live floor state (Rule #1):
-            seated · free · on bill · covers · occupancy · spend velocity. */}
+            Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy LAST). */}
         <div className="core-statstrip" role="group" aria-label="Floor metrics">
           <div className="cell">
             <span className="lab">Seated</span>
@@ -397,125 +433,107 @@ export function CoreFloor({
             <span className="val">{twin ? floorStats.covers : "—"}</span>
             <span className="delta">{s ? `${s.seated} table${s.seated === 1 ? "" : "s"} seated` : ""}</span>
           </div>
+          {/* Waitlist — no live waiting-party source exists yet (see DATA NEEDED);
+              render a graceful 0 rather than fabricate a queue (Rule #1). */}
+          <div className="cell">
+            <span className="lab">Waitlist</span>
+            <span className="val brand">{twin ? floorStats.waitlist : "—"}</span>
+            <span className="delta">{twin ? (floorStats.waitlist > 0 ? "waiting" : "no queue") : ""}</span>
+          </div>
           <div className="cell">
             <span className="lab">Occupancy</span>
             <span className="val">{s ? <>{Math.round(s.occupancyPct)}<small>%</small></> : "—"}</span>
             <span className="delta">{s?.freeingSoon15 ? `${s.freeingSoon15} freeing ≤15m` : "steady"}</span>
           </div>
-          <div className="cell">
-            <span className="lab">Spend / hr</span>
-            <span className="val brand">{s?.spendVelocityPerHourGrosze != null ? zl0(s.spendVelocityPerHourGrosze) : "—"}</span>
-            <span className="delta">{s?.medianTurnMin != null ? `${s.medianTurnMin}m turn` : "live"}</span>
-          </div>
         </div>
 
-        <div className="core-floor-bar">
-          <span className="core-rec-lbl">⌕ Find order</span>
-          <input
-            className="core-inp"
-            style={{ flex: 1, minWidth: 0 }}
-            value={lookup}
-            onChange={(e) => setLookup(e.target.value)}
-            placeholder="order id, guest name or table…"
-          />
-        </div>
-        {lookup.trim() && (
-          <div className="core-lookup-results">
-            {lookupResults.length === 0 ? (
-              <div className="core-ctx-empty pad">No active order matches &ldquo;{lookup.trim()}&rdquo;.</div>
-            ) : (
-              lookupResults.map((o) => (
-                <div key={o.id} className="core-lookup-row">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>
-                      {o.tableNumber ? `Table ${o.tableNumber}` : o.fulfillmentType} · {o.customerName}
-                      <span className="core-chip" style={{ marginLeft: 8, height: 20, fontSize: 10.5 }}>{CHANNEL_LABEL[o.channel] ?? o.channel}</span>
+        {/* App-only floor tools — order lookup + predictive seating. Not in the
+            mockup, so collapsed by default (tiles sit where the mockup has them)
+            while staying fully wired (Rule #8). */}
+        <details className="core-floor-tools">
+          <summary>⌕ Find order · ✦ seat a party</summary>
+          <div className="core-floor-bar">
+            <span className="core-rec-lbl">⌕ Find order</span>
+            <input
+              className="core-inp"
+              style={{ flex: 1, minWidth: 0 }}
+              value={lookup}
+              onChange={(e) => setLookup(e.target.value)}
+              placeholder="order id, guest name or table…"
+            />
+          </div>
+          {lookup.trim() && (
+            <div className="core-lookup-results">
+              {lookupResults.length === 0 ? (
+                <div className="core-ctx-empty pad">No active order matches &ldquo;{lookup.trim()}&rdquo;.</div>
+              ) : (
+                lookupResults.map((o) => (
+                  <div key={o.id} className="core-lookup-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>
+                        {o.tableNumber ? `Table ${o.tableNumber}` : o.fulfillmentType} · {o.customerName}
+                        <span className="core-chip" style={{ marginLeft: 8, height: 20, fontSize: 10.5 }}>{CHANNEL_LABEL[o.channel] ?? o.channel}</span>
+                      </div>
+                      <div className="core-cust-sub" style={{ fontSize: 11.5 }}>{o.id} · {o.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}</div>
                     </div>
-                    <div className="core-cust-sub" style={{ fontSize: 11.5 }}>{o.id} · {o.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}</div>
+                    <span className={o.paid ? "core-tpay paid" : "core-tpay due"} style={{ position: "static" }}>{o.paid ? "✓ paid" : `${zl2(o.totalAmount)} to pay`}</span>
+                    {!o.paid && (
+                      <button type="button" className="core-btn primary sm" disabled={settling === o.id} onClick={() => void settle(o.id)}>
+                        {settling === o.id ? "…" : "Mark paid"}
+                      </button>
+                    )}
                   </div>
-                  <span className={o.paid ? "core-tpay paid" : "core-tpay due"} style={{ position: "static" }}>{o.paid ? "✓ paid" : `${zl2(o.totalAmount)} to pay`}</span>
-                  {!o.paid && (
-                    <button type="button" className="core-btn primary sm" disabled={settling === o.id} onClick={() => void settle(o.id)}>
-                      {settling === o.id ? "…" : "Mark paid"}
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {kitchen && kitchen.tier !== "calm" && (
-          <div className={`core-bottleneck ${kitchen.tier}`} role="status">
-            <span className="bn-ic" aria-hidden>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-              </svg>
-            </span>
-            <span className="bn-msg">
-              <b>{kitchen.label ?? "Kitchen"} {kitchen.tier === "risk" ? "backed up" : "warming"}</b> — {Math.round(kitchen.util)}% loaded
-              <span className="rec"> · seat new covers toward <em>a calmer station</em> and pace the floor</span>
-            </span>
-            <span className="bn-tag">bottleneck</span>
-            <button type="button" className="bn-act" onClick={() => setParty(String(Math.max(2, partyN)))}>Pace seating</button>
-          </div>
-        )}
-
-        <div className="core-floor-bar">
-          <span className="core-rec-lbl">✦ Seat a party of</span>
-          <input
-            className="core-inp core-rec-n"
-            type="number"
-            min={1}
-            max={50}
-            value={party}
-            onChange={(e) => setParty(e.target.value)}
-          />
-          <div className="core-rec-chips">
-            {recs.length === 0 ? (
-              <span className="core-rec-empty">No table fits a party of {partyN}.</span>
-            ) : (
-              recs.map((r) => (
-                <button
-                  key={r.tableId}
-                  type="button"
-                  className="core-fchip"
-                  disabled={r.readyInMin !== 0 || acting === r.tableId}
-                  onClick={() => void post("seat", r.tableId, r.number)}
-                  title={r.note}
-                >
-                  {r.number}
-                  <span className="n">{r.readyInMin === 0 ? "seat" : `~${r.readyInMin}m`}</span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="core-floor">
-          {zones.length > 1 && (
-            <div className="core-zonetabs">
-              <span className="core-zone-lbl">Zone</span>
-              <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
-                All zones<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
-              </button>
-              {zones.map(([z, ts]) => (
-                <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
-                  {z}<span className="n">{ts.length}</span>
-                </button>
-              ))}
+                ))
+              )}
             </div>
           )}
+          <div className="core-floor-bar">
+            <span className="core-rec-lbl">✦ Seat a party of</span>
+            <input
+              className="core-inp core-rec-n"
+              type="number"
+              min={1}
+              max={50}
+              value={party}
+              onChange={(e) => setParty(e.target.value)}
+            />
+            <div className="core-rec-chips">
+              {recs.length === 0 ? (
+                <span className="core-rec-empty">No table fits a party of {partyN}.</span>
+              ) : (
+                recs.map((r) => (
+                  <button
+                    key={r.tableId}
+                    type="button"
+                    className="core-fchip"
+                    disabled={r.readyInMin !== 0 || acting === r.tableId}
+                    onClick={() => void post("seat", r.tableId, r.number)}
+                    title={r.note}
+                  >
+                    {r.number}
+                    <span className="n">{r.readyInMin === 0 ? "seat" : `~${r.readyInMin}m`}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </details>
+
+        <div className="core-floor">
           {!twin ? (
             <div className="core-ctx-empty pad">Loading floor…</div>
           ) : zones.length === 0 ? (
             <div className="core-ctx-empty pad">No tables yet — add one to start modelling the floor.</div>
           ) : (
-            (zoneFilter ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => (
+            (zoneFilter ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => {
+              // Zone occupancy % = seated ÷ serviceable tables (mockup zsub format).
+              const zServiceable = tbls.filter((t) => t.status !== "out-of-service");
+              const zOcc = zServiceable.length ? Math.round((zServiceable.filter((t) => t.occupied).length / zServiceable.length) * 100) : 0;
+              return (
               <div key={zone}>
                 <div className="core-zone-h">
                   <span className="zt">{zone}</span>
-                  <span className="core-cust-sub">{tbls.length} tables · {tbls.reduce((a, t) => a + t.seats, 0)} covers</span>
+                  <span className="core-cust-sub">{tbls.length} table{tbls.length === 1 ? "" : "s"} · {zOcc}%</span>
                 </div>
                 <div className="core-tables">
                   {tbls.map((t) => {
@@ -568,30 +586,69 @@ export function CoreFloor({
                     ) : tOrders.length > 0 ? (
                       <span className="core-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
                     ) : null;
+                    // Tile number prefix — the twin stores plain numbers ("12");
+                    // the mockup shows "T12" (bar/patio labels pass through).
+                    const numLabel = /^\d+$/.test(t.number) ? `T${t.number}` : t.number;
+                    // Inline quick-action row — revealed on the selected/hover
+                    // tile, wired to the SAME handlers the radial uses. Merge
+                    // reuses move mode (start a combine-with-another-table flow).
+                    const qa: { label: string; pri?: boolean; on: () => void }[] | null =
+                      t.status === "out-of-service"
+                        ? null
+                        : t.occupied
+                          ? [
+                              { label: "Bill", pri: true, on: () => openCheck(t) },
+                              { label: "Move", on: () => startMove(t) },
+                              { label: "Clear", on: () => act(t) },
+                            ]
+                          : [
+                              { label: "Seat", pri: true, on: () => act(t) },
+                              { label: "Reserve", on: () => window.location.assign("/core/guest/book") },
+                              { label: "Merge", on: () => startMove(t) },
+                            ];
+                    const openTile = (el: HTMLElement) => {
+                      // In move mode, the next tap is the destination.
+                      if (moveFrom) { void doMove(moveFrom, t); return; }
+                      // Tap blooms the state-aware radial AND feeds the dock
+                      // (so the check follows across lenses on tap).
+                      select(buildSelection(t));
+                      const r = el.getBoundingClientRect();
+                      setRadial({ table: t, x: r.left + r.width / 2, y: r.top + r.height / 2 });
+                    };
                     return (
                       <div key={t.id} className="core-tbl2-wrap">
-                        <button
+                        <div
+                          role="button"
+                          tabIndex={0}
                           className={`core-tbl2 ${mockCls}${isFocus ? " is-focus" : ""}${foodUp ? " food-up" : ""}${moveFrom?.id === t.id ? " is-moving" : ""}`}
-                          onClick={(e) => {
-                            // In move mode, the next tap is the destination.
-                            if (moveFrom) { void doMove(moveFrom, t); return; }
-                            // Tap blooms the state-aware radial AND feeds the
-                            // dock (so the check follows across lenses on tap).
-                            select(buildSelection(t));
-                            const r = e.currentTarget.getBoundingClientRect();
-                            setRadial({ table: t, x: r.left + r.width / 2, y: r.top + r.height / 2 });
-                          }}
+                          onClick={(e) => openTile(e.currentTarget)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openTile(e.currentTarget); } }}
                           title={`Table ${t.number} — actions`}
                         >
                           <span className="thead">
-                            <span className="tnum">{t.number}</span>
+                            <span className="tnum">{numLabel}</span>
                             <span className="tstat"><span className="dot" /><span className="tst">{statusText}</span></span>
                           </span>
                           <span className="tcap">{coversLine}</span>
                           <span className="tdwell">{dwellLine}</span>
                           {checkLine && <span className="tchk">{checkLine.amt} <small>{checkLine.tag}</small></span>}
                           {urgent}
-                        </button>
+                          {qa && (
+                            <span className="core-tqa">
+                              {qa.map((v) => (
+                                <button
+                                  key={v.label}
+                                  type="button"
+                                  className={v.pri ? "pri" : undefined}
+                                  disabled={acting === t.id}
+                                  onClick={(e) => { e.stopPropagation(); v.on(); }}
+                                >
+                                  {v.label}
+                                </button>
+                              ))}
+                            </span>
+                          )}
+                        </div>
                         <button
                           type="button"
                           className="core-tbl2-edit"
@@ -601,24 +658,13 @@ export function CoreFloor({
                         >
                           ⋯
                         </button>
-                        {t.occupied && (
-                          <button
-                            type="button"
-                            className="core-tbl2-clear"
-                            disabled={acting === t.id}
-                            onClick={(e) => { e.stopPropagation(); act(t); }}
-                            title={`Free table ${t.number}`}
-                            aria-label={`Free table ${t.number}`}
-                          >
-                            {acting === t.id ? "…" : "Free"}
-                          </button>
-                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

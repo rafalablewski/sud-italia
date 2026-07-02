@@ -1,0 +1,71 @@
+/* Core parity (loyalty) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* Gold accent used by the Gold+ stat + gold gem chips (not in the base tokens). */
+.core { --gold: #e8b24a; }
+
+/* ---- Labeled sub-tab segmented control (Members · Wallets · Redemptions · Win-back) ---- */
+.core .core-loy-seg { display: inline-flex; gap: 2px; padding: 3px; margin: 0 16px 10px; border-radius: var(--pill);
+  background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-loy-seg button { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px;
+  border-radius: var(--pill); font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; cursor: pointer; }
+.core .core-loy-seg button:hover { color: var(--ink-2); }
+.core .core-loy-seg button.on { color: var(--ink); }
+.core .core-loy-seg button.on.brand { background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
+.core .core-loy-seg .ct { font-family: var(--mono); font-size: 9px; color: var(--ink-3); background: var(--panel); border-radius: 99px; padding: 1px 6px; }
+.core .core-loy-seg button.on.brand .ct { color: var(--brand-bright); }
+
+/* ---- Stat strip: gold Gold+ cell + flagged (no-data) Breakage cell ---- */
+.core .core-statstrip .val.gold { color: var(--gold); }
+.core .core-statstrip .val.muted { color: var(--ink-3); }
+
+/* ---- Table title bar: title + text tier-filter chips + relocated compact search ---- */
+.core .core-tbar { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.core .core-tbar .t { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.core .core-tbar .r { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.core .core-chipf { font-family: var(--mono); font-size: 10px; color: var(--ink-3); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: var(--pill); padding: 3px 9px; cursor: pointer; }
+.core .core-chipf:hover { color: var(--ink-2); }
+.core .core-chipf.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255, 255, 255, .14)); }
+.core .core-tbar-search { height: 28px; width: 150px; flex: 0 0 auto; border-radius: var(--pill); padding: 0 10px; gap: 6px; }
+.core .core-tbar-search svg { width: 14px; height: 14px; flex: none; color: var(--ink-3); }
+.core .core-tbar-search input { font-size: 11.5px; }
+
+/* ---- Sortable column headers (replaces the standalone sort-glyph row) ---- */
+.core .core-tbl th.core-th-sort { cursor: pointer; user-select: none; }
+.core .core-tbl th.core-th-sort:hover { color: var(--ink-2); }
+.core .core-tbl th.core-th-sort.on { color: var(--ink); }
+
+/* ---- Member row: initials avatar + name/phone ---- */
+.core .core-mname { display: flex; align-items: center; gap: 9px; }
+
+/* ---- Bronze avatar gradient (base theme ships g/p/s only) ---- */
+.core .core-g-av.b { background: linear-gradient(150deg, #d9915a, #8a4f27); }
+
+/* ---- Gem tier chip: faceted diamond + UPPERCASE metal, tinted per tier ---- */
+.core .core-gem { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: .05em; padding: 2px 9px 2px 7px; border-radius: var(--pill); border: 1px solid var(--line); }
+.core .core-gem .g { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1px; flex: none; }
+.core .core-gem.platinum { color: var(--tier-platinum); background: var(--tier-platinum-wash); box-shadow: inset 0 0 0 1px rgba(180, 190, 210, .4); }
+.core .core-gem.platinum .g { background: var(--tier-platinum); box-shadow: 0 0 7px var(--tier-platinum); }
+.core .core-gem.gold { color: var(--gold); background: var(--amber-wash); box-shadow: inset 0 0 0 1px rgba(232, 162, 60, .4); }
+.core .core-gem.gold .g { background: var(--gold); box-shadow: 0 0 7px var(--gold); }
+.core .core-gem.silver { color: var(--tier-silver); background: var(--tier-silver-wash); box-shadow: inset 0 0 0 1px rgba(154, 160, 173, .4); }
+.core .core-gem.silver .g { background: var(--tier-silver); box-shadow: 0 0 7px var(--tier-silver); }
+.core .core-gem.bronze { color: var(--tier-bronze); background: var(--tier-bronze-wash); box-shadow: inset 0 0 0 1px rgba(192, 138, 94, .4); }
+.core .core-gem.bronze .g { background: var(--tier-bronze); box-shadow: 0 0 7px var(--tier-bronze); }
+
+/* ---- Family wallet: avatar stack + role · Tier subrow ---- */
+.core .core-avstack { display: flex; align-items: center; margin: 14px 0 2px; }
+.core .core-avstack .core-g-av { width: 32px; height: 32px; flex-basis: 32px; border: 2px solid var(--panel); margin-left: -8px; box-shadow: 0 0 0 1px var(--line); }
+.core .core-avstack .core-g-av:first-child { margin-left: 0; }
+.core .core-loy-wmembers .who .mt { text-transform: none; }
+
+/* ---- Tier-mix rows: gem language (diamond + UPPERCASE metal) instead of pill ---- */
+.core .core-tiermix .ml { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  min-width: 78px; display: flex; align-items: center; gap: 6px; }
+.core .core-tiermix .ml .g { width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1px; flex: none; }
+.core .core-tiermix.platinum .ml { color: var(--tier-platinum); } .core .core-tiermix.platinum .ml .g { background: var(--tier-platinum); }
+.core .core-tiermix.gold .ml { color: var(--gold); } .core .core-tiermix.gold .ml .g { background: var(--gold); }
+.core .core-tiermix.silver .ml { color: var(--tier-silver); } .core .core-tiermix.silver .ml .g { background: var(--tier-silver); }
+.core .core-tiermix.bronze .ml { color: var(--tier-bronze); } .core .core-tiermix.bronze .ml .g { background: var(--tier-bronze); }

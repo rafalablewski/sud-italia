@@ -58,6 +58,18 @@ function weekDates(d: string): string[] {
 function dayLabel(d: string): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
+// Service period label derived from the day's real slot times (Rule #1) — the
+// mockup's "dinner"/"lunch" tag under the section head.
+function servicePeriod(times: string[]): string {
+  const hrs = times.map((t) => parseInt(t.slice(0, 2), 10)).filter((n) => Number.isFinite(n));
+  if (!hrs.length) return "";
+  const min = Math.min(...hrs), max = Math.max(...hrs);
+  const lunch = min < 16, dinner = max >= 16;
+  if (lunch && dinner) return "lunch + dinner";
+  if (dinner) return "dinner";
+  if (min < 11) return "breakfast";
+  return "lunch";
+}
 const zl = (g: number) => (g / 100).toFixed(0);
 const zl0 = (g: number) => `${Math.round(g / 100)} zł`;
 
@@ -78,6 +90,12 @@ export function CoreSlots() {
     setDate(todayLocal());
   }, []);
   const [range, setRange] = useState<"day" | "week">("day");
+  // Leading Manage|Demand segment. Both panels stay mounted on desktop; the
+  // toggle only chooses which one shows once the grid collapses to one column.
+  const [panel, setPanel] = useState<"manage" | "demand">("manage");
+  // Channel filter behind the "Filters" ghost button — real, wired to slot
+  // fulfillmentTypes (Rule #1), cycles all → dine-in → takeaway → delivery.
+  const [chan, setChan] = useState<FulfillmentType | "all">("all");
   const [surgeDismissed, setSurgeDismissed] = useState(false);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
@@ -117,10 +135,10 @@ export function CoreSlots() {
   }, [loadBoard]);
 
   const week = useMemo(() => weekDates(date), [date]);
-  const scoped = useMemo(
-    () => (range === "week" ? slots.filter((s) => week.includes(s.date)) : slots.filter((s) => s.date === date)),
-    [slots, range, week, date],
-  );
+  const scoped = useMemo(() => {
+    const base = range === "week" ? slots.filter((s) => week.includes(s.date)) : slots.filter((s) => s.date === date);
+    return chan === "all" ? base : base.filter((s) => s.fulfillmentTypes.includes(chan));
+  }, [slots, range, week, date, chan]);
   const ordered = useMemo(() => [...scoped].sort((a, b) => a.time.localeCompare(b.time)), [scoped]);
   const byDay = useMemo(() => week.map((d) => [d, ordered.filter((s) => s.date === d)] as const), [week, ordered]);
   // Dense-console stat strip + surge state — every figure from live slot data
@@ -272,6 +290,17 @@ export function CoreSlots() {
 
   const changeCount = board?.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze).length ?? 0;
 
+  const period = servicePeriod(ordered.map((s) => s.time));
+  const dateDisplay = date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB") : "—";
+  const CHAN_CYCLE: (FulfillmentType | "all")[] = ["all", "dine-in", "takeout", "delivery"];
+  const cycleChan = () => setChan((c) => CHAN_CYCLE[(CHAN_CYCLE.indexOf(c) + 1) % CHAN_CYCLE.length]);
+  const chanLabel = chan === "all" ? "Filters" : `Filters · ${FULFIL.find((f) => f.key === chan)?.label ?? chan}`;
+  const refresh = () => {
+    void loadSlots();
+    void loadBoard();
+    toast("Refreshed slots + demand", "success");
+  };
+
   // Dense-console service-window row (mockup `.mslot`): time · fill bar with a
   // booked/status meta line · tier chip · N/max. Tap the tier chip to toggle
   // active/draft; hover reveals a delete affordance (both features preserved).
@@ -310,17 +339,32 @@ export function CoreSlots() {
         </div>
         <div className="core-sectionhead">
           <h1>Service · Slots</h1>
-          <span className="sub">{location} · {date ? dayLabel(date).toLowerCase() : "today"} · {range}</span>
+          <span className="sub">{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</span>
         </div>
-        {/* Slots controls — range · date · New · Refresh — in one body sub-toolbar. */}
+        {/* Slots controls — Manage|Demand · range · date · Filters · New · Refresh. */}
         <div className="core-surf-toolbar">
+          <div className="core-seg core-slots-viewseg">
+            <button className={panel === "manage" ? "on brand" : ""} onClick={() => setPanel("manage")}>Manage</button>
+            <button className={panel === "demand" ? "on brand" : ""} onClick={() => setPanel("demand")}>Demand</button>
+          </div>
           <div className="core-seg">
             <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
             <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
           </div>
+          <label className="core-datefield core-slots-date" title="Change date">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
+            <span className="dv">{dateDisplay}</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* not supported */ } }} aria-label="Date" />
+          </label>
+          <button type="button" className={`core-ghostbtn ${chan !== "all" ? "on" : ""}`} onClick={cycleChan}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M7 12h10M10 18h4" /></svg>{chanLabel}
+          </button>
           <div className="core-sp" />
-          <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
-          <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
+          <button type="button" className="core-slot-add" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
+          <button type="button" className="core-ghostbtn" onClick={refresh}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" /></svg>Refresh
+          </button>
         </div>
 
         {/* dense-console 6-up stat strip — every figure from live slot data (Rule #1). */}
@@ -346,14 +390,14 @@ export function CoreSlots() {
             <span className={stat.surgeCount > 0 ? "delta dn" : "delta"}>{stat.surgeCount > 0 ? stat.surgeRange : "on pace"}</span>
           </div>
           <div className="cell">
-            <span className="lab">Peak fill</span>
-            <span className="val info">{stat.peakPct}<small>%</small></span>
-            <span className="delta">{stat.peakTime}</span>
+            <span className="lab">Covers booked</span>
+            <span className="val info">{stat.booked}</span>
+            <span className="delta">{board ? `${board.summary.predictedCovers} forecast` : `${scoped.length} windows`}</span>
           </div>
           <div className="cell">
-            <span className="lab">Demand price</span>
-            <span className={stat.mult === "1.0×" ? "val" : "val amber"}>{stat.mult}</span>
-            <span className="delta">{stat.mult === "1.0×" ? "flat" : "surge active"}</span>
+            <span className="lab">No-show risk</span>
+            <span className="val">—</span>
+            <span className="delta dn">unconfirmed</span>
           </div>
         </div>
 
@@ -371,7 +415,7 @@ export function CoreSlots() {
           </div>
         )}
 
-        <div className="core-slots-grid">
+        <div className={`core-slots-grid focus-${panel}`}>
           {/* Manage · service windows */}
           <div className="core-frame">
             <div className="core-frame-h">
@@ -403,7 +447,7 @@ export function CoreSlots() {
           <div className="core-frame">
             <div className="core-exch-head">
               <span className="t">Demand exchange <span className="sub">pace-based levers</span></span>
-              {changeCount > 0 && <button type="button" className="core-applyall" disabled={acting} onClick={() => void applyAll()}>⚡ Apply all ({changeCount})</button>}
+              {changeCount > 0 && <button type="button" className="core-applyall" disabled={acting} onClick={() => void applyAll()}>⚡ Apply all</button>}
             </div>
             <div className="core-frame-b">
               {!board ? (

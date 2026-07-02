@@ -6,7 +6,7 @@ import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
 import { guestTabs } from "./guestTabs";
-import { GuestGlyph, type GuestGlyphName } from "./glyphs";
+import { GuestGlyph } from "./glyphs";
 
 interface MemberRow {
   phone: string;
@@ -45,29 +45,24 @@ interface WinBack {
 }
 
 type Tab = "members" | "wallets" | "redemptions" | "winback";
-const TABS: { key: Tab; label: string; icon: GuestGlyphName }[] = [
-  { key: "members", label: "Members", icon: "members" },
-  { key: "wallets", label: "Wallets", icon: "wallets" },
-  { key: "redemptions", label: "Redemptions", icon: "redemptions" },
-  { key: "winback", label: "Win-back", icon: "winback" },
+const TABS: { key: Tab; label: string }[] = [
+  { key: "members", label: "Members" },
+  { key: "wallets", label: "Wallets" },
+  { key: "redemptions", label: "Redemptions" },
+  { key: "winback", label: "Win-back" },
 ];
-const TIERS = ["all", "platinum", "gold", "silver", "bronze"] as const;
-// Glyph-only tier filter — "All" gets a layer-stack, each tier a gem tinted by
-// its metal (`.t-<tier>`); the label survives as a tooltip + aria-label.
-const TIER_META: Record<(typeof TIERS)[number], { label: string; icon: GuestGlyphName }> = {
-  all: { label: "All tiers", icon: "tierAll" },
-  platinum: { label: "Platinum", icon: "gem" },
-  gold: { label: "Gold", icon: "gem" },
-  silver: { label: "Silver", icon: "gem" },
-  bronze: { label: "Bronze", icon: "gem" },
-};
-type SortKey = "points" | "spent" | "orders" | "name";
-const SORTS: { key: SortKey; label: string; icon: GuestGlyphName }[] = [
-  { key: "points", label: "Sort by points", icon: "points" },
-  { key: "spent", label: "Sort by lifetime spend", icon: "spent" },
-  { key: "orders", label: "Sort by orders", icon: "orders" },
-  { key: "name", label: "Sort by name", icon: "name" },
-];
+type SortKey = "points" | "orders" | "name";
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+const initials = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase() || "··";
+// Wallet avatars vary by metal in the mockup — map tier → gradient class.
+const avTier = (tier: string): string => ({ platinum: "p", gold: "g", silver: "s", bronze: "b" }[tier] ?? "");
+// Family-wallet SVG glyph (mockup uses a line wallet, not the 🎁 emoji).
+const WalletGlyph = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--basil)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M17 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2M21 9v6h-5a3 3 0 0 1 0-6z" />
+  </svg>
+);
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 });
 const CHANNEL_LABEL: Record<string, string> = { "dine-in": "Dine-in", takeout: "Takeaway", delivery: "Delivery", whatsapp: "WhatsApp", web: "Web" };
 const chanLabel = (k: string) => CHANNEL_LABEL[k] ?? (k ? k[0].toUpperCase() + k.slice(1) : "—");
@@ -97,9 +92,10 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [winback, setWinback] = useState<WinBack[] | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tier, setTier] = useState("all");
+  // Member smart-filter chip: "all" | "goldplus" | "risk" | "loc:<slug>"
+  const [mfilter, setMfilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<"points" | "spent" | "orders" | "name">("points");
+  const [sort, setSort] = useState<SortKey>("points");
   const [adjust, setAdjust] = useState<MemberRow | null>(null);
   const [ptAmount, setPtAmount] = useState("");
   const [ptReason, setPtReason] = useState("");
@@ -133,13 +129,23 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
     void load();
   }, [load]);
 
+  // Load the win-back queue for the Win-back tab AND for the "At churn risk"
+  // member filter — the queue's phones are the real at-risk set (no fabrication).
   useEffect(() => {
-    if (tab !== "winback" || winback !== null) return;
+    if (winback !== null) return;
+    if (tab !== "winback" && mfilter !== "risk") return;
     fetch("/api/admin/retention")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setWinback(d?.queue?.candidates ?? []))
       .catch(() => setWinback([]));
-  }, [tab, winback]);
+  }, [tab, winback, mfilter]);
+  const riskPhones = useMemo(() => new Set((winback ?? []).map((w) => w.phone)), [winback]);
+  // Distinct member locations → per-location filter chips (real data).
+  const locations = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of members) for (const l of m.locations ?? []) set.add(l);
+    return [...set].sort();
+  }, [members]);
 
   // Dense-console stat strip + tier mix — every figure from live loyalty data
   // (Rule #1). Outstanding points are a real liability (100 pts = 1 zł).
@@ -169,25 +175,61 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   const primaryWallet = useMemo(() => {
     const w = wallets[0];
     if (!w) return null;
-    const ptsByPhone = new Map(members.map((m) => [m.phone, m.points]));
-    const rows = w.members.map((mm) => ({ phone: mm.phone, name: mm.name ?? mm.phone, status: mm.status ?? "member", points: ptsByPhone.get(mm.phone) ?? 0 }));
+    const byPhone = new Map(members.map((m) => [m.phone, m]));
+    const rows = w.members.map((mm) => {
+      const mem = byPhone.get(mm.phone);
+      return {
+        phone: mm.phone,
+        name: mm.name ?? mem?.name ?? mm.phone,
+        status: mm.status ?? "member",
+        points: mem?.points ?? 0,
+        tier: (mem?.tier ?? "").toLowerCase(),
+      };
+    });
     const pool = w.spendablePool ?? rows.reduce((s, r) => s + r.points, 0);
-    return { id: w.id, rows, pool };
+    // Household name from the owner's surname (derived, not fabricated).
+    const owner = rows.find((r) => r.status === "owner") ?? rows[0];
+    const surname = owner?.name?.trim().split(/\s+/).slice(-1)[0] ?? "";
+    const household = surname && /[a-zA-Zà-żÀ-Ż]/.test(surname) ? `${surname} household` : "";
+    return { id: w.id, rows, pool, household };
   }, [wallets, members]);
 
   const visibleMembers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rows = members.filter((m) => (tier === "all" || m.tier.toLowerCase() === tier) && (!q || m.name.toLowerCase().includes(q) || m.phone.includes(q)));
+    const rows = members.filter((m) => {
+      const t = m.tier.toLowerCase();
+      const passFilter =
+        mfilter === "all" ? true
+        : mfilter === "goldplus" ? t === "gold" || t === "platinum"
+        : mfilter === "risk" ? riskPhones.has(m.phone)
+        : mfilter.startsWith("loc:") ? (m.locations ?? []).includes(mfilter.slice(4))
+        : true;
+      return passFilter && (!q || m.name.toLowerCase().includes(q) || m.phone.includes(q));
+    });
     rows.sort((a, b) => {
       switch (sort) {
-        case "spent": return b.totalSpent - a.totalSpent;
         case "orders": return b.orders - a.orders;
         case "name": return a.name.localeCompare(b.name);
         default: return b.points - a.points;
       }
     });
     return rows;
-  }, [members, tier, query, sort]);
+  }, [members, mfilter, riskPhones, query, sort]);
+  const memberChips = useMemo(
+    () => [
+      { key: "all", label: "All tiers" },
+      { key: "goldplus", label: "Gold+" },
+      { key: "risk", label: "At churn risk" },
+      ...locations.map((l) => ({ key: `loc:${l}`, label: cap(l) })),
+    ],
+    [locations],
+  );
+  const tabCount: Record<Tab, number | null> = {
+    members: members.length,
+    wallets: wallets.length,
+    redemptions: redemptions.length,
+    winback: winback?.length ?? null,
+  };
 
   const applyPoints = async () => {
     const amt = parseInt(ptAmount, 10);
@@ -252,6 +294,26 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
           <h1>Guest · Loyalty</h1>
           <span className="sub">members · wallets · redemptions · win-back</span>
         </div>
+
+        {/* labeled sub-tab segmented control with live count pills */}
+        <div className="core-loy-seg" role="tablist" aria-label="Loyalty views">
+          {TABS.map((t) => {
+            const c = tabCount[t.key];
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={tab === t.key}
+                className={tab === t.key ? "on brand" : ""}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+                {c != null && <span className="ct">{c.toLocaleString("pl-PL")}</span>}
+              </button>
+            );
+          })}
+        </div>
+
         {/* dense-console 6-up stat strip — every figure from live loyalty data (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Loyalty metrics">
           <div className="cell">
@@ -271,90 +333,67 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
           </div>
           <div className="cell">
             <span className="lab">Gold+</span>
-            <span className="val amber">{stat.goldPlus}</span>
+            <span className="val gold">{stat.goldPlus}</span>
             <span className="delta">{stat.goldPct}% of members</span>
+          </div>
+          {/* Breakage % = expired/never-redeemed share of issued points. No issuance
+              ledger is exposed yet, so it's honestly flagged (DATA NEEDED). */}
+          <div className="cell">
+            <span className="lab">Breakage</span>
+            <span className="val muted">—</span>
+            <span className="delta">no issuance data</span>
           </div>
           <div className="cell">
             <span className="lab">Avg points</span>
             <span className="val">{stat.avg.toLocaleString("pl-PL")}</span>
             <span className="delta">per member</span>
           </div>
-          <div className="cell">
-            <span className="lab">Wallets</span>
-            <span className="val brand">{stat.wallets}</span>
-            <span className="delta">shared balances</span>
-          </div>
-        </div>
-
-        <div className="core-gfilters">
-          {/* view switcher */}
-          <div className="core-seg icons" role="group" aria-label="View">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                className={tab === t.key ? "on" : ""}
-                onClick={() => setTab(t.key)}
-                title={t.label}
-                aria-label={t.label}
-                aria-pressed={tab === t.key}
-              >
-                <GuestGlyph name={t.icon} />
-              </button>
-            ))}
-          </div>
-          {tab === "members" && (
-            <>
-              {/* search — grows to fill the bar */}
-              <div className="core-search">
-                <GuestGlyph name="search" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or phone…" aria-label="Search members" />
-              </div>
-              {/* tier filter — glyph-only, gem tinted per metal */}
-              <div className="core-seg icons core-tierseg" role="group" aria-label="Tier">
-                {TIERS.map((t) => (
-                  <button
-                    key={t}
-                    className={`t-${t}${tier === t ? " on" : ""}`}
-                    onClick={() => setTier(t)}
-                    title={TIER_META[t].label}
-                    aria-label={TIER_META[t].label}
-                    aria-pressed={tier === t}
-                  >
-                    <GuestGlyph name={TIER_META[t].icon} />
-                  </button>
-                ))}
-              </div>
-              {/* sort */}
-              <div className="core-seg icons" role="group" aria-label="Sort by">
-                {SORTS.map((s) => (
-                  <button
-                    key={s.key}
-                    className={sort === s.key ? "on" : ""}
-                    onClick={() => setSort(s.key)}
-                    title={s.label}
-                    aria-label={s.label}
-                    aria-pressed={sort === s.key}
-                  >
-                    <GuestGlyph name={s.icon} />
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
         {tab === "members" && (
           <div className="core-loy-grid">
             <div className="core-crm-table-wrap">
+              {/* table title bar — title + text tier-filter chips + compact search */}
+              <div className="core-tbar">
+                <span className="t">Members</span>
+                <div className="r">
+                  {memberChips.map((c) => (
+                    <button
+                      key={c.key}
+                      className={`core-chipf${mfilter === c.key ? " on" : ""}`}
+                      onClick={() => setMfilter(c.key)}
+                      aria-pressed={mfilter === c.key}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                  <div className="core-search core-tbar-search">
+                    <GuestGlyph name="search" />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" aria-label="Search members" />
+                  </div>
+                </div>
+              </div>
               <table className="core-tbl">
                 <thead>
-                  <tr><th>Member</th><th>Tier</th><th className="num">Points</th><th className="num">Visits</th><th>Next reward</th><th></th></tr>
+                  <tr>
+                    <th className={`core-th-sort${sort === "name" ? " on" : ""}`} onClick={() => setSort("name")}>Member</th>
+                    <th>Tier</th>
+                    <th className={`num core-th-sort${sort === "points" ? " on" : ""}`} onClick={() => setSort("points")}>Points</th>
+                    <th className={`num core-th-sort${sort === "orders" ? " on" : ""}`} onClick={() => setSort("orders")}>Visits</th>
+                    <th style={{ width: 170 }}>Next reward</th>
+                    <th></th>
+                  </tr>
                 </thead>
                 <tbody>
                   {visibleMembers.map((m) => (
                     <tr key={m.phone} onClick={() => setAdjust(m)}>
-                      <td><div className="core-cust-nm">{m.name}</div><div className="core-cust-sub">{m.phone}</div></td>
-                      <td><span className={`core-tierbadge ${m.tier.toLowerCase()}`}>{m.tier}</span></td>
+                      <td>
+                        <div className="core-mname">
+                          <span className="core-g-av">{initials(m.name)}</span>
+                          <div><div className="core-cust-nm">{m.name}</div><div className="core-cust-sub">{m.phone}</div></div>
+                        </div>
+                      </td>
+                      <td><span className={`core-gem ${m.tier.toLowerCase()}`}><i className="g" />{m.tier.toUpperCase()}</span></td>
                       <td className="num mono">{m.points.toLocaleString("pl-PL")}</td>
                       <td className="num mono">{m.orders}</td>
                       <td>
@@ -393,17 +432,22 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
               {primaryWallet && (
                 <div className="core-frame">
                   <div className="core-frame-h">
-                    <span className="t">🎁 Family wallet</span>
+                    <span className="t"><WalletGlyph />Family wallet</span>
                     <span className="fbadge">shared · {primaryWallet.rows.length}</span>
                   </div>
                   <div className="core-frame-b">
                     <div className="core-loy-pool">{primaryWallet.pool.toLocaleString("pl-PL")}<small> pts</small></div>
-                    <div className="core-loy-poolsub">combined balance</div>
+                    <div className="core-loy-poolsub">{primaryWallet.household ? `${primaryWallet.household} · combined balance` : "combined balance"}</div>
+                    <div className="core-avstack">
+                      {primaryWallet.rows.slice(0, 4).map((r) => (
+                        <span className={`core-g-av ${avTier(r.tier)}`} key={r.phone}>{initials(r.name)}</span>
+                      ))}
+                    </div>
                     <div className="core-loy-wmembers">
                       {primaryWallet.rows.map((r) => (
                         <div className="row" key={r.phone}>
-                          <span className={`core-g-av ${r.status === "owner" ? "g" : "s"}`}>{r.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
-                          <div className="who"><div className="nm">{r.name}</div><div className="mt">{r.status}</div></div>
+                          <span className={`core-g-av ${avTier(r.tier)}`}>{initials(r.name)}</span>
+                          <div className="who"><div className="nm">{r.name}</div><div className="mt">{r.status}{r.tier ? ` · ${cap(r.tier)}` : ""}</div></div>
                           <span className="pts mono">{r.points.toLocaleString("pl-PL")} pts</span>
                         </div>
                       ))}
@@ -415,8 +459,8 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
                 <div className="core-frame-h"><span className="t">Tier mix</span></div>
                 <div className="core-frame-b">
                   {tierMix.map((t) => (
-                    <div className="core-tiermix" key={t.tier}>
-                      <span className={`core-tierbadge ${t.tier}`} style={{ minWidth: 78, textAlign: "center" }}>{t.tier}</span>
+                    <div className={`core-tiermix ${t.tier}`} key={t.tier}>
+                      <span className="ml"><i className="g" />{t.tier.toUpperCase()}</span>
                       <div className="track"><i className={t.tier} style={{ width: `${t.pct}%` }} /></div>
                       <span className="mono n">{t.count}</span>
                     </div>
