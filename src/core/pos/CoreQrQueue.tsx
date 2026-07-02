@@ -118,7 +118,7 @@ export function CoreQrQueue({ location }: { location: string }) {
     <>
       <button
         type="button"
-        className={unpaid > 0 ? "core-iconbtn on" : "core-iconbtn"}
+        className={unpaid > 0 ? "core-qrpill on" : "core-qrpill"}
         onClick={() => setOpen(true)}
         title={
           orders.length > 0
@@ -128,7 +128,8 @@ export function CoreQrQueue({ location }: { location: string }) {
         aria-label="QR table orders"
       >
         <QrIcon />
-        {orders.length > 0 && <span>{unpaid > 0 ? unpaid : orders.length}</span>}
+        <span className="core-qrpill-l">QR orders</span>
+        {orders.length > 0 && <span className="core-qrpill-n">{unpaid > 0 ? unpaid : orders.length}</span>}
       </button>
 
       {open && (

@@ -103,8 +103,9 @@ surface toolbar.
 - **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
   a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. Lives
   in the `.core-surf-toolbar`, not the command bar.
-- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
-  `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
+- **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`): a
+  leading **`.cm-k-ico`** magnifier glyph + `.cm-k-label` (the "search" word,
+  collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
   (an optional leading **`.cm-tel-glyph`** + `.lbl` dim key + `.val` bright
   value): `▲ risk N` from `PressureBadge` (`.ok`/`.warn`/`.risk` colour the
@@ -231,7 +232,9 @@ wordmark, no second subbar row, no bottom switcher:
   `.cm-tabs` scrolls; everything else is `flex:none`.
 - **`.core-surf-toolbar`** — the surface sub-toolbar at the top of the Canvas
   body that carries the surface's own controls (`subRight` right-aligned, plus
-  any filters/segments/date the surface builds). Keeps the command bar standard.
+  any filters/segments/date the surface builds). An optional **`subLeft`** slot
+  renders a left-aligned **`.core-surf-tb-lbl`** context label (POS's
+  "TILL 1 · DINNER SERVICE", mockup toolbar). Keeps the command bar standard.
 - **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
   lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass"),
   then a `.core-lens-div` divider and the two ops adjacencies the dense-console

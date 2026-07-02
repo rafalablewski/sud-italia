@@ -20,8 +20,9 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 ## Layout
 
 The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
-+ an uppercase-mono `<location> · dine-in service` sub, with a right-aligned
-`Till · <channel>` context tag) over the **`.core-statstrip`** — the
++ an uppercase-mono `<location> · dine-in service` sub, left-aligned — the
+`TILL 1 · DINNER SERVICE` context now rides the sub-toolbar's `subLeft` label,
+like the mockup) over the **`.core-statstrip`** — the
 dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
 over a three-column grid inside the shell body: **rail · menu · ticket**.
 
@@ -339,11 +340,13 @@ and the fullscreen kiosk are all wired — feature-for-feature with today's
 
 Live code: `src/core/pos/CoreQrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
 
-A **QR pill** in the POS sub-header (`subRight`, beside the channel chip +
-Park) surfaces the dine-in orders guests placed by scanning a table QR
-(`channel: "qr"`, from `/qr`). It polls `GET /api/admin/pos/qr-orders?location=`
-every 8s; the pill goes `on` and shows an "N to pay" count when any are
-unpaid. Opening it lists each order in a `CoreDialog` — table number,
+A **QR pill** (`.core-qrpill`) in the POS sub-toolbar (`subRight`) surfaces the
+dine-in orders guests placed by scanning a table QR (`channel: "qr"`, from
+`/qr`). Like the mockup's `.pill.qr` it's a labelled info-tinted pill — a grid
+glyph + "QR orders" + a live `.core-qrpill-n` count badge — not a bare icon. It
+polls `GET /api/admin/pos/qr-orders?location=` every 8s; the pill goes `on`
+(brighter info ring + glow) and the count shows the "N to pay" tally when any
+are unpaid. Opening it lists each order in a `CoreDialog` — table number,
 guest, party size, line items, elapsed time, total and a paid/unpaid·status
 chip. **Take payment** expands an inline `QrTenderPanel` (`.core-qr-tender`) —
 method (Card/Cash), tip presets, and a cash change-due — and **Settle** posts

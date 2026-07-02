@@ -1386,12 +1386,12 @@ export function CorePos({
           CORE — POS · ORDER · <b>liquid glass</b> · <span className="fix">dense console</span>
         </div>
       )}
-      {/* surface section header — dense-console page title + context sub */}
+      {/* surface section header — dense-console page title + context sub. The
+          till/service context moved to the body sub-toolbar's left label
+          (mockup: "TILL 1 · DINNER SERVICE"), so the head stays left-aligned. */}
       <div className="core-sectionhead">
         <h1>POS · Order</h1>
         <span className="sub">{pageLoc} · dine-in service</span>
-        <div className="core-sp" />
-        <span className="sub">Till · {CHANNELS.find((c) => c.key === active?.channel)?.label ?? "dinner service"}</span>
       </div>
 
       {/* live stat strip — the dense-console KPI row, every figure from real
@@ -2038,6 +2038,7 @@ export function CorePos({
           onClick: () => (active && active.items.length > 0 ? setTenderOpen(true) : toast("Add items first")),
         },
       ]}
+      subLeft="Till 1 · dinner service"
       subRight={
         <>
           <CoreQrQueue location={pageLoc} />

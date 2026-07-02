@@ -102,6 +102,8 @@
 .core .cm-k { display: flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 11px; font-family: var(--mono);
   border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; flex: none; background: transparent; }
 .core .cm-k:hover { color: var(--ink); background: var(--hover); }
+.core .cm-k-ico { width: 13px; height: 13px; flex: none; opacity: .8; }
+.core .cm-k:hover .cm-k-ico { opacity: 1; }
 .core .cm-k kbd { font-family: var(--mono); font-size: 10px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px; background: var(--panel-3); }
 
 /* telemetry cluster — risk · loc · clock, mono, colour-coded */
@@ -265,6 +267,17 @@
 .core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 14px; min-height: 40px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; font-family: var(--mono); font-size: 11.5px; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+/* QR-orders pill — a labelled info-tinted pill (mockup `.pill.qr`), not a bare
+   icon button: glyph + "QR orders" + a live count, info ring, brighter when
+   there are orders waiting to pay. */
+.core .core-qrpill { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: var(--pill);
+  font-family: var(--mono); font-size: 11.5px; color: var(--info); background: var(--panel-2); border: 1px solid var(--line);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info) 32%, transparent); white-space: nowrap; }
+.core .core-qrpill:hover { background: var(--panel-3); }
+.core .core-qrpill svg { width: 15px; height: 15px; flex: none; }
+.core .core-qrpill-n { font-weight: 700; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 99px; display: inline-grid; place-items: center;
+  background: var(--info); color: var(--on-info, #06222c); font-size: 10px; }
+.core .core-qrpill.on { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info) 55%, transparent), 0 0 14px -5px var(--info); }
 
 /* ---- surface section header (title + sub) — the dense-console page head ----
    A big grotesk surface title beside an uppercase mono sub, matching the
