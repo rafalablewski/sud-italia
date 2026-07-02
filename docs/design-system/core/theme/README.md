@@ -106,9 +106,11 @@ surface toolbar.
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
   `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
-  (`.lbl` dim key + `.val` bright value): `risk N` from `PressureBadge`
-  (`.ok`/`.warn`/`.risk` colour the count basil/amber/red), **`.cm-tel-loc`**
-  the click-to-cycle `loc <slug>` from `CoreLocationChip`, and
+  (an optional leading **`.cm-tel-glyph`** + `.lbl` dim key + `.val` bright
+  value): `▲ risk N` from `PressureBadge` (`.ok`/`.warn`/`.risk` colour the
+  glyph + count basil/amber/red — matching the mockup's `▲ risk`),
+  **`.cm-tel-loc`** the click-to-cycle `◈ loc <slug>` from `CoreLocationChip`
+  (ember diamond glyph), and
   **`.cm-tel-clock`** the basil mono HH:MM clock.
 - **`.cm-right`** — the global tools (notifications bell · theme toggle) as
   flush 32px terminal icon buttons (hover → `--basil`).

@@ -75,6 +75,7 @@ export function CoreLocationChip() {
         setLocation(order[(i + 1) % order.length]);
       }}
     >
+      <span className="cm-tel-glyph" aria-hidden>◈</span>
       <span className="lbl">loc</span>
       <span className="val">{label}</span>
     </button>

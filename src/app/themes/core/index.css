@@ -109,6 +109,11 @@
 .core .cm-tel-item { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: transparent; border: 0; }
 .core .cm-tel-item .lbl { color: var(--ink-3); }
 .core .cm-tel-item .val { color: var(--ink); }
+/* leading telemetry glyph (mockup: ▲ risk · ◈ loc) — tinted with the item */
+.core .cm-tel-item .cm-tel-glyph { font-size: 10px; color: var(--ink-3); line-height: 1; }
+.core .cm-tel-item.warn .cm-tel-glyph { color: var(--amber); }
+.core .cm-tel-item.risk .cm-tel-glyph { color: var(--danger); }
+.core .cm-tel-loc .cm-tel-glyph { color: var(--brand-bright); }
 .core .cm-tel-item.ok .val { color: var(--basil); }
 .core .cm-tel-item.warn .val { color: var(--amber); }
 .core .cm-tel-item.risk .val { color: var(--danger); }

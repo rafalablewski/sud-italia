@@ -41,6 +41,7 @@ export function PressureBadge() {
   const detail = `Kitchen pressure — ${p.atRisk} at-risk · line ${p.onLine}${mins > 0 ? ` · ${mins}m wall` : ""}`;
   return (
     <span className={`cm-tel-item ${tone}`} title={detail}>
+      <span className="cm-tel-glyph" aria-hidden>▲</span>
       <span className="lbl">risk</span>
       <span className="val">{p.atRisk}</span>
     </span>
