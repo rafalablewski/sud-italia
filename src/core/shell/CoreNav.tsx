@@ -27,39 +27,47 @@ import { CORE_SURFACES } from "@/core/routes";
  * `.core-rail`) — see docs/design-system/core/theme/README.md → "Chrome".
  */
 
+// Icons trace the dense-console mockup's lens rail 1:1 (tests/sketches/
+// core-pages/*.html → `.lens`): Floor = 2×2 grid, POS = register with legs,
+// KDS = split pass panel, Book = calendar, Reports = line chart, Settings = gear.
 const ICON: Record<string, ReactNode> = {
   service: (
     <>
-      <path d="M3 11a9 9 0 0 1 18 0Z" />
-      <path d="M12 2v3M2 16h20M5 20h14" />
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
     </>
   ),
   pos: (
     <>
-      <rect x="3" y="4" width="18" height="14" rx="2" />
-      <path d="M3 9h18" />
+      <rect x="2" y="4" width="20" height="14" rx="2" />
+      <path d="M2 10h20M7 18v3M17 18v3" />
     </>
   ),
-  kds: (
+  kds: <path d="M4 4h16v5H4zM4 13h16v7H4zM8 4v5M16 13v7" />,
+  book: <path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />,
+  reports: <path d="M3 3v18h18M7 14l3-4 3 3 5-6" />,
+  settings: (
     <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M7 9h10M7 13h6" />
-    </>
-  ),
-  book: (
-    <>
-      <rect x="3" y="4.5" width="18" height="16" rx="2" />
-      <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3.9a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1z" />
     </>
   ),
 };
 
 // The four room lenses, in the spec's rail order. Labels are the plain names.
-const LENSES: { key: keyof typeof ICON; href: string; label: string }[] = [
-  { key: "service", href: CORE_SURFACES.service, label: "Floor" },
-  { key: "pos", href: CORE_SURFACES.pos, label: "POS" },
-  { key: "kds", href: CORE_SURFACES.kds, label: "KDS" },
-  { key: "book", href: CORE_SURFACES.book, label: "Book" },
+const LENSES: { key: keyof typeof ICON; href: string; label: string; sub: string }[] = [
+  { key: "service", href: CORE_SURFACES.service, label: "Floor", sub: "tables · covers" },
+  { key: "pos", href: CORE_SURFACES.pos, label: "POS", sub: "order & charge" },
+  { key: "kds", href: CORE_SURFACES.kds, label: "KDS", sub: "kitchen wall" },
+  { key: "book", href: CORE_SURFACES.book, label: "Book", sub: "reservations" },
+];
+// Below the divider — the two ops adjacencies the mockup rail pins (they live
+// in the admin shell, so these leave the Core canvas by design).
+const ADJACENCIES: { key: keyof typeof ICON; href: string; label: string; sub: string }[] = [
+  { key: "reports", href: "/admin/reports", label: "Reports", sub: "day close" },
+  { key: "settings", href: "/admin/settings", label: "Settings", sub: "device · tax" },
 ];
 
 const PIN_KEY = "core-lens-pinned";
@@ -100,7 +108,7 @@ export function CoreNav() {
         onClick={toggle}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path d="M9 4v16M4 8h4M14 4l5 8-5 8" />
+          <path d="M9 4v16M4 8h5M15 4l5 8-5 8" />
         </svg>
         <span>Lenses</span>
       </button>
@@ -115,13 +123,26 @@ export function CoreNav() {
             aria-label={s.label}
             title={s.label}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              {ICON[s.key]}
-            </svg>
-            <span>{s.label}</span>
+            <span className="core-lens-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                {ICON[s.key]}
+              </svg>
+            </span>
+            <span className="core-lens-txt">{s.label}<span className="core-lens-sub">{s.sub}</span></span>
           </Link>
         );
       })}
+      <div className="core-lens-div" />
+      {ADJACENCIES.map((s) => (
+        <Link key={s.key} href={s.href} aria-label={s.label} title={s.label}>
+          <span className="core-lens-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              {ICON[s.key]}
+            </svg>
+          </span>
+          <span className="core-lens-txt">{s.label}<span className="core-lens-sub">{s.sub}</span></span>
+        </Link>
+      ))}
     </nav>
   );
 }

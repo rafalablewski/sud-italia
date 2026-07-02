@@ -227,13 +227,20 @@ wordmark, no second subbar row, no bottom switcher:
   body that carries the surface's own controls (`subRight` right-aligned, plus
   any filters/segments/date the surface builds). Keeps the command bar standard.
 - **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
-  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
-  Collapsed by default; it expands to labels only when **pinned** — a click on
-  the `.core-lens-pin` toggle adds `.open` — never on hover, so a stray cursor
-  never shoves the Canvas. The pinned choice persists (localStorage,
-  `core-lens-pinned`). It sits inside `.core-main`, beside the Canvas, spanning
-  the full body height under the command bar. Distinct from the POS category
-  `.core-rail`. Orders + Guest are cross-cutting surfaces reached from ⌘K.
+  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass"),
+  then a `.core-lens-div` divider and the two ops adjacencies the dense-console
+  mockup pins below it (**Reports · Settings**, linking into the admin shell).
+  Icons trace the mockup 1:1: Floor = 2×2 grid, POS = register with legs, KDS =
+  split pass panel, Book = calendar, Reports = line chart, Settings = gear. Each
+  row is `.core-lens-ico` + a `.core-lens-txt` (mono label + `.core-lens-sub`
+  caption); the **active** lens gets the ember `--brand-wash` fill, an inset
+  ring, and an ember `::before` left accent bar. Collapsed by default; it
+  expands to labels only when **pinned** — a click on the `.core-lens-pin`
+  toggle adds `.open` — never on hover, so a stray cursor never shoves the
+  Canvas. The pinned choice persists (localStorage, `core-lens-pinned`). It
+  sits inside `.core-main`, beside the Canvas, spanning the full body height
+  under the command bar. Distinct from the POS category `.core-rail`. Orders +
+  Guest are cross-cutting surfaces reached from ⌘K.
 
 ## Responsive — tablet & phone
 

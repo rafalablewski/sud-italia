@@ -206,14 +206,19 @@
   opacity: 0; transition: opacity var(--fast); }
 .core .core-lens.open .core-lens-pin { color: var(--brand-bright); }
 .core .core-lens.open .core-lens-pin span { opacity: 1; }
-.core .core-lens a { display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 9px; flex: none;
-  border-radius: var(--r-sm); color: var(--ink-2); transition: background var(--fast), color var(--fast); }
-.core .core-lens a svg { width: 20px; height: 20px; flex: none; opacity: .78; }
-.core .core-lens a span { white-space: nowrap; font-weight: 600; font-size: 13px; opacity: 0; transition: opacity var(--fast); }
-.core .core-lens.open a span { opacity: 1; }
-.core .core-lens a:hover { background: var(--panel-3); color: var(--ink); }
-.core .core-lens a.on { background: var(--panel-2); color: var(--ink); box-shadow: var(--sh-1); }
-.core .core-lens a.on svg { opacity: 1; color: var(--brand); }
+.core .core-lens a { position: relative; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 9px; flex: none;
+  border-radius: var(--r-sm); color: var(--ink-3); text-decoration: none; transition: background var(--fast), color var(--fast); }
+.core .core-lens a .core-lens-ico { flex: 0 0 22px; display: grid; place-items: center; }
+.core .core-lens a svg { width: 18px; height: 18px; flex: none; }
+.core .core-lens a .core-lens-txt { display: flex; flex-direction: column; justify-content: center; white-space: nowrap;
+  font-family: var(--mono); font-weight: 500; font-size: 12px; opacity: 0; transition: opacity var(--fast); }
+.core .core-lens a .core-lens-sub { font-family: var(--mono); font-size: 9px; color: var(--ink-3); font-weight: 400; }
+.core .core-lens.open a .core-lens-txt { opacity: 1; }
+.core .core-lens a:hover { background: var(--panel-2); color: var(--ink-2); }
+.core .core-lens a.on { color: var(--ink); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4), 0 0 18px -6px var(--brand); }
+.core .core-lens a.on::before { content: ""; position: absolute; left: -7px; top: 9px; bottom: 9px; width: 3px; border-radius: 99px; background: var(--brand-bright); box-shadow: 0 0 10px var(--brand); }
+/* divider between the room lenses and the ops adjacencies (Reports · Settings) */
+.core .core-lens-div { flex: none; height: 1px; background: var(--line); margin: 6px 8px; }
 .core .core-tabs { display: flex; gap: 2px; }
 .core .core-tabs a, .core .core-tabs button { height: 30px; padding: 0 13px; border-radius: 8px; font-weight: 550; font-size: 13px; color: var(--ink-2); transition: all var(--fast); display: inline-flex; align-items: center; }
 .core .core-tabs a:hover, .core .core-tabs button:hover { background: var(--hover); color: var(--ink); }
