@@ -1214,6 +1214,15 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-disp-dstat.returning { color: var(--basil); background: var(--basil-wash); }
 .core .core-disp-dstat.idle { color: var(--ink-3); background: var(--panel-2); }
 @media (max-width: 1040px) { .core .core-disp-grid { grid-template-columns: 1fr; } .core .core-disp-drivers { position: static; } }
+/* members-table "next reward" progress (mockup: Free pizza 1180/1200) */
+.core .core-nextreward { min-width: 150px; }
+.core .core-nextreward .nr-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.core .core-nextreward .nr-h .nm { font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-nextreward .nr-h .pr { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); white-space: nowrap; }
+.core .core-nextreward .track { height: 6px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.core .core-nextreward .track i { display: block; height: 100%; border-radius: 99px; }
+.core .core-nextreward .track i.hi { background: linear-gradient(90deg, var(--basil), #a7e08c); }
+.core .core-nextreward .track i.mid, .core .core-nextreward .track i.lo { background: linear-gradient(90deg, var(--brand), var(--brand-bright)); }
 .core .core-tierbadge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: var(--pill); text-transform: capitalize; background: var(--panel-3); color: var(--ink-2); }
 .core .core-tierbadge.platinum { background: var(--tier-platinum-wash); color: var(--tier-platinum); }
 .core .core-tierbadge.gold { background: var(--amber-wash); color: var(--amber); }

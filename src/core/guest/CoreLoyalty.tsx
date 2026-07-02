@@ -80,8 +80,17 @@ const fmtDays = (d: number) => (d < 1 ? "today" : `${Math.round(d)}d ago`);
  * wallet-redemptions/retention, points via members/points, wallet dissolve via
  * DELETE wallets, win-back approve via POST retention. Own core- UI.
  */
-export function CoreLoyalty() {
+interface Reward { id: string; name: string; pointsCost: number; }
+export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   const toast = useCoreToast();
+  // Next reward for a member = the cheapest active reward they can't yet afford
+  // (or the top one, fully earned) — drives the live NEXT REWARD progress bar.
+  const nextReward = (points: number): { name: string; have: number; need: number } | null => {
+    if (rewards.length === 0) return null;
+    const next = rewards.find((r) => r.pointsCost > points);
+    const r = next ?? rewards[rewards.length - 1];
+    return { name: r.name, have: Math.min(points, r.pointsCost), need: r.pointsCost };
+  };
   const [tab, setTab] = useState<Tab>("members");
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [wallets, setWallets] = useState<WalletSummary[]>([]);
@@ -339,7 +348,7 @@ export function CoreLoyalty() {
             <div className="core-crm-table-wrap">
               <table className="core-tbl">
                 <thead>
-                  <tr><th>Member</th><th>Tier</th><th className="num">Points</th><th className="num">Orders</th><th className="num">Lifetime</th><th>Last</th><th></th></tr>
+                  <tr><th>Member</th><th>Tier</th><th className="num">Points</th><th className="num">Visits</th><th>Next reward</th><th></th></tr>
                 </thead>
                 <tbody>
                   {visibleMembers.map((m) => (
@@ -348,8 +357,20 @@ export function CoreLoyalty() {
                       <td><span className={`core-tierbadge ${m.tier.toLowerCase()}`}>{m.tier}</span></td>
                       <td className="num mono">{m.points.toLocaleString("pl-PL")}</td>
                       <td className="num mono">{m.orders}</td>
-                      <td className="num mono">{zl(m.totalSpent)} zł</td>
-                      <td className="core-cust-sub">{m.lastOrder}</td>
+                      <td>
+                        {(() => {
+                          const nr = nextReward(m.points);
+                          if (!nr) return <span className="core-cust-sub">—</span>;
+                          const pct = Math.round((nr.have / nr.need) * 100);
+                          const tone = pct >= 100 ? "hi" : pct >= 60 ? "mid" : "lo";
+                          return (
+                            <div className="core-nextreward">
+                              <div className="nr-h"><span className="nm">{nr.name}</span><span className="pr mono">{nr.have}/{nr.need}</span></div>
+                              <div className="track"><i className={tone} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td>
                         <button
                           type="button"
