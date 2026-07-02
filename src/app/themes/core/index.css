@@ -416,6 +416,7 @@
 .core .core-thead .th-t { font-family: var(--display); font-weight: 700; font-size: 17px; }
 .core .core-thead .th-name-row { display: flex; align-items: baseline; gap: 2px; min-width: 0; }
 .core .core-th-tbl { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink-3); white-space: nowrap; }
+.core .core-th-ord { font-family: var(--mono); font-size: 10px; color: var(--ink-3); align-self: center; margin-left: 2px; white-space: nowrap; }
 .core .core-th-name { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; max-width: 100%; }
 .core .core-th-name:hover { border-color: var(--line); }
 .core .core-th-name:focus { outline: none; border-color: var(--brand); background: var(--panel-2); }
@@ -482,14 +483,21 @@
 .core .core-line .core-lqz { display: flex; align-items: center; flex: none; }
 .core .core-line .core-lqty { display: none; min-width: 26px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-3); }
 @media (hover: hover) {
-  /* at rest the qty reads "N×" (mockup); hovering the line swaps in the live
-     stepper in-flow (name shifts a touch, never overlaps) and blooms the grip. */
+  /* at rest the qty reads "N×" (mockup); hovering OR keyboard-focusing the line
+     swaps in the live stepper in-flow (never overlaps) and blooms the grip.
+     :focus-within keeps the −/＋ buttons + grip reachable for keyboard-only
+     operators (a display:none stepper would drop out of the tab order). Both the
+     grip and the stepper key off .core-line-main (the row) — not .core-line — so
+     hovering the modifiers/recourse sub-rows doesn't reveal them. */
   .core .core-line .core-lqty { display: inline; }
   .core .core-line .core-lqz .core-qstep { display: none; }
-  .core .core-line-main:hover .core-lqz .core-lqty { display: none; }
-  .core .core-line-main:hover .core-lqz .core-qstep { display: inline-flex; background: var(--panel-3); border-color: var(--line); }
+  .core .core-line-main:hover .core-lqz .core-lqty,
+  .core .core-line-main:focus-within .core-lqz .core-lqty { display: none; }
+  .core .core-line-main:hover .core-lqz .core-qstep,
+  .core .core-line-main:focus-within .core-lqz .core-qstep { display: inline-flex; background: var(--panel-3); border-color: var(--line); }
   .core .core-line .core-grip { opacity: 0; }
-  .core .core-line:hover .core-grip { opacity: 1; }
+  .core .core-line-main:hover .core-grip,
+  .core .core-line-main:focus-within .core-grip { opacity: 1; }
 }
 .core .core-qstep.big button { width: 34px; height: 34px; font-size: 18px; }
 .core .core-qstep.big .q { min-width: 34px; font-size: 15px; }

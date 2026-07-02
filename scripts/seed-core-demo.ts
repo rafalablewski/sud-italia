@@ -53,7 +53,11 @@ import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus,
 // The live floor moves in real time — slots, bookings and open checks must land
 // on the ACTUAL current day or Service · Slots / Book / POS read empty. (This was
 // pinned to a fixed date, which silently drifted a month into the past.)
-const TODAY = new Date().toISOString().slice(0, 10);
+// Use LOCAL calendar parts, not toISOString() (UTC): near local midnight the UTC
+// date can be the previous/next day, which would date the rows to the wrong day
+// vs the app's local-time "today" and read empty — the very failure this fixes.
+const _today = new Date();
+const TODAY = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, "0")}-${String(_today.getDate()).padStart(2, "0")}`;
 const useDB = !!process.env.DATABASE_URL;
 const now = Date.now();
 const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
@@ -229,8 +233,15 @@ async function seedOpenTabs(slug: string, menu: MenuItem[], tableIds: string[]):
       customerName: s.guest?.name,
       coursed: s.channel === "dine-in",
     });
-    if (s.fireStarter && saved.coursed) {
-      await fireTab({ tabId: saved.id, locationSlug: slug, courses: ["starter"] });
+    // Fire the starter only if it actually has lines (a menu without an
+    // antipasti item would fire an empty course → fireTab throws), and never let
+    // a fire failure abort the rest of the seed (other location, bookings, etc.).
+    if (s.fireStarter && saved.coursed && items.some((l) => l.course === "starter")) {
+      try {
+        await fireTab({ tabId: saved.id, locationSlug: slug, courses: ["starter"] });
+      } catch (e) {
+        console.log(`  fireTab(${s.name}) skipped: ${(e as Error).message}`);
+      }
     }
     n++;
   }

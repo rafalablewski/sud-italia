@@ -1617,6 +1617,13 @@ export function CorePos({
                     {active.channel === "dine-in" && active.tableId && (
                       <span className="core-th-tbl">· T{tableById(active.tableId)?.number ?? "?"}</span>
                     )}
+                    {/* order ref, once the check is sent — kept for KDS/receipt/refund
+                        reconciliation; muted so the title still reads clean. */}
+                    {active.orderId && (
+                      <span className="core-th-ord" title="Order reference">
+                        #{active.orderId.replace(/[^a-zA-Z0-9]/g, "").slice(-5)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}

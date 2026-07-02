@@ -163,8 +163,8 @@ _(append dated entries as choices are made)_
   **channel** selector and **kitchen-timing** toggle became one labelled full-width ember segmented control each
   (`.core-oseg`/`.core-miniseg`), a density pass tightened the header/covers/segments/courses/lines, ticket lines gained
   the menu **descriptor** sub, the header title now reads **`Tab N · T{table}`** (content-sized name + `.core-th-tbl`
-  suffix) with an **info-cyan** table pill (`.core-chan-aux`), and the redundant channel/order-ref subs were dropped
-  (removing the orphan `.th-s`). For the coursing states, the demo seed now **fires the starter** of one dine-in check
+  suffix) with an **info-cyan** table pill (`.core-chan-aux`); the redundant channel sub was dropped (removing the
+  orphan `.th-s`) while the sent-check order ref moved inline into the title (`.core-th-ord`). For the coursing states, the demo seed now **fires the starter** of one dine-in check
   via the real `fireTab` (not a faked flag) — so the panel shows served ✓ (basil) · next ⚡Fire (ember) · held ◷Hold
   (amber) like the mockup, and the fired course also seeds a real KDS ticket; cleanup deletes the spawned order via the
   tab link so re-seeds stay idempotent. Verified with repeated headless side-by-side crops. Docs synced (`modules/pos.md`).

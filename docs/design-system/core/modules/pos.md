@@ -109,7 +109,9 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   content-sized `.core-th-name` (the check name is an **inline editable input** —
   click to rename, persisted via the same debounced `PUT`, `size` tracks the value)
   followed by a static `.core-th-tbl` table suffix (dine-in, when a table is
-  assigned). Then a `.core-tabpromise` per-check ETA (max `promiseSecondsByCategory`
+  assigned) and — once the check is sent — a muted `.core-th-ord` order reference
+  (`#XXXXX`, kept for KDS / receipt / refund reconciliation). Then a
+  `.core-tabpromise` per-check ETA (max `promiseSecondsByCategory`
   across the lines, toned by the bottleneck tier) · the **info-cyan** `.core-chan-aux`
   button — **＋ Assign table / ⇄ Table N** (dine-in, opens the in-pane table picker)
   or **Add / Edit address** (delivery, opens the address dialog). Channel moved to
