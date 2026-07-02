@@ -84,7 +84,9 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   surge windows · peak fill · demand price** (all live from the slot set —
   Rule #1; a "surge window" is one filled ≥85%, peak drives the price
   multiplier). When any window is ≥85% a **`.core-surge-banner`** offers a
-  one-tap *Apply surge levers*.
+  one-tap *Apply surge levers* — its `.sb-h` title and `.sb-s` detail are
+  block-level so they stack (title over detail) like the mockup, not jammed
+  onto one line.
 - **Manage** and **Demand exchange** are shown **side by side** in
   `.core-slots-grid` (not tab-switched — both columns are live; the grid
   stacks below 1000px):
