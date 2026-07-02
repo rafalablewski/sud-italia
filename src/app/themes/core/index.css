@@ -730,9 +730,16 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 /* station strip */
 .core .core-stations { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
-.core .core-stn { height: 30px; padding: 0 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.core .core-stn { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 600; font-size: 12px; white-space: nowrap; }
 .core .core-stn:hover { color: var(--ink); }
 .core .core-stn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+/* live station-load bar inside the chip (mockup: Forno 88%) */
+.core .core-stn-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.core .core-stn-load { width: 44px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; flex: none; }
+.core .core-stn-load i { display: block; height: 100%; border-radius: 99px; }
+.core .core-stn-pct { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.core .core-stn.on .core-stn-pct { color: var(--bg); }
+.core .core-stn.on .core-stn-load { background: rgba(0,0,0,.25); }
 /* all-day batch rail — the line's "make now" totals per dish */
 .core .core-allday { display: flex; align-items: center; gap: 9px; padding: 9px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; background: var(--brand-wash); }
 .core .core-allday-lbl { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; color: var(--brand-bright); flex: none; }

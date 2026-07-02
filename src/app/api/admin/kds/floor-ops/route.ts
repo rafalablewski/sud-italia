@@ -3,6 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getLaborCostInRange, getOrders } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { analyzeTruck } from "@/lib/kds-prediction";
 
 /**
  * Manager floor-control header data — the live signals that aren't already
@@ -30,6 +31,15 @@ export const GET = withAdmin(
     const recent = await getOrders(locationSlug ?? undefined, hourAgoIso);
     const throughputLastHour = recent.filter((o) => o.status === "completed").length;
 
+    // Per-station load for the KDS station strip (mockup): the same predictive
+    // engine the pace/at-risk colours come from. Real active orders (Rule #1) —
+    // `getOrders` already strips simulated demo tickets.
+    const activeOrders = await getOrders(locationSlug ?? undefined);
+    const analysis = analyzeTruck(activeOrders, now);
+    const stations = analysis.stations
+      .filter((s) => s.demand > 0)
+      .map((s) => ({ id: s.id, util: Math.round(Math.min(1.5, s.util) * 100), tier: s.tier, demand: s.demand }));
+
     const { openShifts } = await getLaborCostInRange(
       locationSlug ?? undefined,
       dayStart.toISOString(),
@@ -53,6 +63,7 @@ export const GET = withAdmin(
       menuSlug: menuSlug ?? "",
       throughputLastHour,
       onShift: openShifts,
+      stations,
       menu,
     });
   },
