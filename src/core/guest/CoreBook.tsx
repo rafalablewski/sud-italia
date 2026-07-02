@@ -136,6 +136,25 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
   const hours = Array.from({ length: (CLOSE - OPEN) / 60 + 1 }, (_, i) => 11 + i);
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
+  // Dense-console stat strip — every figure from the day's reservations (Rule #1).
+  const bookStat = useMemo(() => {
+    const active = reservations.filter((r) => r.status !== "cancelled");
+    const covers = active.reduce((s, r) => s + (r.partySize || 0), 0);
+    const seated = reservations.filter((r) => r.status === "seated").length;
+    const upcoming = reservations.filter((r) => r.status === "booked").length;
+    const noShows = reservations.filter((r) => r.status === "no-show").length;
+    const totalSeats = tables.reduce((s, t) => s + (t.seats || 0), 0);
+    const nextUp = reservations.filter((r) => r.status === "booked").map((r) => r.time).sort()[0];
+    return {
+      bookings: active.length,
+      covers,
+      seated,
+      upcoming,
+      noShows,
+      nextUp,
+      fill: totalSeats ? Math.round((covers / totalSeats) * 100) : 0,
+    };
+  }, [reservations, tables]);
   const conflictIds = useMemo(() => {
     const s = new Set<string>();
     for (const r of dayRes) if (findReservationConflicts(reservations, r).length) s.add(r.id);
@@ -158,14 +177,65 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
       tabs={standalone ? undefined : guestTabs("book")}
     >
       <div className="core-book">
+        <div className="core-crumb">
+          CORE — BOOK · RESERVATIONS · <b>liquid glass</b> · <span className="fix">timeline view</span>
+        </div>
+        <div className="core-sectionhead">
+          <h1>Book · Timeline</h1>
+          <span className="sub">{loc} · {date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase() : "today"} · dinner service</span>
+          <div className="core-sp" />
+        </div>
+        {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Booking metrics">
+          <div className="cell">
+            <span className="lab">Bookings today</span>
+            <span className="val">{bookStat.bookings}</span>
+            <span className="delta">{dineInSlots.length} slot{dineInSlots.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Covers</span>
+            <span className="val brand">{bookStat.covers}</span>
+            <span className="delta">booked</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Seated</span>
+            <span className="val info">{bookStat.seated}</span>
+            <span className="delta">on the floor</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Upcoming</span>
+            <span className="val basil">{bookStat.upcoming}</span>
+            <span className="delta">{bookStat.nextUp ? `next ${bookStat.nextUp}` : "none pending"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">No-shows</span>
+            <span className={bookStat.noShows > 0 ? "val danger" : "val"}>{bookStat.noShows}</span>
+            <span className={bookStat.noShows > 0 ? "delta dn" : "delta"}>{bookStat.noShows > 0 ? "today" : "clean"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Fill</span>
+            <span className="val amber">{bookStat.fill}<small>%</small></span>
+            <span className="delta">of seats</span>
+          </div>
+        </div>
         {/* Date picker lives on the surface — the mockup's guest command bar
             carries the inbox tools + WhatsApp-live only, no date field. */}
         <div className="core-surf-toolbar">
           <span className="core-surf-tb-lbl">Day</span>
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
         </div>
-        {/* timeline — tables (rows) × hours (cols); drag a block to reassign,
-            overlaps hatch red live via findReservationConflicts */}
+        {/* timeline panel (left) — the tlbar header + the tables×hours grid,
+            grouped so the new-reservation form can sit as a right rail. */}
+        <div className="core-book-tlpanel">
+        <div className="core-book-tlbar">
+          <span className="t">Reservations timeline</span>
+          <div className="core-tl-legend">
+            <span><i className="cf" /> confirmed</span>
+            <span><i className="se" /> seated</span>
+            <span><i className="pe" /> pending</span>
+            <span><i className="cx" /> conflict</span>
+          </div>
+        </div>
         <div className="core-book-timeline">
           <div className="core-tl-head">
             <div className="core-tl-corner">Tables ↓ · Hours →</div>
@@ -194,7 +264,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
                         <div
                           key={r.id}
                           draggable
-                          className={`core-tl-block${conflictIds.has(r.id) ? " conflict" : ""}`}
+                          className={`core-tl-block ${r.status === "seated" ? "seated" : "confirmed"}${conflictIds.has(r.id) ? " conflict" : ""}`}
                           style={{ left: `${left}%`, width: `${width}%` }}
                           onDragStart={() => setDragId(r.id)}
                           title={`${r.customerName} · ${r.partySize}p · ${r.time}${conflictIds.has(r.id) ? " · CONFLICT" : ""}`}
@@ -209,8 +279,9 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
             )}
           </div>
         </div>
+        </div>{/* /core-book-tlpanel */}
 
-        {/* form */}
+        {/* new reservation — right rail (mockup) */}
         <div className="core-book-form">
           <h4 className="core-profile-h">Dine-in slot</h4>
           {loading ? (

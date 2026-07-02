@@ -11,13 +11,19 @@ import type { Order } from "@/data/types";
 
 type Scope = "current" | "paid" | "all";
 const ACTIVE = new Set(["pending", "confirmed", "preparing", "ready"]);
-const CHANNELS = ["all", "qr", "web", "whatsapp", "pos"] as const;
-type ChannelFilter = (typeof CHANNELS)[number];
+// Dense-console channel chips (mockup): fulfillment types + the QR guest
+// channel. `takeaway` maps to the model's `takeout` fulfillment type.
+const CHANS = ["all", "dine-in", "takeaway", "delivery", "qr"] as const;
+type ChannelFilter = (typeof CHANS)[number];
 const CHANNEL_LABEL: Record<string, string> = { all: "All channels", web: "Web", whatsapp: "WhatsApp", qr: "QR", pos: "POS" };
+const FULFILLMENT_LABEL: Record<string, string> = { "dine-in": "dine-in", takeout: "takeaway", delivery: "delivery" };
+const FULFILLMENT_CLASS: Record<string, string> = { "dine-in": "dinein", takeout: "takeaway", delivery: "delivery" };
 
-const STATUS_TONE: Record<string, string> = {
-  pending: "due", confirmed: "info", preparing: "info", ready: "paid", completed: "paid", cancelled: "muted",
+// Order status → the mockup's `.stpill` tone bucket.
+const STATUS_PILL: Record<string, string> = {
+  pending: "new", confirmed: "new", preparing: "preparing", ready: "ready", completed: "paid", cancelled: "cancelled",
 };
+const zl0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")}`;
 const zl2 = (g: number) => `${(g / 100).toFixed(2)} zł`;
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
@@ -123,12 +129,18 @@ export function CoreOrders() {
 
   const tableNo = (o: Order) => (o.tableId ? tableById[o.tableId] ?? null : null);
 
+  const chanMatch = (o: Order, c: ChannelFilter) => {
+    if (c === "all") return true;
+    if (c === "qr") return (o.channel ?? "web") === "qr";
+    if (c === "takeaway") return o.fulfillmentType === "takeout";
+    return o.fulfillmentType === c; // "dine-in" | "delivery"
+  };
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return orders.filter((o) => {
       if (scope === "current" && !ACTIVE.has(o.status)) return false;
       if (scope === "paid" && !o.paidAt) return false;
-      if (channel !== "all" && (o.channel ?? "web") !== channel) return false;
+      if (!chanMatch(o, channel)) return false;
       if (query) {
         const hay = `${o.id} ${o.customerName} ${o.customerPhone} ${tableNo(o) ?? ""}`.toLowerCase();
         if (!hay.includes(query)) return false;
@@ -142,12 +154,28 @@ export function CoreOrders() {
     const today = new Date().toDateString();
     return orders.filter((o) => new Date(o.createdAt).toDateString() === today);
   }, [orders]);
-  const kpi = useMemo(() => ({
-    today: todays.length,
-    current: orders.filter((o) => ACTIVE.has(o.status)).length,
-    toPay: orders.filter((o) => ACTIVE.has(o.status) && !o.paidAt).length,
-    revenue: todays.filter((o) => o.paidAt).reduce((a, o) => a + o.totalAmount, 0),
-  }), [orders, todays]);
+  // Dense-console stat strip — every figure from live order state (Rule #1).
+  const kpi = useMemo(() => {
+    const active = orders.filter((o) => ACTIVE.has(o.status));
+    const paidToday = todays.filter((o) => o.paidAt);
+    const revenue = paidToday.reduce((a, o) => a + o.totalAmount, 0);
+    const refunded = todays.filter((o) => o.refund);
+    const n = Math.max(1, todays.length);
+    const byType = (t: string) => todays.filter((o) => o.fulfillmentType === t).length;
+    const dineIn = byType("dine-in"), takeaway = byType("takeout"), delivery = byType("delivery");
+    return {
+      open: active.length,
+      toPay: active.filter((o) => !o.paidAt).length,
+      revenue,
+      avg: paidToday.length ? Math.round(revenue / paidToday.length) : 0,
+      refunds: refunded.length,
+      refundTotal: refunded.reduce((a, o) => a + (o.refund?.amount ?? 0), 0),
+      dineIn, takeaway, delivery,
+      dineInPct: Math.round((dineIn / n) * 100),
+      takeawayPct: Math.round((takeaway / n) * 100),
+      deliveryPct: Math.round((delivery / n) * 100),
+    };
+  }, [orders, todays]);
 
   return (
     <CoreShell
@@ -159,51 +187,111 @@ export function CoreOrders() {
       }))}
     >
       <div className="core-guest-inbox">
+        <div className="core-crumb">
+          CORE — ORDERS · <b>liquid glass</b> · <span className="fix">cross-cutting surface</span>
+        </div>
         <div className="core-sectionhead">
           <h1>Orders</h1>
           <span className="sub">{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</span>
         </div>
-        <div className="core-kpi-strip">
-          <div className="k"><div className="kl">Orders today</div><div className="kv mono">{kpi.today}</div></div>
-          <div className="k"><div className="kl">Current</div><div className="kv mono">{kpi.current}</div></div>
-          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={kpi.toPay > 0 ? { color: "var(--brand-bright)" } : undefined}>{kpi.toPay || "—"}</div></div>
-          <div className="k"><div className="kl">Paid today</div><div className="kv mono">{zl2(kpi.revenue)}</div></div>
+        {/* dense-console 7-up stat strip — every figure from live order state (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Order metrics">
+          <div className="cell">
+            <span className="lab">Open orders</span>
+            <span className="val">{kpi.open}</span>
+            <span className={kpi.toPay > 0 ? "delta warn" : "delta"}>{kpi.toPay > 0 ? `${kpi.toPay} to pay` : "all settled"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Revenue today</span>
+            <span className="val brand">{zl0(kpi.revenue)}<small> zł</small></span>
+            <span className="delta">{todays.filter((o) => o.paidAt).length} paid</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg check</span>
+            <span className="val basil">{zl0(kpi.avg)}<small> zł</small></span>
+            <span className="delta">per paid order</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Refunds</span>
+            <span className={kpi.refunds > 0 ? "val danger" : "val"}>{kpi.refunds}</span>
+            <span className={kpi.refunds > 0 ? "delta dn" : "delta"}>{kpi.refunds > 0 ? `−${zl0(kpi.refundTotal)} zł` : "none today"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Dine-in</span>
+            <span className="val info">{kpi.dineInPct}<small>%</small></span>
+            <span className="delta">{kpi.dineIn} order{kpi.dineIn === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Takeaway</span>
+            <span className="val amber">{kpi.takeawayPct}<small>%</small></span>
+            <span className="delta">{kpi.takeaway} order{kpi.takeaway === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Delivery</span>
+            <span className="val">{kpi.deliveryPct}<small>%</small></span>
+            <span className="delta">{kpi.delivery} order{kpi.delivery === 1 ? "" : "s"}</span>
+          </div>
         </div>
 
-        {/* One filter toolbar — channel · search · refresh. The Current/Paid/All
-            scope now lives in the command bar's view tabs. */}
-        <div className="core-floor-bar">
-          <select className="core-inp" style={{ width: 150 }} value={channel} onChange={(e) => setChannel(e.target.value as ChannelFilter)}>
-            {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABEL[c]}</option>)}
-          </select>
-          <input className="core-inp" style={{ flex: 1, minWidth: 0 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="order id, guest, phone or table…" />
+        {/* dense-console filterbar — search · channel chips · date · refresh.
+            The Current/Paid/All scope lives in the command bar's view tabs. */}
+        <div className="core-filterbar">
+          <div className="core-searchfield">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="id · guest · phone · table" aria-label="Search orders" />
+          </div>
+          <div className="core-chanset" role="group" aria-label="Channel filter">
+            {CHANS.map((c) => (
+              <span key={c} className={channel === c ? `core-chan on${c === "all" ? " brand" : ""}` : "core-chan"} role="button" tabIndex={0}
+                onClick={() => setChannel(c)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChannel(c); } }}>
+                {c}
+              </span>
+            ))}
+          </div>
+          <div className="core-datefield" title="Today">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
+            {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+          </div>
           <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
         </div>
 
-        <div className="core-orders-list">
-          {!loaded ? (
-            <div className="core-ctx-empty pad">Loading orders…</div>
-          ) : filtered.length === 0 ? (
-            <div className="core-ctx-empty pad">No orders match.</div>
-          ) : (
-            filtered.slice(0, 200).map((o) => {
-              const t = tableNo(o);
-              return (
-                <button key={o.id} type="button" className="core-order-row" onClick={() => setDetail(o)}>
-                  <span className="core-or-time mono">{fmtTime(o.createdAt)}<span className="core-or-date">{fmtDate(o.createdAt)}</span></span>
-                  <span className="core-or-main">
-                    <span className="core-or-who">{t ? `Table ${t}` : o.fulfillmentType} · {o.customerName}</span>
-                    <span className="core-or-items">{o.items.reduce((a, i) => a + i.quantity, 0)} items · {o.id}</span>
-                  </span>
-                  <span className="core-chip" style={{ height: 22 }}>{CHANNEL_LABEL[o.channel ?? "web"] ?? o.channel}</span>
-                  <span className={`core-tpay ${STATUS_TONE[o.status] ?? "muted"}`} style={{ position: "static" }}>{o.status}</span>
-                  <span className={o.paidAt ? "core-tpay paid" : "core-tpay due"} style={{ position: "static" }}>{o.paidAt ? "✓ paid" : "unpaid"}</span>
-                  <span className="core-or-total mono">{zl2(o.totalAmount)}</span>
-                </button>
-              );
-            })
-          )}
-        </div>
+        {!loaded ? (
+          <div className="core-ctx-empty pad">Loading orders…</div>
+        ) : filtered.length === 0 ? (
+          <div className="core-ctx-empty pad">No orders match.</div>
+        ) : (
+          <div className="core-otable">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Time</th><th>Channel</th><th>Guest</th><th>Table</th><th>Items</th><th className="r">Total</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 200).map((o) => {
+                  const t = tableNo(o);
+                  const isQr = (o.channel ?? "web") === "qr";
+                  const chanCls = isQr ? "qr" : FULFILLMENT_CLASS[o.fulfillmentType] ?? "";
+                  const chanLbl = isQr ? "qr" : FULFILLMENT_LABEL[o.fulfillmentType] ?? o.fulfillmentType;
+                  const items = o.items.map((i) => `${i.quantity}× ${i.menuItem.name}`).join(" · ");
+                  return (
+                    <tr key={o.id} className={detail?.id === o.id ? "sel" : undefined} onClick={() => setDetail(o)}>
+                      <td className="id">#{o.id}</td>
+                      <td className="tm">{fmtTime(o.createdAt)}</td>
+                      <td><span className={`core-chanchip ${chanCls}`}>{chanLbl}</span></td>
+                      <td className="guest">{o.customerName || "—"}</td>
+                      <td className={t ? "otbl" : "otbl none"}>{t ? `T${t}` : "—"}</td>
+                      <td className="items" title={items}>{items}</td>
+                      <td className="total">{zl2(o.totalAmount)}</td>
+                      <td><span className={`core-stpill ${STATUS_PILL[o.status] ?? "paid"}`}>{o.status}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {detail && (
@@ -227,6 +315,27 @@ export function CoreOrders() {
               <div className="core-cust-sub">{fmtDate(detail.createdAt)} {fmtTime(detail.createdAt)} · {CHANNEL_LABEL[detail.channel ?? "web"]} · <span style={{ textTransform: "capitalize" }}>{detail.status}</span></div>
             </div>
           </div>
+          {/* status timeline — placed → fired → ready → paid, from live order state */}
+          {(() => {
+            const steps = [
+              { lbl: "Placed", done: true, tm: fmtTime(detail.createdAt) },
+              { lbl: "Fired", done: ["preparing", "ready", "completed"].includes(detail.status), tm: undefined as string | undefined },
+              { lbl: "Ready", done: ["ready", "completed"].includes(detail.status), tm: undefined as string | undefined },
+              { lbl: "Paid", done: !!detail.paidAt, tm: detail.paidAt ? fmtTime(detail.paidAt) : undefined },
+            ];
+            const lastDone = steps.reduce((acc, s, i) => (s.done ? i : acc), 0);
+            return (
+              <div className="core-od-track" role="list">
+                {steps.map((s, i) => (
+                  <div key={s.lbl} className={`step${s.done ? " done" : ""}${i === lastDone && !detail.paidAt ? " at" : ""}`} role="listitem">
+                    <span className="dot" />
+                    <span className="lbl">{s.lbl}</span>
+                    <span className="tm">{s.tm ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <div className="core-od-lines">
             {detail.items.map((i, idx) => (
               <div key={idx} className="core-od-line">

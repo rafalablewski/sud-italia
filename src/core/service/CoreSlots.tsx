@@ -36,13 +36,6 @@ interface DemandBoard {
   summary: { predictedCovers: number; fillForecastPct: number; missedDemand: number };
 }
 
-const ACTION_LABEL: Record<DemandSlotRow["action"], string> = {
-  raise: "Raise capacity",
-  trim: "Trim / promote",
-  protect: "Protect kitchen",
-  hold: "Hold",
-};
-
 function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -84,8 +77,8 @@ export function CoreSlots() {
   useEffect(() => {
     setDate(todayLocal());
   }, []);
-  const [tab, setTab] = useState<"manage" | "demand">("manage");
   const [range, setRange] = useState<"day" | "week">("day");
+  const [surgeDismissed, setSurgeDismissed] = useState(false);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
   const [acting, setActing] = useState(false);
@@ -117,9 +110,11 @@ export function CoreSlots() {
   useEffect(() => {
     void loadSlots();
   }, [loadSlots]);
+  // Demand exchange sits alongside Manage (dense-console: both columns live),
+  // so the board loads on every date/location change, not on a tab toggle.
   useEffect(() => {
-    if (tab === "demand") void loadBoard();
-  }, [tab, loadBoard]);
+    void loadBoard();
+  }, [loadBoard]);
 
   const week = useMemo(() => weekDates(date), [date]);
   const scoped = useMemo(
@@ -128,18 +123,29 @@ export function CoreSlots() {
   );
   const ordered = useMemo(() => [...scoped].sort((a, b) => a.time.localeCompare(b.time)), [scoped]);
   const byDay = useMemo(() => week.map((d) => [d, ordered.filter((s) => s.date === d)] as const), [week, ordered]);
-  const kpis = useMemo(() => {
+  // Dense-console stat strip + surge state — every figure from live slot data
+  // (Rule #1). A "surge window" is one filled ≥85%; peak drives demand price.
+  const stat = useMemo(() => {
     const cap = scoped.reduce((s, x) => s + x.maxOrders, 0);
     const booked = scoped.reduce((s, x) => s + x.currentOrders, 0);
-    const peak = Math.max(0, ...scoped.map((x) => (x.maxOrders ? x.currentOrders / x.maxOrders : 0)));
-    const mult = peak >= 0.85 ? "1.2×" : peak >= 0.7 ? "1.1×" : "1.0×";
-    return [
-      { l: range === "week" ? "Slots / wk" : "Slots", v: String(scoped.length) },
-      { l: "Booked", v: String(booked) },
-      { l: "Fill rate", v: cap ? `${Math.round((booked / cap) * 100)}%` : "—" },
-      { l: "Demand price", v: mult },
-    ];
-  }, [scoped, range]);
+    const active = scoped.filter((x) => x.status === "active").length;
+    const withPct = scoped.map((x) => ({ x, pct: x.maxOrders ? x.currentOrders / x.maxOrders : 0 }));
+    const surge = withPct.filter((r) => r.pct >= 0.85);
+    const peak = withPct.reduce((m, r) => (r.pct > m.pct ? r : m), { x: undefined as TimeSlot | undefined, pct: 0 });
+    const fillPct = cap ? Math.round((booked / cap) * 100) : 0;
+    const mult = peak.pct >= 0.85 ? "1.2×" : peak.pct >= 0.7 ? "1.1×" : "1.0×";
+    // Surge windows sorted by time, for the banner range.
+    const surgeTimes = surge.map((r) => r.x.time).sort();
+    return {
+      booked, cap, active, fillPct,
+      surgeCount: surge.length,
+      peakPct: Math.round(peak.pct * 100),
+      peakTime: peak.x?.time ?? "—",
+      mult,
+      surgeRange: surgeTimes.length ? `${surgeTimes[0]}–${surgeTimes[surgeTimes.length - 1]}` : "",
+    };
+  }, [scoped]);
+  const showSurge = stat.surgeCount > 0 && !surgeDismissed;
 
   const toggleSlot = async (slot: TimeSlot) => {
     if (acting) return;
@@ -266,55 +272,115 @@ export function CoreSlots() {
 
   const changeCount = board?.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze).length ?? 0;
 
+  // Dense-console service-window row (mockup `.mslot`): time · fill bar with a
+  // booked/status meta line · tier chip · N/max. Tap the tier chip to toggle
+  // active/draft; hover reveals a delete affordance (both features preserved).
   const slotRow = (s: TimeSlot) => {
     const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
+    const tier = pct >= 100 ? "full" : pct >= 70 ? "tight" : "healthy";
+    const statusText = pct >= 100 ? "full" : pct >= 85 ? "filling fast" : `seats to ${s.maxOrders}`;
     return (
-      <div key={s.id} className={`core-slot ${s.status === "draft" ? "draft" : ""}`}>
-        <span className="st mono">{s.time}</span>
-        <div className="bar"><div className="fill" style={{ width: `${Math.min(100, pct)}%`, background: pct >= 85 ? "var(--danger)" : pct >= 70 ? "var(--amber)" : "var(--basil)" }} /></div>
-        <span className="cap mono">{s.currentOrders}/{s.maxOrders}</span>
-        <span className="ch">
-          {s.fulfillmentTypes.join(" · ")}
-          {s.minSpendGrosze ? <span className="core-slot-min">min {zl0(s.minSpendGrosze)}</span> : null}
-        </span>
-        <button className={`core-pill-btn ${s.status}`} onClick={() => void toggleSlot(s)}>{s.status}</button>
-        <button className="core-slot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
+      <div key={s.id} className={`core-mslot ${s.status === "draft" ? "draft" : ""}`}>
+        <span className="tm">{s.time}</span>
+        <div className="barwrap">
+          <div className="mbar"><i className={tier} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+          <div className="meta">
+            <span>{s.currentOrders} booked{s.minSpendGrosze ? ` · min ${zl0(s.minSpendGrosze)}` : ""}</span>
+            <span>{statusText}</span>
+          </div>
+        </div>
+        <button className={`core-tchip ${tier}`} title={`${s.status} — tap to ${s.status === "active" ? "unpublish" : "publish"}`} onClick={() => void toggleSlot(s)}>{tier}</button>
+        <span className="mcap">{s.currentOrders} / {s.maxOrders}</span>
+        <button className="mslot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
       </div>
     );
+  };
+  const LEVER: Record<DemandSlotRow["action"], { cls: string; label: (r: DemandSlotRow) => string }> = {
+    raise: { cls: "raise", label: (r) => (r.recommendedMaxOrders > r.maxOrders ? `raise +${r.recommendedMaxOrders - r.maxOrders}` : "raise") },
+    trim: { cls: "trim", label: (r) => (r.recommendedMaxOrders < r.maxOrders ? `trim −${r.maxOrders - r.recommendedMaxOrders}` : "trim") },
+    protect: { cls: "protect", label: () => "protect" },
+    hold: { cls: "hold", label: () => "hold" },
   };
 
   return (
     <CoreShell eyebrow="Service · Floor & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
-        {/* All Slots controls — view filters, range, date, and the New action —
-            live in this one body sub-toolbar; the command bar stays standard. */}
+        <div className="core-crumb">
+          CORE — DENSE GLASS CONSOLE · <b>service · slots</b> · <span className="fix">demand exchange</span>
+        </div>
+        <div className="core-sectionhead">
+          <h1>Service · Slots</h1>
+          <span className="sub">{location} · {date ? dayLabel(date).toLowerCase() : "today"} · {range}</span>
+        </div>
+        {/* Slots controls — range · date · New · Refresh — in one body sub-toolbar. */}
         <div className="core-surf-toolbar">
           <div className="core-seg">
-            <button className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
-            <button className={tab === "demand" ? "on" : ""} onClick={() => setTab("demand")}>Demand</button>
+            <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
+            <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
           </div>
-          {tab === "manage" && (
-            <div className="core-seg">
-              <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
-              <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
-            </div>
-          )}
           <div className="core-sp" />
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
-          {tab === "manage" && (
-            <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New</button>
-          )}
+          <button type="button" className="cm-primary" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
         </div>
-        {tab === "manage" ? (
-          <>
-            <div className="core-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-              {kpis.map((k) => (
-                <div className="k" key={k.l}><div className="kl">{k.l}</div><div className="kv mono">{k.v}</div></div>
-              ))}
+
+        {/* dense-console 6-up stat strip — every figure from live slot data (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Slot metrics">
+          <div className="cell">
+            <span className="lab">Booked</span>
+            <span className="val">{stat.booked}</span>
+            <span className="delta">{scoped.length} window{scoped.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Capacity</span>
+            <span className="val">{stat.cap}</span>
+            <span className="delta">{stat.active} active</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Fill</span>
+            <span className="val basil">{stat.fillPct}<small>%</small></span>
+            <span className="delta">peak {stat.peakPct}%</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Surge windows</span>
+            <span className={stat.surgeCount > 0 ? "val amber" : "val"}>{stat.surgeCount}</span>
+            <span className={stat.surgeCount > 0 ? "delta dn" : "delta"}>{stat.surgeCount > 0 ? stat.surgeRange : "on pace"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Peak fill</span>
+            <span className="val info">{stat.peakPct}<small>%</small></span>
+            <span className="delta">{stat.peakTime}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Demand price</span>
+            <span className={stat.mult === "1.0×" ? "val" : "val amber"}>{stat.mult}</span>
+            <span className="delta">{stat.mult === "1.0×" ? "flat" : "surge active"}</span>
+          </div>
+        </div>
+
+        {showSurge && (
+          <div className="core-surge-banner" role="status">
+            <span className="sb-ic" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z" /></svg>
+            </span>
+            <span className="sb-txt">
+              <span className="sb-h">Demand surge · {stat.surgeRange}</span>
+              <span className="sb-s"><b>{stat.surgeCount} window{stat.surgeCount === 1 ? "" : "s"} at booking pace</b> · peak {stat.peakPct}% at {stat.peakTime}. Raise prices or protect walk-in tables.</span>
+            </span>
+            {changeCount > 0 && <button type="button" className="sb-act" disabled={acting} onClick={() => void applyAll()}>Apply surge levers</button>}
+            <button type="button" className="sb-x" onClick={() => setSurgeDismissed(true)} aria-label="Dismiss">✕</button>
+          </div>
+        )}
+
+        <div className="core-slots-grid">
+          {/* Manage · service windows */}
+          <div className="core-frame">
+            <div className="core-frame-h">
+              <span className="t">Manage · service windows</span>
+              {stat.surgeCount > 0 ? <span className="fbadge surge">▲ {stat.surgeCount} full</span> : <span className="fbadge">{scoped.length} windows</span>}
             </div>
-            <div className="core-crm-table-wrap" style={{ padding: 16 }}>
+            <div className="core-frame-b">
               {ordered.length === 0 ? (
-                <div className="core-kds-empty pad">No slots for this {range === "week" ? "week" : "day"}.</div>
+                <div className="core-kds-empty">No slots for this {range === "week" ? "week" : "day"}.</div>
               ) : range === "week" ? (
                 <div className="core-slot-week">
                   {byDay.map(([d, daySlots]) => (
@@ -323,58 +389,52 @@ export function CoreSlots() {
                         <span>{dayLabel(d)}</span>
                         <span className="n">{daySlots.length}</span>
                       </div>
-                      {daySlots.length === 0 ? (
-                        <div className="core-slot-day-empty">No slots</div>
-                      ) : (
-                        <div className="core-slot-list">{daySlots.map(slotRow)}</div>
-                      )}
+                      {daySlots.length === 0 ? <div className="core-slot-day-empty">No slots</div> : daySlots.map(slotRow)}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="core-slot-list">{ordered.map(slotRow)}</div>
+                ordered.map(slotRow)
               )}
             </div>
-          </>
-        ) : (
-          <>
-            {board && (
-              <div className="core-demand-head">
-                <span className="core-cust-sub">~{board.summary.predictedCovers} covers · {Math.round(board.summary.fillForecastPct)}% fill · {board.summary.missedDemand} walked{board.kitchenCoversPerHour ? ` · kitchen ${board.kitchenCoversPerHour}/hr` : ""}</span>
-                {changeCount > 0 && <button className="core-btn primary" disabled={acting} onClick={() => void applyAll()}>Apply all ({changeCount})</button>}
-              </div>
-            )}
-            <div className="core-crm-table-wrap">
+          </div>
+
+          {/* Demand exchange · pace-based levers */}
+          <div className="core-frame">
+            <div className="core-exch-head">
+              <span className="t">Demand exchange <span className="sub">pace-based levers</span></span>
+              {changeCount > 0 && <button type="button" className="core-applyall" disabled={acting} onClick={() => void applyAll()}>⚡ Apply all ({changeCount})</button>}
+            </div>
+            <div className="core-frame-b">
               {!board ? (
-                <div className="core-kds-empty pad">Loading demand board…</div>
+                <div className="core-kds-empty">Loading demand board…</div>
               ) : board.slots.length === 0 ? (
-                <div className="core-kds-empty pad">No slots to forecast for this day.</div>
+                <div className="core-kds-empty">No slots to forecast for this day.</div>
               ) : (
-                <table className="core-tbl">
-                  <thead>
-                    <tr><th>Time</th><th>Tier</th><th className="num">Booked</th><th className="num">Forecast</th><th className="num">Cap → rec</th><th>Action</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {board.slots.map((r) => {
-                      const changed = r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze;
-                      return (
-                        <tr key={r.slotId} title={r.note}>
-                          <td className="mono">{r.time}</td>
-                          <td><span className={`core-tier-d ${r.tier}`}>{r.tier}</span></td>
-                          <td className="num mono">{r.currentOrders}</td>
-                          <td className="num mono">{r.predictedDemand}</td>
-                          <td className="num mono">{r.maxOrders}{changed ? ` → ${r.recommendedMaxOrders}` : ""}{r.recommendedMinSpendGrosze > 0 ? ` · min ${zl(r.recommendedMinSpendGrosze)}` : ""}</td>
-                          <td><span className={`core-act ${r.action}`}>{ACTION_LABEL[r.action]}</span></td>
-                          <td>{changed && <button className="core-btn sm" disabled={acting} onClick={() => void applyOne(r)}>Apply</button>}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                board.slots.map((r) => {
+                  const changed = r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze;
+                  const lever = LEVER[r.action];
+                  const tierCls = r.tier === "kitchen-capped" ? "kitchen-capped" : r.tier;
+                  return (
+                    <div key={r.slotId} className="core-exrow" title={r.note}>
+                      <span className="tm">{r.time}</span>
+                      <span className={`core-tier ${tierCls}`}>{r.tier}</span>
+                      <div className="core-lever">
+                        <span className={`lv ${lever.cls}`}>{lever.label(r)}{r.recommendedMinSpendGrosze > 0 ? ` · min ${zl(r.recommendedMinSpendGrosze)}` : ""}</span>
+                        <span className="why">{r.note}</span>
+                      </div>
+                      {changed ? (
+                        <button type="button" className="core-apply" disabled={acting} onClick={() => void applyOne(r)}>Apply</button>
+                      ) : (
+                        <button type="button" className="core-apply hold" disabled>Hold</button>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
 
       <CoreDialog

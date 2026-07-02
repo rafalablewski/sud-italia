@@ -18,6 +18,11 @@ The kitchen wall. `/core/kds`.
 A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
+The Floor/Chef boards open with a `.core-crumb` breadcrumb (`CORE — KDS ·
+KITCHEN WALL · liquid glass · dark board · frosted kpis`) + a `.core-sectionhead`
+(`KDS · Pass — Floor|Chef`), matching the dense-console mockup while keeping the
+kitchen wall dark (the KPIs, not the surface, are what's frosted).
+
 - **Floor** (default) — the expo board. A manager **ops band** (the
   responsive `.core-kpi`: Open · New · Firing · Ready · At risk · Late ·
   Oldest · Avg age · Done/hr · On shift) over three `.core-lane` columns
@@ -25,6 +30,12 @@ for owners (role from `/api/admin/me`).
   from the live ticket stream; **Done/hr** and **On shift** come from
   `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
   the subbar focuses a single lane into the dense `.core-chefq` wrap.
+- **Station strip** (`.core-stations` / `.core-stn`) — each present station is
+  a one-tap filter chip that also shows its **live load** (mockup: `Forno 88%`):
+  a `.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/
+  danger by pace tier. Load comes from `floor-ops`'s `stations[]` (the same
+  `analyzeTruck` per-station `util`/`tier` the board colours from — Rule #1);
+  only stations with live demand carry a bar.
 - **All-day rail** (`.core-allday`) — toggled by the **`Σ`** control, an
   ember-washed strip of `.core-allday-item` chips: every still-to-make item
   (New + Firing, not Ready) summed **by dish across all active tickets**, biggest

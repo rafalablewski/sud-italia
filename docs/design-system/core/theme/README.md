@@ -106,16 +106,18 @@ surface toolbar.
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`);
   `.cm-k-label` = the "search" word (collapses to just the `⌘K` kbd on narrow).
 - **`.cm-tel`** — the telemetry cluster; each reading is a **`.cm-tel-item`**
-  (`.lbl` dim key + `.val` bright value): `risk N` from `PressureBadge`
-  (`.ok`/`.warn`/`.risk` colour the count basil/amber/red), **`.cm-tel-loc`**
-  the click-to-cycle `loc <slug>` from `CoreLocationChip`, and
+  (an optional leading **`.cm-tel-glyph`** + `.lbl` dim key + `.val` bright
+  value): `▲ risk N` from `PressureBadge` (`.ok`/`.warn`/`.risk` colour the
+  glyph + count basil/amber/red — matching the mockup's `▲ risk`),
+  **`.cm-tel-loc`** the click-to-cycle `◈ loc <slug>` from `CoreLocationChip`
+  (ember diamond glyph), and
   **`.cm-tel-clock`** the basil mono HH:MM clock.
 - **`.cm-right`** — the global tools (notifications bell · theme toggle) as
   flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
 - **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
-  Service/Guest/Orders `.core-kpi-strip` and POS's `.core-statstrip` are
+  Guest `.core-kpi-strip` and POS's / Floor's / Orders' / Slots' `.core-statstrip` are
   hairline-divided columns with an uppercase mono label and a big **mono
   tabular** value. `.core-kpi-strip` lays its cells out with `grid-auto-flow:
   column` (auto `minmax(0,1fr)` tracks), so 4-, 5-, 6- or 7-cell strips all
@@ -123,12 +125,16 @@ surface toolbar.
   component language everywhere — a KDS KPI, a Floor KPI and a Loyalty KPI read
   identically.
   - **`.core-statstrip`** — the dense-console variant used at the top of a
-    surface body (POS): a bordered glass panel of `.cell`s, each an uppercase
-    mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/`.basil`/
-    `.amber`/`.info`/`.danger`, optional `<small>` unit), and a colour-coded
-    `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber). Divider is a
-    `.cell + .cell::before` hairline. Every figure MUST be real surface data
-    (Rule #1). Matches the mockup's `.statstrip`.
+    surface body (POS, **Floor**, **Orders**, **Slots**, **CRM**, **Loyalty**, **Book**, **Inbox**, **Dispatch**): a bordered glass panel of `.cell`s, each an
+    uppercase mono `.lab`, a big mono-tabular `.val` (tone with `.brand`/
+    `.basil`/`.amber`/`.info`/`.danger`, optional `<small>` unit), and a
+    colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
+    Divider is a `.cell + .cell::before` hairline. Every figure MUST be real
+    surface data (Rule #1). Matches the mockup's `.statstrip`.
+- **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
+  uppercase mono `CORE — SURFACE · … · liquid glass · [context]`, with `b`
+  basil and a `.fix` ember pill for the location/mode tag. Sits directly above
+  the `.core-sectionhead` (Floor).
 - **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
   beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
   context tag. Sits under the sub-toolbar, over the stat strip.
@@ -223,13 +229,20 @@ wordmark, no second subbar row, no bottom switcher:
   body that carries the surface's own controls (`subRight` right-aligned, plus
   any filters/segments/date the surface builds). Keeps the command bar standard.
 - **`.core-lens`** — the icon-only 56px Lens Rail that switches the four room
-  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass").
-  Collapsed by default; it expands to labels only when **pinned** — a click on
-  the `.core-lens-pin` toggle adds `.open` — never on hover, so a stray cursor
-  never shoves the Canvas. The pinned choice persists (localStorage,
-  `core-lens-pinned`). It sits inside `.core-main`, beside the Canvas, spanning
-  the full body height under the command bar. Distinct from the POS category
-  `.core-rail`. Orders + Guest are cross-cutting surfaces reached from ⌘K.
+  lenses (**Floor · POS · KDS · Book** — the plain names, not "Line"/"Pass"),
+  then a `.core-lens-div` divider and the two ops adjacencies the dense-console
+  mockup pins below it (**Reports · Settings**, linking into the admin shell).
+  Icons trace the mockup 1:1: Floor = 2×2 grid, POS = register with legs, KDS =
+  split pass panel, Book = calendar, Reports = line chart, Settings = gear. Each
+  row is `.core-lens-ico` + a `.core-lens-txt` (mono label + `.core-lens-sub`
+  caption); the **active** lens gets the ember `--brand-wash` fill, an inset
+  ring, and an ember `::before` left accent bar. Collapsed by default; it
+  expands to labels only when **pinned** — a click on the `.core-lens-pin`
+  toggle adds `.open` — never on hover, so a stray cursor never shoves the
+  Canvas. The pinned choice persists (localStorage, `core-lens-pinned`). It
+  sits inside `.core-main`, beside the Canvas, spanning the full body height
+  under the command bar. Distinct from the POS category `.core-rail`. Orders +
+  Guest are cross-cutting surfaces reached from ⌘K.
 
 ## Responsive — tablet & phone
 
@@ -240,6 +253,7 @@ Core runs on iPads and phones, not only desktop. Breakpoints at the end of
 | ----- | ------------ |
 | **≤1100** (tablet landscape) | Command bar sheds the low-priority `loc` telemetry (`.cm-tel-loc`); POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
 | **≤900** (tablet portrait) | Command bar drops the decorative traffic lights + dividers (`.cm-lights` / `.cm-div`) and collapses the ⌘K launcher to just its chip (`.cm-k-label` hidden); POS panes `148 · 1fr · 296`. |
+| **≤1040 / ≤1000** | The dense **two-column bodies collapse to one column** — CRM (`.core-crm-grid`), Loyalty (`.core-loy-grid`), Dispatch (`.core-disp-grid`), Slots (`.core-slots-grid`), Book (`.core-book`, incl. resetting the form rail's `grid-column`), Concierge (`.core-concierge`) all stack their side panel/rail below the main column. Wide data tables (`.core-roster`, `.core-otable`, the Loyalty roster) **scroll horizontally** (`overflow-x: auto`) rather than clip, so every column stays reachable on a phone. |
 | **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
 | **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail; the pin toggle still expands it (to a slimmer 176px). |
 | **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |

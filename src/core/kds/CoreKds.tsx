@@ -523,7 +523,8 @@ export function CoreKds() {
   }, [view]);
 
   // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
-  const [ops, setOps] = useState<{ throughputLastHour: number; onShift: number } | null>(null);
+  type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
+  const [ops, setOps] = useState<{ throughputLastHour: number; onShift: number; stations: StationLoad[] } | null>(null);
   useEffect(() => {
     if (view === "fleet" || !location) return;
     let cancelled = false;
@@ -532,7 +533,7 @@ export function CoreKds() {
         const r = await fetch(`/api/admin/kds/floor-ops?location=${encodeURIComponent(location)}`);
         if (!r.ok) return;
         const d = await r.json();
-        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, onShift: d.onShift ?? 0 });
+        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
       } catch {
         /* non-fatal — manager-only endpoint; the band just shows — */
       }
@@ -710,6 +711,16 @@ export function CoreKds() {
           <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
         ) : (
           <>
+            {/* dense-console head (mockup 02-kds) — the kitchen wall keeps its
+                dark board + frosted KPIs, but reads with the same breadcrumb +
+                section title as every other surface. */}
+            <div className="core-crumb">
+              CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
+            </div>
+            <div className="core-sectionhead">
+              <h1>KDS · Pass — {view === "chef" ? "Chef" : "Floor"}</h1>
+              <span className="sub">sla-toned tickets · start / bump / pass</span>
+            </div>
             {/* Board toolbar — the lane filter + board actions the mockup keeps
                 OUT of the command bar. Fullscreen-enter lives here too. */}
             <div className="core-kds-toolbar">
@@ -732,18 +743,31 @@ export function CoreKds() {
               <div className="k"><div className="kl">On shift</div><div className="kv">{ops?.onShift ?? "—"}</div></div>
             </div>
 
-            {/* station strip (chef + floor) */}
+            {/* station strip — each present station shows its LIVE LOAD (mockup:
+                Forno 88% …) from the same predictive engine the board colours
+                from, and stays a one-tap filter. Load lookup by category. */}
             <div className="core-stations">
-              {stationsPresent.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={station === s.id ? "core-stn on" : "core-stn"}
-                  onClick={() => setStation(s.id)}
-                >
-                  {s.id === "all" ? "All stations" : MENU_CATEGORY_LABELS[s.id as MenuCategory]}
-                </button>
-              ))}
+              {stationsPresent.map((s) => {
+                const ld = s.id === "all" ? null : ops?.stations.find((x) => x.id === s.id);
+                const tone = ld ? (ld.tier === "risk" ? "var(--danger)" : ld.tier === "warn" ? "var(--amber)" : "var(--basil)") : null;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={station === s.id ? "core-stn on" : "core-stn"}
+                    onClick={() => setStation(s.id)}
+                  >
+                    {tone && <span className="core-stn-dot" style={{ background: tone }} />}
+                    {s.id === "all" ? "All stations" : MENU_CATEGORY_LABELS[s.id as MenuCategory]}
+                    {ld && (
+                      <>
+                        <span className="core-stn-load"><i style={{ width: `${Math.min(100, ld.util)}%`, background: tone! }} /></span>
+                        <span className="core-stn-pct">{ld.util}%</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* All-day batch rail — what the line still has to cook, biggest

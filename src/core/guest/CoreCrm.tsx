@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { guestTabs } from "./guestTabs";
-import { GuestGlyph, type GuestGlyphName } from "./glyphs";
 
 interface CrmCustomer {
   phone: string;
@@ -39,31 +39,6 @@ interface NoteRow {
   createdAt: string;
 }
 
-// Glyph-only filters — every chip carries a glyph; the label survives as the
-// button's title + aria-label so the abstract segments stay readable on hover.
-const SEGS: { key: string; label: string; icon: GuestGlyphName }[] = [
-  { key: "all", label: "All guests", icon: "members" },
-  { key: "vip", label: "VIP", icon: "crown" },
-  { key: "members", label: "Loyalty members", icon: "badge" },
-  { key: "active", label: "Active", icon: "activity" },
-  { key: "repeat", label: "Repeat", icon: "repeat" },
-  { key: "new", label: "New", icon: "sparkle" },
-  { key: "lapsed", label: "Lapsed", icon: "userx" },
-];
-const SORTS: { key: string; label: string; icon: GuestGlyphName }[] = [
-  { key: "ltv", label: "Sort by value", icon: "coins" },
-  { key: "recent", label: "Sort by recency", icon: "clock" },
-  { key: "orders", label: "Sort by orders", icon: "orders" },
-  { key: "points", label: "Sort by points", icon: "points" },
-  { key: "name", label: "Sort by name", icon: "name" },
-];
-
-const PERIODS: { key: string; label: string; icon: GuestGlyphName }[] = [
-  { key: "all", label: "Any time", icon: "anytime" },
-  { key: "1", label: "Seen in 24h", icon: "clock" },
-  { key: "7", label: "Seen in 7 days", icon: "calWeek" },
-  { key: "30", label: "Seen in 30 days", icon: "calMonth" },
-];
 const CHANNEL_LABEL: Record<string, string> = {
   "dine-in": "Dine-in",
   takeout: "Takeaway",
@@ -72,16 +47,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: "WhatsApp",
   web: "Web",
 };
-const CHANNEL_GLYPH: Record<string, GuestGlyphName> = {
-  "dine-in": "utensils",
-  takeout: "takeout",
-  takeaway: "takeout",
-  delivery: "truck",
-  whatsapp: "chat",
-  web: "globe",
-};
 const chanLabel = (k: string) => (k ? CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1) : "");
-const chanGlyph = (k: string): GuestGlyphName => CHANNEL_GLYPH[k.toLowerCase()] ?? "globe";
 
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const seen = (d: number | null) => (d == null ? "never" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`);
@@ -110,8 +76,27 @@ function inSeg(c: CrmCustomer, seg: string): boolean {
     case "all": return true;
     case "vip": return c.vip;
     case "members": return c.member;
+    // dense-console segments (mockup): Regular = an ordering non-VIP that isn't
+    // brand-new; At-risk = ordered before but RFM health has slipped below 34.
+    case "regular": return !c.vip && c.orderCount > 0 && c.lifecycle !== "new";
+    case "atrisk": return c.orderCount > 0 && health(c) < 34;
     default: return c.vip ? false : c.lifecycle === seg;
   }
+}
+// Loyalty tier → gem class + avatar tint (bronze/silver/gold/platinum).
+function gemClass(tier: string): string {
+  const t = (tier || "").toLowerCase();
+  if (t.includes("platinum")) return "plat";
+  if (t.includes("gold")) return "gold";
+  if (t.includes("silver")) return "silver";
+  return "bronze";
+}
+function avClass(c: CrmCustomer): string {
+  const g = gemClass(c.tier);
+  return g === "plat" ? "p" : g === "silver" ? "s" : "g";
+}
+function initials(name: string): string {
+  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
 /**
@@ -127,20 +112,15 @@ export function CoreCrm() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [seg, setSeg] = useState("all");
-  const [chan, setChan] = useState("all");
-  const [recency, setRecency] = useState("all");
   const [sort, setSort] = useState("ltv");
+  const [tierF, setTierF] = useState<string | null>(null);
   const [eraseOpen, setEraseOpen] = useState(false);
   const [erasing, setErasing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [noteDraft, setNoteDraft] = useState("");
   const [ptAmount, setPtAmount] = useState("");
-  const [ptReason, setPtReason] = useState("");
-  const [msgChannel, setMsgChannel] = useState<"sms" | "email">("sms");
-  const [msgSubject, setMsgSubject] = useState("");
-  const [msgBody, setMsgBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const [ptReason] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,20 +148,12 @@ export function CoreCrm() {
       .catch(() => {});
   }, [selected]);
 
-  // Channels actually present in the book — drives the channel filter chips.
-  const channelKeys = useMemo(
-    () => Array.from(new Set(data.flatMap((c) => c.channels ?? []))).filter((k): k is string => typeof k === "string" && !!k).sort(),
-    [data],
-  );
-
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const recN = recency === "all" ? null : Number(recency);
     const rows = data.filter(
       (c) =>
         inSeg(c, seg) &&
-        (chan === "all" || c.channels.includes(chan)) &&
-        (recN == null || (c.lastDays != null && c.lastDays <= recN)) &&
+        (tierF == null || gemClass(c.tier) === tierF) &&
         (!q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email ?? "").toLowerCase().includes(q)),
     );
     rows.sort((a, b) => {
@@ -194,18 +166,38 @@ export function CoreCrm() {
       }
     });
     return rows;
-  }, [data, query, seg, chan, recency, sort]);
+  }, [data, query, seg, tierF, sort]);
 
-  const kpis = useMemo(() => {
-    const members = data.filter((c) => c.member).length;
+  // Live counts for the labelled segment chips (mockup).
+  const segCounts = useMemo(() => ({
+    all: data.length,
+    vip: data.filter((c) => inSeg(c, "vip")).length,
+    regular: data.filter((c) => inSeg(c, "regular")).length,
+    new: data.filter((c) => inSeg(c, "new")).length,
+    atrisk: data.filter((c) => inSeg(c, "atrisk")).length,
+  }), [data]);
+
+  // Dense-console stat strip — every figure derived from the live customer book
+  // (Rule #1): guests · VIPs · new · at-risk (RFM health < 34) · avg spend ·
+  // repeat rate (guests with 2+ orders).
+  const stat = useMemo(() => {
+    const n = data.length;
     const vip = data.filter((c) => c.vip).length;
-    const ltv = data.reduce((s, c) => s + c.totalSpent, 0);
-    return [
-      { l: "Customers", v: String(data.length) },
-      { l: "Members", v: String(members) },
-      { l: "VIP", v: String(vip) },
-      { l: "Total LTV", v: `${zl(ltv)} zł` },
-    ];
+    const fresh = data.filter((c) => c.lifecycle === "new").length;
+    const atRisk = data.filter((c) => c.orderCount > 0 && health(c) < 34).length;
+    const withOrders = data.filter((c) => c.orderCount > 0);
+    const avgSpend = withOrders.length ? Math.round(withOrders.reduce((s, c) => s + c.totalSpent, 0) / withOrders.length) : 0;
+    const repeat = data.filter((c) => c.orderCount > 1).length;
+    return {
+      guests: n,
+      members: data.filter((c) => c.member).length,
+      vip,
+      vipPct: n ? Math.round((vip / n) * 100) : 0,
+      fresh,
+      atRisk,
+      avgSpend,
+      repeatPct: n ? Math.round((repeat / n) * 100) : 0,
+    };
   }, [data]);
 
   const cust = data.find((c) => c.phone === selected) ?? null;
@@ -239,29 +231,9 @@ export function CoreCrm() {
     });
     if (res.ok) {
       setPtAmount("");
-      setPtReason("");
       toast(`${amt > 0 ? "+" : ""}${amt} points`, "success");
       void load();
     } else toast("Could not adjust points", "danger");
-  };
-  const sendMessage = async () => {
-    if (!selected || !msgBody.trim() || sending) return;
-    setSending(true);
-    try {
-      const res = await fetch(`/api/admin/customers/${encodeURIComponent(selected)}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: msgChannel, body: msgBody.trim(), subject: msgChannel === "email" ? msgSubject.trim() || undefined : undefined }),
-      });
-      const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (res.ok) {
-        toast(`${msgChannel === "sms" ? "SMS" : "Email"} sent`, "success");
-        setMsgBody("");
-        setMsgSubject("");
-      } else toast(d.error || "Could not send (manager+ only)", "danger");
-    } finally {
-      setSending(false);
-    }
   };
 
   // GDPR Art. 17 erasure — hard-deletes every record tied to the phone.
@@ -303,215 +275,230 @@ export function CoreCrm() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
-        <div className="core-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-          {kpis.map((k) => (
-            <div className="k" key={k.l}>
-              <div className="kl">{k.l}</div>
-              <div className="kv mono">{k.v}</div>
-            </div>
-          ))}
+        <div className="core-crumb">
+          CORE — GUEST · CRM · <b>customer book</b> · <span className="fix">{stat.guests} guests</span>
         </div>
-
-        {/* one unified, glyph-only filter bar — search grows to fill, the rest
-            are equal-height glyph pods (segment · sort · channel · recency) */}
-        <div className="core-gfilters">
-          <div className="core-search">
-            <GuestGlyph name="search" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone, email…" aria-label="Search customers" />
+        <div className="core-sectionhead">
+          <h1>Guest · CRM</h1>
+          <span className="sub">customer book · rfm health · consent &amp; points</span>
+        </div>
+        {/* dense-console 6-up stat strip — every figure from the live book (Rule #1). */}
+        <div className="core-statstrip" role="group" aria-label="Customer-book metrics">
+          <div className="cell">
+            <span className="lab">Guests</span>
+            <span className="val">{stat.guests}</span>
+            <span className="delta">{stat.members} member{stat.members === 1 ? "" : "s"}</span>
           </div>
-          <div className="core-seg icons" role="group" aria-label="Segment">
-            {SEGS.map((s) => (
-              <button key={s.key} className={seg === s.key ? "on" : ""} onClick={() => setSeg(s.key)} title={s.label} aria-label={s.label} aria-pressed={seg === s.key}>
-                <GuestGlyph name={s.icon} />
-              </button>
-            ))}
+          <div className="cell">
+            <span className="lab">VIPs</span>
+            <span className="val brand">{stat.vip}</span>
+            <span className="delta">{stat.vipPct}% of book</span>
           </div>
-          <div className="core-seg icons" role="group" aria-label="Channel">
-            <button className={chan === "all" ? "on" : ""} onClick={() => setChan("all")} title="All channels" aria-label="All channels" aria-pressed={chan === "all"}>
-              <GuestGlyph name="asterisk" />
-            </button>
-            {channelKeys.map((k) => (
-              <button key={k} className={chan === k ? "on" : ""} onClick={() => setChan(k)} title={chanLabel(k)} aria-label={chanLabel(k)} aria-pressed={chan === k}>
-                <GuestGlyph name={chanGlyph(k)} />
-              </button>
-            ))}
+          <div className="cell">
+            <span className="lab">New</span>
+            <span className="val info">{stat.fresh}</span>
+            <span className="delta">first-time guests</span>
           </div>
-          <div className="core-seg icons" role="group" aria-label="Last seen">
-            {PERIODS.map((p) => (
-              <button key={p.key} className={recency === p.key ? "on" : ""} onClick={() => setRecency(p.key)} title={p.label} aria-label={p.label} aria-pressed={recency === p.key}>
-                <GuestGlyph name={p.icon} />
-              </button>
-            ))}
+          <div className="cell">
+            <span className="lab">At-risk</span>
+            <span className={stat.atRisk > 0 ? "val danger" : "val"}>{stat.atRisk}</span>
+            <span className={stat.atRisk > 0 ? "delta dn" : "delta"}>{stat.atRisk > 0 ? "win-back due" : "book healthy"}</span>
           </div>
-          <div className="core-seg icons" role="group" aria-label="Sort by">
-            {SORTS.map((s) => (
-              <button key={s.key} className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key)} title={s.label} aria-label={s.label} aria-pressed={sort === s.key}>
-                <GuestGlyph name={s.icon} />
-              </button>
-            ))}
+          <div className="cell">
+            <span className="lab">Avg spend</span>
+            <span className="val basil">{zl(stat.avgSpend)}<small> zł</small></span>
+            <span className="delta">per active guest</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Repeat rate</span>
+            <span className="val amber">{stat.repeatPct}<small>%</small></span>
+            <span className="delta">2+ orders</span>
           </div>
         </div>
 
-        <div className="core-crm-table-wrap">
+        {/* dense-console filter bar — search · labelled segment chips (counts) ·
+            loyalty-tier gems · sort · refresh (mockup 08-guest-crm). */}
+        <div className="core-crm-filterbar glass">
+          <div className="core-crm-search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
+          </div>
+          <div className="core-fsep" />
+          <div className="core-segchips" role="group" aria-label="Segment">
+            {([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([k, label]) => (
+              <button key={k} className={seg === k ? `on${k === "all" ? " brand" : ""}` : ""} onClick={() => setSeg(k)} aria-pressed={seg === k}>
+                {label} <span className="ct">{segCounts[k]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="core-fsep" />
+          <div className="core-gems" role="group" aria-label="Loyalty tier">
+            {([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([k, label]) => (
+              <span key={k} className={tierF === k ? "core-gemchip on" : "core-gemchip"} role="button" tabIndex={0}
+                onClick={() => setTierF((t) => (t === k ? null : k))}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTierF((t) => (t === k ? null : k)); } }}>
+                <span className={`core-gem ${k}`} />{label}
+              </span>
+            ))}
+          </div>
+          <div className="core-sp" />
+          <span className="core-crm-sortlbl">sort</span>
+          <div className="core-seg" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
+            {([["recent", "recent"], ["ltv", "spend"], ["orders", "visits"]] as const).map(([k, label]) => (
+              <button key={k} className={sort === k ? "on" : ""} onClick={() => setSort(k)}>{label}</button>
+            ))}
+          </div>
+          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+        </div>
+
+        <div className={`core-crm-grid${cust ? "" : " solo"}`}>
+          <div className="core-roster">
           {loading ? (
             <div className="core-kds-empty pad">Loading customer book…</div>
           ) : visible.length === 0 ? (
             <div className="core-kds-empty pad">No customers match.</div>
           ) : (
-            <table className="core-tbl">
+            <table>
               <thead>
                 <tr>
-                  <th>Customer</th>
-                  <th>Health</th>
-                  <th className="num">Orders</th>
-                  <th className="num">Points</th>
-                  <th className="num">LTV</th>
-                  <th>Last</th>
+                  <th>Guest</th>
+                  <th>Phone</th>
+                  <th className="num">Visits</th>
+                  <th>Last seen</th>
+                  <th className="num">Spend</th>
+                  <th>Tier</th>
+                  <th>RFM health</th>
                 </tr>
               </thead>
               <tbody>
                 {visible.map((c) => {
                   const h = health(c);
                   const t = healthTier(h);
+                  const bar = t.tone === "ok" ? "hi" : t.tone === "warn" ? "mid" : "lo";
+                  const gem = gemClass(c.tier);
+                  const tierLabel = gem === "plat" ? "Platinum" : gem.charAt(0).toUpperCase() + gem.slice(1);
                   return (
-                    <tr key={c.phone} onClick={() => setSelected(c.phone)}>
+                    <tr key={c.phone} className={selected === c.phone ? "sel" : undefined} onClick={() => setSelected(c.phone)}>
                       <td>
-                        <div className="core-cust-nm">
-                          {c.name}
-                          {c.vip && <span className="core-pill vip">VIP</span>}
-                          {c.member && <span className="core-pill mem">★</span>}
+                        <div className="core-g-name">
+                          <span className={`core-g-av ${avClass(c)}`}>{initials(c.name)}</span>
+                          <div>
+                            <div className="core-g-nm">{c.name}</div>
+                            <div className="core-g-meta">{c.vip ? "VIP" : c.member ? "Member" : "Guest"}{c.channels[0] ? ` · ${chanLabel(c.channels[0])}` : ""}</div>
+                          </div>
                         </div>
-                        <div className="core-cust-sub">{c.channels.join(" · ") || c.phone}</div>
+                      </td>
+                      <td><span className="ph">{c.phone}</span></td>
+                      <td className="num">{c.orderCount}</td>
+                      <td><span className="ls">{seen(c.lastDays)}</span></td>
+                      <td className="num">{zl(c.totalSpent)} zł</td>
+                      <td>
+                        <div className="core-tiercell"><span className={`core-gem ${gem}`} />{tierLabel}</div>
                       </td>
                       <td>
-                        <span className={`core-health t-${t.tone}`}>{t.label}</span>
+                        <div className="core-rfm">
+                          <div className="track"><i className={bar} style={{ width: `${Math.min(100, h)}%` }} /></div>
+                          <span className={`sc ${bar}`}>{h}</span>
+                        </div>
                       </td>
-                      <td className="num mono">{c.orderCount}</td>
-                      <td className="num mono">{c.points}</td>
-                      <td className="num mono">{zl(c.totalSpent)} zł</td>
-                      <td className="core-cust-sub">{seen(c.lastDays)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           )}
+          </div>
+
+          {/* persistent profile panel (mockup drawer) */}
+          {cust && (
+            <aside className="core-drawer">
+              <div className="dh">
+                <span className={`av ${avClass(cust)}`}>{initials(cust.name)}</span>
+                <div className="who">
+                  <div className="n">{cust.name} <span className={`core-gem ${gemClass(cust.tier)}`} style={{ width: 11, height: 11 }} /></div>
+                  <div className="sub">{cust.vip ? "VIP · " : ""}{cust.member ? cust.tier : `Contact · ${cust.source}`}{cust.email ? ` · ${cust.email}` : ""}</div>
+                </div>
+              </div>
+
+              <div className="core-dsec">
+                <div className="core-dsec-lab">Lifetime</div>
+                <div className="core-dstat-grid">
+                  <div className="core-dstat"><div className="v">{cust.orderCount}</div><div className="k">Visits</div></div>
+                  <div className="core-dstat"><div className="v brand">{zl(cust.totalSpent)}<small> zł</small></div><div className="k">Spend</div></div>
+                  <div className="core-dstat"><div className="v">{zl(cust.avgOrderValue)}<small> zł</small></div><div className="k">Avg</div></div>
+                  <div className="core-dstat"><div className="v basil">{cust.points}</div><div className="k">Points</div></div>
+                </div>
+              </div>
+
+              <div className="core-dsec">
+                <div className="core-dsec-lab">Consent</div>
+                <div className="core-consent2">
+                  <div className="row">
+                    <span className="cn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>SMS</span>
+                    <div className={cust.smsOptIn ? "core-tog on" : "core-tog"} role="switch" aria-checked={cust.smsOptIn} tabIndex={0} onClick={() => void toggleConsent({ smsOptIn: !cust.smsOptIn })} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void toggleConsent({ smsOptIn: !cust.smsOptIn }); } }}><i /></div>
+                  </div>
+                  <div className="row">
+                    <span className="cn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>Email</span>
+                    <div className={cust.emailOptIn ? "core-tog on" : "core-tog"} role="switch" aria-checked={cust.emailOptIn} tabIndex={0} onClick={() => void toggleConsent({ emailOptIn: !cust.emailOptIn })} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void toggleConsent({ emailOptIn: !cust.emailOptIn }); } }}><i /></div>
+                  </div>
+                </div>
+              </div>
+
+              {cust.recent.length > 0 && (
+                <div className="core-dsec">
+                  <div className="core-dsec-lab">Recent orders</div>
+                  <div className="core-dtimeline">
+                    {cust.recent.slice(0, 3).map((o) => (
+                      <div className="core-dtl" key={o.id}>
+                        <span className="dot" />
+                        <div className="body">
+                          <div className="t">{o.items.map((i) => i.name).join(" · ") || "Order"} <b>{zl(o.total)} zł</b></div>
+                          <div className="m">{o.fulfillment} · {o.location} · {new Date(o.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="core-dsec">
+                <div className="core-dsec-lab">Adjust points</div>
+                <div className="core-dpoints">
+                  <div className="core-dstepper">
+                    <button type="button" onClick={() => setPtAmount((v) => String((parseInt(v, 10) || 0) - 10))}>−</button>
+                    <span className="num">{(parseInt(ptAmount, 10) || 0) > 0 ? "+" : ""}{parseInt(ptAmount, 10) || 0}</span>
+                    <button type="button" onClick={() => setPtAmount((v) => String((parseInt(v, 10) || 0) + 10))}>+</button>
+                  </div>
+                  <button type="button" className="apply" disabled={!parseInt(ptAmount, 10)} onClick={() => void adjustPoints()}>Apply</button>
+                  <span className="bal">balance <b>{cust.points}</b></span>
+                </div>
+              </div>
+
+              <div className="core-dsec">
+                <div className="core-dsec-lab">Notes {notes.length > 0 && <span className="more" onClick={() => void delNote(notes[0].id)}>clear latest</span>}</div>
+                <textarea className="core-dnotes" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add a private note…" />
+                <button type="button" className="core-dsave" onClick={() => void addNote()}>Save note</button>
+                {notes.length > 0 && (
+                  <div className="core-notes" style={{ marginTop: 9 }}>
+                    {notes.slice(0, 4).map((n) => (
+                      <div className="core-note" key={n.id}>
+                        <div className="b">{n.body}</div>
+                        <div className="m">{n.authoredBy ?? "staff"} · {new Date(n.createdAt).toLocaleDateString("pl-PL")}<button onClick={() => void delNote(n.id)} aria-label="Delete note">✕</button></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="core-dsec">
+                <div className="core-dsec-lab">Data <a className="more" href={`/api/admin/gdpr/export?phone=${encodeURIComponent(cust.phone)}`} target="_blank" rel="noreferrer">export ↗</a></div>
+                <button type="button" className="core-dsave" style={{ color: "var(--danger)", borderColor: "rgba(255,90,92,.4)" }} onClick={() => setEraseOpen(true)}>Erase customer (GDPR Art. 17)</button>
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
-      {/* profile drawer */}
-      <CoreDialog open={!!cust} onClose={() => setSelected(null)} title={cust?.name ?? ""} width={640}>
-        {cust && (
-          <div className="core-profile">
-            <div className="core-profile-head">
-              <span className="core-av lg">{cust.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
-              <div>
-                <div className="row">
-                  {cust.member ? <span className="core-tier">★ {cust.tier}</span> : <span className="core-pill">Contact · {cust.source}</span>}
-                  {cust.vip && <span className="core-pill vip">VIP</span>}
-                </div>
-                <div className="core-cust-sub">{cust.phone}{cust.email ? ` · ${cust.email}` : " · no email"}</div>
-              </div>
-            </div>
-
-            <div className="core-stat-grid">
-              <div><span className="sv">{zl(cust.totalSpent)} zł</span><span className="sl">Lifetime</span></div>
-              <div><span className="sv">{zl(cust.avgOrderValue)} zł</span><span className="sl">Avg order</span></div>
-              <div><span className="sv">{cust.orderCount}</span><span className="sl">Orders</span></div>
-              <div><span className="sv">{cust.points}</span><span className="sl">Points</span></div>
-              <div><span className="sv">{cust.reliability}%</span><span className="sl">Reliability</span></div>
-              <div><span className={cust.noShows ? "sv bad" : "sv"}>{cust.noShows}</span><span className="sl">No-shows</span></div>
-            </div>
-
-            {/* consent */}
-            <div className="core-consent">
-              <button className={cust.smsOptIn ? "on" : ""} onClick={() => void toggleConsent({ smsOptIn: !cust.smsOptIn })}>
-                SMS {cust.smsOptIn ? "✓" : "✕"}
-              </button>
-              <button className={cust.emailOptIn ? "on" : ""} onClick={() => void toggleConsent({ emailOptIn: !cust.emailOptIn })}>
-                Email {cust.emailOptIn ? "✓" : "✕"}
-              </button>
-              <a className="core-gdpr" href={`/api/admin/gdpr/export?phone=${encodeURIComponent(cust.phone)}`} target="_blank" rel="noreferrer">
-                GDPR export ↗
-              </a>
-              <button className="core-gdpr danger" onClick={() => setEraseOpen(true)}>
-                Erase ⚠
-              </button>
-            </div>
-
-            {/* recent orders */}
-            {cust.recent.length > 0 && (
-              <>
-                <h4 className="core-profile-h">Recent orders</h4>
-                <div className="core-timeline">
-                  {cust.recent.slice(0, 5).map((o) => (
-                    <div className="core-tl-row" key={o.id}>
-                      <span className="mono">{zl(o.total)} zł</span>
-                      <span className="core-cust-sub">{o.fulfillment} · {o.location}</span>
-                      <span className="core-cust-sub">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* message */}
-            <h4 className="core-profile-h">Send a message</h4>
-            <div className="core-msg-compose">
-              <div className="core-seg" style={{ marginBottom: 8 }}>
-                <button className={msgChannel === "sms" ? "on" : ""} onClick={() => setMsgChannel("sms")} disabled={!cust.smsOptIn} title={cust.smsOptIn ? "" : "No SMS consent"}>SMS</button>
-                <button className={msgChannel === "email" ? "on" : ""} onClick={() => setMsgChannel("email")} disabled={!cust.email || !cust.emailOptIn} title={cust.email ? (cust.emailOptIn ? "" : "No email consent") : "No email on file"}>Email</button>
-              </div>
-              {msgChannel === "email" && (
-                <input className="core-inp" style={{ width: "100%", marginBottom: 8 }} value={msgSubject} onChange={(e) => setMsgSubject(e.target.value)} placeholder="Subject" />
-              )}
-              <textarea className="core-textarea" rows={2} value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder={`Message to ${cust.name.split(" ")[0]}…`} />
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                <button className="core-btn primary" disabled={!msgBody.trim() || sending} onClick={() => void sendMessage()}>
-                  Send {msgChannel === "sms" ? "SMS" : "email"}
-                </button>
-              </div>
-            </div>
-
-            {/* points */}
-            <h4 className="core-profile-h">Adjust points</h4>
-            <div className="core-points-row">
-              <input className="core-inp" value={ptAmount} onChange={(e) => setPtAmount(e.target.value)} placeholder="e.g. 50 or -20" />
-              <input className="core-inp" value={ptReason} onChange={(e) => setPtReason(e.target.value)} placeholder="Reason" />
-              <button className="core-btn primary" onClick={() => void adjustPoints()}>Apply</button>
-            </div>
-
-            {/* notes */}
-            <h4 className="core-profile-h">Notes</h4>
-            <div className="core-points-row">
-              <input
-                className="core-inp"
-                style={{ flex: 1 }}
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void addNote()}
-                placeholder={`Add a note about ${cust.name.split(" ")[0]}…`}
-              />
-              <button className="core-btn" onClick={() => void addNote()}>Add</button>
-            </div>
-            <div className="core-notes">
-              {notes.length === 0 ? (
-                <div className="core-ctx-empty">No notes yet.</div>
-              ) : (
-                notes.map((n) => (
-                  <div className="core-note" key={n.id}>
-                    <div className="b">{n.body}</div>
-                    <div className="m">
-                      {n.authoredBy ?? "staff"} · {new Date(n.createdAt).toLocaleDateString("pl-PL")}
-                      <button onClick={() => void delNote(n.id)} aria-label="Delete note">✕</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </CoreDialog>
 
       {/* GDPR erasure confirm */}
       <CoreDialog

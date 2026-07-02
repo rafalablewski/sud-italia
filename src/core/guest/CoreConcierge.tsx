@@ -17,11 +17,20 @@ interface Matrix {
   columns: { key: string; label: string; emoji: string }[];
   rows: { id: string; name: string; available: boolean; allergens: string[]; dietary: string[] }[];
 }
+interface AgentStats {
+  requestsToday: number;
+  avgLatencyMs: number;
+  errors: number;
+  errorRatePct: number;
+  deflectionPct: number;
+  byCapability: Record<string, { count: number; avgLatencyMs: number }>;
+}
 interface Props {
   meta: CapMeta[];
   settings: { exposure: Record<string, boolean> };
   byLocation: Record<string, { samples: Record<string, unknown>; matrix: Matrix }>;
   waConfigured: boolean;
+  stats: AgentStats;
 }
 
 /**
@@ -30,7 +39,7 @@ interface Props {
  * capability meta + per-location samples + matrix; exposure toggles PATCH
  * /api/admin/concierge. Own core- UI.
  */
-export function CoreConcierge({ meta, settings, byLocation, waConfigured }: Props) {
+export function CoreConcierge({ meta, settings, byLocation, waConfigured, stats }: Props) {
   const toast = useCoreToast();
   // Drive the inspected location from the shell's global location switcher
   // (CoreLocationChip) — no second, page-local switch. The chip can sit on
@@ -94,6 +103,23 @@ export function CoreConcierge({ meta, settings, byLocation, waConfigured }: Prop
       tabs={guestTabs("concierge")}
       subRight={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
     >
+      <div className="core-crumb">
+        CORE — GUEST · CONCIERGE · <b>mcp inspector</b> · <span className="fix">{liveCount}/{meta.length} live</span>
+      </div>
+      <div className="core-sectionhead">
+        <h1>Guest · Concierge</h1>
+        <span className="sub">ai capability server · model-context inspector</span>
+      </div>
+      {/* dense-console 6-up stat strip — capabilities/live are config; the rest
+          are REAL agent-endpoint telemetry from getAgentCallStats (Rule #1). */}
+      <div className="core-statstrip" role="group" aria-label="Concierge metrics">
+        <div className="cell"><span className="lab">Capabilities</span><span className="val">{meta.length}</span><span className="delta">registered</span></div>
+        <div className="cell"><span className="lab">Live</span><span className="val basil">{liveCount}</span><span className="delta">{liveCount}/{meta.length} exposed</span></div>
+        <div className="cell"><span className="lab">Requests today</span><span className="val">{stats.requestsToday}</span><span className="delta">agent hits</span></div>
+        <div className="cell"><span className="lab">Avg latency</span><span className="val info">{stats.avgLatencyMs}<small> ms</small></span><span className="delta">per call</span></div>
+        <div className="cell"><span className="lab">Deflection</span><span className="val basil">{stats.deflectionPct}<small>%</small></span><span className="delta">served OK</span></div>
+        <div className="cell"><span className="lab">Errors</span><span className={stats.errors > 0 ? "val danger" : "val"}>{stats.errors}</span><span className={stats.errors > 0 ? "delta dn" : "delta"}>{stats.errorRatePct}% rate</span></div>
+      </div>
       <div className="core-concierge">
         {/* capability inspector */}
         <section className="core-caps">
@@ -113,7 +139,10 @@ export function CoreConcierge({ meta, settings, byLocation, waConfigured }: Prop
                 </button>
               </div>
               <div className="core-cap-desc">{m.desc}</div>
-              <div className="core-cap-meta">{m.label} · {m.transport}</div>
+              <div className="core-cap-meta">
+                {exposure[m.id] ? <span style={{ color: "var(--basil)" }}>● live</span> : "hidden"} · {m.transport}
+                {stats.byCapability[m.id] && ` · ${stats.byCapability[m.id].count} req · ${stats.byCapability[m.id].avgLatencyMs} ms`}
+              </div>
             </div>
           ))}
         </section>

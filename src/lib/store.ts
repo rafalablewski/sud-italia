@@ -9284,6 +9284,58 @@ export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurred
   return entry;
 }
 
+// --- Concierge / agent-call telemetry ---------------------------------------
+//
+// Every hit on the public agent endpoint (`/api/agent/[capability]`) is logged
+// here so the Concierge MCP inspector can show REAL usage (requests today · avg
+// latency · deflection · errors · per-capability load) instead of guessed
+// numbers (Rule #1). Bounded ring buffer — the inspector only reads "today".
+export interface AgentCall {
+  capability: string;
+  at: string;
+  latencyMs: number;
+  ok: boolean;
+}
+const AGENT_CALLS_MAX = 5000;
+export async function logAgentCall(entry: { capability: string; latencyMs: number; ok: boolean; at?: string }): Promise<void> {
+  await withLock("agent-calls.json", async () => {
+    const list = await readJSON<AgentCall[]>("agent-calls.json", []);
+    list.push({ capability: entry.capability, latencyMs: Math.max(0, Math.round(entry.latencyMs)), ok: entry.ok, at: entry.at ?? new Date().toISOString() });
+    await writeJSON("agent-calls.json", list.length > AGENT_CALLS_MAX ? list.slice(list.length - AGENT_CALLS_MAX) : list);
+  });
+}
+export interface AgentCallStats {
+  requestsToday: number;
+  avgLatencyMs: number;
+  errors: number;
+  errorRatePct: number;
+  deflectionPct: number; // share of calls served OK without an error → self-serve success
+  byCapability: Record<string, { count: number; avgLatencyMs: number }>;
+}
+export async function getAgentCallStats(): Promise<AgentCallStats> {
+  const list = await readJSON<AgentCall[]>("agent-calls.json", []);
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const today = list.filter((c) => Date.parse(c.at) >= startOfDay.getTime());
+  const n = today.length;
+  const errors = today.filter((c) => !c.ok).length;
+  const avg = n ? Math.round(today.reduce((s, c) => s + c.latencyMs, 0) / n) : 0;
+  const byCapability: Record<string, { count: number; avgLatencyMs: number }> = {};
+  for (const c of today) {
+    const b = (byCapability[c.capability] ??= { count: 0, avgLatencyMs: 0 });
+    b.avgLatencyMs = Math.round((b.avgLatencyMs * b.count + c.latencyMs) / (b.count + 1));
+    b.count += 1;
+  }
+  return {
+    requestsToday: n,
+    avgLatencyMs: avg,
+    errors,
+    errorRatePct: n ? Math.round((errors / n) * 100) : 0,
+    deflectionPct: n ? Math.round(((n - errors) / n) * 100) : 0,
+    byCapability,
+  };
+}
+
 // --- Agent HQ: editable agent configs + timeline -----------------------------
 //
 // Agent HQ turns the nine hardcoded Boardroom personas into EDITABLE agents.
