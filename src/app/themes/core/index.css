@@ -199,10 +199,14 @@
    (SelectionContext) — you change the VIEW, not the app. Distinct from the POS
    category `.core-rail` below. */
 .core .core-main { flex: 1; min-height: 0; display: flex; }
+/* The collapsed lens rail is TRANSPARENT with no divider — the icons float on
+   the aurora like the mockup (no panel fill, no border-right). Only when it's
+   pinned/expanded (`.open`) does it become a readable floating glass panel. */
 .core .core-lens { flex: none; width: 56px; display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 7px; background: var(--panel); border-right: 1px solid var(--line);
+  padding: 8px 7px; background: transparent;
   overflow: hidden; z-index: 6; transition: width var(--fast); }
-.core .core-lens.open { width: 184px; box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); }
+.core .core-lens.open { width: 184px; background: var(--panel); border-right: 1px solid var(--line);
+  box-shadow: var(--sh-2, 0 8px 24px rgba(0,0,0,.35)); }
 /* pin toggle at the top of the rail — collapses/expands (and persists) */
 .core .core-lens-pin { display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px; margin-bottom: 4px;
   flex: none; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line);

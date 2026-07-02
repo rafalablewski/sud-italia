@@ -247,7 +247,10 @@ wordmark, no second subbar row, no bottom switcher:
   split pass panel, Book = calendar, Reports = line chart, Settings = gear. Each
   row is `.core-lens-ico` + a `.core-lens-txt` (mono label + `.core-lens-sub`
   caption); the **active** lens gets the ember `--brand-wash` fill, an inset
-  ring, and an ember `::before` left accent bar. Collapsed by default; it
+  ring, and an ember `::before` left accent bar. Collapsed, the rail is
+  **transparent with no divider** — the icons float on the aurora, like the
+  mockup (no panel fill, no `border-right`); it becomes a readable floating glass
+  panel (`--panel` + border + shadow) only in the `.open` state. It
   expands to labels only when **pinned** — a click on the `.core-lens-pin`
   toggle adds `.open` — never on hover, so a stray cursor never shoves the
   Canvas. The pinned choice persists (localStorage, `core-lens-pinned`). It
