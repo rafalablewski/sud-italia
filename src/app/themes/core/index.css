@@ -431,6 +431,10 @@
 .core .core-covers button { width: 24px; height: 24px; border-radius: 50%; color: var(--ink-2); font-size: 15px; }
 .core .core-covers button:hover { background: var(--hover); color: var(--ink); }
 .core .core-covers .mono { min-width: 18px; text-align: center; font-weight: 600; font-size: 13px; }
+/* labelled covers row (mockup: COVERS [− 2 +] ......... guest/party on the right) */
+.core .core-tcovers { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.core .core-tcovers-l { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.core .core-tcovers-g { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core .core-chanrow { display: flex; gap: 6px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; flex: none; }
 .core .core-chan { height: 30px; padding: 0 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 550; font-size: 12.5px; color: var(--ink-2); }
 .core .core-chan:hover { color: var(--ink); }
@@ -467,14 +471,20 @@
 .core .core-qstep button { width: 22px; height: 22px; border-radius: 6px; color: var(--ink-2); font-size: 14px; }
 .core .core-qstep button:hover { background: var(--hover); color: var(--ink); }
 .core .core-qstep .q { min-width: 22px; text-align: center; font-weight: 600; font-size: 12.5px; }
-/* Calm ticket lines like the mockup: the qty stepper is borderless + dimmed at
-   rest and only lights up when the line is hovered — width is stable so nothing
-   jumps. Touch tills always show it (no hover). */
+/* Calm ticket lines like the mockup: at rest the line reads "N×" (clean, no
+   controls); hovering a line swaps in the live stepper + grip. Touch tills have
+   no hover, so they always show the stepper (the "N×" is hidden there). */
+.core .core-line .core-lqz { display: flex; align-items: center; flex: none; }
+.core .core-line .core-lqty { display: none; min-width: 26px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-3); }
 @media (hover: hover) {
-  .core .core-line .core-qstep { background: transparent; border-color: transparent; }
-  .core .core-line .core-qstep button { opacity: .35; transition: opacity var(--fast); }
-  .core .core-line-main:hover .core-qstep { background: var(--panel-3); border-color: var(--line); }
-  .core .core-line-main:hover .core-qstep button { opacity: 1; }
+  /* at rest the qty reads "N×" (mockup); hovering the line swaps in the live
+     stepper in-flow (name shifts a touch, never overlaps) and blooms the grip. */
+  .core .core-line .core-lqty { display: inline; }
+  .core .core-line .core-lqz .core-qstep { display: none; }
+  .core .core-line-main:hover .core-lqz .core-lqty { display: none; }
+  .core .core-line-main:hover .core-lqz .core-qstep { display: inline-flex; background: var(--panel-3); border-color: var(--line); }
+  .core .core-line .core-grip { opacity: 0; }
+  .core .core-line:hover .core-grip { opacity: 1; }
 }
 .core .core-qstep.big button { width: 34px; height: 34px; font-size: 18px; }
 .core .core-qstep.big .q { min-width: 34px; font-size: 15px; }

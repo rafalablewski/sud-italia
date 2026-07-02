@@ -1298,14 +1298,19 @@ export function CorePos({
           ) : (
             <span className="core-grip" aria-hidden>⠿</span>
           )}
-          <div className="core-qstep">
-            <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
-              −
-            </button>
-            <span className="q mono">{l.quantity}</span>
-            <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
-              +
-            </button>
+          <div className="core-lqz">
+            {/* resting: a clean "N×" like the mockup; on hover (desktop) it swaps
+                to the live stepper. Touch tills always show the stepper. */}
+            <span className="core-lqty mono" aria-hidden>{l.quantity}×</span>
+            <div className="core-qstep">
+              <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
+                −
+              </button>
+              <span className="q mono">{l.quantity}</span>
+              <button type="button" onClick={() => changeQty(key, 1)} aria-label="Add one">
+                +
+              </button>
+            </div>
           </div>
           <button type="button" className="ln ln-edit" onClick={() => openEditor(m, l)} title="Edit options & note">
             {m.name}
@@ -1610,17 +1615,6 @@ export function CorePos({
                   </span>
                 )}
                 {active.channel === "dine-in" && (
-                  <div className="core-covers">
-                    <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">
-                      −
-                    </button>
-                    <span className="mono">{active.covers ?? 2}</span>
-                    <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">
-                      +
-                    </button>
-                  </div>
-                )}
-                {active.channel === "dine-in" && (
                   <button type="button" className="core-chan-aux" onClick={() => setTableOpen(true)}>
                     {active.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : "Assign table"}
                   </button>
@@ -1638,6 +1632,19 @@ export function CorePos({
                   </button>
                 )}
               </div>
+
+              {/* covers row — labelled, on its own line like the mockup */}
+              {active.channel === "dine-in" && (
+                <div className="core-tcovers">
+                  <span className="core-tcovers-l">Covers</span>
+                  <div className="core-covers">
+                    <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">−</button>
+                    <span className="mono">{active.covers ?? 2}</span>
+                    <button type="button" onClick={() => changeCovers(1)} aria-label="More covers">+</button>
+                  </div>
+                  {active.customerName && <span className="core-tcovers-g">{active.customerName}</span>}
+                </div>
+              )}
 
               {/* channel selector */}
               <div className="core-chanrow">

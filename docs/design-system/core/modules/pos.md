@@ -109,22 +109,27 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   input** — click to rename, persisted via the same debounced `PUT`) ·
   channel/order tag · a `.core-tabpromise` per-check ETA (max
   `promiseSecondsByCategory` across the lines, toned by the bottleneck
-  tier) · the `.core-covers` stepper (dine-in) and, right beside it, the
-  `.core-chan-aux` button — **Assign table / Table N** (dine-in, opens the
-  in-pane table picker) or **Add / Edit address** (delivery, opens the
-  address dialog). Both sit next to the covers count so the seating /
-  destination control lives with the party size. A `.core-delivery-paused`
+  tier) · the `.core-chan-aux` button — **Assign table / Table N** (dine-in, opens
+  the in-pane table picker) or **Add / Edit address** (delivery, opens the
+  address dialog). A `.core-delivery-paused`
   banner shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
+- **`.core-tcovers`** — a **labelled covers row** (dine-in), on its own line like
+  the mockup: a `.core-tcovers-l` "COVERS" caption + the `.core-covers` stepper,
+  with the attached guest name pushed right (`.core-tcovers-g`) when the check
+  carries one. (Moved off the header so the party size reads as its own control.)
 - **`.core-chanrow` / `.core-chan`** — the channel selector (dine-in /
   takeaway / delivery), now just the three channel buttons.
 - **`.core-timing` / `.core-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
   renderer reads to course or flat-list the ticket.
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
-  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter, the **tappable
-  line name** (`.ln-edit`, reveals a `✎` on hover → opens the line editor) and a
-  mono line price (modifier deltas included). Under the name, `.core-line-mods`
+  `.core-lqz` quantity zone that reads a clean **`N×`** (`.core-lqty`) at rest like
+  the mockup and swaps to the live `.core-qstep` −/＋ counter on hover (touch tills
+  have no hover, so they show the stepper outright); a `.core-grip` handle (`⠿`,
+  also hover-revealed on desktop); the **tappable line name** (`.ln-edit`, reveals
+  a `✎` on hover → opens the line editor) and a mono line price (modifier deltas
+  included). Under the name, `.core-line-mods`
   renders the chosen modifiers as `.core-mod-chip` chips (a `flagOnKds` pick →
   `.flag` amber) and the special-request note as `.core-mod-note` (amber `.alrg`
   when it names an allergy). **Line identity** is the item + its modifier picks +
