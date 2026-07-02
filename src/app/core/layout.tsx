@@ -11,6 +11,7 @@ import "../themes/core/parity/floor.css";
 import "../themes/core/parity/slots.css";
 import "../themes/core/parity/dispatch.css";
 import "../themes/core/parity/orders.css";
+import "../themes/core/parity/book.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";

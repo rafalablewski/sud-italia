@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -25,7 +25,7 @@ function todayLocal(): string {
  */
 export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) {
   const toast = useCoreToast();
-  const { selected } = useSelection();
+  const { selected, select } = useSelection();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
   // Seed the date on the client only — todayLocal() reads the local timezone,
@@ -87,13 +87,6 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     [selectedSlot, partyN, reservations, loc],
   );
 
-  const recommend = () => {
-    const fit = tables.filter((t) => tableState(t).ok).sort((a, b) => a.seats - b.seats)[0];
-    if (fit) setTableId(fit.id);
-    else toast(`Nothing open for a party of ${partyN}`, "danger");
-  };
-
-  const todays = useMemo(() => [...reservations].filter((r) => RES_HOLDS.has(r.status)).sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
   const tableLabel = (id?: string) => tables.find((t) => t.id === id)?.number ?? "—";
   const canBook = !!selectedSlot && !!tableId && !!name.trim() && partyN >= 1 && !booking;
 
@@ -131,10 +124,16 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     }
   };
 
-  // --- Timeline (tables × hours) ---------------------------------------
-  const OPEN = 11 * 60, CLOSE = 23 * 60, SPAN = CLOSE - OPEN;
+  // --- Timeline (tables × 30-min ticks, 17:00→23:00 dinner window) ------
+  // Mockup axis: 13 tick marks (17:00, 17:30 … 23:00) laid on a fixed-width
+  // grid (48px label + 64px/tick) so real blocks fill the grid, and the panel
+  // scrolls horizontally rather than squishing an 11:00-start day to the right.
+  const OPEN = 17 * 60, CLOSE = 23 * 60;
+  const TICK_MIN = 30, LBL_W = 48, TICK_W = 64;
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
-  const hours = Array.from({ length: (CLOSE - OPEN) / 60 + 1 }, (_, i) => 11 + i);
+  const fmtHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
+  const COLS = ticks.length; // 13
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
   // Dense-console stat strip — every figure from the day's reservations (Rule #1).
   const bookStat = useMemo(() => {
@@ -171,6 +170,33 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     else toast("Could not move booking", "danger");
   };
 
+  // Best-fit table (smallest that seats the party & is free) — the row that
+  // wears the ✨ Recommend tag in the pick list.
+  const recTableId = useMemo(
+    () => tables.filter((t) => tableState(t).ok).sort((a, b) => a.seats - b.seats)[0]?.id ?? null,
+    [tables, tableState],
+  );
+  // Full-width booking list — everything but cancellations, chronological.
+  const bookingList = useMemo(
+    () => reservations.filter((r) => r.status !== "cancelled").sort((a, b) => a.time.localeCompare(b.time)),
+    [reservations],
+  );
+  // status → list badge tone/label. The schema has no confirmed/pending split,
+  // so a held (`booked`) reservation reads as "pending" (unconfirmed).
+  const listStat: Record<string, { c: string; l: string }> = {
+    seated: { c: "seated", l: "seated" },
+    booked: { c: "pending", l: "pending" },
+    "no-show": { c: "noshow", l: "no-show" },
+    completed: { c: "confirmed", l: "done" },
+  };
+  const selectRow = (r: Reservation) => {
+    const t = tables.find((x) => x.id === r.tableId);
+    if (t) select({ kind: "table", id: t.id, label: `Table ${t.number}`, sub: `${r.partySize} covers${t.zone ? ` · ${t.zone}` : ""}`, status: r.status });
+  };
+  const daySub = date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase() : "today";
+  const isToday = date === todayLocal();
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
   return (
     <CoreShell
       eyebrow={standalone ? "Book" : "Guest Engagement"}
@@ -182,7 +208,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
         </div>
         <div className="core-sectionhead">
           <h1>Book · Timeline</h1>
-          <span className="sub">{loc} · {date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase() : "today"} · dinner service</span>
+          <span className="sub">{daySub} · dinner service · {loc}</span>
           <div className="core-sp" />
         </div>
         {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
@@ -204,7 +230,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
           </div>
           <div className="cell">
             <span className="lab">Upcoming</span>
-            <span className="val basil">{bookStat.upcoming}</span>
+            <span className="val">{bookStat.upcoming}</span>
             <span className="delta">{bookStat.nextUp ? `next ${bookStat.nextUp}` : "none pending"}</span>
           </div>
           <div className="cell">
@@ -214,7 +240,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
           </div>
           <div className="cell">
             <span className="lab">Fill</span>
-            <span className="val amber">{bookStat.fill}<small>%</small></span>
+            <span className="val basil">{bookStat.fill}<small>%</small></span>
             <span className="delta">of seats</span>
           </div>
         </div>
@@ -224,7 +250,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
           <span className="core-surf-tb-lbl">Day</span>
           <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
         </div>
-        {/* timeline panel (left) — the tlbar header + the tables×hours grid,
+        {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
         <div className="core-book-tlpanel">
         <div className="core-book-tlbar">
@@ -236,46 +262,63 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
             <span><i className="cx" /> conflict</span>
           </div>
         </div>
-        <div className="core-book-timeline">
-          <div className="core-tl-head">
-            <div className="core-tl-corner">Tables ↓ · Hours →</div>
-            <div className="core-tl-hours">
-              {hours.map((h) => <div key={h} className="core-tl-hr">{h}:00</div>)}
+        <div className="core-bk-tlscroll">
+          <div className="core-bk-tlcols" style={{ "--cols": COLS } as CSSProperties}>
+            <div className="core-bk-hours">
+              <div className="hc" />
+              {ticks.map((m, i) => <div key={m} className={`hc${i % 2 === 0 ? " hh" : ""}`}>{fmtHM(m)}</div>)}
             </div>
-          </div>
-          <div className="core-tl-body">
             {tables.length === 0 ? (
               <div className="core-ctx-empty pad">No tables configured.</div>
             ) : (
-              tables.map((t) => (
-                <div
-                  key={t.id}
-                  className="core-tl-row"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { const r = dayRes.find((x) => x.id === dragId); if (r) void reassign(r, t.id); setDragId(null); }}
-                >
-                  <div className="core-tl-label">{t.number}<span className="s">{t.seats}p</span></div>
-                  <div className="core-tl-track">
-                    {hours.slice(0, -1).map((h) => <div key={h} className="core-tl-cell" />)}
-                    {dayRes.filter((r) => r.tableId === t.id).map((r) => {
-                      const left = Math.max(0, ((toMin(r.time) - OPEN) / SPAN) * 100);
-                      const width = Math.max(4, Math.min(100 - left, ((r.durationMin ?? DURATION_MIN) / SPAN) * 100));
+              tables.map((t) => {
+                const rows = dayRes.filter((r) => r.tableId === t.id);
+                const clashing = rows.filter((r) => conflictIds.has(r.id));
+                return (
+                  <div
+                    key={t.id}
+                    className="core-bk-row"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { const r = dayRes.find((x) => x.id === dragId); if (r) void reassign(r, t.id); setDragId(null); }}
+                  >
+                    <div className="lbl">{t.number}</div>
+                    {ticks.map((m, i) => <div key={m} className={`tick${i % 2 === 0 ? " hh" : ""}`} />)}
+                    {rows.map((r) => {
+                      const startTick = (toMin(r.time) - OPEN) / TICK_MIN;
+                      const cs = Math.max(0, startTick);
+                      if (cs >= COLS) return null;
+                      const spanTicks = (r.durationMin ?? DURATION_MIN) / TICK_MIN;
+                      const cspan = Math.max(0.5, Math.min(COLS - cs, spanTicks - (cs - startTick)));
+                      const left = LBL_W + cs * TICK_W;
+                      const width = cspan * TICK_W - 4;
+                      const conflict = conflictIds.has(r.id);
+                      const tone = r.status === "seated" ? "seated" : "pending";
+                      const elapsed = isToday && r.status === "seated" ? Math.max(0, nowMin - toMin(r.time)) : null;
+                      const context = r.status === "seated" ? (elapsed != null ? `seated · ${elapsed}m` : "seated") : "pending confirm";
+                      const stackCls = conflict ? (clashing.indexOf(r) % 2 === 0 ? " conflict top" : " conflict bot") : ` ${tone}`;
                       return (
                         <div
                           key={r.id}
                           draggable
-                          className={`core-tl-block ${r.status === "seated" ? "seated" : "confirmed"}${conflictIds.has(r.id) ? " conflict" : ""}`}
-                          style={{ left: `${left}%`, width: `${width}%` }}
+                          className={`core-bk-blk${stackCls}`}
+                          style={{ left: `${left}px`, width: `${width}px` }}
                           onDragStart={() => setDragId(r.id)}
-                          title={`${r.customerName} · ${r.partySize}p · ${r.time}${conflictIds.has(r.id) ? " · CONFLICT" : ""}`}
+                          title={`${r.customerName} · ${r.partySize} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
                         >
-                          <b>{r.customerName}</b><span>{r.partySize}p · {r.time}</span>
+                          {conflict ? (
+                            <span className="bn">{r.customerName} · {r.partySize} · ⚠ clash</span>
+                          ) : (
+                            <>
+                              <span className="bn">{r.customerName} · {r.partySize}</span>
+                              <span className="bm">{context}</span>
+                            </>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -283,87 +326,130 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
 
         {/* new reservation — right rail (mockup) */}
         <div className="core-book-form">
-          <h4 className="core-profile-h">Dine-in slot</h4>
-          {loading ? (
-            <div className="core-ctx-empty">Loading slots…</div>
-          ) : dineInSlots.length === 0 ? (
-            <div className="core-ctx-empty">No dine-in slots for this day.</div>
-          ) : (
-            <div className="core-pks">
-              {dineInSlots.map((s) => (
-                <button key={s.id} className={slotId === s.id ? "core-pk on" : "core-pk"} onClick={() => setSlotId(s.id)}>
-                  {s.time}
-                  <span className="sub">{s.currentOrders}/{s.maxOrders}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <h4 className="core-profile-h">Party size</h4>
-          <div className="core-covers" style={{ width: "fit-content" }}>
-            <button onClick={() => setPartyN((n) => Math.max(1, n - 1))} aria-label="Fewer">−</button>
-            <span className="mono">{partyN}</span>
-            <button onClick={() => setPartyN((n) => Math.min(20, n + 1))} aria-label="More">+</button>
+          <div className="core-bk-resvh">
+            <div className="t">New reservation</div>
+            <div className="s">{daySub} · {loc}</div>
           </div>
+          <div className="core-bk-resvb">
 
-          <h4 className="core-profile-h">
-            Table
-            <button className="core-btn ghost sm" style={{ marginLeft: "auto" }} onClick={recommend}>✨ Recommend</button>
-          </h4>
-          {tables.length === 0 ? (
-            <div className="core-ctx-empty">No tables configured.</div>
-          ) : (
-            <div className="core-pks">
-              {tables.map((t) => {
-                const st = tableState(t);
-                return (
-                  <button key={t.id} className={`core-pk ${tableId === t.id ? "on" : ""} ${st.ok ? "" : "off"}${selected?.kind === "table" && selected.id === t.id ? " is-focus" : ""}`} disabled={!st.ok && !override} onClick={() => setTableId(t.id)} title={st.label}>
-                    {t.number}
-                    <span className="sub">{st.label}</span>
-                  </button>
-                );
-              })}
+            <div className="core-bk-field">
+              <div className="core-bk-flab"><span>Slot</span><span className="mut">tinted by capacity</span></div>
+              {loading ? (
+                <div className="core-ctx-empty">Loading slots…</div>
+              ) : dineInSlots.length === 0 ? (
+                <div className="core-ctx-empty">No dine-in slots for this day.</div>
+              ) : (
+                <div className="core-bk-slotchips">
+                  {dineInSlots.map((s) => {
+                    const fill = s.maxOrders > 0 ? s.currentOrders / s.maxOrders : 0;
+                    const tier = fill >= 1 ? "full" : fill >= 0.85 ? "warm" : fill >= 0.6 ? "mid" : "ok";
+                    const on = slotId === s.id;
+                    return (
+                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${s.currentOrders}/${s.maxOrders} booked`}>
+                        {s.time}<small>{s.currentOrders}/{s.maxOrders}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
 
-          <h4 className="core-profile-h">Guest</h4>
-          <div className="core-book-fields">
-            <input className="core-inp" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest name" />
-            <input className="core-inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48…" />
-            <input className="core-inp" style={{ gridColumn: "1 / -1" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
-          </div>
+            <div className="core-bk-field">
+              <div className="core-bk-flab"><span>Party size</span></div>
+              <div className="core-bk-partyrow">
+                <div className="core-covers">
+                  <button onClick={() => setPartyN((n) => Math.max(1, n - 1))} aria-label="Fewer">−</button>
+                  <span className="mono">{partyN}</span>
+                  <button onClick={() => setPartyN((n) => Math.min(20, n + 1))} aria-label="More">+</button>
+                </div>
+                <span className="hint">seats {partyN} · needs {partyN}-top+</span>
+              </div>
+            </div>
 
-          <div className="core-book-actions">
+            <div className="core-bk-field">
+              <div className="core-bk-flab"><span>Table</span><span className="mut">{selectedSlot ? `live fit for ${partyN}` : `needs ${partyN}-top+`}</span></div>
+              {tables.length === 0 ? (
+                <div className="core-ctx-empty">No tables configured.</div>
+              ) : (
+                <div className="core-bk-tpicks">
+                  {tables.map((t) => {
+                    const st = tableState(t);
+                    const isRec = t.id === recTableId;
+                    const on = tableId === t.id;
+                    let tag: string;
+                    let dim = false;
+                    if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
+                    else if (t.seats < partyN) { tag = "too small"; dim = true; }
+                    else if (!st.ok) { tag = selectedSlot ? `booked ${selectedSlot.time}` : "booked"; dim = true; }
+                    else tag = isRec ? "✨ Recommend" : "fits";
+                    const focus = selected?.kind === "table" && selected.id === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        className={`core-bk-tpick${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
+                        disabled={dim && !override}
+                        onClick={() => setTableId(t.id)}
+                        title={st.label}
+                      >
+                        <span className="tn">{t.number}</span>
+                        <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
+                        <span className="tfit">{tag}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="core-bk-field">
+              <div className="core-bk-flab"><span>Guest</span></div>
+              <input className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
+              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
+              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
+            </div>
+
+            {selectedSlot?.minSpendGrosze ? (
+              <div className="core-bk-minspend">
+                <span>Slot minimum: <b>{Math.round(selectedSlot.minSpendGrosze / 100)} zł</b> to book this slot.</span>
+              </div>
+            ) : null}
+
             <label className="core-ov">
               <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
               Override conflicts & capacity
             </label>
-            <button className="core-btn primary" disabled={!canBook} onClick={() => void book()}>
-              ✓ Book slot + table
+
+            <button className="core-bk-bookbtn" disabled={!canBook} onClick={() => void book()}>
+              {canBook && selectedSlot ? `✓ Book table · ${selectedSlot.time} · ${tableLabel(tableId)} · ${partyN}` : "✓ Book slot + table"}
             </button>
           </div>
         </div>
 
-        {/* today's bookings */}
-        <aside className="core-book-side">
-          <h4 className="core-profile-h">Booked · {todays.length}</h4>
-          {todays.length === 0 ? (
-            <div className="core-ctx-empty">No bookings yet for this day.</div>
+        {/* today's bookings — full-width blist */}
+        <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to open on the timeline</div>
+        <section className="core-bk-blist">
+          <div className="core-bk-blisth">
+            <span className="t">Today&apos;s bookings</span>
+            <span className="badge">{bookStat.bookings} total · {bookStat.upcoming} upcoming</span>
+          </div>
+          {bookingList.length === 0 ? (
+            <div className="core-ctx-empty pad">No bookings yet for this day.</div>
           ) : (
-            <div className="core-svc-list">
-              {todays.map((r) => (
-                <div className="core-svc-res" key={r.id}>
-                  <span className="t mono">{r.time}</span>
-                  <div className="m">
-                    <div className="nm">{r.customerName}</div>
-                    <div className="core-cust-sub">{r.partySize}p · table {tableLabel(r.tableId)}</div>
-                  </div>
-                  <button className="x" onClick={() => void cancel(r.id)} aria-label="Cancel">✕</button>
+            bookingList.map((r) => {
+              const sm = listStat[r.status] ?? { c: "", l: r.status };
+              return (
+                <div className="core-bk-brow" key={r.id} onClick={() => selectRow(r)}>
+                  <span className="btm">{r.time}</span>
+                  <span className="bnm">{r.customerName}</span>
+                  <span className="bcov">{r.partySize} cov</span>
+                  <span className="btbl">{tableLabel(r.tableId)}</span>
+                  <span className={`bstat ${sm.c}`}>{sm.l}</span>
+                  <button className="bcancel" onClick={(e) => { e.stopPropagation(); void cancel(r.id); }} aria-label="Cancel">✕</button>
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
-        </aside>
+        </section>
       </div>
     </CoreShell>
   );
