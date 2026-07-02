@@ -159,6 +159,15 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **POS order panel finished to the mockup.** After a headless side-by-side exposed real gaps: the
+  **channel** selector and **kitchen-timing** toggle became one labelled full-width ember segmented control each
+  (`.core-oseg`/`.core-miniseg`), a density pass tightened the header/covers/segments/courses/lines, ticket lines gained
+  the menu **descriptor** sub, the header title now reads **`Tab N · T{table}`** (content-sized name + `.core-th-tbl`
+  suffix) with an **info-cyan** table pill (`.core-chan-aux`), and the redundant channel/order-ref subs were dropped
+  (removing the orphan `.th-s`). For the coursing states, the demo seed now **fires the starter** of one dine-in check
+  via the real `fireTab` (not a faked flag) — so the panel shows served ✓ (basil) · next ⚡Fire (ember) · held ◷Hold
+  (amber) like the mockup, and the fired course also seeds a real KDS ticket; cleanup deletes the spawned order via the
+  tab link so re-seeds stay idempotent. Verified with repeated headless side-by-side crops. Docs synced (`modules/pos.md`).
 - **2026-07-02** — **POS order-panel coursing spine brought 1:1 with the mockup.** Course labels now read in
   **Neapolitan** (`POS_COURSE_LABELS`: Antipasti · Primi · Dolci · Bevande) across POS + KDS + toasts, and each
   `.core-course-h` gained a status **dot** + contextual chip matching the mockup: basil `✓ Fired` (served), an ember

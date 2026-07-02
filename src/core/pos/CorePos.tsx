@@ -1601,18 +1601,23 @@ export function CorePos({
             <>
               <div className="core-thead">
                 <div className="th-id">
-                  <input
-                    className="core-th-name"
-                    value={active.name ?? ""}
-                    maxLength={40}
-                    onChange={(e) => setName(e.target.value)}
-                    aria-label="Check name"
-                    title="Rename this check"
-                  />
-                  {/* channel now reads in the segment below — the header keeps
-                      only the live order ref, so the title sits on one line like
-                      the mockup ("Tab 4 · T10"). */}
-                  {active.orderId && <div className="th-s">#{active.orderId.slice(-5)}</div>}
+                  {/* title reads "Tab N · T{table}" like the mockup: a
+                      content-sized editable name + a static table suffix. Channel
+                      moved to the segment below, so the title sits on one line. */}
+                  <div className="th-name-row">
+                    <input
+                      className="core-th-name"
+                      value={active.name ?? ""}
+                      size={Math.max(3, (active.name ?? "").length)}
+                      maxLength={40}
+                      onChange={(e) => setName(e.target.value)}
+                      aria-label="Check name"
+                      title="Rename this check"
+                    />
+                    {active.channel === "dine-in" && active.tableId && (
+                      <span className="core-th-tbl">· T{tableById(active.tableId)?.number ?? "?"}</span>
+                    )}
+                  </div>
                 </div>
                 {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}
                 {tabPromiseSec > 0 && (
@@ -1622,7 +1627,7 @@ export function CorePos({
                 )}
                 {active.channel === "dine-in" && (
                   <button type="button" className="core-chan-aux" onClick={() => setTableOpen(true)}>
-                    {active.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : "Assign table"}
+                    {active.tableId ? `⇄ Table ${tableById(active.tableId)?.number ?? "?"}` : "＋ Assign table"}
                   </button>
                 )}
                 {active.channel === "delivery" && (

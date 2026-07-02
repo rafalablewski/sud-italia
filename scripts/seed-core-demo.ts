@@ -5,7 +5,9 @@
  *   - floor tables  → POS table-assign, Service · Floor, Book
  *   - dine-in slots → Service · Slots, Book (dated to the real current day)
  *   - orders        → KDS (active) + Fleet KPIs + CRM rollups + loyalty + spend
- *   - open checks   → POS · Order (tab bar + coursed ticket + charge dock)
+ *   - open checks   → POS · Order (tab bar + coursed ticket + charge dock); one
+ *                     lands mid-service (starter fired via the real fireTab) so
+ *                     the coursing spine shows served/next/held + a KDS ticket
  *   - loyalty members + a family wallet
  *   - reservations  → Book + Service · Floor (booked tables)
  *
@@ -44,6 +46,7 @@ import {
   getPosTabs,
   deletePosTab,
 } from "@/lib/store";
+import { fireTab } from "@/lib/pos/fireTab";
 import { createBooking } from "@/lib/booking";
 import type { Allergen, CartItem, FulfillmentType, MenuItem, Order, OrderStatus, PosCourse, PosTabLine, TimeSlot } from "@/data/types";
 
@@ -194,10 +197,14 @@ async function seedOpenTabs(slug: string, menu: MenuItem[], tableIds: string[]):
     covers: number;
     guest?: (typeof GUESTS)[number];
     lines: [string, PosCourse, number][];
+    // Fire the starter so the check lands mid-service — the coursing spine then
+    // shows all three states (served ✓ · next ⚡Fire · held ◷Hold) like the mockup,
+    // and the fired course also seeds a real KDS ticket (honest, not faked).
+    fireStarter?: boolean;
   };
   const specs: Spec[] = [
-    { name: "Tab 1", channel: "dine-in", table: tableIds[1], covers: 2, guest: GUESTS[1],
-      lines: [["antipasti", "starter", 1], ["pizza", "main", 2], ["drinks", "drink", 2]] },
+    { name: "Tab 1", channel: "dine-in", table: tableIds[1], covers: 2, guest: GUESTS[1], fireStarter: true,
+      lines: [["antipasti", "starter", 1], ["pizza", "main", 2], ["desserts", "dessert", 1], ["drinks", "drink", 2]] },
     { name: "Tab 2", channel: "dine-in", table: tableIds[2], covers: 4, guest: GUESTS[2],
       lines: [["antipasti", "starter", 2], ["pizza", "main", 2], ["pasta", "main", 1], ["drinks", "drink", 3]] },
     { name: "Tab 4", channel: "dine-in", table: tableIds[7] ?? tableIds[3], covers: 3, guest: GUESTS[0],
@@ -209,7 +216,7 @@ async function seedOpenTabs(slug: string, menu: MenuItem[], tableIds: string[]):
   for (const s of specs) {
     const items = s.lines.map(([cat, course, qty]) => tabLine(menu, cat, course, qty)).filter((l): l is PosTabLine => !!l);
     if (items.length === 0) continue;
-    await savePosTab({
+    const saved = await savePosTab({
       id: rid("demo-tab"),
       locationSlug: slug,
       name: s.name,
@@ -222,6 +229,9 @@ async function seedOpenTabs(slug: string, menu: MenuItem[], tableIds: string[]):
       customerName: s.guest?.name,
       coursed: s.channel === "dine-in",
     });
+    if (s.fireStarter && saved.coursed) {
+      await fireTab({ tabId: saved.id, locationSlug: slug, courses: ["starter"] });
+    }
     n++;
   }
   return n;
@@ -236,7 +246,12 @@ async function cleanup(): Promise<void> {
   let n = 0;
   for (const o of orders) if (o.id.startsWith("demo-ord")) { await deleteOrder(o.id); n++; }
   const tabs = await getPosTabs();
-  for (const t of tabs) if (t.id.startsWith("demo-tab")) await deletePosTab(t.id, t.locationSlug);
+  for (const t of tabs) if (t.id.startsWith("demo-tab")) {
+    // a mid-service demo tab spawned a real (non-demo-id) order when its starter
+    // fired — delete it via the tab's link so re-seeds don't orphan/accumulate it.
+    if (t.orderId) await deleteOrder(t.orderId);
+    await deletePosTab(t.id, t.locationSlug);
+  }
   const tables = await getTables();
   for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
   const slots = await getSlots();

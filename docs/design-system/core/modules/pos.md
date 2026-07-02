@@ -105,13 +105,15 @@ The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
 top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
 **active** check only:
 
-- **`.core-thead`** — `.core-th-name` (the check name is an **inline editable
-  input** — click to rename, persisted via the same debounced `PUT`) ·
-  channel/order tag · a `.core-tabpromise` per-check ETA (max
-  `promiseSecondsByCategory` across the lines, toned by the bottleneck
-  tier) · the `.core-chan-aux` button — **Assign table / Table N** (dine-in, opens
-  the in-pane table picker) or **Add / Edit address** (delivery, opens the
-  address dialog). A `.core-delivery-paused`
+- **`.core-thead`** — the title reads **`Tab N · T{table}`** like the mockup: a
+  content-sized `.core-th-name` (the check name is an **inline editable input** —
+  click to rename, persisted via the same debounced `PUT`, `size` tracks the value)
+  followed by a static `.core-th-tbl` table suffix (dine-in, when a table is
+  assigned). Then a `.core-tabpromise` per-check ETA (max `promiseSecondsByCategory`
+  across the lines, toned by the bottleneck tier) · the **info-cyan** `.core-chan-aux`
+  button — **＋ Assign table / ⇄ Table N** (dine-in, opens the in-pane table picker)
+  or **Add / Edit address** (delivery, opens the address dialog). Channel moved to
+  the segment below, so the title stays one line. A `.core-delivery-paused`
   banner shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
 - **`.core-tcovers`** — a **labelled covers row** (dine-in), on its own line like
