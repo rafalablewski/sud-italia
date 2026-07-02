@@ -1,0 +1,44 @@
+/* Core parity (kds) — dense-console 1:1 fixes for the Pass wall.
+   Scope every rule under .core (and the dark .core-kds board). */
+
+/* --- ticket header: bold display title + symbol-prefixed due (mockup .tt/.due) --- */
+.core .core-kds .core-tk-h { align-items: baseline; }
+.core .core-kds .core-tk-h .tt {
+  font-family: var(--display); font-weight: 700; font-size: 14px; letter-spacing: -.01em; color: var(--ink);
+}
+
+/* --- meta row: lowercase channel badge + "fired m:ss ago" (mockup .meta) --- */
+.core .core-kds .core-tk-meta { display: flex; align-items: center; gap: 8px; margin: -2px 0 7px; }
+.core .core-kds .core-chan {
+  font-family: var(--mono); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: 1px 6px; border-radius: 99px; white-space: nowrap;
+}
+.core .core-kds .core-chan.dine { color: var(--t-firing); background: rgba(84, 188, 224, .16); }
+.core .core-kds .core-chan.take { color: var(--t-warn); background: rgba(240, 173, 70, .16); }
+.core .core-kds .core-chan.deliv { color: var(--brand-bright); background: var(--brand-wash); }
+.core .core-kds .core-tk-ago { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
+
+/* --- station strip: plain load rows, not bordered filter pills (mockup .station) --- */
+.core .core-kds .core-stations { gap: 16px; }
+.core .core-kds .core-stn {
+  border: 0; background: transparent; height: auto; padding: 2px 0; border-radius: 0;
+  font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink-2); gap: 6px;
+}
+.core .core-kds .core-stn:hover { color: var(--ink); }
+.core .core-kds .core-stn.on { background: transparent; color: var(--ink); border: 0; }
+.core .core-kds .core-stn.on .core-stn-pct { color: var(--ink-3); }
+.core .core-kds .core-stn.on .core-stn-load { background: rgba(255, 255, 255, .12); }
+/* the "All stations" chip stays a subtle pill so the filter still reads as one */
+.core .core-kds .core-stn:first-child {
+  border: 1px solid var(--line); border-radius: 7px; padding: 3px 10px; font-weight: 600;
+}
+.core .core-kds .core-stn:first-child.on { background: var(--panel-3); border-color: var(--line-2); }
+
+/* --- allergens: keep the safety callout but compact (mockup shows only mods) --- */
+.core .core-kds .core-tk-alrg {
+  margin-top: 7px; font-size: 11px; font-weight: 700; letter-spacing: 0;
+  padding: 4px 9px; border-width: 1px; border-left-width: 3px; border-radius: 5px;
+}
+
+/* item quantities read in the mockup's mono ink (not amber) unless flagged */
+.core .core-kds .core-tk-items .it .q { color: var(--ink-3); }

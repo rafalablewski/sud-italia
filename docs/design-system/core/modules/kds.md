@@ -147,3 +147,7 @@ amber) rather than a bare glyph, so the affordance reads at a glance; two
 opt-in chimes (bright bell on a new ticket, lower alarm the
 instant a ticket breaches SLA), the **`Σ` all-day** toggle (`.core-allday`), and
 the 86 control (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.
+
+## Ticket + station parity (2026-07-02)
+
+`src/app/themes/core/parity/kds.css` (imported after base+skin; scoped under `.core .core-kds`). Pass-card header is a bold display **`.tt`** title + a symbol-prefixed **`.due`** (◉ firing · ▲ at-risk · ✓ ready · "−m:ss late"); a **`.core-tk-meta`** row carries a lowercase channel badge (`.core-chan.dine/.take/.deliv`) + party + "fired m:ss ago" (from `paidAtMs`). The station strip renders as plain load rows (dot · name · bar · %) instead of bordered filter pills (the "All stations" chip stays a subtle pill). Allergens keep their danger callout but compact, so the card reads like the mockup's clean ticket while preserving the safety row.
