@@ -710,6 +710,16 @@ export function CoreKds() {
           <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
         ) : (
           <>
+            {/* dense-console head (mockup 02-kds) — the kitchen wall keeps its
+                dark board + frosted KPIs, but reads with the same breadcrumb +
+                section title as every other surface. */}
+            <div className="core-crumb">
+              CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
+            </div>
+            <div className="core-sectionhead">
+              <h1>KDS · Pass — {view === "chef" ? "Chef" : "Floor"}</h1>
+              <span className="sub">sla-toned tickets · start / bump / pass</span>
+            </div>
             {/* Board toolbar — the lane filter + board actions the mockup keeps
                 OUT of the command bar. Fullscreen-enter lives here too. */}
             <div className="core-kds-toolbar">

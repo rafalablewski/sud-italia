@@ -18,6 +18,11 @@ The kitchen wall. `/core/kds`.
 A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
+The Floor/Chef boards open with a `.core-crumb` breadcrumb (`CORE — KDS ·
+KITCHEN WALL · liquid glass · dark board · frosted kpis`) + a `.core-sectionhead`
+(`KDS · Pass — Floor|Chef`), matching the dense-console mockup while keeping the
+kitchen wall dark (the KPIs, not the surface, are what's frosted).
+
 - **Floor** (default) — the expo board. A manager **ops band** (the
   responsive `.core-kpi`: Open · New · Firing · Ready · At risk · Late ·
   Oldest · Avg age · Done/hr · On shift) over three `.core-lane` columns
