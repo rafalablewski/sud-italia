@@ -1847,22 +1847,28 @@ export function CorePos({
                     Charge {fmtPLN(grandG(active))}
                   </button>
                 </div>
-                <div className="core-foot-actions2">
-                  <button type="button" className="core-foot-aux core-foot-aux-wide" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
+                {/* utility strip — Park · Discount · Membership · Void collapse to
+                    one row of labelled icon buttons (idea 03): the low-frequency
+                    actions stop eating three full rows, active state shows as an
+                    ember tint, and Void is danger-tinted + set apart by a spacer so
+                    it's deliberate. Every action + state carries over 1:1. */}
+                <div className="core-foot-strip">
+                  <button type="button" className="core-foot-ic" data-on={active.status === "parked"} onClick={() => togglePark()} aria-label={active.status === "parked" ? "Held — tap to resume" : "Park / hold this check"}>
                     <Gly><rect width="6" height="14" x="6" y="5" rx="1" /><rect width="6" height="14" x="12" y="5" rx="1" /></Gly>
-                    {active.status === "parked" ? "Held" : "Park / hold"}
+                    <span className="tip" aria-hidden>{active.status === "parked" ? "Held" : "Park / hold"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
+                  <button type="button" className="core-foot-ic" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)} aria-label={manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}>
                     <Gly><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".6" fill="currentColor" /></Gly>
-                    {manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}
+                    <span className="tip" aria-hidden>{manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)}>
+                  <button type="button" className="core-foot-ic" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)} aria-label={active.customerPhone ? "Member attached" : "Add membership"}>
                     <Gly><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Gly>
-                    {active.customerPhone ? "Member ✓" : "Add membership"}
+                    <span className="tip" aria-hidden>{active.customerPhone ? "Member ✓" : "Add membership"}</span>
                   </button>
-                  <button type="button" className="core-foot-aux danger core-foot-aux-wide" disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
+                  <span className="core-foot-strip-sp" />
+                  <button type="button" className="core-foot-ic danger" disabled={!!busyTabId} onClick={requestVoid} aria-label="Void / delete this check">
                     <Gly><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" /></Gly>
-                    Void check
+                    <span className="tip" aria-hidden>Void check</span>
                   </button>
                 </div>
               </div>

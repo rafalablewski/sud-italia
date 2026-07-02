@@ -190,14 +190,19 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
 - **`.core-foot`** — an optional `.core-frow.member` chip (attached loyalty
   guest, with a remove ✕), `.core-frow` subtotal, `.core-frow.disc` combo
   discount **and** a `.core-frow.disc` manual-discount line, `.core-ftot` total,
-  then `.core-foot-actions` (`.core-send` Send to KDS + `.core-charge`) and a
-  -- each button carries an inline `.core-glyph` line-SVG (send · card ·
-  park-bars · tag · person · trash, core's own glyphs, not lucide) --
-  secondary `.core-foot-actions2` grid of `.core-foot-aux` buttons (`data-on`
-  when active): **Park / hold** full-width (`.core-foot-aux-wide`; the park
-  toggle now lives by Charge, not the top bar) over a 2-column row of
-  **Add / Edit discount** | **Add membership / Member ✓**, then a
-  full-width **Void check** (`.core-foot-aux.danger.core-foot-aux-wide`).
+  then `.core-foot-actions` (`.core-send` Fire course / Send to KDS +
+  `.core-charge`) over the secondary **`.core-foot-strip`** — each button carries
+  an inline `.core-glyph` line-SVG (send · card · park-bars · tag · person ·
+  trash, core's own glyphs, not lucide). The strip collapses the four
+  low-frequency utilities into **one 40px row of labelled icon buttons**
+  (`.core-foot-ic`) instead of three full-width rows (~90px reclaimed):
+  **Park / hold** · **Add / Edit discount** · **Add membership / Member ✓**,
+  then a `.core-foot-strip-sp` spacer and the danger-tinted **Void check**
+  (`.core-foot-ic.danger`) set apart at the far end so it's deliberate. Each
+  button keeps its `data-on` ember tint when active (parked / discount set /
+  member attached) and shows its label as a hover/focus `.tip` tooltip, so no
+  action name is lost. Park's held state is also mirrored by the header's
+  `▣ Held` chip.
 - **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
   optional reason) and `MemberDialog` (phone + optional name) write
   `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal

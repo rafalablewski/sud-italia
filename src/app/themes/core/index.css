@@ -590,25 +590,44 @@
 .core .core-fire-upsell .u-p { color: var(--brand-bright); font-weight: 700; flex: none; }
 .core .core-foot-actions { display: flex; gap: 10px; }
 /* shared press / transition feel for the footer actions */
-.core .core-send, .core .core-charge, .core .core-foot-aux { transition: background var(--fast), border-color var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast), filter var(--fast); }
-.core .core-send:active:not(:disabled), .core .core-charge:active:not(:disabled), .core .core-foot-aux:active { transform: translateY(1px); }
+.core .core-send, .core .core-charge, .core .core-foot-ic { transition: background var(--fast), border-color var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast), filter var(--fast); }
+.core .core-send:active:not(:disabled), .core .core-charge:active:not(:disabled), .core .core-foot-ic:active:not(:disabled) { transform: translateY(1px); }
 /* member chip + manual-discount line in the ticket footer */
 .core .core-frow.member { color: var(--ink); font-weight: 600; align-items: center; background: var(--brand-wash); margin: -2px -8px 8px; padding: 6px 8px; border-radius: 8px; }
 .core .core-frow-x { margin-left: 8px; width: 20px; height: 20px; border-radius: 6px; color: var(--ink-3); font-size: 12px; flex: none; }
 .core .core-frow-x:hover { background: var(--hover); color: var(--ink); }
-/* secondary actions — Park/hold full-width, then Add discount | Add
-   membership in a 2-column row (each full-width of its column) */
-.core .core-foot-actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.core .core-foot-aux-wide { grid-column: 1 / -1; }
-.core .core-foot-aux { height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-weight: 550; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .core .core-glyph { flex: none; }
-.core .core-foot-aux .core-glyph { opacity: .7; }
-.core .core-foot-aux:hover { color: var(--ink); background: var(--hover); border-color: var(--line-2); }
-.core .core-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
-.core .core-foot-aux[data-on="true"] .core-glyph { opacity: 1; }
-.core .core-foot-aux.danger { color: var(--danger); }
-.core .core-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: var(--on-danger); }
-.core .core-foot-aux:disabled { opacity: .45; cursor: default; }
+/* secondary actions — Park · Discount · Membership · Void collapse to ONE row of
+   labelled icon buttons (`.core-foot-strip`): the low-frequency utilities stop
+   eating three full rows (~90px reclaimed), each carries its state as an ember
+   `data-on` tint, and Void is danger-tinted + pushed to the far end past a
+   spacer so it reads as separate + deliberate. Label rides as a hover/focus
+   `.tip` so the action name is never lost. */
+.core .core-foot-strip { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.core .core-foot-strip-sp { flex: 1; }
+.core .core-foot-ic { position: relative; width: 44px; height: 40px; flex: none; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); display: grid; place-items: center; }
+.core .core-foot-ic .core-glyph { opacity: .82; }
+.core .core-foot-ic:hover { color: var(--ink); background: var(--panel-3); border-color: var(--line-2); }
+.core .core-foot-ic:hover .core-glyph { opacity: 1; }
+.core .core-foot-ic[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); }
+.core .core-foot-ic[data-on="true"] .core-glyph { opacity: 1; }
+.core .core-foot-ic.danger { color: var(--danger); }
+.core .core-foot-ic.danger:hover { background: var(--danger); border-color: transparent; color: var(--on-danger); }
+.core .core-foot-ic:disabled { opacity: .45; cursor: default; }
+/* the label as a floating tooltip above the icon (mono, glass) */
+.core .core-foot-ic .tip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%) translateY(3px);
+  opacity: 0; pointer-events: none; white-space: nowrap; z-index: 5;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink); background: color-mix(in oklab, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: var(--lg-blur, blur(12px)); backdrop-filter: var(--lg-blur, blur(12px));
+  border: 1px solid var(--line-2); border-radius: 7px; padding: 4px 8px; box-shadow: var(--sh-2, 0 12px 32px rgba(0,0,0,.4));
+  transition: opacity var(--fast), transform var(--fast); }
+.core .core-foot-ic:hover .tip, .core .core-foot-ic:focus-visible .tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* the leftmost tip can clip past the card edge — nudge it to hug the left */
+.core .core-foot-strip .core-foot-ic:first-child .tip { left: 0; transform: translateX(0) translateY(3px); }
+.core .core-foot-strip .core-foot-ic:first-child:hover .tip, .core .core-foot-strip .core-foot-ic:first-child:focus-visible .tip { transform: translateX(0) translateY(0); }
+.core .core-foot-strip .core-foot-ic.danger .tip { left: auto; right: 0; transform: translateX(0) translateY(3px); }
+.core .core-foot-strip .core-foot-ic.danger:hover .tip, .core .core-foot-strip .core-foot-ic.danger:focus-visible .tip { transform: translateX(0) translateY(0); }
 .core .core-send { flex: 1; height: 44px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .core .core-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .core .core-send:disabled { opacity: .45; cursor: default; }
 .core .core-send .core-glyph { opacity: .75; }
