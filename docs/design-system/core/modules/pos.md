@@ -76,10 +76,14 @@ is `overflow:hidden` so its footer clips to the card's rounded corners.
 
 - **`.core-rail.core-rail-icons`** — the category rail, **pure icon-only**
   (collapsed, 56px): each category is a 44px boxed `.core-cat` icon button
-  (glyph from `CAT_ICON` in `CorePos.tsx`, `--panel-2` fill + hairline, ember
-  `.on`, count as a corner badge that sits just outside the box) with the label
-  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present (`.core-cat.pop`, ember
-  fill, the default landing category) — frequency-ranked top items for the
+  (18px glyph from `CAT_ICON` in `CorePos.tsx` — the dense-console mockup's set
+  1:1: dome pizza · fork pasta · basket antipasti · box panini · cloche dessert ·
+  cup drinks — `--panel-2` fill + hairline, ember-**wash** `.on`, count as a
+  corner badge that sits just outside the box) with the label
+  as a `title`/`aria-label` tooltip. A **★ Popular** chip first when present
+  (`.core-cat.pop`, styled identically to every category — the star glyph carries
+  the "special / default landing category" meaning, no extra ember fill) —
+  frequency-ranked top items for the
   current daypart from `GET /api/admin/pos/popular` (real orders, Rule #1;
   hidden when empty) — then an **All** chip (stacks every category as
   `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over the

@@ -38,61 +38,32 @@ const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini",
  * label rides along as a `title`/`aria-label` tooltip. One 24-viewBox,
  * 1.9-weight line set, matching the Core icon language.
  */
+// Category glyphs are the dense-console mockup's set, 1:1 (viewBox 0 0 24 24,
+// stroke 2) — pizza dome · pasta fork · antipasti basket · panini box · dessert
+// cloche · drinks cup. Keep these in lock-step with the mockup.
 const CAT_ICON: Record<string, ReactNode> = {
-  popular: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L4.5 9.7l5.9-.9z" />,
+  popular: <path d="m12 2 3 6.3 6.9.9-5 4.8 1.3 6.9L12 17.6 5.8 20.9 7.1 14l-5-4.8 6.9-.9z" />,
   all: (
     <>
-      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
     </>
   ),
   pizza: (
     <>
-      <path d="M12 3.2 3.6 18.5a1 1 0 0 0 1 1.5h14.8a1 1 0 0 0 .9-1.5z" />
-      <path d="M5.8 10.4h12.4" />
-      <circle cx="10" cy="14" r="1" />
-      <circle cx="14" cy="14.5" r="1" />
-      <circle cx="12" cy="9" r="1" />
+      <path d="M12 3a9 9 0 0 0-9 9c4 0 5 5 9 5s5-5 9-5a9 9 0 0 0-9-9z" />
+      <circle cx="9" cy="11" r="1" />
+      <circle cx="14" cy="9" r="1" />
+      <circle cx="15" cy="14" r="1" />
     </>
   ),
-  pasta: (
-    <>
-      <path d="M4 11h16v1a8 8 0 0 1-16 0z" />
-      <path d="M2.5 20h19" />
-      <path d="M8 11c0-3 .5-6 1.5-7M12 11c0-3.5.3-6.5 1.3-8M16 11c0-3 .5-5.5 1.4-7" />
-    </>
-  ),
-  antipasti: (
-    <>
-      <ellipse cx="12" cy="13" rx="8.5" ry="4" />
-      <circle cx="9" cy="12.4" r="1.1" />
-      <circle cx="13" cy="13.4" r="1.1" />
-      <circle cx="15.5" cy="12" r="1.1" />
-      <path d="M8 9.2c1-1.6 2.4-2.4 4-2.4s3 .8 4 2.4" />
-    </>
-  ),
-  panini: (
-    <>
-      <path d="M3.5 9.5c0-2 3.8-3.5 8.5-3.5s8.5 1.5 8.5 3.5z" />
-      <path d="M3.5 14.5c0 2 3.8 3.5 8.5 3.5s8.5-1.5 8.5-3.5z" />
-      <path d="M4.5 11.8c2.4 1 12.6 1 15 0" />
-    </>
-  ),
-  desserts: (
-    <>
-      <path d="M6 20h12l-1-8H7z" />
-      <path d="M9.5 12c0-2 1-3 2.5-3s2.5 1 2.5 3" />
-      <path d="M12 6.2V4M12 4a1.2 1.2 0 1 0 0-.1z" />
-    </>
-  ),
-  drinks: (
-    <>
-      <path d="M6 4h12l-1.5 5.5a5 5 0 0 1-9 0z" />
-      <path d="M12 15v4M8.5 20h7" />
-    </>
-  ),
+  pasta: <path d="M4 20c2-6 3-9 8-9s6 3 8 9M8 11V5M12 11V4M16 11V5" />,
+  antipasti: <path d="M5 11h14l-1 9H6zM9 11V7a3 3 0 0 1 6 0v4" />,
+  panini: <path d="M4 7h16l-2 12H6zM4 7l2-4h12l2 4" />,
+  desserts: <path d="M4 16a8 8 0 0 1 16 0zM2 20h20M12 8V4M9 5l3-2 3 2" />,
+  drinks: <path d="M6 3h12l-1 4H7zM7 7l1 13h8l1-13M9 12h6" />,
 };
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
   { key: "dine-in", label: "Dine-in" },
@@ -1493,7 +1464,7 @@ export function CorePos({
               aria-label="Popular"
               aria-pressed={activeCat === "popular"}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 {CAT_ICON.popular}
               </svg>
               <span className="n">{popularItems.filter(channelOk).length}</span>
@@ -1507,7 +1478,7 @@ export function CorePos({
             aria-label="All"
             aria-pressed={activeCat === "all"}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               {CAT_ICON.all}
             </svg>
             <span className="n">{channelMenu.length}</span>
@@ -1522,7 +1493,7 @@ export function CorePos({
               aria-label={MENU_CATEGORY_LABELS[c]}
               aria-pressed={c === activeCat}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 {CAT_ICON[c]}
               </svg>
               {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
