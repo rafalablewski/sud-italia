@@ -44,6 +44,10 @@ import {
   getStaff,
   deleteStaff,
   assignOrderDriver,
+  mutateWaSession,
+  appendWaMessage,
+  clearWaSession,
+  deleteWaTranscript,
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
@@ -306,6 +310,7 @@ async function cleanup(): Promise<void> {
   for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
   const staff = await getStaff();
   for (const s of staff) if (s.id.startsWith("demo-drv")) await deleteStaff(s.id);
+  for (const g of GUESTS) { await clearWaSession(g.phone); await deleteWaTranscript(g.phone); }
   const slots = await getSlots();
   for (const s of slots) if (s.id.startsWith("demo-slot")) await deleteSlot(s.id);
   const resvs = await getReservations(undefined, TODAY);
@@ -386,6 +391,64 @@ async function seedAgentCalls(): Promise<void> {
     }
   }
   console.log(`agent-call telemetry seeded (${mix.reduce((s, m) => s + m.n, 0)} calls)`);
+}
+
+/** Seed a few live WhatsApp conversations so Guest · Inbox lands populated
+ *  (3-pane: conversation list + thread + guest context) like the mockup. These
+ *  ride the channel's real session + transcript stores (Rule #1). Sessions carry
+ *  a 90-min TTL, so a fresh seed keeps them live for the demo window. Idempotent:
+ *  each phone's session + transcript is cleared before re-seeding. */
+type WaSeedMsg = { mins: number; dir: "in" | "out"; actor: "customer" | "bot" | "operator"; body: string; meta?: Record<string, unknown> };
+async function seedWhatsApp(menu: MenuItem[], slug: string): Promise<number> {
+  const cart = (cats: [string, number][]): CartItem[] =>
+    cats.map(([c, q]) => lineFrom(menu, c, slug, q)).filter((l): l is CartItem => !!l);
+  const convos: { guest: (typeof GUESTS)[number]; cart: CartItem[]; fulfillment: FulfillmentType; pendingPay?: boolean; msgs: WaSeedMsg[] }[] = [
+    {
+      guest: GUESTS[2], cart: cart([["pizza", 1], ["antipasti", 1]]), fulfillment: "takeout",
+      msgs: [
+        { mins: 14, dir: "in", actor: "customer", body: "Hi! Is the Margherita available on a gluten-free base?" },
+        { mins: 13, dir: "out", actor: "bot", body: "Yes — Margherita on a GF base (+6 zł). Shall I add it?", meta: { card: [{ label: "Margherita · GF base", value: "42 zł" }, { label: "Allergens", value: "milk", tone: "info" }] } },
+        { mins: 12, dir: "in", actor: "customer", body: "Perfect, one for pickup in 30 min please." },
+        { mins: 6, dir: "out", actor: "operator", body: "Got it Marek — firing now, ready in ~6 min 🍕", meta: { staffName: "Kasia" } },
+      ],
+    },
+    {
+      guest: GUESTS[4], cart: cart([["pizza", 2], ["drinks", 1]]), fulfillment: "delivery", pendingPay: true,
+      msgs: [
+        { mins: 22, dir: "in", actor: "customer", body: "Can I get 2 Diavola delivered to Kazimierz?" },
+        { mins: 21, dir: "out", actor: "bot", body: "Sure! Your cart is ready — tap to pay and we'll start cooking.", meta: { card: [{ label: "2× Diavola", value: "65 zł" }, { label: "Delivery · Kazimierz", value: "+9 zł" }] } },
+        { mins: 20, dir: "in", actor: "customer", body: "Sending payment now 👍" },
+      ],
+    },
+    {
+      guest: GUESTS[1], cart: cart([["pizza", 1], ["desserts", 1]]), fulfillment: "dine-in",
+      msgs: [
+        { mins: 40, dir: "in", actor: "customer", body: "Do you have a table for 4 tonight around 8?" },
+        { mins: 39, dir: "out", actor: "operator", body: "We do! Booked you for 20:00, table by the window. See you then, Giulia ✨", meta: { staffName: "Marek" } },
+        { mins: 4, dir: "in", actor: "customer", body: "Amazing, thank you!" },
+      ],
+    },
+  ];
+  let n = 0;
+  for (const c of convos) {
+    const phone = c.guest.phone;
+    await clearWaSession(phone);
+    await deleteWaTranscript(phone);
+    for (const m of c.msgs) {
+      await appendWaMessage(phone, { at: iso(min(m.mins)), direction: m.dir, kind: "text", body: m.body, actor: m.actor, meta: m.meta });
+    }
+    await mutateWaSession(phone, (cur) => ({
+      ...cur,
+      locationSlug: slug,
+      customerName: c.guest.name,
+      cartItems: c.cart,
+      fulfillmentType: c.fulfillment,
+      pendingOrderId: c.pendingPay ? rid("demo-wa-ord") : null,
+      pendingPaymentUrl: c.pendingPay ? "https://checkout.stripe.com/c/pay/demo" : null,
+    }));
+    n++;
+  }
+  return n;
 }
 
 async function main() {
@@ -498,6 +561,12 @@ async function main() {
   // loyalty points/tier boards read populated instead of all-zero.
   await recomputeCustomerRollupsBulk(GUESTS.map((g) => g.phone));
   console.log("customer rollups computed");
+
+  // Live WhatsApp conversations so Guest · Inbox lands populated (channel-wide,
+  // seeded against the first truck's menu).
+  const waMenu = await getMenuWithOverrides(locations[0].slug);
+  const waCount = await seedWhatsApp(waMenu, locations[0].slug);
+  console.log(`whatsapp conversations seeded (${waCount})`);
 
   await seedAgentCalls();
 

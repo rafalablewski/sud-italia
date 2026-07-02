@@ -854,6 +854,16 @@ export function CoreInbox() {
     });
   }, [conversations, filter, query, archivedSet]);
 
+  // Land on a populated thread like the mockup: auto-select the top visible
+  // conversation on load, and re-home to the first row if the current pick is
+  // filtered out (a manual pick within the list still wins). Mirrors CRM.
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    if (!selected || !filtered.some((c) => c.phone === selected)) {
+      setSelected(filtered[0].phone);
+    }
+  }, [filtered, selected]);
+
   // Filter-chip counts (over non-archived conversations), plus the archived tally.
   const chipCounts = useMemo(() => {
     const open = conversations.filter((c) => !archivedSet.has(c.phone));
