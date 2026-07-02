@@ -94,6 +94,13 @@ export function CoreConcierge({ meta, settings, byLocation, waConfigured }: Prop
       tabs={guestTabs("concierge")}
       subRight={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
     >
+      <div className="core-crumb">
+        CORE — GUEST · CONCIERGE · <b>mcp inspector</b> · <span className="fix">{liveCount}/{meta.length} live</span>
+      </div>
+      <div className="core-sectionhead">
+        <h1>Guest · Concierge</h1>
+        <span className="sub">ai capability server · model-context inspector</span>
+      </div>
       <div className="core-concierge">
         {/* capability inspector */}
         <section className="core-caps">
