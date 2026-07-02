@@ -9,6 +9,24 @@
 
 Last run: **2026-07-02**.
 
+## Resolution — parity pass complete (2026-07-02)
+
+All structural/visual gaps below are **closed and verified in a production build**
+(dev React 19's `eval` is blocked in the headless sandbox; the prod server
+hydrates, so verification ran against `next start`). Fixes landed as: per-surface
+`src/app/themes/core/parity/<page>.css` layers, the eight `Core*` components, the
+KDS pass (earlier commits), the shared stat-strip dividers, the 14-column
+`buildAllergenMatrix`, and demo-seed enrichment (the suite-wide order-loss fix,
+delivery drivers, live WhatsApp conversations, a family wallet). Every `/core/*`
+page now renders populated like the mockup.
+
+**Remaining items are DATA-MODEL additions, not visual gaps** (the UI renders them
+with honest empty/derived states): Inbox response-time & opt-in-rate metrics + an
+NBA recommendation source; CRM WhatsApp opt-in persistence (a `whatsappOptout`
+flag); Loyalty breakage % (a points-issuance ledger); Dispatch avg-delivery time &
+numeric driver ETA (a `deliveredAt` + driver telemetry); Orders server-name &
+stored discount-reason/VAT-override. Tracked here for a future backend pass.
+
 ---
 
 ## Systemic root causes (fix once, many pages improve)
