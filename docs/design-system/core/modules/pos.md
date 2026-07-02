@@ -118,11 +118,14 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   the mockup: a `.core-tcovers-l` "COVERS" caption + the `.core-covers` stepper,
   with the attached guest name pushed right (`.core-tcovers-g`) when the check
   carries one. (Moved off the header so the party size reads as its own control.)
-- **`.core-chanrow` / `.core-chan`** — the channel selector (dine-in /
-  takeaway / delivery), now just the three channel buttons.
-- **`.core-timing` / `.core-seg`** — dine-in **kitchen-timing** toggle
-  (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
-  renderer reads to course or flat-list the ticket.
+- **`.core-oseg` / `.core-miniseg`** — the **channel** selector and the dine-in
+  **kitchen-timing** toggle share one pattern, matching the mockup's `.order-seg`:
+  a mono `.core-oseg-l` caption (CHANNEL · KITCHEN TIMING) stacked over a single
+  full-width connected segment (`.core-miniseg` — pill track, options `flex:1`),
+  the active option ember-tinted (`.on`). Channel writes `tab.channel`; timing
+  writes `tab.coursed`, which the `.core-lines` renderer reads to course or
+  flat-list the ticket. (Replaces the old separate `.core-chan` pills + inline
+  `.core-timing` toggle so both read identically to the mockup.)
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
   `.core-lqz` quantity zone that reads a clean **`N×`** (`.core-lqty`) at rest like
   the mockup and swaps to the live `.core-qstep` −/＋ counter on hover (touch tills
@@ -132,7 +135,9 @@ top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
   included). Under the name, `.core-line-mods`
   renders the chosen modifiers as `.core-mod-chip` chips (a `flagOnKds` pick →
   `.flag` amber) and the special-request note as `.core-mod-note` (amber `.alrg`
-  when it names an allergy). **Line identity** is the item + its modifier picks +
+  when it names an allergy); when a line has neither, it falls back to the menu
+  item's **descriptor** (truncated) as the sub-line, like the mockup
+  ("San Marzano · fior di latte"). **Line identity** is the item + its modifier picks +
   its note (`posLineKey`, `@/lib/pos-line`), so a plain item and a customised one
   sit on separate rows and the stepper / re-course / edit target the right line.
   Dine-in coursed checks group lines into `.core-course` blocks with a

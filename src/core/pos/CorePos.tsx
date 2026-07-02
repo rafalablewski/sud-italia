@@ -1319,7 +1319,7 @@ export function CorePos({
           </button>
           <span className="lp mono">{zl(lineUnit * l.quantity)}</span>
         </div>
-        {(modChips.length > 0 || l.notes) && (
+        {(modChips.length > 0 || l.notes) ? (
           <div className="core-line-mods">
             {modChips.map((c, i) => (
               <span key={i} className={`core-mod-chip${c.flag ? " flag" : ""}`}>
@@ -1328,7 +1328,13 @@ export function CorePos({
             ))}
             {l.notes && <span className={`core-mod-note${allergy ? " alrg" : ""}`}>{allergy ? "⚠ " : "“"}{l.notes}{allergy ? "" : "”"}</span>}
           </div>
-        )}
+        ) : m.description ? (
+          // No modifiers/notes → show the dish descriptor as the line sub, like
+          // the mockup ("San Marzano · fior di latte"). Truncated so it stays one line.
+          <div className="core-line-mods">
+            <span className="core-mod-chip">{m.description.length > 38 ? `${m.description.slice(0, 36).trimEnd()}…` : m.description}</span>
+          </div>
+        ) : null}
         {picking && coursed && (
           <div className="core-recourse" role="group" aria-label="Move to course">
             {POS_COURSE_ORDER.map((c) => {
@@ -1603,10 +1609,10 @@ export function CorePos({
                     aria-label="Check name"
                     title="Rename this check"
                   />
-                  <div className="th-s">
-                    {active.channel ? CHANNELS.find((c) => c.key === active.channel)?.label : "No channel"}
-                    {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
-                  </div>
+                  {/* channel now reads in the segment below — the header keeps
+                      only the live order ref, so the title sits on one line like
+                      the mockup ("Tab 4 · T10"). */}
+                  {active.orderId && <div className="th-s">#{active.orderId.slice(-5)}</div>}
                 </div>
                 {active.status === "parked" && <span className="core-chip on core-th-held">▣ Held</span>}
                 {tabPromiseSec > 0 && (
@@ -1646,18 +1652,21 @@ export function CorePos({
                 </div>
               )}
 
-              {/* channel selector */}
-              <div className="core-chanrow">
-                {CHANNELS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={active.channel === c.key ? "core-chan on" : "core-chan"}
-                    onClick={() => setChannel(c.key)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+              {/* channel — labelled full-width segmented control (mockup .order-seg) */}
+              <div className="core-oseg">
+                <span className="core-oseg-l">Channel</span>
+                <div className="core-miniseg">
+                  {CHANNELS.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className={active.channel === c.key ? "on" : ""}
+                      onClick={() => setChannel(c.key)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {deliveryPaused && (
@@ -1666,11 +1675,11 @@ export function CorePos({
                 </div>
               )}
 
-              {/* dine-in kitchen timing — coursed vs all-together */}
+              {/* dine-in kitchen timing — labelled full-width segment (mockup .order-seg) */}
               {active.channel === "dine-in" && (
-                <div className="core-timing">
-                  <span className="core-timing-l">Kitchen timing</span>
-                  <div className="core-seg">
+                <div className="core-oseg">
+                  <span className="core-oseg-l">Kitchen timing</span>
+                  <div className="core-miniseg">
                     <button type="button" className={isCoursed ? "on" : ""} onClick={() => !isCoursed && toggleCoursed()}>Coursed</button>
                     <button type="button" className={!isCoursed ? "on" : ""} onClick={() => isCoursed && toggleCoursed()}>All together</button>
                   </div>
