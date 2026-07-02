@@ -69,19 +69,34 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
 ## Slots (`/core/service/slots`) — wired
 
 - **Live code:** `src/core/service/CoreSlots.tsx`.
-- **Theme:** `.core-slot-list` / `.core-slot` (capacity bars, `.core-slot-min`
-  min-spend badge) · `.core-slot-week` / `.core-slot-day-h` (week grouping) ·
-  `.core-tier-d` / `.core-act` (the demand board).
-- Two tabs: **Manage** — a **Day / Week** toggle over the slot list, each
-  row a capacity fill bar (green→amber→red ≥85%), covers, channels, a
-  min-spend badge when set, and an active/draft toggle, over a KPI strip
-  (slots · booked · fill rate · demand-price multiplier; week mode
-  aggregates the seven days, grouped under `.core-slot-day` headers).
-  **Demand** — the Demand Exchange: per-slot forecast vs capacity with a
-  **tier** (under · healthy · tight · over · kitchen-capped) and a
-  recommended lever spelled out in prose (**Raise capacity · Trim /
-  promote · Protect kitchen · Hold**); Apply one or Apply-all.
-- **Create** (`+ New`) opens a `CoreDialog` with a **Single / Bulk**
+- **Theme:** `.core-crumb` · `.core-sectionhead` · `.core-statstrip` ·
+  `.core-surge-banner` · `.core-slots-grid` (two-column) · `.core-frame` /
+  `.core-frame-h` / `.core-frame-b` · Manage rows `.core-mslot` (`.barwrap` /
+  `.mbar` fill + `.meta` + `.core-tchip` tier chip + `.mcap`) ·
+  `.core-slot-week` / `.core-slot-day-h` (week grouping) · Demand rows
+  `.core-exch-head` / `.core-applyall` / `.core-exrow` / `.core-tier` /
+  `.core-lever` (`.lv` + `.why`) / `.core-apply`.
+- Rendered in the **dense-console** language (1:1 with
+  `tests/sketches/core-pages/05-service-slots.html`): a `.core-crumb`
+  breadcrumb, a `.core-sectionhead`, a **Day / Week** + date + New-slot
+  sub-toolbar, then a **6-up `.core-statstrip`** — **booked · capacity · fill ·
+  surge windows · peak fill · demand price** (all live from the slot set —
+  Rule #1; a "surge window" is one filled ≥85%, peak drives the price
+  multiplier). When any window is ≥85% a **`.core-surge-banner`** offers a
+  one-tap *Apply surge levers*.
+- **Manage** and **Demand exchange** are shown **side by side** in
+  `.core-slots-grid` (not tab-switched — both columns are live; the grid
+  stacks below 1000px):
+  - **Manage · service windows** — each `.core-mslot` is a capacity fill bar
+    (basil→amber→danger ≥85%), a booked/status meta line, a **tier chip**
+    (healthy · tight · full) that doubles as the **active/draft toggle**, and
+    `N / max`; hover reveals a delete affordance. Week mode groups the seven
+    days under `.core-slot-day` headers.
+  - **Demand exchange** — per-slot forecast vs capacity with a **tier**
+    (under · healthy · tight · over · kitchen-capped) and a **lever** (`.lv`
+    raise / protect / trim / hold + a `.why` note); **Apply** one or the
+    **⚡ Apply all** header action.
+- **Create** (`+ New slot`) opens a `CoreDialog` with a **Single / Bulk**
   mode toggle: Single posts one slot (time + capacity); Bulk generates a
   start→end range at an interval.
 - **Engine:** `GET /api/admin/slots?location=[&date=]` (day = date-scoped,

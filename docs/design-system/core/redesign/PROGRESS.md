@@ -159,3 +159,12 @@ _(append dated entries as choices are made)_
   (icon · message + seating rec · tag · route action). Rationale: the user's **"1:1, every single thing the same"**
   directive overrides the earlier capacity-sizing choice. All interactions kept (radial actions, move mode, edit,
   food-up / guest-ordered chips, cross-lens focus, docked check). 343 tests green; verified live (screenshotted).
+- **2026-07-02** — **Orders brought 1:1** with `03-orders.html`: `.core-crumb` + a 7-up `.core-statstrip`
+  (open · revenue · avg check · refunds · dine-in/takeaway/delivery %), a `.core-filterbar` (search + channel chips
+  + date + refresh), a `.core-otable` HTML table (`.core-chanchip` / `.core-stpill`), and a `.core-od-track` status
+  timeline in the detail modal. All figures live (Rule #1). **Slots brought 1:1** with `05-service-slots.html`:
+  Manage + Demand-exchange now render **side by side** (`.core-slots-grid`, no longer tab-switched), under a `.core-crumb`,
+  a 6-up `.core-statstrip` (booked · capacity · fill · surge windows · peak fill · demand price), and a
+  `.core-surge-banner` when a window is ≥85% full. Manage rows are `.core-mslot` (fill bar + tier chip toggle + N/max);
+  Demand rows are `.core-exrow` (tier + lever + Apply / Apply-all). All slot/demand mutations preserved. 343 tests green;
+  both verified live (screenshotted).
