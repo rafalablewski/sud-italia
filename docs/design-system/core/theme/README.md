@@ -175,9 +175,11 @@ surface toolbar.
 
 ### POS
 
-`.core-pos` grid (rail · menu · ticket) — three **floating rounded glass cards**
-with `gap:10px` + a 14px body inset (mockup `pos-grid`), each frosted under
-liquid-glass: `.core-rail.core-rail-icons` (the
+`.core-pos` grid (rail · [check-bar over menu] · ticket) — **floating rounded
+glass cards** with `gap:10px` + a 14px body inset (mockup `pos-grid`), laid out
+with **grid-template-areas** (`"rail bar tkt" / "rail menu tkt"`) so the
+check-bar sits above the menu and the rail + ticket top-align with it. Each is
+frosted under liquid-glass: `.core-rail.core-rail-icons` (the
 **pure icon-only** 56px category rail, `align-self:start`) + `.core-cat` icon buttons (glyph +
 corner count badge, label as tooltip) · `.core-menu` + `.core-menu-grid` +
 `.core-prod` cards (`.pn` name ·

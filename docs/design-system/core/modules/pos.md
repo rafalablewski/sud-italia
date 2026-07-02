@@ -23,14 +23,18 @@ The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
 + an uppercase-mono `<location> · dine-in service` sub, left-aligned — the
 `TILL 1 · DINNER SERVICE` context now rides the sub-toolbar's `subLeft` label,
 like the mockup) over the **`.core-statstrip`** — the
-dense-console KPI row. Then a full-width **open-check bar** (`.core-checkbar`)
-over a three-column grid inside the shell body: **rail · menu · ticket**.
+dense-console KPI row. Then the **`.core-pos`** grid inside the shell body:
+**rail · [check-bar over menu] · ticket**.
 
 Every region is a **separate rounded, bordered glass card** — the stat strip,
 the check-bar, and the three grid columns each float with **10px gaps** and a
 14px inset from the body edges (`.core-pos { gap:10px; padding:0 14px 12px }`),
 matching the mockup's `pos-grid` + `.glass` columns rather than flush panes cut
-by hairlines. Under the liquid-glass skin all five (plus the rail) get the
+by hairlines. `.core-pos` is a **grid-template-areas** layout
+(`"rail bar tkt" / "rail menu tkt"`): the **open-check bar sits above the menu in
+the middle column**, and the rail + ticket span both rows so all three columns
+**top-align with the check-bar** — exactly like the mockup. (On phones the areas
+reset and the cards stack: check-bar · rail strip · menu, ticket as a drawer.) Under the liquid-glass skin all five (plus the rail) get the
 frosted `--lg-fill` + blur + `--lg-float`/`--lg-rim` treatment so they read as
 layered glass; in the flat skins the border + `--sh-1` defines each card. The
 rail is `align-self:start` (content-height, floating at the top); the ticket
@@ -48,8 +52,9 @@ is `overflow:hidden` so its footer clips to the card's rounded corners.
   `--amber` / `--brand` / `--info` / `--danger`; the shared `.core-statstrip`
   visual is documented in the theme README ("Stat strip").
 
-- **`.core-checkbar`** — spans the whole width above the panes (so it sits
-  over the menu's steering banner): an optional `.core-sync-pill`, then the
+- **`.core-checkbar`** — the `bar` grid area: a glass bar **above the menu in
+  the middle column** (over the menu's steering banner), top-aligned with the
+  rail + ticket: an optional `.core-sync-pill`, then the
   `.core-tabrail` of `.core-ttab` open-check pills + `+ New`. **No rollup line**
   — count · ready · parked · open value already live in the stat strip (Open
   checks / To pay / Open value), so a summary here would only duplicate it; like
@@ -128,7 +133,7 @@ Wired 1:1 to the shared server engine — fresh `core-`
 UI, identical contract.
 
 The open-check selector (`.core-tabrail`) lives in the
-top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
+`.core-checkbar` above the menu (see Layout) — the `.core-ticket` column shows the
 **active** check only:
 
 - **`.core-thead`** — the title reads **`Tab N · T{table}`** like the mockup: a

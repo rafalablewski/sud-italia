@@ -1403,7 +1403,12 @@ export function CorePos({
         </div>
       </div>
 
-      {/* open-check bar — spans the full width, above the panes */}
+      {/* POS grid — rail · [check-bar over menu] · ticket, as three floating
+          glass cards. The check-bar sits above the menu in the MIDDLE column
+          (grid areas) so the rail + ticket top-align with it, matching the
+          mockup's `pos-grid` exactly. */}
+      <div className="core-pos">
+      {/* open-check bar — above the menu, inside the middle column */}
       <div className="core-checkbar">
         {pendingWrites > 0 && (
           <div className="core-sync-pill" role="status" title="Saved locally — will sync when the connection returns">
@@ -1452,7 +1457,6 @@ export function CorePos({
           </button>
         </div>
       </div>
-      <div className="core-pos">
         {/* category rail — pure icon-only (collapsed); label rides as a tooltip */}
         <aside className="core-rail core-rail-icons" aria-label="Menu categories">
           {hasPopular && (

@@ -313,7 +313,12 @@
 /* Three floating glass cards (rail · menu · ticket) with gaps, inset from the
    body edges — matches the mockup's `pos-grid { gap:10px }` + `.glass` columns,
    not flush panes divided by hairlines. */
-.core .core-pos { flex: 1; display: grid; grid-template-columns: 56px 1fr 344px; min-height: 0; gap: 10px; padding: 0 14px 12px; align-items: stretch; }
+.core .core-pos { flex: 1; display: grid; grid-template-columns: 56px 1fr 344px; grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "rail bar tkt" "rail menu tkt"; min-height: 0; gap: 10px; padding: 0 14px 12px; }
+.core .core-checkbar { grid-area: bar; }
+.core .core-rail { grid-area: rail; }
+.core .core-menu { grid-area: menu; }
+.core .core-ticket { grid-area: tkt; }
 .core .core-rail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); padding: 8px 6px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; align-self: start; max-height: 100%; }
 .core .core-rail .lbl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 6px 10px 4px; }
 .core .core-cat { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border-radius: 9px;
@@ -411,7 +416,7 @@
 
 /* ---------- ticket: tabs ---------- */
 /* full-width open-check bar, above the three panes */
-.core .core-checkbar { flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); margin: 0 14px 10px; }
+.core .core-checkbar { flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
 .core .core-sync-pill { margin: 8px 14px 0; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
   color: var(--amber); background: var(--amber-wash); display: inline-flex; align-items: center; gap: 6px; flex: none; align-self: flex-start; }
 .core .core-tabrail-sum { padding: 9px 16px 0; font-size: 11px; color: var(--ink-3); letter-spacing: .01em; flex: none; }
@@ -1822,7 +1827,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   /* POS → single column: the menu fills, categories become a horizontal
      strip, and the ticket slides up from the bottom as a drawer (toggled by
      the .core-ticket-fab bar), sitting ABOVE the bottom nav. */
-  .core .core-pos { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .core .core-pos { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; grid-template-areas: none; }
+  /* clear the desktop grid-area names so the cards flow in one column
+     (check-bar · rail strip · menu; the ticket is a fixed drawer) */
+  .core .core-pos > .core-checkbar, .core .core-pos > .core-rail,
+  .core .core-pos > .core-menu, .core .core-pos > .core-ticket { grid-area: auto; }
   .core .core-rail { flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden;
     border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; gap: 6px; max-height: none; }
   .core .core-rail .lbl { display: none; }
