@@ -101,8 +101,11 @@ surface toolbar.
   24-viewBox, 1.6-weight line set — so no surface hand-rolls a unicode/emoji
   glyph. (Semantic text labels like KDS `86` / `Σ` stay as text.)
 - **`.cm-primary`** — a surface's primary action (Service "add table" / "new"):
-  a basil-outlined mono pill with a leading `PlusIcon`, hover-fills basil. Lives
-  in the `.core-surf-toolbar`, not the command bar.
+  the shared **brand-ember** mono pill with a leading `PlusIcon`, hover-fills
+  brand. Lives in the `.core-surf-toolbar`, not the command bar. Every primary
+  action across Core reads brand-ember — `.cm-primary`, Slots' `.core-slot-add`,
+  `.core-btn.primary`, and the points-adjust `.core-dpoints .apply` all share
+  the one brand treatment (no green/basil primaries).
 - **`.cm-k`** — the ⌘K launcher chip (`CmdkLauncher`, fires `core:cmdk`): a
   leading **`.cm-k-ico`** magnifier glyph + `.cm-k-label` (the "search" word,
   collapses to just the `⌘K` kbd on narrow).
@@ -155,15 +158,24 @@ surface toolbar.
 
 - **`.core-chip`** — pill (surface status flags, a `Dine-in` flag, the Orders
   channel tag). `.dot` = a small status dot. `.on` = filled brand (active toggle).
-- **`.core-iconbtn`** — 34px square icon button (the default in surface bodies —
-  KDS lane toolbar, inbox conversation actions); reskinned to a flush 32px
-  terminal button inside a `.core-surf-toolbar` and the global `.cm-right`, above.
+- **`.core-iconbtn`** — the shared **bare 28px mono icon glyph** (the mockup's
+  `.tico`): transparent, fills on hover, `.on` lights basil for a toggled-on
+  control (chime, filters). ONE definition for every surface — the
+  `.core-surf-toolbar` / `.cm-right` / `.core-kds` variants only tune spacing,
+  not the look. `.core-recall-btn` widens it for a text label (KDS "↩ Undo").
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
   command bar they carry `.cm-tabs` for the mono/lowercase treatment.
-- **`.core-seg button`** — a segmented filter (KDS stage filter, etc.).
-  `.core-seg.icons` = square icon-only cells (centred 16px glyph) for an
+- **`.core-seg`** — the shared **dense-console segmented control**: ONE
+  canonical definition (deduped from two) used by every surface (POS scope
+  tabs, KDS lane/kitchen filters, Slots view toggles, Guest filters). A
+  mono-labelled **glass capsule** (`--pill` track + buttons, 11px regular) whose
+  active option is a frosted **inset-`--lg-rim`** pill; token-driven fills so it
+  turns to glass on liquid-glass surfaces and the KDS wall re-glazes its opaque
+  tokens. A surface can tint the active option brand-ember for a primary-mode
+  toggle (Slots Manage/Demand via `.core-slots-viewseg button.on.brand`, in the
+  slots parity sheet). `.core-seg.icons` = square glyph cells for an
   icon-only switcher / filter pod; pair each button with a `title` /
   `aria-label` so the dropped text stays accessible.
 - **`.core-gfilters`** — the shared **glyph-only filter bar** for the guest
