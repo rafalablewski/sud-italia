@@ -11,6 +11,7 @@ import {
   turnBucket,
   resolvePolicy,
   suggestJoins,
+  simulateService,
   BALANCED_POLICY,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
@@ -322,6 +323,47 @@ test("suggestJoins skips occupied / held tables", () => {
   const rs = [resv("t6", "18:00", 90, "seated")]; // t6 busy now
   const joins = suggestJoins(ctx(7, at("18:58"), tables, rs));
   assert.equal(joins.length, 0); // only t5 free → can't reach 7
+});
+
+// ── look-ahead ────────────────────────────────────────────────────────────────
+test("look-ahead holds a table a known later party will need", () => {
+  const tables = [table("t6", 4, "main"), table("t9", 8, "main")];
+  const baseT9 = suggestTables(ctx(4, at("18:58"), tables)).find((s) => s.tableId === "t9")!;
+  // a later booking of 8 (needs most of the 8-top) → t9 should be held harder
+  const later: Reservation[] = [{ id: "later", locationSlug: LOC, customerName: "Michalski", partySize: 8, date: DATE, time: "20:00", durationMin: 120, status: "booked" } as Reservation];
+  const res = suggestTables(ctx(4, at("18:58"), tables, later));
+  const t9 = res.find((s) => s.tableId === "t9")!;
+  const t6 = res.find((s) => s.tableId === "t6")!;
+  assert.ok(t9.breakdown.yield < baseT9.breakdown.yield, "later demand lowers the big table's yield");
+  assert.ok(t6.score > t9.score, "the smaller table is now preferred for the small party");
+  assert.ok(t9.reasons.some((r) => r.includes("needed for a 8")), `got ${t9.reasons.join(",")}`);
+});
+
+// ── pre-service simulation ────────────────────────────────────────────────────
+function resvFull(id: string, time: string, party: number, tableId: string | undefined, status: Reservation["status"] = "booked"): Reservation {
+  return { id, locationSlug: LOC, customerName: id, partySize: party, date: DATE, time, durationMin: 90, tableId, status } as Reservation;
+}
+test("simulateService counts covers + occupancy and flags at-risk bookings", () => {
+  const tables = [table("t1", 2, "main"), table("t2", 4, "main")];
+  const rs = [
+    resvFull("a", "19:00", 2, "t1"), // fine
+    resvFull("b", "19:00", 6, "t2"), // 6 on a 4-top → too small
+    resvFull("c", "20:00", 2, undefined), // no table
+  ];
+  const sim = simulateService({ tables, reservations: rs, date: DATE, locationSlug: LOC });
+  assert.equal(sim.bookings, 3);
+  assert.equal(sim.covers, 10);
+  assert.equal(sim.serviceableTables, 2);
+  assert.ok(sim.atRisk.find((a) => a.id === "b" && a.reason === "table too small"));
+  assert.ok(sim.atRisk.find((a) => a.id === "c" && a.reason === "no table"));
+  assert.ok(sim.peakOccupancyPct > 0);
+});
+
+test("simulateService clears a joined big party as seatable (not too small)", () => {
+  const tables = [table("t5", 4, "main"), table("t6", 4, "main")];
+  const joined: Reservation = { ...resvFull("j", "19:00", 7, "t5"), joinedTableIds: ["t6"] } as Reservation;
+  const sim = simulateService({ tables, reservations: [joined], date: DATE, locationSlug: LOC });
+  assert.equal(sim.atRisk.length, 0); // 4 + 4 seats ≥ 7
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────

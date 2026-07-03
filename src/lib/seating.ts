@@ -1,5 +1,5 @@
 import type { FloorTable, Reservation, TableFeature } from "@/data/types";
-import { timeToMinutes } from "./floor";
+import { timeToMinutes, findReservationConflicts } from "./floor";
 
 /**
  * Seating Intelligence Engine — the pure brain behind "what's the best table
@@ -500,7 +500,23 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     // yield — protect a large table from a small party (keep it for big demand)
     const isLarge = t.seats >= policy.largeTableSeats;
     const smallParty = party <= t.seats - 2;
-    const yieldS = isLarge && smallParty ? 0.35 : 1;
+    let yieldS = isLarge && smallParty ? 0.35 : 1;
+
+    // look-ahead — don't burn a table a *specific* known later party will need.
+    // If a booking still to come today fits this table tightly (needs most of its
+    // seats) and is bigger than who we're seating now, protect it: seat the small
+    // party elsewhere so the night's big demand isn't blocked (fragmentation).
+    const laterNeed = smallParty
+      ? ctx.reservations.find((L) => {
+          if (L.id === ctx.excludeReservationId) return false;
+          if (L.locationSlug !== ctx.locationSlug || L.date !== ctx.date) return false;
+          if (L.status !== "booked") return false;
+          const ls = timeToMinutes(L.time);
+          if (!Number.isFinite(ls) || ls <= ctx.atMin) return false;
+          return L.partySize > party && L.partySize <= t.seats && L.partySize > t.seats - 2;
+        })
+      : undefined;
+    if (laterNeed) yieldS = Math.min(yieldS, 0.2);
 
     // section balance — reward the lighter server station (even spread of covers)
     const sectionScore = sectionBalance(zone);
@@ -521,7 +537,8 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     else if (over === 1) reasons.unshift("good fit");
     if (free === Infinity) reasons.push("open all night");
     else reasons.push(`free until ${fmtHM(ctx.atMin + free)}`);
-    if (isLarge && smallParty) reasons.push("large table — held back for big parties");
+    if (laterNeed) reasons.push(`needed for a ${laterNeed.partySize} at ${laterNeed.time}`);
+    else if (isLarge && smallParty) reasons.push("large table — held back for big parties");
     if (bucketLoad >= policy.paceCapPer15) reasons.push("busy 15-min window");
     if (capOn && zoneLoad(zone) >= policy.sectionCapPer15 - 1 && zone) reasons.push(`${zone} filling up`);
     else if (multiZone && zone && sectionScore >= 0.8) reasons.push(`${zone} station light`);
@@ -631,6 +648,107 @@ export function suggestJoins(ctx: SuggestContext): JoinSuggestion[] {
   }
   // fewest tables first, then least wasted seats
   return out.sort((a, b) => a.tableIds.length - b.tableIds.length || a.seats - party - (b.seats - party)).slice(0, 3);
+}
+
+// ─── Pre-service simulation — forecast the night before it starts ─────────────
+
+export interface SimAtRisk {
+  id: string;
+  customerName: string;
+  time: string;
+  partySize: number;
+  /** Why this booking is at risk: "no table" · "table too small" · "double-booked". */
+  reason: string;
+}
+
+export interface SimBucket {
+  atMin: number;
+  label: string;
+  occupiedTables: number;
+  occupancyPct: number;
+}
+
+export interface ServiceSimulation {
+  bookings: number;
+  covers: number;
+  serviceableTables: number;
+  peakOccupancyPct: number;
+  peakAtMin: number | null;
+  buckets: SimBucket[];
+  atRisk: SimAtRisk[];
+}
+
+const SIM_WINDOW_START = 17 * 60;
+const SIM_WINDOW_END = 23 * 60;
+const SIM_BUCKET_MIN = 30;
+
+/**
+ * Run the whole reservation book against the floor before service to forecast
+ * pressure and flag un-seatable bookings early (concept 6, `simulate()`). Pure:
+ * counts covers, computes per-30-min table occupancy + the peak, and surfaces
+ * every at-risk booking (no table, a table too small for the party even with its
+ * joined tables, or a double-booked slot). Deterministic → unit-testable.
+ */
+export function simulateService(input: {
+  tables: FloorTable[];
+  reservations: Reservation[];
+  date: string;
+  locationSlug: string;
+  windowStartMin?: number;
+  windowEndMin?: number;
+}): ServiceSimulation {
+  const startMin = input.windowStartMin ?? SIM_WINDOW_START;
+  const endMin = input.windowEndMin ?? SIM_WINDOW_END;
+  const serviceable = input.tables.filter((t) => t.status !== "out-of-service");
+  const tableById = new Map(input.tables.map((t) => [t.id, t]));
+  // The "book": live bookings (booked or already seated) for this day.
+  const book = input.reservations.filter(
+    (r) => r.locationSlug === input.locationSlug && r.date === input.date && (r.status === "booked" || r.status === "seated"),
+  );
+
+  const atRisk: SimAtRisk[] = [];
+  for (const r of book) {
+    const primary = r.tableId ? tableById.get(r.tableId) : undefined;
+    let reason: string | null = null;
+    if (!primary) {
+      reason = "no table";
+    } else {
+      const joinSeats = (r.joinedTableIds ?? []).reduce((s, id) => s + (tableById.get(id)?.seats ?? 0), 0);
+      if (primary.seats + joinSeats < r.partySize) reason = "table too small";
+      else if (findReservationConflicts(book, r).length > 0) reason = "double-booked";
+    }
+    if (reason) atRisk.push({ id: r.id, customerName: r.customerName, time: r.time, partySize: r.partySize, reason });
+  }
+
+  // Per-bucket occupancy: distinct tables (primary + joined) held by a booking
+  // whose [time, time+dur) window covers the bucket start.
+  const buckets: SimBucket[] = [];
+  let peakOccupancyPct = 0;
+  let peakAtMin: number | null = null;
+  for (let m = startMin; m <= endMin; m += SIM_BUCKET_MIN) {
+    const held = new Set<string>();
+    for (const r of book) {
+      const s = timeToMinutes(r.time);
+      if (!Number.isFinite(s)) continue;
+      const e = s + (r.durationMin || 90);
+      if (s <= m && m < e) {
+        for (const id of [r.tableId, ...(r.joinedTableIds ?? [])]) if (id && tableById.has(id)) held.add(id);
+      }
+    }
+    const occupancyPct = serviceable.length ? Math.round((held.size / serviceable.length) * 100) : 0;
+    if (occupancyPct > peakOccupancyPct) { peakOccupancyPct = occupancyPct; peakAtMin = m; }
+    buckets.push({ atMin: m, label: fmtHM(m), occupiedTables: held.size, occupancyPct });
+  }
+
+  return {
+    bookings: book.length,
+    covers: book.reduce((s, r) => s + (r.partySize || 0), 0),
+    serviceableTables: serviceable.length,
+    peakOccupancyPct,
+    peakAtMin,
+    buckets,
+    atRisk: atRisk.sort((a, b) => a.time.localeCompare(b.time)),
+  };
 }
 
 // ─── Trust loop — learn-from-overrides / shadow-mode telemetry ────────────────

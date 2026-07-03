@@ -21,6 +21,7 @@ import {
   type SeatingWeights,
   type TurnModel,
   type SeatingDecisionSummary,
+  type ServiceSimulation,
 } from "@/lib/seating";
 import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
@@ -96,6 +97,18 @@ export function CoreBook() {
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkParty, setWalkParty] = useState(2);
   const [policyOpen, setPolicyOpen] = useState(false);
+  // Pre-service forecast — run the book against the floor before doors open.
+  const [simOpen, setSimOpen] = useState(false);
+  const [sim, setSim] = useState<ServiceSimulation | null>(null);
+  const [simBusy, setSimBusy] = useState(false);
+  const openForecast = async () => {
+    setSimOpen(true);
+    setSimBusy(true);
+    try {
+      const r = await fetch(`/api/admin/seating/simulate?location=${encodeURIComponent(loc)}&date=${date}`);
+      setSim(r.ok ? await r.json() : null);
+    } catch { setSim(null); } finally { setSimBusy(false); }
+  };
   // The three lenses over one shared reservation truth (concept 5): Timeline
   // (plan), Floor (spatial, live occupancy), Arrivals (the host queue).
   const [viewMode, setViewMode] = useState<"timeline" | "floor" | "arrivals">("timeline");
@@ -465,6 +478,9 @@ export function CoreBook() {
             aria-label="Booking day"
           />
           <div className="core-sp" />
+          <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
+            <span aria-hidden>◔</span> Forecast
+          </button>
           <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
             <span aria-hidden>⚙</span> Policy
           </button>
@@ -981,6 +997,45 @@ export function CoreBook() {
               </div>
             )}
           </div>
+        </CoreDialog>
+
+        {/* Pre-service forecast — the book run against the floor before doors open */}
+        <CoreDialog open={simOpen} onClose={() => setSimOpen(false)} title="Pre-service forecast">
+          {simBusy ? (
+            <div className="core-ctx-empty pad">Running the book…</div>
+          ) : !sim ? (
+            <div className="core-ctx-empty pad">Could not run the forecast.</div>
+          ) : (
+            <div className="core-bk-sim">
+              <div className="core-bk-simkpis">
+                <div className="cell"><span className="v">{sim.bookings}</span><span className="k">bookings</span></div>
+                <div className="cell"><span className="v">{sim.covers}</span><span className="k">covers</span></div>
+                <div className="cell"><span className={sim.peakOccupancyPct >= 90 ? "v danger" : "v"}>{sim.peakOccupancyPct}<small>%</small></span><span className="k">peak{sim.peakAtMin != null ? ` · ${String(Math.floor(sim.peakAtMin / 60)).padStart(2, "0")}:${String(sim.peakAtMin % 60).padStart(2, "0")}` : ""}</span></div>
+                <div className="cell"><span className={sim.atRisk.length ? "v danger" : "v basil"}>{sim.atRisk.length}</span><span className="k">at risk</span></div>
+              </div>
+              <div className="core-bk-simhead">Table occupancy through service</div>
+              <div className="core-bk-simchart">
+                {sim.buckets.map((b) => (
+                  <div key={b.atMin} className="simcol" title={`${b.label} · ${b.occupancyPct}% · ${b.occupiedTables} tables`}>
+                    <div className="simbar-track"><div className={`simbar${b.occupancyPct >= 90 ? " hot" : b.occupancyPct >= 70 ? " warm" : ""}`} style={{ height: `${Math.max(2, b.occupancyPct)}%` }} /></div>
+                    <span className="simx">{b.label.endsWith(":00") ? b.label.slice(0, 2) : ""}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="core-bk-simhead">At-risk bookings {sim.atRisk.length === 0 && <span className="ok">— all clear ✓</span>}</div>
+              {sim.atRisk.length > 0 && (
+                <div className="core-bk-simrisks">
+                  {sim.atRisk.map((a) => (
+                    <div key={a.id} className="simrisk">
+                      <span className="rt">{a.time}</span>
+                      <span className="rn">{a.customerName} · {a.partySize}</span>
+                      <span className="rr">{a.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CoreDialog>
 
         {/* Seating engine policy — manager-tunable weights + rules (Rule #7: saves immediately) */}

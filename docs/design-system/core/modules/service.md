@@ -195,7 +195,15 @@ Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 number** (shared with Floor's `tLabel`). The **surface sub-bar**
 (`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
 use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a
-brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field).
+brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field). A
+**◔ Forecast** button opens a **pre-service simulation** `CoreDialog`
+(`.core-bk-sim`, from `simulateService` via GET `/api/admin/seating/simulate`):
+bookings/covers/peak-occupancy KPIs, a per-30-min table-occupancy bar chart
+(`.core-bk-simchart`), and the **at-risk bookings** list (no table · too small ·
+double-booked) so a manager sees pressure and un-seatable parties before doors
+open. The engine also runs a **look-ahead** pass live: a table a *specific* known
+later booking will need (a big party still to come that fits it tightly) is held
+back from a smaller party now, with the reason *"needed for a 8 at 20:00"*.
 Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST
 /api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
 
