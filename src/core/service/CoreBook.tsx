@@ -43,9 +43,9 @@ function tLabel(n: string): string {
 /** Timeline rows + table-pick list read T1…T12 in order (mockup), so sort by
  *  numeric table number where possible, falling back to lexical. */
 function byTableNumber(a: FloorTable, b: FloorTable): number {
-  const na = parseInt(a.number, 10), nb = parseInt(b.number, 10);
-  if (!isNaN(na) && !isNaN(nb)) return na - nb;
-  return a.number.localeCompare(b.number);
+  // Numeric-aware compare so "2" < "10" and mixed labels ("12", "12b") stay
+  // stable — parseInt would treat "12" and "12b" as equal.
+  return a.number.localeCompare(b.number, undefined, { numeric: true });
 }
 
 function todayLocal(): string {
@@ -604,7 +604,7 @@ export function CoreBook({
             className="core-bk-newpill"
             onClick={() => {
               nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-              nameRef.current?.focus();
+              nameRef.current?.focus({ preventScroll: true });
             }}
           >
             <span aria-hidden>+</span> New reservation
