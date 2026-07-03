@@ -25,6 +25,17 @@ import { MENU_CATEGORY_LABELS, type MenuCategory, type OrderStatus } from "@/dat
 
 type View = "fleet" | "floor" | "chef";
 
+// Kitchen-station display names for the Pass wall (mockup: Forno · Primi · Dolci)
+// rather than the menu-category labels — the line reads its stations, not menu tabs.
+const KDS_STATION_LABEL: Partial<Record<MenuCategory, string>> = {
+  pizza: "Forno",
+  pasta: "Primi",
+  antipasti: "Antipasti",
+  drinks: "Bar",
+  desserts: "Dolci",
+  panini: "Griglia",
+};
+
 // Mockup verbs: New → Start, Firing → Bump, Ready → Pass.
 const BUMP_LABEL: Partial<Record<OrderStatus, string>> = {
   confirmed: "Start",
@@ -773,7 +784,7 @@ export function CoreKds() {
                     onClick={() => setStation(s.id)}
                   >
                     {tone && <span className="core-stn-dot" style={{ background: tone }} />}
-                    {s.id === "all" ? "All stations" : MENU_CATEGORY_LABELS[s.id as MenuCategory]}
+                    {s.id === "all" ? "All stations" : (KDS_STATION_LABEL[s.id as MenuCategory] ?? MENU_CATEGORY_LABELS[s.id as MenuCategory])}
                     {ld && (
                       <>
                         <span className="core-stn-load"><i style={{ width: `${Math.min(100, ld.util)}%`, background: tone! }} /></span>
