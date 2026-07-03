@@ -9,6 +9,8 @@ import {
   recommendTable,
   buildTurnModel,
   turnBucket,
+  resolvePolicy,
+  BALANCED_POLICY,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
   type SuggestContext,
@@ -190,6 +192,58 @@ test("a learned longer turn tightens the walk-in guard", () => {
   const withModel = suggestTables(ctx(2, at("18:58"), tables, rs, { turnModel: model }));
   assert.equal(withModel[0].ok, false);
   assert.ok(withModel[0].excludedReason?.startsWith("held"));
+});
+
+// ── advanced policy: section cap · VIP hold · protect large ──────────────────
+test("section cap: a zone at its per-15-min cap is excluded, other zones pass", () => {
+  const policy = { ...BALANCED_POLICY, sectionCapPer15: 1 };
+  // a patio hold at 18:50 fills patio's one slot for the 18:45 bucket
+  const tables = [table("t2", 4, "patio"), table("t3", 4, "patio"), table("t5", 4, "main")];
+  const rs = [resv("t2", "18:50")]; // occupies t2 AND counts as patio's 1 hold this bucket
+  const res = suggestTables(ctx(4, at("18:58"), tables, rs, { policy }));
+  const t3 = res.find((s) => s.tableId === "t3")!;
+  const t5 = res.find((s) => s.tableId === "t5")!;
+  assert.equal(t3.ok, false);
+  assert.ok(t3.excludedReason?.includes("full this window"), `got ${t3.excludedReason}`);
+  assert.equal(t5.ok, true); // main zone untouched
+});
+
+test("VIP hold: a non-VIP is excluded from a held zone; a VIP is let in", () => {
+  const policy = { ...BALANCED_POLICY, vipHoldZones: ["window"] };
+  const tables = [table("t2", 4, "window")];
+  const nonVip = suggestTables(ctx(4, at("18:58"), tables, [], { policy }));
+  assert.equal(nonVip[0].ok, false);
+  assert.equal(nonVip[0].excludedReason, "VIP hold");
+  const vip = suggestTables(ctx(4, at("18:58"), tables, [], { policy, prefs: { vip: true } }));
+  assert.equal(vip[0].ok, true);
+});
+
+test("protect large tables: a small party is dropped from a big top when a small one is free", () => {
+  const policy = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6 };
+  const res = suggestTables(ctx(2, at("18:58"), [table("t6", 4, "main"), table("t9", 8, "booth")], [], { policy }));
+  const t9 = res.find((s) => s.tableId === "t9")!;
+  const t6 = res.find((s) => s.tableId === "t6")!;
+  assert.equal(t9.ok, false);
+  assert.ok(t9.excludedReason?.includes("protected"), `got ${t9.excludedReason}`);
+  assert.equal(t6.ok, true);
+});
+
+test("protect large tables never strands a party: only a big top fits → still seatable", () => {
+  const policy = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6 };
+  const res = suggestTables(ctx(2, at("18:58"), [table("t9", 8, "booth")], [], { policy }));
+  assert.equal(res[0].ok, true); // nothing smaller to fall back to
+});
+
+test("advanced toggles default off/neutral so a bare preset never regresses ranking", () => {
+  const p = resolvePolicy({ preset: "balanced" });
+  assert.equal(p.sectionCapPer15, 0);
+  assert.equal(p.protectLargeTables, false);
+  assert.deepEqual(p.vipHoldZones, []);
+  // overrides flow through resolve
+  const o = resolvePolicy({ preset: "balanced", overrides: { sectionCapPer15: 3, vipHoldZones: ["patio"], shadowMode: true } });
+  assert.equal(o.sectionCapPer15, 3);
+  assert.deepEqual(o.vipHoldZones, ["patio"]);
+  assert.equal(o.shadowMode, true);
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────

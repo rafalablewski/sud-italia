@@ -6,7 +6,7 @@ import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
-import { resolvePolicy, buildTurnModel, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample } from "@/lib/seating";
+import { resolvePolicy, buildTurnModel, summariseDecisions, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type SeatingDecision, type SeatingDecisionSummary } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -14365,6 +14365,51 @@ export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
     samples.push({ party: r.partySize, atMin, minutes });
   }
   return buildTurnModel(samples);
+}
+
+// --- Seating decisions (trust loop) --------------------------------------
+// Every seat records what the engine recommended vs. what the operator chose,
+// so the override rate is a real, measured number (Rule #1 — never fabricated)
+// and shadow-mode can prove the engine before it drives. Per-location list,
+// capped to the most recent DECISION_CAP so the file can't grow unbounded.
+const SEATING_DECISIONS_FILE = "seating-decisions.json";
+const DECISION_CAP = 500;
+
+export async function recordSeatingDecision(
+  locationSlug: string,
+  input: { party: number; atMin: number; recommendedTableId: string | null; chosenTableId: string; override: boolean; shadow: boolean },
+): Promise<SeatingDecision> {
+  return withLock(SEATING_DECISIONS_FILE, async () => {
+    const all = await readJSON<Record<string, SeatingDecision[]>>(SEATING_DECISIONS_FILE, {});
+    const decision: SeatingDecision = {
+      id: `sd-${crypto.randomUUID().slice(0, 8)}`,
+      locationSlug,
+      at: new Date().toISOString(),
+      party: input.party,
+      atMin: input.atMin,
+      recommendedTableId: input.recommendedTableId,
+      chosenTableId: input.chosenTableId,
+      override: input.override,
+      shadow: input.shadow,
+    };
+    const list = all[locationSlug] ?? [];
+    list.push(decision);
+    // keep the most recent DECISION_CAP
+    all[locationSlug] = list.slice(-DECISION_CAP);
+    await writeJSON(SEATING_DECISIONS_FILE, all);
+    return decision;
+  });
+}
+
+export async function getSeatingDecisions(locationSlug: string): Promise<SeatingDecision[]> {
+  const all = await readJSON<Record<string, SeatingDecision[]>>(SEATING_DECISIONS_FILE, {});
+  return all[locationSlug] ?? [];
+}
+
+/** The trust readout for a location — override rate + shadow count over recent
+ *  decisions. Pure summary shared with the UI (summariseDecisions). */
+export async function getSeatingDecisionSummary(locationSlug: string): Promise<SeatingDecisionSummary> {
+  return summariseDecisions(await getSeatingDecisions(locationSlug));
 }
 
 // --- POS open checks (tabs) ----------------------------------------------

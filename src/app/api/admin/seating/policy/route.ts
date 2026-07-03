@@ -49,6 +49,13 @@ export const PUT = withAdmin(
         if (Number.isFinite(Number(o.resetBufferMin))) clean.resetBufferMin = Math.max(0, Math.min(60, Math.round(Number(o.resetBufferMin))));
         if (Number.isFinite(Number(o.paceCapPer15))) clean.paceCapPer15 = Math.max(1, Math.min(20, Math.round(Number(o.paceCapPer15))));
         if (Number.isFinite(Number(o.largeTableSeats))) clean.largeTableSeats = Math.max(3, Math.min(20, Math.round(Number(o.largeTableSeats))));
+        // advanced rules/toggles (increment 3) — 0 disables the section cap
+        if (Number.isFinite(Number(o.sectionCapPer15))) clean.sectionCapPer15 = Math.max(0, Math.min(20, Math.round(Number(o.sectionCapPer15))));
+        if (typeof o.protectLargeTables === "boolean") clean.protectLargeTables = o.protectLargeTables;
+        if (Array.isArray(o.vipHoldZones)) clean.vipHoldZones = o.vipHoldZones.filter((z: unknown) => typeof z === "string" && z.trim()).map((z: string) => z.trim()).slice(0, 12);
+        if (typeof o.autoSuggest === "boolean") clean.autoSuggest = o.autoSuggest;
+        if (typeof o.learnFromOverrides === "boolean") clean.learnFromOverrides = o.learnFromOverrides;
+        if (typeof o.shadowMode === "boolean") clean.shadowMode = o.shadowMode;
         patch.overrides = clean;
       } else {
         return NextResponse.json({ error: "Invalid overrides" }, { status: 400 });

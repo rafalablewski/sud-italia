@@ -121,7 +121,36 @@ export interface SeatingPolicy {
   paceCapPer15: number;
   /** A big table (≥ this many seats) is "large" for yield protection. */
   largeTableSeats: number;
+  /** Per-zone cap on new seatings per 15-minute bucket — stops one section (and
+   *  its server) getting slammed while the rest of the room is calm. 0 = off. */
+  sectionCapPer15: number;
+  /** Hard-protect large tables: a small party is *excluded* from a large table
+   *  whenever a fitting non-large table is available (vs. the soft yield nudge). */
+  protectLargeTables: boolean;
+  /** Zones held for VIPs — a non-VIP party is excluded from them. Lower-cased on
+   *  compare. Empty = no hold. */
+  vipHoldZones: string[];
+  /** UI: pre-select the engine's top pick instead of only advising. Ignored in
+   *  shadow mode (which never auto-applies). */
+  autoSuggest: boolean;
+  /** Record every seat decision (recommended vs chosen) so the override rate is
+   *  measurable and the model can learn what operators actually do. */
+  learnFromOverrides: boolean;
+  /** Advisory-only: compute + log the recommendation but never auto-apply it, so
+   *  a manager can trust the engine before letting it drive. */
+  shadowMode: boolean;
 }
+
+/** The advanced rules/toggles a preset carries by default — off/neutral so a
+ *  fresh preset behaves exactly as before this layer existed (non-regressing). */
+const ADVANCED_DEFAULTS = {
+  sectionCapPer15: 0,
+  protectLargeTables: false,
+  vipHoldZones: [] as string[],
+  autoSuggest: false,
+  learnFromOverrides: true,
+  shadowMode: false,
+};
 
 function normaliseWeights(w: SeatingWeights): SeatingWeights {
   const total = w.fit + w.runway + w.guest + w.pacing + w.yield || 1;
@@ -134,6 +163,7 @@ export const BALANCED_POLICY: SeatingPolicy = {
   resetBufferMin: 10,
   paceCapPer15: 4,
   largeTableSeats: 6,
+  ...ADVANCED_DEFAULTS,
 };
 
 /** Pack the room — favour tight fit, yield protection and pacing. */
@@ -177,6 +207,12 @@ export interface StoredSeatingPolicy {
     resetBufferMin?: number;
     paceCapPer15?: number;
     largeTableSeats?: number;
+    sectionCapPer15?: number;
+    protectLargeTables?: boolean;
+    vipHoldZones?: string[];
+    autoSuggest?: boolean;
+    learnFromOverrides?: boolean;
+    shadowMode?: boolean;
   };
 }
 
@@ -326,16 +362,24 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
   const needFree = turn + policy.resetBufferMin;
   const prefs = ctx.prefs;
 
-  // pacing context — how many holds already start in this atMin 15-min bucket
+  // pacing context — the holds that already start in this atMin 15-min bucket,
+  // floor-wide and per-zone (for the section cap).
   const bucket = Math.floor(ctx.atMin / 15);
-  const bucketLoad = ctx.reservations.filter((r) => {
+  const zoneById = new Map(ctx.tables.map((t) => [t.id, t.zone]));
+  const bucketHolds = ctx.reservations.filter((r) => {
     if (r.id === ctx.excludeReservationId) return false;
     if (r.locationSlug !== ctx.locationSlug || r.date !== ctx.date) return false;
     if (!HOLDS.includes(r.status)) return false;
     const s = timeToMinutes(r.time);
     return Number.isFinite(s) && Math.floor(s / 15) === bucket;
-  }).length;
-  const pacingScore = clamp01(1 - bucketLoad / Math.max(1, policy.paceCapPer15));
+  });
+  const bucketLoad = bucketHolds.length;
+  const floorPacing = clamp01(1 - bucketLoad / Math.max(1, policy.paceCapPer15));
+  const zoneLoad = (zone?: string): number =>
+    zone == null ? 0 : bucketHolds.filter((r) => (r.tableId ? zoneById.get(r.tableId) : undefined) === zone).length;
+  const capOn = policy.sectionCapPer15 > 0;
+  const vipHold = policy.vipHoldZones.map((z) => z.toLowerCase());
+  const inVipHold = (zone?: string): boolean => !!zone && vipHold.includes(zone.toLowerCase());
 
   const out: Suggestion[] = ctx.tables.map((t) => {
     const zone = t.zone;
@@ -364,11 +408,22 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     if (free < needFree) {
       return { ...base, excludedReason: free === Infinity ? "booked" : `held ${Math.round(free)}m` };
     }
+    // VIP hold — this zone is kept for VIPs; a non-VIP party can't take it.
+    if (inVipHold(zone) && !prefs?.vip) return { ...base, excludedReason: "VIP hold" };
+    // Section cap — the zone has already taken its share of this 15-min window.
+    if (capOn && zoneLoad(zone) >= policy.sectionCapPer15) {
+      return { ...base, excludedReason: `${zone ?? "section"} full this window` };
+    }
 
     // ── soft sub-scores (0..1) ─────────────────────────────────────
     const over = t.seats - party;
     const fit = clamp01(1 - Math.max(0, over) * 0.18); // exact = 1, decays with oversize
     const runway = free === Infinity ? 1 : clamp01(free / (turn * 1.5 + policy.resetBufferMin));
+    // Pacing folds the floor-wide cap with the per-zone section cap (when on) so
+    // a filling section drags a table's score down before it hits the hard cap.
+    const pacingScore = capOn
+      ? Math.min(floorPacing, clamp01(1 - zoneLoad(zone) / Math.max(1, policy.sectionCapPer15)))
+      : floorPacing;
 
     let guest = 0.5; // neutral when nothing is known
     const reasons: string[] = [];
@@ -408,9 +463,28 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     else reasons.push(`free until ${fmtHM(ctx.atMin + free)}`);
     if (isLarge && smallParty) reasons.push("large table — held back for big parties");
     if (bucketLoad >= policy.paceCapPer15) reasons.push("busy 15-min window");
+    if (capOn && zoneLoad(zone) >= policy.sectionCapPer15 - 1 && zone) reasons.push(`${zone} filling up`);
 
     return { ...base, ok: true, score: Math.round(score), breakdown, reasons };
   });
+
+  // Protect large tables (hard) — once every table is scored, drop a small party
+  // from any large `ok` table *provided* a fitting non-large table is still open,
+  // so the big top stays for big demand. Never strands the party: if only large
+  // tables fit, they remain seatable.
+  if (policy.protectLargeTables) {
+    const hasNonLargeOk = out.some((s) => s.ok && s.seats < policy.largeTableSeats);
+    if (hasNonLargeOk) {
+      for (const s of out) {
+        if (s.ok && s.seats >= policy.largeTableSeats && party <= s.seats - 2) {
+          s.ok = false;
+          s.score = 0;
+          s.isRecommended = false;
+          s.excludedReason = "large table — protected for big parties";
+        }
+      }
+    }
+  }
 
   // rank: ok first (score desc), excluded after (stable by input order)
   const oks = out.filter((s) => s.ok).sort((a, b) => b.score - a.score);
@@ -423,4 +497,42 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
 export function recommendTable(ctx: SuggestContext): Suggestion | null {
   const top = suggestTables(ctx).find((s) => s.ok);
   return top ?? null;
+}
+
+// ─── Trust loop — learn-from-overrides / shadow-mode telemetry ────────────────
+
+/** One logged seat decision: what the engine recommended vs. what the operator
+ *  chose. The raw material for the override rate and, later, learning. */
+export interface SeatingDecision {
+  id: string;
+  locationSlug: string;
+  at: string; // ISO timestamp
+  party: number;
+  atMin: number;
+  recommendedTableId: string | null;
+  chosenTableId: string;
+  /** chosen ≠ recommended — the operator overrode the engine. */
+  override: boolean;
+  /** The engine was advisory-only (shadow mode) when this was logged. */
+  shadow: boolean;
+}
+
+/** Rolled-up trust signal over a location's recent decisions. */
+export interface SeatingDecisionSummary {
+  n: number;
+  overrides: number;
+  /** Share of decisions where the operator agreed with the engine (0..1). */
+  agreeRate: number;
+  shadow: number;
+  lastAt: string | null;
+}
+
+/** Summarise decisions into the trust readout. Pure so the UI and any report
+ *  share one definition of "agreement". */
+export function summariseDecisions(decisions: SeatingDecision[]): SeatingDecisionSummary {
+  const n = decisions.length;
+  const overrides = decisions.filter((d) => d.override).length;
+  const shadow = decisions.filter((d) => d.shadow).length;
+  const lastAt = decisions.reduce<string | null>((a, d) => (a && a > d.at ? a : d.at), null);
+  return { n, overrides, agreeRate: n ? (n - overrides) / n : 0, shadow, lastAt };
 }
