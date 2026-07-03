@@ -21,7 +21,11 @@ The guest engagement hub. `/core/guest`.
 - **Live code:** `src/core/guest/CoreInbox.tsx`.
 - **Theme:** `.core-crumb` · `.core-sectionhead` · `.core-statstrip` ·
   `.core-guest-inbox` / `.core-inbox` (3-pane: `.core-convs` · `.core-thread`
-  · `.core-ctx`) in `themes/core/index.css`.
+  · `.core-ctx`) in `themes/core/index.css`. The three panes are each a
+  **frosted-glass card** (mockup `.pane.glass`) — `parity/inbox.css` gives
+  `.core-inbox` a 14px gutter + a **10px gap**, every pane a full border +
+  radius (no divider borders), and the liquid-glass skin adds the sheen/blur/
+  float; inner headers/composer go transparent so the glass reads through.
 - **Layout:** dense-console (mockup 07-guest-inbox) — a `.core-crumb`
   breadcrumb + `.core-sectionhead`, then a **5-up `.core-statstrip`** (open
   convos · awaiting reply · live · conversion · paid 7d — all from live
