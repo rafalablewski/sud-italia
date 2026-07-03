@@ -34,8 +34,11 @@ The guest engagement hub. `/core/guest`.
   archived=box, each tooltip-labelled) · thread (`.core-bub` bubbles toned by actor:
   customer/operator/bot/system, with a `.core-bub-kind` badge on non-text
   kinds — Template / Buttons / List / Link / 📍 Location / Selection —
-  grouped under `.core-day-sep` **day separators**; the header carries a
-  `.core-window` **24h-window** chip open/closed) + a `.core-quickreplies`
+  grouped under `.core-day-sep` **day separators**; the thread header shows the
+  guest as **masked phone · tier · WhatsApp** with SVG **pin / archive**
+  `.core-iconbtn`s + a `.core-window` **24h-window** chip open/closed. Order
+  refs are badged **short** (`shortRef` → trailing token, e.g. `#2WJCKO`) on the
+  convo `live` badge, the Guest-context header, and the live-order card) + a `.core-quickreplies`
   row of starters (Menu · Payment link
   [injects the live pay URL] · Reservation · Comp dessert) over the
   composer · context (`.core-ctx`: live cart + guest rollup + tier).

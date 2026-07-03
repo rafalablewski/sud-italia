@@ -118,6 +118,13 @@ function maskPhone(phone: string): string {
   if (head.startsWith("+") && head.length >= 6) head = `${head.slice(0, 3)} ${head.slice(3)}`;
   return `${head} ••• ${last3}`;
 }
+// Order/session refs are slugs (e.g. "demo-wa-ord-2wjcko"); the mockup shows a
+// short clean ref (e.g. "#4821"), so surface only the trailing token, upper-cased
+// and capped, wherever a ref is badged.
+function shortRef(id: string): string {
+  const tail = id.split(/[-_]/).pop() || id;
+  return tail.slice(-6).toUpperCase();
+}
 // Loyalty metal → tier-badge colour class (gold gradient is the default).
 function tierClass(tier: string | null): string {
   const t = (tier ?? "").toLowerCase();
@@ -268,7 +275,7 @@ const ConvRow = memo(function ConvRow({
         {(c.hasActiveSession || c.pendingPaymentUrl) && (
           <span className="cbadges">
             {c.hasActiveSession && (
-              <span className="core-cbadge live">● live{c.pendingOrderId ? ` #${c.pendingOrderId}` : ""}</span>
+              <span className="core-cbadge live">● live{c.pendingOrderId ? ` #${shortRef(c.pendingOrderId)}` : ""}</span>
             )}
             {c.pendingPaymentUrl && <span className="core-cbadge pay">pay pending</span>}
           </span>
@@ -1067,14 +1074,21 @@ export function CoreInbox() {
                   <span className="core-av">{initials(selectedConv.customerName, selectedConv.phone)}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="nm">{selectedConv.customerName || selectedConv.phone}</div>
-                    <div className="meta">{selectedConv.phone} · WhatsApp</div>
+                    <div className="meta">
+                      {maskPhone(selectedConv.phone)}
+                      {rollup?.isMember ? ` · ${rollup.tier ?? "Member"}` : ""} · WhatsApp
+                    </div>
                   </div>
                   <span className={`core-window ${windowOpen ? "open" : "closed"}`}>24h · {windowOpen ? "open" : "closed"}</span>
-                  <button className="core-iconbtn" title={pinnedSet.has(selectedConv.phone) ? "Unpin" : "Pin"} onClick={() => void setFlag(selectedConv.phone, { pinned: !pinnedSet.has(selectedConv.phone) })}>
-                    {pinnedSet.has(selectedConv.phone) ? "📌" : "📍"}
+                  <button className={`core-iconbtn${pinnedSet.has(selectedConv.phone) ? " on" : ""}`} title={pinnedSet.has(selectedConv.phone) ? "Unpin" : "Pin"} aria-label={pinnedSet.has(selectedConv.phone) ? "Unpin" : "Pin"} onClick={() => void setFlag(selectedConv.phone, { pinned: !pinnedSet.has(selectedConv.phone) })}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M9 4v6l-2 4h10l-2-4V4M12 18v3M8 4h8" />
+                    </svg>
                   </button>
-                  <button className="core-iconbtn" title={archivedSet.has(selectedConv.phone) ? "Unarchive" : "Archive"} onClick={() => void setFlag(selectedConv.phone, { archived: !archivedSet.has(selectedConv.phone) })}>
-                    🗄
+                  <button className="core-iconbtn" title={archivedSet.has(selectedConv.phone) ? "Unarchive" : "Archive"} aria-label={archivedSet.has(selectedConv.phone) ? "Unarchive" : "Archive"} onClick={() => void setFlag(selectedConv.phone, { archived: !archivedSet.has(selectedConv.phone) })}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4" />
+                    </svg>
                   </button>
                 </div>
                 <div className="core-msgs" ref={msgsRef}>
@@ -1104,7 +1118,7 @@ export function CoreInbox() {
               <>
                 <div className="core-pane-h">
                   <span className="t">Guest context</span>
-                  {selectedConv.pendingOrderId && <span className="badge">#{selectedConv.pendingOrderId}</span>}
+                  {selectedConv.pendingOrderId && <span className="badge">#{shortRef(selectedConv.pendingOrderId)}</span>}
                 </div>
                 <div className="core-ctx-body">
                   {/* guest card */}
@@ -1138,7 +1152,7 @@ export function CoreInbox() {
                     <div className="core-liveorder">
                       <div className="oh">
                         <span className="id">
-                          {selectedConv.pendingOrderId ? `#${selectedConv.pendingOrderId}` : "Live cart"}
+                          {selectedConv.pendingOrderId ? `#${shortRef(selectedConv.pendingOrderId)}` : "Live cart"}
                           {selectedConv.fulfillmentType ? ` · ${selectedConv.fulfillmentType}` : ""}
                         </span>
                         <span className={`stt ${selectedConv.pendingPaymentUrl ? "pay" : "live"}`}>
