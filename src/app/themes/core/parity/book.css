@@ -282,6 +282,11 @@
 .core .core-bk-toggle .tg-l { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .core .core-bk-toggle .tg-h { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); line-height: 1.35; }
 
+/* Guest-needs chips (accessibility) in the booking form */
+.core .core-bk-needs { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-need { font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.core .core-bk-need.on { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+
 /* VIP-hold zone chips */
 .core .core-bk-vipzones { display: flex; flex-wrap: wrap; gap: 6px; }
 .core .core-bk-vipzone { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }

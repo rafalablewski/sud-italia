@@ -1,4 +1,4 @@
-import type { Reservation } from "@/data/types";
+import type { Reservation, TableFeature } from "@/data/types";
 import {
   getReservations,
   getSlotById,
@@ -64,6 +64,8 @@ export interface CreateBookingInput {
   partySize: number;
   durationMin?: number;
   notes?: string;
+  /** Accessibility features this party requires (carried onto the reservation). */
+  needs?: TableFeature[];
   /** Operator force — bypasses the table_conflict and slot_full gates. */
   override?: boolean;
 }
@@ -124,6 +126,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     slotId: input.slotId,
     status: "booked",
     notes: input.notes?.trim() || undefined,
+    needs: input.needs?.length ? input.needs : undefined,
   });
   return { ok: true, reservation };
 }

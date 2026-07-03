@@ -1858,6 +1858,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 12px; color: var(--ink-2); }
 .core .core-tbl-field:last-child { margin-bottom: 0; }
 .core .core-tbl-field .core-inp { width: 100%; }
+.core .core-tbl-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-tbl-feat { font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.core .core-tbl-feat.on { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
 .core .core-btn.danger { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
 .core .core-btn.danger:hover { background: var(--danger); color: var(--on-danger); }
 

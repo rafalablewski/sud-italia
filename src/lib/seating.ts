@@ -1,4 +1,4 @@
-import type { FloorTable, Reservation } from "@/data/types";
+import type { FloorTable, Reservation, TableFeature } from "@/data/types";
 import { timeToMinutes } from "./floor";
 
 /**
@@ -363,6 +363,8 @@ export interface SuggestContext {
   policy?: SeatingPolicy;
   /** Learned turn-times; when absent the engine uses party-size defaults. */
   turnModel?: TurnModel;
+  /** Accessibility features this party requires — a table missing any is excluded. */
+  needs?: TableFeature[];
   /** When re-seating/editing, ignore this reservation's own hold. */
   excludeReservationId?: string;
 }
@@ -450,6 +452,11 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     // ── hard constraints ───────────────────────────────────────────
     if (t.status === "out-of-service") return { ...base, excludedReason: "out of service" };
     if (t.seats < party) return { ...base, excludedReason: "too small" };
+    // accessibility — the party needs a feature this table doesn't offer
+    if (ctx.needs?.length) {
+      const missing = ctx.needs.find((n) => !(t.features ?? []).includes(n));
+      if (missing) return { ...base, excludedReason: `no ${missing.replace("-", " ")}` };
+    }
     // occupied *right now* by a seated/booked party → hard block (freeWindowMin
     // only sees the forward window, so this must be checked separately)
     const occLeft = occupiedMinLeft(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId);

@@ -20,7 +20,7 @@ import {
   type TurnModel,
   type SeatingDecisionSummary,
 } from "@/lib/seating";
-import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
 const DURATION_MIN = 90;
@@ -74,7 +74,9 @@ export function CoreBook() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [needs, setNeeds] = useState<TableFeature[]>([]);
   const [override, setOverride] = useState(false);
+  const toggleNeed = (f: TableFeature) => setNeeds((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
   const [booking, setBooking] = useState(false);
   // The subbar's "New reservation" pill jumps focus to the guest field.
   const nameRef = useRef<HTMLInputElement>(null);
@@ -151,7 +153,7 @@ export function CoreBook() {
       const res = await fetch(`/api/admin/booking?location=${encodeURIComponent(loc)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedSlot.id, tableId, customerName: name.trim(), customerPhone: phone.trim() || undefined, partySize: partyN, durationMin: DURATION_MIN, notes: notes.trim() || undefined, override }),
+        body: JSON.stringify({ slotId: selectedSlot.id, tableId, customerName: name.trim(), customerPhone: phone.trim() || undefined, partySize: partyN, durationMin: DURATION_MIN, notes: notes.trim() || undefined, needs: needs.length ? needs : undefined, override }),
       });
       if (res.ok) {
         toast(`Booked · ${name.trim()} · ${partyN}p · ${selectedSlot.time}`, "success");
@@ -160,6 +162,7 @@ export function CoreBook() {
         setName("");
         setPhone("");
         setNotes("");
+        setNeeds([]);
         setTableId(null);
         setOverride(false);
         await load();
@@ -241,8 +244,9 @@ export function CoreBook() {
       reservations,
       policy,
       turnModel,
+      needs: needs.length ? needs : undefined,
     });
-  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel]);
+  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel, needs]);
   const suggByTable = useMemo(() => {
     const m = new Map<string, Suggestion>();
     suggestions?.forEach((s) => m.set(s.tableId, s));
@@ -323,9 +327,9 @@ export function CoreBook() {
   // walk-in is an ad-hoc reservation (source: walk-in, seated immediately).
   const walkSuggestions = useMemo<Suggestion[]>(() => {
     if (!walkOpen) return [];
-    return suggestTables({ party: walkParty, atMin: nowMin, date, locationSlug: loc, tables, reservations, policy, turnModel });
+    return suggestTables({ party: walkParty, atMin: nowMin, date, locationSlug: loc, tables, reservations, policy, turnModel, needs: needs.length ? needs : undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walkOpen, walkParty, tables, reservations, loc, date, policy, turnModel]);
+  }, [walkOpen, walkParty, tables, reservations, loc, date, policy, turnModel, needs]);
   const seatWalkIn = async (t: FloorTable) => {
     setActing(`walk-${t.id}`);
     try {
@@ -336,7 +340,7 @@ export function CoreBook() {
         body: JSON.stringify({
           customerName: "Walk-in", partySize: walkParty, date, time: hm,
           durationMin: expectedTurnMin(walkParty, nowMin, turnModel), tableId: t.id,
-          status: "seated", source: "walk-in", override: true,
+          status: "seated", source: "walk-in", needs: needs.length ? needs : undefined, override: true,
         }),
       });
       if (res.ok) { toast(`Walk-in seated · ${walkParty} · ${tLabel(t.number)}`, "success"); setWalkOpen(false); await load(); }
@@ -623,6 +627,17 @@ export function CoreBook() {
                   <button onClick={() => setPartyN((n) => Math.min(20, n + 1))} aria-label="More">+</button>
                 </div>
                 <span className="hint">seats {partyN} · needs {partyN}-top+</span>
+              </div>
+            </div>
+
+            <div className="core-bk-field">
+              <div className="core-bk-flab"><span>Guest needs</span><span className="mut">filters tables</span></div>
+              <div className="core-bk-needs">
+                {TABLE_FEATURES.map((f) => (
+                  <button key={f} type="button" className={`core-bk-need${needs.includes(f) ? " on" : ""}`} onClick={() => toggleNeed(f)} aria-pressed={needs.includes(f)}>
+                    {f === "accessible" ? "♿ accessible" : f === "high-chair" ? "🍼 high-chair" : "▭ step-free"}
+                  </button>
+                ))}
               </div>
             </div>
 

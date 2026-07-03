@@ -14243,6 +14243,7 @@ export async function saveTable(
     zone: input.zone,
     status: input.status,
     notes: input.notes,
+    features: input.features,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   let prevStatus: string | null = null;
@@ -14303,6 +14304,7 @@ export async function saveReservation(
     source: input.source,
     seatedAt: input.seatedAt,
     completedAt: input.completedAt,
+    needs: input.needs,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return reservationsBlob.upsert(res);

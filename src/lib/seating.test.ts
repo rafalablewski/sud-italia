@@ -223,6 +223,24 @@ test("a learned longer turn tightens the walk-in guard", () => {
   assert.ok(withModel[0].excludedReason?.startsWith("held"));
 });
 
+// ── accessibility ─────────────────────────────────────────────────────────────
+test("a required feature the table lacks is a hard exclusion", () => {
+  const plain = table("t1", 4, "main");
+  const access: FloorTable = { ...table("t2", 4, "main"), features: ["accessible", "step-free"] };
+  const res = suggestTables({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [plain, access], reservations: [], needs: ["accessible"] });
+  const t1 = res.find((s) => s.tableId === "t1")!;
+  const t2 = res.find((s) => s.tableId === "t2")!;
+  assert.equal(t1.ok, false);
+  assert.ok(t1.excludedReason?.startsWith("no accessible"));
+  assert.equal(t2.ok, true); // has the feature
+});
+
+test("no needs → features are ignored (non-regressing)", () => {
+  const plain = table("t1", 4, "main");
+  const res = suggestTables({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [plain], reservations: [] });
+  assert.equal(res[0].ok, true);
+});
+
 // ── advanced policy: section cap · VIP hold · protect large ──────────────────
 test("section cap: a zone at its per-15-min cap is excluded, other zones pass", () => {
   const policy = { ...BALANCED_POLICY, sectionCapPer15: 1 };

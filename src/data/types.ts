@@ -601,6 +601,11 @@ export interface PosPayment {
 
 export type TableStatus = "available" | "seated" | "reserved" | "out-of-service";
 
+/** Physical accessibility features a table can offer / a guest can require. The
+ *  seating engine treats a required feature the table lacks as a hard exclusion. */
+export type TableFeature = "accessible" | "high-chair" | "step-free";
+export const TABLE_FEATURES: TableFeature[] = ["accessible", "high-chair", "step-free"];
+
 /** A physical table on a location's floor. `number` is the operator-facing
  *  label (free-form so it can be "12", "Bar 3", "Patio A"). */
 export interface FloorTable {
@@ -613,6 +618,9 @@ export interface FloorTable {
   /** Free-text service note for the table (allergy, VIP, high-chair, …),
    *  edited live from the Service → Floor table detail. */
   notes?: string;
+  /** Accessibility features this table offers (wheelchair-accessible, has a
+   *  high-chair, step-free). The engine matches these against a party's needs. */
+  features?: TableFeature[];
   createdAt: string;
 }
 
@@ -654,6 +662,9 @@ export interface Reservation {
   /** Stamped when the party leaves (status → completed). With `seatedAt` this is
    *  one realised dining duration the turn-time model learns from. */
   completedAt?: string;
+  /** Accessibility features this party requires — the engine only offers tables
+   *  that provide every one. */
+  needs?: TableFeature[];
   createdAt: string;
 }
 

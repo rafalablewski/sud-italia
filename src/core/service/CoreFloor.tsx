@@ -13,7 +13,7 @@ import { useLocation } from "@/shared/LocationContext";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { CorePos } from "@/core/pos/CorePos";
 import { recommendSeating, type FloorTwin, type TwinTableRow } from "@/lib/floor-twin";
-import type { FloorTable, MenuItem, TableStatus } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type MenuItem, type TableStatus, type TableFeature } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 
@@ -755,8 +755,10 @@ function TableDialog({
   const [zone, setZone] = useState("");
   const [status, setStatus] = useState<TableStatus>("available");
   const [notes, setNotes] = useState("");
+  const [features, setFeatures] = useState<TableFeature[]>([]);
   const [busy, setBusy] = useState(false);
   const rowNotes = row?.notes ?? "";
+  const rowFeatures = (row?.features ?? []).join(",");
 
   useEffect(() => {
     if (table) {
@@ -765,9 +767,12 @@ function TableDialog({
       setZone(row?.zone ?? "");
       setStatus(row?.status ?? "available");
       setNotes(rowNotes);
+      setFeatures(rowFeatures ? (rowFeatures.split(",") as TableFeature[]) : []);
       setBusy(false);
     }
-  }, [table, row, rowNotes]);
+  }, [table, row, rowNotes, rowFeatures]);
+  const toggleFeature = (f: TableFeature) =>
+    setFeatures((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
 
   const save = async () => {
     if (!number.trim() || busy) return;
@@ -783,6 +788,7 @@ function TableDialog({
           zone: zone.trim() || undefined,
           status,
           notes: notes.trim() || undefined,
+          features,
         }),
       });
       if (res.ok) {
@@ -855,6 +861,22 @@ function TableDialog({
           ))}
         </select>
       </label>
+      <div className="core-tbl-field">
+        <span>Accessibility</span>
+        <div className="core-tbl-features">
+          {TABLE_FEATURES.map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`core-tbl-feat${features.includes(f) ? " on" : ""}`}
+              onClick={() => toggleFeature(f)}
+              aria-pressed={features.includes(f)}
+            >
+              {f === "accessible" ? "♿ accessible" : f === "high-chair" ? "🍼 high-chair" : "▭ step-free"}
+            </button>
+          ))}
+        </div>
+      </div>
       <label className="core-tbl-field">
         <span>Service note</span>
         <textarea className="core-inp" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="allergy, VIP, high-chair, split bill…" style={{ resize: "vertical", fontFamily: "inherit" }} />

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders } from "@/lib/store";
 import { findReservationConflicts, timeToMinutes } from "@/lib/floor";
-import type { ReservationStatus } from "@/data/types";
+import { TABLE_FEATURES, type ReservationStatus, type TableFeature } from "@/data/types";
 
 /**
  * Reservations — per-location CRUD with double-booking conflict detection.
@@ -92,6 +92,10 @@ export const POST = withAdmin(
     const nowIso = new Date().toISOString();
     const seatedAt = body.seatedAt ? String(body.seatedAt) : status === "seated" ? nowIso : undefined;
     const completedAt = body.completedAt ? String(body.completedAt) : status === "completed" ? nowIso : undefined;
+    const needsList = Array.isArray(body.needs)
+      ? (body.needs.filter((n: unknown) => TABLE_FEATURES.includes(n as TableFeature)) as TableFeature[]).slice(0, 3)
+      : [];
+    const needs = needsList.length ? needsList : undefined;
 
     // Conflict check against the day's active bookings on the same table.
     const candidate = {
@@ -135,6 +139,7 @@ export const POST = withAdmin(
       source,
       seatedAt,
       completedAt,
+      needs,
     });
     // Mirror the live seat/clear onto the shared floor table (TableSession
     // spine). Reconcile the current table and — on a reassignment — the table
