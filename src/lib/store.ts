@@ -5,6 +5,8 @@ import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
+import { timeToMinutes } from "@/lib/floor";
+import { resolvePolicy, buildTurnModel, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -14298,6 +14300,9 @@ export async function saveReservation(
     slotId: input.slotId,
     status: input.status,
     notes: input.notes,
+    source: input.source,
+    seatedAt: input.seatedAt,
+    completedAt: input.completedAt,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return reservationsBlob.upsert(res);
@@ -14305,6 +14310,58 @@ export async function saveReservation(
 
 export async function deleteReservation(id: string, locationSlug?: string): Promise<boolean> {
   return reservationsBlob.remove(id, locationSlug);
+}
+
+// --- Seating Intelligence Engine: policy + learned turn-times --------------
+//
+// The seating policy is the manager-tunable weight/rule set the engine scores
+// with (src/lib/seating.ts). Stored per location as a partial patch over the
+// shipped default so re-tuning the defaults later still applies. The learned
+// turn-time model is *derived* (not stored) from the day-to-day reservations
+// that have both a seatedAt and a completedAt — so it needs no extra blob and
+// can never drift from reality (Rule #1).
+
+const SEATING_POLICY_FILE = "seating-policy.json";
+
+/** Resolve the effective policy for a location (preset ⊕ overrides ⊕ default). */
+export async function getSeatingPolicy(locationSlug: string): Promise<{ policy: SeatingPolicy; stored: StoredSeatingPolicy }> {
+  const all = await readJSON<Record<string, StoredSeatingPolicy>>(SEATING_POLICY_FILE, {});
+  const stored: StoredSeatingPolicy = all[locationSlug] ?? { preset: "balanced" };
+  return { policy: resolvePolicy(stored), stored };
+}
+
+/** Persist a location's policy choice (preset + overrides). Merges over current. */
+export async function saveSeatingPolicy(locationSlug: string, patch: Partial<StoredSeatingPolicy>): Promise<StoredSeatingPolicy> {
+  return withLock(SEATING_POLICY_FILE, async () => {
+    const all = await readJSON<Record<string, StoredSeatingPolicy>>(SEATING_POLICY_FILE, {});
+    const current = all[locationSlug] ?? { preset: "balanced" };
+    const next: StoredSeatingPolicy = {
+      preset: patch.preset ?? current.preset,
+      overrides: patch.overrides === undefined ? current.overrides : patch.overrides,
+    };
+    all[locationSlug] = next;
+    await writeJSON(SEATING_POLICY_FILE, all);
+    return next;
+  });
+}
+
+/** Build the learned turn-time model for a location from realised dining
+ *  durations (completed reservations with a seatedAt → completedAt span). Empty
+ *  until parties have actually closed — the engine then falls back to defaults. */
+export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
+  const reservations = await getReservations(locationSlug);
+  const samples: TurnSample[] = [];
+  for (const r of reservations) {
+    if (r.status !== "completed" || !r.seatedAt || !r.completedAt) continue;
+    const start = new Date(r.seatedAt).getTime();
+    const end = new Date(r.completedAt).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    const minutes = Math.round((end - start) / 60000);
+    const atMin = timeToMinutes(r.time);
+    if (!Number.isFinite(atMin)) continue;
+    samples.push({ party: r.partySize, atMin, minutes });
+  }
+  return buildTurnModel(samples);
 }
 
 // --- POS open checks (tabs) ----------------------------------------------

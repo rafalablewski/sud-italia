@@ -32,22 +32,74 @@ export function daypartOf(atMin: number): Daypart {
 
 const DAYPART_FACTOR: Record<Daypart, number> = { lunch: 0.85, early: 1, prime: 1.15, late: 1 };
 
-/** Base expected dining minutes by party size (before the daypart factor). */
-function baseTurnMin(party: number): number {
-  if (party <= 2) return 75;
-  if (party <= 4) return 95;
-  if (party <= 6) return 120;
-  return 150;
+/** Party-size buckets the turn-time model learns over. */
+export type TurnBucket = "1-2" | "3-4" | "5-6" | "7+";
+export function turnBucket(party: number): TurnBucket {
+  const p = Math.max(1, Math.floor(party || 1));
+  if (p <= 2) return "1-2";
+  if (p <= 4) return "3-4";
+  if (p <= 6) return "5-6";
+  return "7+";
+}
+
+/** Base expected dining minutes by party bucket (before the daypart factor). */
+const BASE_TURN: Record<TurnBucket, number> = { "1-2": 75, "3-4": 95, "5-6": 120, "7+": 150 };
+
+/** A single realised dining duration — a reservation's `seatedAt → completedAt`. */
+export interface TurnSample {
+  party: number;
+  atMin: number;
+  minutes: number;
 }
 
 /**
- * Expected dining duration (minutes) for a party at a given time. Defaults now;
- * a learned per-(party × daypart × weekday) model can slot in here later without
- * changing any caller (the engine's single source of turn-time truth).
+ * A learned turn-time model: mean minutes + sample count per (bucket × daypart).
+ * Absent cells fall back to the default. Built by `buildTurnModel` from real
+ * closes; the engine reads it through `expectedTurnMin` (concept v3).
  */
-export function expectedTurnMin(party: number, atMin: number): number {
-  const p = Math.max(1, Math.floor(party || 1));
-  return Math.round(baseTurnMin(p) * DAYPART_FACTOR[daypartOf(atMin)]);
+export interface TurnModel {
+  cells: Partial<Record<`${TurnBucket}:${Daypart}`, { mean: number; n: number }>>;
+}
+
+/** Shrinkage strength — how many "prior" samples the default is worth. Higher =
+ *  slower to trust thin data. */
+const TURN_SHRINKAGE = 4;
+
+/** Aggregate realised durations into a shrinkage-smoothed model. Thin cells
+ *  stay close to the default; well-sampled cells move toward the observed mean. */
+export function buildTurnModel(samples: TurnSample[]): TurnModel {
+  const acc = new Map<string, { sum: number; n: number }>();
+  for (const s of samples) {
+    if (!Number.isFinite(s.minutes) || s.minutes <= 0 || s.minutes > 600) continue;
+    const key = `${turnBucket(s.party)}:${daypartOf(s.atMin)}`;
+    const a = acc.get(key) ?? { sum: 0, n: 0 };
+    a.sum += s.minutes;
+    a.n += 1;
+    acc.set(key, a);
+  }
+  const cells: TurnModel["cells"] = {};
+  for (const [key, a] of acc) {
+    const [bucket, daypart] = key.split(":") as [TurnBucket, Daypart];
+    // shrink toward the same default this cell would otherwise fall back to
+    const prior = Math.round(BASE_TURN[bucket] * DAYPART_FACTOR[daypart]);
+    const mean = (a.sum + TURN_SHRINKAGE * prior) / (a.n + TURN_SHRINKAGE);
+    cells[key as keyof TurnModel["cells"]] = { mean: Math.round(mean), n: a.n };
+  }
+  return { cells };
+}
+
+/**
+ * Expected dining duration (minutes) for a party at a given time. Uses the
+ * learned model's cell when present (already shrinkage-smoothed), else the
+ * party-bucket default × daypart factor. The engine's single source of
+ * turn-time truth — swapping defaults for learning changes no caller.
+ */
+export function expectedTurnMin(party: number, atMin: number, model?: TurnModel): number {
+  const bucket = turnBucket(party);
+  const daypart = daypartOf(atMin);
+  const learned = model?.cells[`${bucket}:${daypart}`];
+  if (learned) return learned.mean;
+  return Math.round(BASE_TURN[bucket] * DAYPART_FACTOR[daypart]);
 }
 
 // ─── Policy ──────────────────────────────────────────────────────────────────
@@ -114,6 +166,29 @@ export const POLICY_PRESETS = {
 
 export type PolicyPreset = keyof typeof POLICY_PRESETS;
 export const DEFAULT_POLICY = BALANCED_POLICY;
+
+/** A location's persisted policy choice: a preset baseline + optional overrides.
+ *  Kept here (the pure module) so the client can read the type without pulling
+ *  in the server store. */
+export interface StoredSeatingPolicy {
+  preset: PolicyPreset;
+  overrides?: {
+    weights?: Partial<SeatingWeights>;
+    resetBufferMin?: number;
+    paceCapPer15?: number;
+    largeTableSeats?: number;
+  };
+}
+
+/** Resolve a stored choice into an effective policy (preset ⊕ overrides). */
+export function resolvePolicy(stored: StoredSeatingPolicy): SeatingPolicy {
+  const base = POLICY_PRESETS[stored.preset] ?? DEFAULT_POLICY;
+  return {
+    ...base,
+    ...stored.overrides,
+    weights: normaliseWeights({ ...base.weights, ...stored.overrides?.weights }),
+  };
+}
 
 // ─── Preferences ─────────────────────────────────────────────────────────────
 
@@ -197,6 +272,8 @@ export interface SuggestContext {
   reservations: Reservation[];
   prefs?: TablePrefs;
   policy?: SeatingPolicy;
+  /** Learned turn-times; when absent the engine uses party-size defaults. */
+  turnModel?: TurnModel;
   /** When re-seating/editing, ignore this reservation's own hold. */
   excludeReservationId?: string;
 }
@@ -217,7 +294,7 @@ function fmtHM(min: number): string {
 export function suggestTables(ctx: SuggestContext): Suggestion[] {
   const policy = ctx.policy ?? DEFAULT_POLICY;
   const party = Math.max(1, Math.floor(ctx.party || 1));
-  const turn = expectedTurnMin(party, ctx.atMin);
+  const turn = expectedTurnMin(party, ctx.atMin, ctx.turnModel);
   const needFree = turn + policy.resetBufferMin;
   const prefs = ctx.prefs;
 

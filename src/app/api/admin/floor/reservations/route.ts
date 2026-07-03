@@ -47,6 +47,14 @@ export const POST = withAdmin(
     }
     const status: ReservationStatus = STATUSES.includes(body.status) ? body.status : "booked";
     const tableId = body.tableId ? String(body.tableId) : undefined;
+    const source: "booking" | "walk-in" | undefined =
+      body.source === "walk-in" ? "walk-in" : body.source === "booking" ? "booking" : undefined;
+    // Lifecycle stamps: seatedAt starts the live occupancy; completedAt closes it
+    // (with seatedAt, one realised turn the learned model reads). Honour a stamp
+    // the client sends; else auto-stamp on the transition so it's never lost.
+    const nowIso = new Date().toISOString();
+    const seatedAt = body.seatedAt ? String(body.seatedAt) : status === "seated" ? nowIso : undefined;
+    const completedAt = body.completedAt ? String(body.completedAt) : status === "completed" ? nowIso : undefined;
 
     // Conflict check against the day's active bookings on the same table.
     const candidate = {
@@ -83,6 +91,9 @@ export const POST = withAdmin(
       slotId: body.slotId ? String(body.slotId) : undefined,
       status,
       notes: body.notes ? String(body.notes).trim() : undefined,
+      source,
+      seatedAt,
+      completedAt,
     });
     return NextResponse.json({ reservation, conflicts });
   },

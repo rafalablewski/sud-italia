@@ -4,9 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { CoreShell } from "@/core/shell/CoreShell";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
+import { CoreDialog } from "@/core/ui/Dialog";
 import { useLocation } from "@/shared/LocationContext";
 import { findReservationConflicts } from "@/lib/floor";
-import { suggestTables, type Suggestion } from "@/lib/seating";
+import {
+  suggestTables,
+  expectedTurnMin,
+  POLICY_PRESETS,
+  type Suggestion,
+  type SeatingPolicy,
+  type StoredSeatingPolicy,
+  type PolicyPreset,
+  type SeatingWeights,
+  type TurnModel,
+} from "@/lib/seating";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
@@ -66,18 +77,32 @@ export function CoreBook() {
   // The subbar's "New reservation" pill jumps focus to the guest field.
   const nameRef = useRef<HTMLInputElement>(null);
 
+  // Seating Intelligence Engine — tunable policy + learned turn-times (loaded
+  // per location), plus the seat/walk-in/policy UI state.
+  const [policy, setPolicy] = useState<SeatingPolicy | undefined>(undefined);
+  const [storedPolicy, setStoredPolicy] = useState<StoredSeatingPolicy | undefined>(undefined);
+  const [turnModel, setTurnModel] = useState<TurnModel | undefined>(undefined);
+  const [acting, setActing] = useState<string | null>(null);
+  const [walkOpen, setWalkOpen] = useState(false);
+  const [walkParty, setWalkParty] = useState(2);
+  const [policyOpen, setPolicyOpen] = useState(false);
+
   const load = useCallback(async () => {
     if (!date) return;
     setLoading(true);
     try {
-      const [s, t, r] = await Promise.all([
+      const [s, t, r, pol, tm] = await Promise.all([
         fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
+        fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+        fetch(`/api/admin/seating/turn-model?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
       ]);
       setSlots(Array.isArray(s) ? s : s.slots ?? []);
       setTables(Array.isArray(t) ? t : t.tables ?? []);
       setReservations(Array.isArray(r) ? r : r.reservations ?? []);
+      if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
+      setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
     } finally {
       setLoading(false);
     }
@@ -204,8 +229,10 @@ export function CoreBook() {
       locationSlug: loc,
       tables,
       reservations,
+      policy,
+      turnModel,
     });
-  }, [selectedSlot, partyN, tables, reservations, loc]);
+  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel]);
   const suggByTable = useMemo(() => {
     const m = new Map<string, Suggestion>();
     suggestions?.forEach((s) => m.set(s.tableId, s));
@@ -247,6 +274,69 @@ export function CoreBook() {
   const isToday = date === todayLocal();
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
 
+  // ── Seating actions — transition a booking through its lifecycle. The route
+  // stamps seatedAt/completedAt; we resend the full record so nothing is lost.
+  const setResStatus = async (r: Reservation, status: Reservation["status"], verb: string) => {
+    setActing(r.id);
+    try {
+      const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: r.id, customerName: r.customerName, customerPhone: r.customerPhone, partySize: r.partySize,
+          date: r.date, time: r.time, durationMin: r.durationMin ?? DURATION_MIN, tableId: r.tableId,
+          slotId: r.slotId, notes: r.notes, source: r.source, seatedAt: r.seatedAt, status, override: true,
+        }),
+      });
+      if (res.ok) { toast(`${r.customerName} · ${verb}`, "success"); await load(); }
+      else toast(`Could not ${verb.toLowerCase()}`, "danger");
+    } finally { setActing(null); }
+  };
+
+  // ── Walk-in — the engine ranks safe tables at "now"; only ok ones seat. A
+  // walk-in is an ad-hoc reservation (source: walk-in, seated immediately).
+  const walkSuggestions = useMemo<Suggestion[]>(() => {
+    if (!walkOpen) return [];
+    return suggestTables({ party: walkParty, atMin: nowMin, date, locationSlug: loc, tables, reservations, policy, turnModel });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkOpen, walkParty, tables, reservations, loc, date, policy, turnModel]);
+  const seatWalkIn = async (t: FloorTable) => {
+    setActing(`walk-${t.id}`);
+    try {
+      const hm = `${String(Math.floor(nowMin / 60)).padStart(2, "0")}:${String(nowMin % 60).padStart(2, "0")}`;
+      const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Walk-in", partySize: walkParty, date, time: hm,
+          durationMin: expectedTurnMin(walkParty, nowMin, turnModel), tableId: t.id,
+          status: "seated", source: "walk-in", override: true,
+        }),
+      });
+      if (res.ok) { toast(`Walk-in seated · ${walkParty} · ${tLabel(t.number)}`, "success"); setWalkOpen(false); await load(); }
+      else toast("Could not seat walk-in", "danger");
+    } finally { setActing(null); }
+  };
+
+  // ── Policy — persist a preset (clears overrides) or a full override set.
+  const putPolicy = async (patch: Partial<StoredSeatingPolicy>) => {
+    const res = await fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+    });
+    if (res.ok) { const j = await res.json(); setPolicy(j.policy); setStoredPolicy(j.stored); }
+    else toast("Could not save policy", "danger");
+  };
+  const setPreset = (preset: PolicyPreset) => void putPolicy({ preset });
+  const setWeight = (key: keyof SeatingWeights, val: number) => {
+    if (!policy || !storedPolicy) return;
+    const weights = { ...policy.weights, [key]: val };
+    void putPolicy({ preset: storedPolicy.preset, overrides: { weights, resetBufferMin: policy.resetBufferMin, paceCapPer15: policy.paceCapPer15, largeTableSeats: policy.largeTableSeats } });
+  };
+  const setRule = (key: "resetBufferMin" | "paceCapPer15" | "largeTableSeats", val: number) => {
+    if (!policy || !storedPolicy) return;
+    void putPolicy({ preset: storedPolicy.preset, overrides: { weights: policy.weights, resetBufferMin: policy.resetBufferMin, paceCapPer15: policy.paceCapPer15, largeTableSeats: policy.largeTableSeats, [key]: val } });
+  };
+
   return (
     <CoreShell
       eyebrow="Service · Book"
@@ -267,6 +357,12 @@ export function CoreBook() {
             aria-label="Booking day"
           />
           <div className="core-sp" />
+          <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
+            <span aria-hidden>⚙</span> Policy
+          </button>
+          <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
+            <span aria-hidden>+</span> Walk-in
+          </button>
           <button
             type="button"
             className="core-bk-newpill"
@@ -517,19 +613,96 @@ export function CoreBook() {
           ) : (
             bookingList.map((r) => {
               const sm = listStat[r.status] ?? { c: "", l: r.status };
+              const busy = acting === r.id;
               return (
                 <div className="core-bk-brow" key={r.id} onClick={() => selectRow(r)}>
                   <span className="btm">{r.time}</span>
-                  <span className="bnm">{r.customerName}</span>
+                  <span className="bnm">{r.customerName}{r.source === "walk-in" ? <span className="bwalk"> walk-in</span> : null}</span>
                   <span className="bcov">{r.partySize} cov</span>
                   <span className="btbl">{tableLabel(r.tableId)}</span>
                   <span className={`bstat ${sm.c}`}>{sm.l}</span>
+                  <span className="bacts" onClick={(e) => e.stopPropagation()}>
+                    {r.status === "booked" && (
+                      <>
+                        <button className="bact seat" disabled={busy} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
+                        <button className="bact" disabled={busy} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
+                      </>
+                    )}
+                    {r.status === "seated" && (
+                      <button className="bact done" disabled={busy} onClick={() => void setResStatus(r, "completed", "Completed")}>Complete</button>
+                    )}
+                  </span>
                   <button className="bcancel" onClick={(e) => { e.stopPropagation(); void cancel(r.id); }} aria-label="Cancel">✕</button>
                 </div>
               );
             })
           )}
         </section>
+
+        {/* Walk-in — engine-guarded seating for a party with no booking */}
+        <CoreDialog open={walkOpen} onClose={() => setWalkOpen(false)} title="Seat a walk-in">
+          <div className="core-bk-walk">
+            <div className="core-bk-flab"><span>Party size</span><span className="mut">now {String(Math.floor(nowMin / 60)).padStart(2, "0")}:{String(nowMin % 60).padStart(2, "0")}</span></div>
+            <div className="core-bk-partyrow">
+              <div className="core-covers">
+                <button onClick={() => setWalkParty((n) => Math.max(1, n - 1))} aria-label="Fewer">−</button>
+                <span className="mono">{walkParty}</span>
+                <button onClick={() => setWalkParty((n) => Math.min(20, n + 1))} aria-label="More">+</button>
+              </div>
+              <span className="hint">engine ranks safe tables · reserved-soon guarded</span>
+            </div>
+            <div className="core-bk-flab" style={{ marginTop: 12 }}><span>Table</span><span className="mut">live fit for {walkParty}</span></div>
+            {tables.length === 0 ? (
+              <div className="core-ctx-empty">No tables configured.</div>
+            ) : (
+              <div className="core-bk-tpicks">
+                {walkSuggestions.map((s) => (
+                  <button
+                    key={s.tableId}
+                    className={`core-bk-tpick${!s.ok ? " dim" : ""}${s.isRecommended ? " rec" : ""}`}
+                    disabled={!s.ok || acting === `walk-${s.tableId}`}
+                    onClick={() => { const t = tables.find((x) => x.id === s.tableId); if (t) void seatWalkIn(t); }}
+                    title={s.ok ? `${s.score} pts · ${s.reasons.join(" · ")}` : s.excludedReason}
+                  >
+                    <span className="tn">{tLabel(s.number)}</span>
+                    <span className="tc">{s.seats}-top{s.zone ? ` · ${s.zone}` : ""}</span>
+                    <span className="tfit">{s.isRecommended ? "✨ Recommend" : s.ok ? "fits" : s.excludedReason}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </CoreDialog>
+
+        {/* Seating engine policy — manager-tunable weights + rules (Rule #7: saves immediately) */}
+        <CoreDialog open={policyOpen} onClose={() => setPolicyOpen(false)} title="Seating engine policy">
+          {policy && storedPolicy ? (
+            <div className="core-bk-policy">
+              <div className="core-bk-flab"><span>Preset</span><span className="mut">{turnModel && Object.keys(turnModel.cells).length ? "learning turn-times ✓" : "default turn-times"}</span></div>
+              <div className="core-bk-presets">
+                {(Object.keys(POLICY_PRESETS) as PolicyPreset[]).map((p) => (
+                  <button key={p} className={`core-bk-preset${storedPolicy.preset === p && !storedPolicy.overrides ? " on" : ""}`} onClick={() => setPreset(p)}>{p.replace(/-/g, " ")}</button>
+                ))}
+              </div>
+              <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Weights</span><span className="mut">relative · auto-normalised</span></div>
+              {(["fit", "runway", "guest", "pacing", "yield"] as (keyof SeatingWeights)[]).map((k) => (
+                <label key={k} className="core-bk-slider">
+                  <span className="sl-k">{k}</span>
+                  <input type="range" min={0} max={0.5} step={0.02} value={policy.weights[k]} onChange={(e) => setWeight(k, Number(e.target.value))} />
+                  <span className="sl-v">{Math.round(policy.weights[k] * 100)}%</span>
+                </label>
+              ))}
+              <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Rules</span></div>
+              <div className="core-bk-rules">
+                <label>Reset buffer<input className="core-inp" type="number" min={0} max={60} value={policy.resetBufferMin} onChange={(e) => setRule("resetBufferMin", Number(e.target.value))} /><span>min</span></label>
+                <label>Pace cap<input className="core-inp" type="number" min={1} max={20} value={policy.paceCapPer15} onChange={(e) => setRule("paceCapPer15", Number(e.target.value))} /><span>/15m</span></label>
+                <label>Large table<input className="core-inp" type="number" min={3} max={20} value={policy.largeTableSeats} onChange={(e) => setRule("largeTableSeats", Number(e.target.value))} /><span>seats</span></label>
+              </div>
+            </div>
+          ) : (
+            <div className="core-ctx-empty pad">Loading policy…</div>
+          )}
+        </CoreDialog>
       </div>
     </CoreShell>
   );

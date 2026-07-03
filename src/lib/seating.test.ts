@@ -7,9 +7,12 @@ import {
   freeWindowMin,
   suggestTables,
   recommendTable,
+  buildTurnModel,
+  turnBucket,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
   type SuggestContext,
+  type TurnSample,
 } from "./seating";
 
 const LOC = "krakow";
@@ -139,6 +142,46 @@ test("policy changes the ranking (guest-first lifts preference)", () => {
 test("maximise-covers still respects hard constraints", () => {
   const res = suggestTables(ctx(4, at("18:58"), [table("t1", 2)], [], { policy: MAXIMISE_COVERS_POLICY }));
   assert.equal(res[0].ok, false); // a 2-top can never hold 4, whatever the policy
+});
+
+// ── learned turn-times ───────────────────────────────────────────────────────
+test("turnBucket maps party size to the learning bucket", () => {
+  assert.equal(turnBucket(2), "1-2");
+  assert.equal(turnBucket(4), "3-4");
+  assert.equal(turnBucket(6), "5-6");
+  assert.equal(turnBucket(10), "7+");
+});
+
+test("buildTurnModel shrinks thin data toward the default, trusts thick data", () => {
+  const prime = at("19:30");
+  // one long 2-top sample → shrinks toward the 88-min prime default (barely moves)
+  const dflt = expectedTurnMin(2, prime); // no model
+  const thin = buildTurnModel([{ party: 2, atMin: prime, minutes: 140 }]);
+  const thinMean = expectedTurnMin(2, prime, thin);
+  assert.ok(thinMean > dflt && thinMean < 120, `expected a small nudge above ${dflt}, got ${thinMean}`);
+  // many consistent samples → moves close to the observed mean
+  const many: TurnSample[] = Array.from({ length: 40 }, () => ({ party: 2, atMin: prime, minutes: 140 }));
+  const thick = expectedTurnMin(2, prime, buildTurnModel(many));
+  assert.ok(thick > 130, `expected to trust the data, got ${thick}`);
+});
+
+test("buildTurnModel ignores impossible durations", () => {
+  const m = buildTurnModel([{ party: 4, atMin: at("19:30"), minutes: -5 }, { party: 4, atMin: at("19:30"), minutes: 999 }]);
+  assert.equal(Object.keys(m.cells).length, 0);
+  assert.equal(expectedTurnMin(4, at("19:30"), m), expectedTurnMin(4, at("19:30"))); // falls back to default
+});
+
+test("a learned longer turn tightens the walk-in guard", () => {
+  // T2 has a 20:45 booking; a party of 2 at 18:58 with default turn fits...
+  const tables = [table("t2", 2)];
+  const rs = [resv("t2", "20:45")];
+  const withDefault = suggestTables(ctx(2, at("18:58"), tables, rs));
+  assert.equal(withDefault[0].ok, true);
+  // ...but once we've learned 2-tops linger ~150m at prime, the same table is held
+  const model = buildTurnModel(Array.from({ length: 30 }, () => ({ party: 2, atMin: at("19:30"), minutes: 150 })));
+  const withModel = suggestTables(ctx(2, at("18:58"), tables, rs, { turnModel: model }));
+  assert.equal(withModel[0].ok, false);
+  assert.ok(withModel[0].excludedReason?.startsWith("held"));
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────

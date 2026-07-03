@@ -645,6 +645,15 @@ export interface Reservation {
   slotId?: string;
   status: ReservationStatus;
   notes?: string;
+  /** How the party reached a table: a planned `booking` (default) or an ad-hoc
+   *  `walk-in` seated on arrival (Seating Intelligence Engine walk-in flow). */
+  source?: "booking" | "walk-in";
+  /** Stamped when the booking is seated — the start of its live occupancy. Feeds
+   *  the "who's seated where" view and the learned turn-time model. */
+  seatedAt?: string;
+  /** Stamped when the party leaves (status → completed). With `seatedAt` this is
+   *  one realised dining duration the turn-time model learns from. */
+  completedAt?: string;
   createdAt: string;
 }
 

@@ -138,8 +138,20 @@ availability) then scored (right-size · runway · guest · pacing · yield), so
 ✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
 reason (e.g. `held 32m`, `large table — held back for big parties`, `89 pts ·
 exact fit`). Excluded tables dim. Before a slot is picked it falls back to a
-plain capacity check. Then capture the guest and confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
-with cancel. Timeline rows + the table-pick list read **`T{n}`, ordered by table
+plain capacity check. Then capture the guest and confirm. The engine has four
+live surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
+**Seat / No-show / Complete** actions (`.bact`) that transition the reservation
+and stamp `seatedAt`/`completedAt` (POST `/api/admin/floor/reservations`), so
+Book answers "who's at T5?"; **(2) walk-in guard** — a subbar **+ Walk-in**
+button (`.core-bk-toolbtn.walk`) opens a `CoreDialog` that ranks tables at *now*
+and only seats a genuinely-free one (writes a `source:"walk-in"` seated
+reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog`
+(`.core-bk-presets`/`.core-bk-slider`/`.core-bk-rules`) editing the preset +
+weights + rules, persisted per location (GET/PUT `/api/admin/seating/policy`,
+Rule #7); **(4) learned turn-times** — the engine reads a model derived live from
+completed reservations' `seatedAt→completedAt` (GET `/api/admin/seating/turn-model`),
+cold-starting on defaults. **Today's bookings** (`.core-bk-blist`) is a
+**full-width list below**, with cancel. Timeline rows + the table-pick list read **`T{n}`, ordered by table
 number** (shared with Floor's `tLabel`). The **surface sub-bar**
 (`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
 use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a

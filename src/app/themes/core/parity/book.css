@@ -203,7 +203,7 @@
   padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3);
 }
 .core .core-bk-brow {
-  display: grid; grid-template-columns: 64px 1fr 70px 60px 96px 34px;
+  display: grid; grid-template-columns: 60px 1fr 56px 46px 76px auto 34px;
   align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer;
 }
 .core .core-bk-brow:last-child { border-bottom: 0; }
@@ -225,3 +225,47 @@
   background: var(--panel-2); color: var(--ink-3); display: grid; place-items: center; cursor: pointer;
 }
 .core .core-bk-brow .bcancel:hover { color: var(--danger); border-color: rgba(255, 90, 92, .5); background: var(--danger-wash); }
+
+/* ── Seating Intelligence Engine controls ───────────────────────────────────
+   Subbar Policy/Walk-in buttons, Today's-bookings row actions, and the walk-in
+   + policy dialogs (src/lib/seating.ts, wired in CoreBook). */
+.core .core-bk-toolbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line);
+  padding: 4px 11px; border-radius: 999px; cursor: pointer;
+}
+.core .core-bk-toolbtn:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-toolbtn.walk { color: var(--basil); border-color: rgba(125, 196, 100, .4); background: var(--basil-wash); }
+.core .core-bk-toolbtn span { font-size: 13px; line-height: 1; }
+
+/* row action buttons (Seat · No-show · Complete) + walk-in tag */
+.core .core-bk-brow .bnm .bwalk { font-family: var(--mono); font-size: 9px; color: var(--basil); text-transform: uppercase; letter-spacing: .04em; }
+.core .core-bk-brow .bacts { display: flex; gap: 5px; justify-content: flex-end; }
+.core .core-bk-brow .bact {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .03em;
+  padding: 3px 9px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2);
+}
+.core .core-bk-brow .bact:hover:not(:disabled) { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-brow .bact:disabled { opacity: .5; cursor: default; }
+.core .core-bk-brow .bact.seat { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-brow .bact.done { color: var(--on-accent); background: linear-gradient(180deg, #7fd0ec, var(--info)); border-color: transparent; }
+
+/* walk-in + policy dialog bodies */
+.core .core-bk-walk, .core .core-bk-policy { display: flex; flex-direction: column; min-width: 320px; max-width: 440px; }
+.core .core-bk-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-preset {
+  font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.core .core-bk-preset:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-preset.on { color: var(--brand-bright); background: var(--brand-wash); border-color: rgba(232, 107, 62, .5); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
+.core .core-bk-slider { display: grid; grid-template-columns: 64px 1fr 42px; align-items: center; gap: 10px; margin: 5px 0; }
+.core .core-bk-slider .sl-k { font-family: var(--mono); font-size: 11px; color: var(--ink-2); text-transform: capitalize; }
+.core .core-bk-slider input[type="range"] { width: 100%; accent-color: var(--brand); }
+.core .core-bk-slider .sl-v { font-family: var(--mono); font-size: 11px; color: var(--brand-bright); text-align: right; }
+.core .core-bk-rules { display: flex; flex-direction: column; gap: 8px; }
+.core .core-bk-rules label { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-bk-rules label input { width: 62px; text-align: center; margin-left: auto; }
+.core .core-bk-rules label span { color: var(--ink-3); flex: 0 0 auto; }
