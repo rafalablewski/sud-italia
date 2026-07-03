@@ -7,7 +7,7 @@ import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { findReservationConflicts } from "@/lib/floor";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
-import { guestTabs } from "./guestTabs";
+import { serviceTabs } from "./serviceTabs";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
@@ -31,12 +31,13 @@ function todayLocal(): string {
 }
 
 /**
- * Core · Guest · Book — slot + table in one move, wired to the same engine
- * as today's /core/guest/book (shared with Service): GET slots / floor tables /
- * reservations, create via POST /api/admin/booking, cancel via DELETE
- * /api/admin/floor/reservations. Conflicts via the pure findReservationConflicts.
+ * Core · Service · Book — slot + table in one move, a Service view alongside
+ * Floor / Slots / Dispatch (`serviceTabs`). Wired to the shared engine: GET
+ * slots / floor tables / reservations, create via POST /api/admin/booking,
+ * cancel via DELETE /api/admin/floor/reservations. Conflicts via the pure
+ * findReservationConflicts.
  */
-export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) {
+export function CoreBook() {
   const toast = useCoreToast();
   const { selected, select } = useSelection();
   const { location, activeLocations } = useLocation();
@@ -224,8 +225,8 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
 
   return (
     <CoreShell
-      eyebrow={standalone ? "Book" : "Guest Engagement"}
-      tabs={standalone ? undefined : guestTabs("book")}
+      eyebrow="Service · Book"
+      tabs={serviceTabs("book")}
     >
       <div className="core-book">
         {/* Surface sub-bar (mockup subbar): weekday label + a date chip on the

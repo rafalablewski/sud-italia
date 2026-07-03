@@ -12,8 +12,9 @@ The guest engagement hub. `/core/guest`.
   `.core-gfilters` (one row, every control a uniform 34px, search flex-grows);
   pods are `.core-seg.icons`. Every glyph button keeps its label as
   `title` + `aria-label` + `aria-pressed`.
-- **Status:** **Inbox wired** (Step 5a). Guests · Loyalty · Concierge ·
-  Book render the shell + scaffold panel (their tabs live) until 5b–5e.
+- **Status:** **Inbox wired** (Step 5a). Guests · Loyalty · Concierge
+  render the shell + scaffold panel (their tabs live) until 5b–5e.
+  (Book is no longer a Guest view — it moved to **Service**.)
 
 ## Inbox (`/core/guest/inbox`) — wired
 
@@ -86,35 +87,10 @@ Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/point
 
 `src/core/guest/CoreConcierge.tsx` (+ a server page that builds the meta / per-location samples / allergen matrix + a `waConfigured` flag from the WhatsApp env, like today's). Headed by a `.core-crumb` breadcrumb (`… mcp inspector · N/N live`) + a `.core-sectionhead` (`Guest · Concierge · ai capability server · model-context inspector`), then a **6-up `.core-statstrip`** — **capabilities · live · requests today · avg latency · deflection · errors** — to match the dense-console mockup (10-guest-concierge). Capabilities/live are config; the rest are **real telemetry** from `getAgentCallStats()`: every hit on `/api/agent/[capability]` writes an `AgentCall` (`logAgentCall`, bounded ring buffer), aggregated to today's requests / avg latency / error rate / deflection (served-OK share) + per-capability count · latency (shown as `N req · N ms` on each capability row). The demo seed writes a day of representative calls so the strip isn't empty out of the box (Rule #1 — real records, not fabricated figures). A two-pane inspector: the six MCP capabilities with live exposure toggles (`.core-toggle`, PATCH `/api/admin/concierge`) · then the selected capability's **transports** panel (`.core-transport` — the MCP/HTTP read API, always Live; WhatsApp Business `/api/whatsapp/webhook`, *Connected ↗* to the inbox when `waConfigured` else *Needs config*) · a **live probe** (`▶ Test live` hits `/api/agent/{cap}` for real, times it, shows an HTTP-status `.core-tbadge2` + the response JSON in place of the static sample) · the EU-14 allergen matrix per location (`.core-matrix`, columns = only the allergens present on that menu, `●` per dish, with a legend noting the agent reads — never guesses — allergens). Allergens are **operator-declared** (EU 1169/2011, via the admin Menu editor → the `allergens` field of the menu-override); the demo seed declares the factual set for the classic dishes (`seedAllergens` in `scripts/seed-core-demo.ts`) so the matrix + `get_allergens` tool have real data out of the box. The inspected location follows the **shell's global location switcher** (`CoreLocationChip`, `useLocation()`) — there is **no** page-local location switch; on "All restaurants" it falls back to the first concrete location.
 
-## Book (`/core/guest/book`) — wired
-
-`src/core/guest/CoreBook.tsx` (shared with Service). Rendered in the
-**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
-`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
-covers · seated · upcoming · no-shows · fill** (all from the day's reservations
-— Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
-timeline a title + a status **legend** (confirmed · seated · pending · conflict).
-Then the **timeline-over-tables grid** (`.core-book-timeline` — tables as rows,
-11:00–23:00 as columns): reservation **blocks** are positioned by time/duration
-and **toned by status** (`.core-tl-block.confirmed` basil / `.seated` info),
-**overlaps hatch red** live (`.core-tl-block.conflict`, one
-`findReservationConflicts` pass per booking), and a block **drags to another
-table row to reassign** (HTML5 drag → the reservations `POST` upsert with
-`override`, so the conflict check re-runs on the result). The timeline panel
-(`.core-book-tlpanel`) sits **left**; the **new-reservation form is the right
-rail** (`.core-book-form` at grid col 2, mockup layout): pick a dine-in slot
-(`.core-pk`, each carrying a `.sub` capacity read `currentOrders/maxOrders` so the
-picker is tinted by fill like the mockup) + party size, then a table — live fit/conflict (booked/too-small
-tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
-confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
-with cancel. Above everything, a **surface sub-bar** (`.core-surf-toolbar.core-bk-subbar`
-— the same shared bar POS/KDS use) carries the weekday label + a compact date chip
-(`.core-bk-datefield`) on the left and a brand **New reservation** pill
-(`.core-bk-newpill`, focuses the guest field) on the right (mockup `.subbar`).
-Timeline rows + the table-pick list read **`T{n}`, ordered by table number**
-(shared with Floor's `tLabel`). Engine: `GET
-/api/admin/{slots,floor/tables,floor/reservations}`; create `POST
-/api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
+> **Book moved to Service.** The booking timeline (`CoreBook`) is now a
+> **Service** view (`/core/service/book`, alongside Floor · Slots · Dispatch) —
+> it is no longer a Guest sub-tab. See `service.md` → "Book". The Guest hub's
+> views are **Inbox · CRM (Guests) · Loyalty · Concierge**.
 
 The whole Guest hub is wired to the live engine.
 
@@ -127,6 +103,4 @@ Per-surface parity layers live in `src/app/themes/core/parity/{crm,loyalty,conci
 - **Concierge** — capability rows render friendly `m.label` + per-id SVG glyph in a two-pane MCP inspector; JSON pane has a green `tools/call`/`resources/read` chip, a basil "Test" pill, and span-based JSON syntax highlighting; the EU-14 matrix now always emits all 14 FIC columns (`buildAllergenMatrix`) with text headers + brand dots / dim `·` cells + a legend footer.
 - **Inbox** — context panel gains guest card (avatar + tier + member-since), lifestats grid, itemized live-order + total, and a Next-Best-Action card; conversation list has a title + open-count badge + labeled filter chips; thread supports named-staff/Concierge-bot labels + in-bubble cards; composer has a circular send + attach; left subbar `whatsapp · live` label. (Renders empty until WhatsApp conversations are seeded — 90-min session TTL.)
 
-### Book — dense-console parity (2026-07-02)
-
-`src/app/themes/core/parity/book.css` (imported after base+skin; scoped under `.core`). Timeline axis is the **17:00→23:00 dinner window in 30-min ticks** (blocks position by time/duration across it, no longer squished); empty corner cell; `T{n}` row labels (ordered by table number); reservation blocks show `status · context` with seated=info / confirmed=basil / **pending=amber** tones (overlaps render hatched). Right rail is a **New reservation** panel: **capacity-tinted** slot chips (green/amber/red by fill; the selected chip is a translucent **brand-wash**, not a solid fill), a party hint, a fit-tagged **table list** (Recommend on the recommended row), stacked guest fields, and a basil **Book** button with a dynamic summary. The booking list below is a full `blist` card (header badge `N total · M upcoming`, rows: time · name · covers · table · colored status badge · cancel). Stat strip: Fill basil, Upcoming plain ink. The three cards (timeline · new-reservation rail · today's-bookings list) are **frosted-glass** in the liquid-glass skin (sheen + backdrop-blur + floating shadow), matching the mockup's `.glass` columns and POS's frosted surfaces — see `../skins.md`. A shared **surface sub-bar** (`.core-bk-subbar`) tops the surface: weekday label + date chip + a brand **New reservation** pill (`.core-bk-newpill`). **Layout gutter:** `.core-book` owns a single `14px` horizontal padding + a `10px` `column-gap`, and the stat strip / divlabel / bookings list drop their own side margins inside Book — so every row (header rows, the timeline↔form columns, and the list) shares one left/right edge and the timeline/rail sit in a 10px channel (mockup `.main` padding + `.book-grid` gap).
+_(Book's dense-console parity notes moved to `service.md` → "Book" along with the surface.)_

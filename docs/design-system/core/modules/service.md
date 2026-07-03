@@ -1,7 +1,7 @@
 # Core · Service
 
 The merged Floor + Slots surface. `/core/service` (redirects to Floor).
-Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor · Slots · Dispatch.
+Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Floor · Slots · Dispatch**. (Book moved here from the top-level Lens Rail / the Guest hub — it is a Service view, reached from the Floor lens, and is no longer its own lens.)
 
 ## Floor (`/core/service/floor`) — wired
 
@@ -111,7 +111,47 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
 Wired 1:1 to the same shared server engine. The booking console (slot + table
-in one move) lives in the Guest hub's **Book** view (`CoreBook`), shared.
+in one move) is the **Book** view — see below.
+
+## Book (`/core/service/book`) — wired
+
+`src/core/service/CoreBook.tsx` — a **Service** view (`serviceTabs("book")`,
+eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
+`/core/book` and `/core/guest/book` redirect here. Rendered in the
+**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
+`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
+covers · seated · upcoming · no-shows · fill** (all from the day's reservations
+— Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
+timeline a title + a status **legend** (confirmed · seated · pending · conflict).
+The **timeline-over-tables grid** (`.core-book-tlpanel`, 17:00→23:00 in 30-min
+ticks): reservation **blocks** are positioned by time/duration and **toned by
+status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
+live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
+**drags to another table row to reassign** (HTML5 drag → the reservations `POST`
+upsert with `override`). The timeline sits **left**; the **new-reservation form
+is the right rail** (`.core-book-form`, grid col 2): pick a capacity-tinted
+dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
+**brand-wash**) + party size, then a table — live fit/conflict (booked/too-small
+tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
+confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
+with cancel. Timeline rows + the table-pick list read **`T{n}`, ordered by table
+number** (shared with Floor's `tLabel`). The **surface sub-bar**
+(`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
+use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a
+brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field).
+Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST
+/api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
+
+**Dense-console parity** (`src/app/themes/core/parity/book.css`, imported after
+base+skin; scoped under `.core`): the three cards (timeline · new-reservation
+rail · today's-bookings list) are **frosted-glass** in the liquid-glass skin
+(sheen + backdrop-blur + floating shadow), matching the mockup's `.glass` columns
+and POS's frosted surfaces — see `../skins.md`. **Layout gutter:** `.core-book`
+owns a single `14px` horizontal padding + a `10px` `column-gap`, and the stat
+strip / divlabel / bookings list drop their own side margins inside Book — so
+every row (header rows, the timeline↔form columns, and the list) shares one
+left/right edge and the timeline/rail sit in a 10px channel (mockup `.main`
+padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 
 ## Floor — live orders, lookup & notes
 
