@@ -106,8 +106,13 @@ rail** (`.core-book-form` at grid col 2, mockup layout): pick a dine-in slot
 (`.core-pk`, each carrying a `.sub` capacity read `currentOrders/maxOrders` so the
 picker is tinted by fill like the mockup) + party size, then a table — live fit/conflict (booked/too-small
 tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
-confirm. **Today's bookings** (`.core-book-side`) is a **full-width list below**,
-with cancel. Engine: `GET
+confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
+with cancel. Above everything, a **surface sub-bar** (`.core-surf-toolbar.core-bk-subbar`
+— the same shared bar POS/KDS use) carries the weekday label + a compact date chip
+(`.core-bk-datefield`) on the left and a brand **New reservation** pill
+(`.core-bk-newpill`, focuses the guest field) on the right (mockup `.subbar`).
+Timeline rows + the table-pick list read **`T{n}`, ordered by table number**
+(shared with Floor's `tLabel`). Engine: `GET
 /api/admin/{slots,floor/tables,floor/reservations}`; create `POST
 /api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
 
@@ -124,4 +129,4 @@ Per-surface parity layers live in `src/app/themes/core/parity/{crm,loyalty,conci
 
 ### Book — dense-console parity (2026-07-02)
 
-`src/app/themes/core/parity/book.css` (imported after base+skin; scoped under `.core`). Timeline axis is the **17:00→23:00 dinner window in 30-min ticks** (blocks position by time/duration across it, no longer squished); empty corner cell; bare `T{n}` row labels; reservation blocks show `status · context` with seated=info / confirmed=basil / **pending=amber** tones (overlaps render hatched). Right rail is a **New reservation** panel: **capacity-tinted** slot chips (green/amber/red by fill), a party hint, a fit-tagged **table list** (Recommend on the recommended row), stacked guest fields, and a basil **Book** button with a dynamic summary. The booking list below is a full `blist` card (header badge `N total · M upcoming`, rows: time · name · covers · table · colored status badge · cancel). Stat strip: Fill basil, Upcoming plain ink.
+`src/app/themes/core/parity/book.css` (imported after base+skin; scoped under `.core`). Timeline axis is the **17:00→23:00 dinner window in 30-min ticks** (blocks position by time/duration across it, no longer squished); empty corner cell; `T{n}` row labels (ordered by table number); reservation blocks show `status · context` with seated=info / confirmed=basil / **pending=amber** tones (overlaps render hatched). Right rail is a **New reservation** panel: **capacity-tinted** slot chips (green/amber/red by fill; the selected chip is a translucent **brand-wash**, not a solid fill), a party hint, a fit-tagged **table list** (Recommend on the recommended row), stacked guest fields, and a basil **Book** button with a dynamic summary. The booking list below is a full `blist` card (header badge `N total · M upcoming`, rows: time · name · covers · table · colored status badge · cancel). Stat strip: Fill basil, Upcoming plain ink. The three cards (timeline · new-reservation rail · today's-bookings list) are **frosted-glass** in the liquid-glass skin (sheen + backdrop-blur + floating shadow), matching the mockup's `.glass` columns and POS's frosted surfaces — see `../skins.md`. A shared **surface sub-bar** (`.core-bk-subbar`) tops the surface: weekday label + date chip + a brand **New reservation** pill (`.core-bk-newpill`).

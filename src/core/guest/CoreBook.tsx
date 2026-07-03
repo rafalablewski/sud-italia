@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -11,6 +11,19 @@ import { guestTabs } from "./guestTabs";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
+
+/** Floor's shared table-label convention: prefix a bare number with "T"
+ *  (matches CoreFloor's `T${n}`), leave already-named tables ("Bar 3") alone. */
+function tLabel(n: string): string {
+  return /^\d+$/.test(n) ? `T${n}` : n;
+}
+/** Timeline rows + table-pick list read T1…T12 in order (mockup), so sort by
+ *  numeric table number where possible, falling back to lexical. */
+function byTableNumber(a: FloorTable, b: FloorTable): number {
+  const na = parseInt(a.number, 10), nb = parseInt(b.number, 10);
+  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  return a.number.localeCompare(b.number);
+}
 
 function todayLocal(): string {
   const d = new Date();
@@ -48,6 +61,8 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
   const [notes, setNotes] = useState("");
   const [override, setOverride] = useState(false);
   const [booking, setBooking] = useState(false);
+  // The subbar's "New reservation" pill jumps focus to the guest field.
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     if (!date) return;
@@ -87,7 +102,11 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     [selectedSlot, partyN, reservations, loc],
   );
 
-  const tableLabel = (id?: string) => tables.find((t) => t.id === id)?.number ?? "—";
+  const sortedTables = useMemo(() => [...tables].sort(byTableNumber), [tables]);
+  const tableLabel = (id?: string) => {
+    const n = tables.find((t) => t.id === id)?.number;
+    return n ? tLabel(n) : "—";
+  };
   const canBook = !!selectedSlot && !!tableId && !!name.trim() && partyN >= 1 && !booking;
 
   const book = async () => {
@@ -197,7 +216,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     if (!date) return "today";
     const d = new Date(`${date}T00:00:00`);
     return !isNaN(d.getTime())
-      ? d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase()
+      ? d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase().replace(/,/g, "")
       : "today";
   })();
   const isToday = date === todayLocal();
@@ -209,6 +228,31 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
       tabs={standalone ? undefined : guestTabs("book")}
     >
       <div className="core-book">
+        {/* Surface sub-bar (mockup subbar): weekday label + a date chip on the
+            left, a brand New-reservation pill on the right that jumps focus to
+            the always-open form. Uses the shared `.core-surf-toolbar` bar so it
+            reads identically to POS/KDS surface controls. */}
+        <div className="core-surf-toolbar core-bk-subbar">
+          <span className="core-surf-tb-lbl">{daySub}</span>
+          <input
+            className="core-inp core-bk-datefield"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            aria-label="Booking day"
+          />
+          <div className="core-sp" />
+          <button
+            type="button"
+            className="core-bk-newpill"
+            onClick={() => {
+              nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+              nameRef.current?.focus();
+            }}
+          >
+            <span aria-hidden>+</span> New reservation
+          </button>
+        </div>
         <div className="core-crumb">
           CORE — BOOK · RESERVATIONS · <b>liquid glass</b> · <span className="fix">timeline view</span>
         </div>
@@ -250,12 +294,6 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
             <span className="delta">of seats</span>
           </div>
         </div>
-        {/* Date picker lives on the surface — the mockup's guest command bar
-            carries the inbox tools + WhatsApp-live only, no date field. */}
-        <div className="core-surf-toolbar">
-          <span className="core-surf-tb-lbl">Day</span>
-          <input className="core-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
-        </div>
         {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
         <div className="core-book-tlpanel">
@@ -277,7 +315,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
             {tables.length === 0 ? (
               <div className="core-ctx-empty pad">No tables configured.</div>
             ) : (
-              tables.map((t) => {
+              sortedTables.map((t) => {
                 const rows = dayRes.filter((r) => r.tableId === t.id);
                 const clashing = rows.filter((r) => conflictIds.has(r.id));
                 return (
@@ -287,7 +325,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => { const r = dayRes.find((x) => x.id === dragId); if (r) void reassign(r, t.id); setDragId(null); }}
                   >
-                    <div className="lbl">{t.number}</div>
+                    <div className="lbl">{tLabel(t.number)}</div>
                     {ticks.map((m, i) => <div key={m} className={`tick${i % 2 === 0 ? " hh" : ""}`} />)}
                     {rows.map((r) => {
                       const startTick = (toMin(r.time) - OPEN) / TICK_MIN;
@@ -378,7 +416,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
                 <div className="core-bk-tpicks">
-                  {tables.map((t) => {
+                  {sortedTables.map((t) => {
                     const st = tableState(t);
                     const isRec = t.id === recTableId;
                     const on = tableId === t.id;
@@ -397,7 +435,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
                         onClick={() => setTableId(t.id)}
                         title={st.label}
                       >
-                        <span className="tn">{t.number}</span>
+                        <span className="tn">{tLabel(t.number)}</span>
                         <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
                         <span className="tfit">{tag}</span>
                       </button>
@@ -409,7 +447,7 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Guest</span></div>
-              <input className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
+              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
               <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
               <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
             </div>
