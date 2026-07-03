@@ -324,6 +324,10 @@
 .core .core-bk-vipzone { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .core .core-bk-vipzone.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
 
+/* Turn-model accuracy readout */
+.core .core-bk-turnacc { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); line-height: 1.4; margin: 2px 0 4px; padding: 6px 8px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-bk-turnacc b { color: var(--info); }
+
 /* Override-reason chips (captured when the operator picks a non-recommended table) */
 .core .core-bk-orsn { margin-top: 8px; }
 .core .core-bk-orsnchips { display: flex; flex-wrap: wrap; gap: 6px; }

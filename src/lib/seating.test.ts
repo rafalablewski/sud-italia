@@ -14,6 +14,7 @@ import {
   simulateService,
   estimateWaitMin,
   summariseDecisions,
+  summariseTurnAccuracy,
   dowGroupOf,
   BALANCED_POLICY,
   GUEST_FIRST_POLICY,
@@ -271,7 +272,7 @@ test("VIP hold: a non-VIP is excluded from a held zone; a VIP is let in", () => 
 });
 
 test("protect large tables: a small party is dropped from a big top when a small one is free", () => {
-  const policy = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6 };
+  const policy = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6, protectLargeReleaseMin: 0 };
   const res = suggestTables(ctx(2, at("18:58"), [table("t6", 4, "main"), table("t9", 8, "booth")], [], { policy }));
   const t9 = res.find((s) => s.tableId === "t9")!;
   const t6 = res.find((s) => s.tableId === "t6")!;
@@ -392,6 +393,58 @@ test("estimateWaitMin: parties ahead push the quote out", () => {
 test("estimateWaitMin: null when no table can ever seat the party", () => {
   const q = estimateWaitMin({ party: 8, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [table("t1", 2)], reservations: [], aheadCount: 0 });
   assert.equal(q, null);
+});
+
+// ── timed holds ───────────────────────────────────────────────────────────────
+test("reserved-table grace keeps a late guest's table held past its slot", () => {
+  // booking 18:00–19:30; at 19:35 it's nominally over, but a 15m grace holds it
+  const rs = [resv("t1", "18:00", 90, "booked")];
+  const graceOn = { ...BALANCED_POLICY, reservedGraceMin: 15 };
+  const graceOff = { ...BALANCED_POLICY, reservedGraceMin: 0 };
+  const held = suggestTables(ctx(2, at("19:35"), [table("t1", 2)], rs, { policy: graceOn }));
+  const free = suggestTables(ctx(2, at("19:35"), [table("t1", 2)], rs, { policy: graceOff }));
+  assert.equal(held[0].ok, false);
+  assert.ok(held[0].excludedReason?.startsWith("occupied"));
+  assert.equal(free[0].ok, true); // without grace the slot is over → free
+});
+
+test("timed protect-large lifts when no big demand is coming", () => {
+  const tables = [table("t6", 4, "main"), table("t9", 8, "main")];
+  const blanket = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6, protectLargeReleaseMin: 0 };
+  const timed = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6, protectLargeReleaseMin: 30 };
+  // no later big booking → blanket still protects, timed lifts
+  const b = suggestTables(ctx(2, at("18:58"), tables, [], { policy: blanket })).find((s) => s.tableId === "t9")!;
+  const t = suggestTables(ctx(2, at("18:58"), tables, [], { policy: timed })).find((s) => s.tableId === "t9")!;
+  assert.equal(b.ok, false); // blanket protection
+  assert.equal(t.ok, true); // timed release — no big demand, so the 8-top is usable
+});
+
+test("timed protect-large still holds when big demand is far off", () => {
+  const tables = [table("t6", 4, "main"), table("t9", 8, "main")];
+  const timed = { ...BALANCED_POLICY, protectLargeTables: true, largeTableSeats: 6, protectLargeReleaseMin: 30 };
+  const later: Reservation[] = [{ id: "big", locationSlug: LOC, customerName: "Party", partySize: 8, date: DATE, time: "20:30", durationMin: 120, status: "booked" } as Reservation];
+  const t = suggestTables(ctx(2, at("18:58"), tables, later, { policy: timed })).find((s) => s.tableId === "t9")!;
+  assert.equal(t.ok, false); // 90m out (> 30m release) → still protected
+});
+
+// ── turn-time accuracy ────────────────────────────────────────────────────────
+test("summariseTurnAccuracy reports error, bias and within-band share", () => {
+  const prime = at("19:30");
+  // model trained to ~140; realised turns all 140 → tiny error, high within-band
+  const trained = buildTurnModel(Array.from({ length: 40 }, () => ({ party: 2, atMin: prime, minutes: 140, dow: 2 })));
+  const samples: TurnSample[] = Array.from({ length: 10 }, () => ({ party: 2, atMin: prime, minutes: 140, dow: 2 }));
+  const acc = summariseTurnAccuracy(samples, trained);
+  assert.equal(acc.n, 10);
+  assert.ok(acc.maeMin <= 5);
+  assert.ok(acc.withinBandPct >= 90);
+});
+
+test("summariseTurnAccuracy shows positive bias when parties linger beyond the default", () => {
+  const prime = at("19:30");
+  // no model → default ~88 for a 2-top prime; realised 130 → parties linger
+  const samples: TurnSample[] = Array.from({ length: 8 }, () => ({ party: 2, atMin: prime, minutes: 130 }));
+  const acc = summariseTurnAccuracy(samples);
+  assert.ok(acc.biasMin > 20, `expected a clear positive bias, got ${acc.biasMin}`);
 });
 
 // ── weekday turn-time learning ────────────────────────────────────────────────

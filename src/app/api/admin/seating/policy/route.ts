@@ -56,6 +56,8 @@ export const PUT = withAdmin(
         if (typeof o.autoSuggest === "boolean") clean.autoSuggest = o.autoSuggest;
         if (typeof o.learnFromOverrides === "boolean") clean.learnFromOverrides = o.learnFromOverrides;
         if (typeof o.shadowMode === "boolean") clean.shadowMode = o.shadowMode;
+        if (Number.isFinite(Number(o.protectLargeReleaseMin))) clean.protectLargeReleaseMin = Math.max(0, Math.min(120, Math.round(Number(o.protectLargeReleaseMin))));
+        if (Number.isFinite(Number(o.reservedGraceMin))) clean.reservedGraceMin = Math.max(0, Math.min(60, Math.round(Number(o.reservedGraceMin))));
         patch.overrides = clean;
       } else {
         return NextResponse.json({ error: "Invalid overrides" }, { status: 400 });

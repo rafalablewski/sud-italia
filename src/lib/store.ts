@@ -6,7 +6,7 @@ import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
-import { resolvePolicy, buildTurnModel, summariseDecisions, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
+import { resolvePolicy, buildTurnModel, summariseDecisions, summariseTurnAccuracy, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type TurnAccuracy, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -14351,10 +14351,10 @@ export async function saveSeatingPolicy(locationSlug: string, patch: Partial<Sto
   });
 }
 
-/** Build the learned turn-time model for a location from realised dining
- *  durations (completed reservations with a seatedAt → completedAt span). Empty
- *  until parties have actually closed — the engine then falls back to defaults. */
-export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
+/** Realised dining durations for a location — one TurnSample per completed
+ *  reservation with a seatedAt → completedAt span. The raw material for both the
+ *  learned model and its accuracy readout. */
+async function getTurnSamples(locationSlug: string): Promise<TurnSample[]> {
   const reservations = await getReservations(locationSlug);
   const samples: TurnSample[] = [];
   for (const r of reservations) {
@@ -14365,10 +14365,22 @@ export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
     const minutes = Math.round((end - start) / 60000);
     const atMin = timeToMinutes(r.time);
     if (!Number.isFinite(atMin)) continue;
-    const dow = dowOf(r.date);
-    samples.push({ party: r.partySize, atMin, minutes, dow });
+    samples.push({ party: r.partySize, atMin, minutes, dow: dowOf(r.date) });
   }
-  return buildTurnModel(samples);
+  return samples;
+}
+
+/** Build the learned turn-time model for a location from realised dining
+ *  durations. Empty until parties have closed — the engine falls back to defaults. */
+export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
+  return buildTurnModel(await getTurnSamples(locationSlug));
+}
+
+/** The model plus how well it predicts reality (predicted-vs-actual turn error). */
+export async function getTurnModelReport(locationSlug: string): Promise<TurnModel & { accuracy: TurnAccuracy }> {
+  const samples = await getTurnSamples(locationSlug);
+  const model = buildTurnModel(samples);
+  return { ...model, accuracy: summariseTurnAccuracy(samples, model) };
 }
 
 // --- Seating decisions (trust loop) --------------------------------------

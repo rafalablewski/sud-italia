@@ -130,6 +130,36 @@ export function turnConfidence(party: number, atMin: number, model?: TurnModel, 
   return { confidence, bandMin, n };
 }
 
+/** How well the model predicts reality, measured over realised turns. `biasMin`
+ *  positive = parties linger longer than predicted (tighten estimates up).
+ *  In-sample when scored against the model built from the same closes — it's a
+ *  fit readout, not a hold-out test. Pure. */
+export interface TurnAccuracy {
+  n: number;
+  maeMin: number;
+  biasMin: number;
+  withinBandPct: number;
+}
+export function summariseTurnAccuracy(samples: TurnSample[], model?: TurnModel): TurnAccuracy {
+  let sumAbs = 0, sumErr = 0, within = 0, n = 0;
+  for (const s of samples) {
+    if (!Number.isFinite(s.minutes) || s.minutes <= 0 || s.minutes > 600) continue;
+    const pred = expectedTurnMin(s.party, s.atMin, model, s.dow);
+    const band = turnConfidence(s.party, s.atMin, model, s.dow).bandMin;
+    const err = s.minutes - pred;
+    sumAbs += Math.abs(err);
+    sumErr += err;
+    if (Math.abs(err) <= band) within++;
+    n++;
+  }
+  return {
+    n,
+    maeMin: n ? Math.round(sumAbs / n) : 0,
+    biasMin: n ? Math.round(sumErr / n) : 0,
+    withinBandPct: n ? Math.round((within / n) * 100) : 0,
+  };
+}
+
 // ─── Policy ──────────────────────────────────────────────────────────────────
 
 export interface SeatingWeights {
@@ -171,6 +201,14 @@ export interface SeatingPolicy {
   /** Advisory-only: compute + log the recommendation but never auto-apply it, so
    *  a manager can trust the engine before letting it drive. */
   shadowMode: boolean;
+  /** Timed protect-large: when > 0 and protectLargeTables is on, a big table is
+   *  only held from a small party while a qualifying big booking is still further
+   *  than this many minutes away — near the booking (or with none coming) the
+   *  protection lifts. 0 = blanket protection (protect whenever a smaller fits). */
+  protectLargeReleaseMin: number;
+  /** Reserved-table grace: keep a booked table held this many minutes PAST its
+   *  start before a walk-in can take it (a late-guest / VIP courtesy). 0 = none. */
+  reservedGraceMin: number;
 }
 
 /** The advanced rules/toggles a preset carries by default — off/neutral so a
@@ -182,6 +220,8 @@ const ADVANCED_DEFAULTS = {
   autoSuggest: false,
   learnFromOverrides: true,
   shadowMode: false,
+  protectLargeReleaseMin: 30,
+  reservedGraceMin: 15,
 };
 
 function normaliseWeights(w: SeatingWeights): SeatingWeights {
@@ -245,6 +285,8 @@ export interface StoredSeatingPolicy {
     autoSuggest?: boolean;
     learnFromOverrides?: boolean;
     shadowMode?: boolean;
+    protectLargeReleaseMin?: number;
+    reservedGraceMin?: number;
   };
 }
 
@@ -313,6 +355,7 @@ export function occupiedMinLeft(
   locationSlug: string,
   reservations: Reservation[],
   excludeReservationId?: string,
+  graceMin = 0,
 ): number | null {
   let left: number | null = null;
   for (const r of reservations) {
@@ -321,7 +364,9 @@ export function occupiedMinLeft(
     if (!HOLDS.includes(r.status)) continue;
     const start = timeToMinutes(r.time);
     if (!Number.isFinite(start)) continue;
-    const end = start + (r.durationMin || 0);
+    // A reserved-table grace keeps a late guest's table held a bit past its
+    // nominal end before a walk-in can take it.
+    const end = start + (r.durationMin || 0) + graceMin;
     if (start <= atMin && atMin < end) left = Math.max(left ?? 0, end - atMin);
   }
   return left;
@@ -474,7 +519,7 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     }
     // occupied *right now* by a seated/booked party → hard block (freeWindowMin
     // only sees the forward window, so this must be checked separately)
-    const occLeft = occupiedMinLeft(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId);
+    const occLeft = occupiedMinLeft(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId, policy.reservedGraceMin);
     if (occLeft != null) return { ...base, excludedReason: `occupied · ${Math.round(occLeft)}m left` };
     if (free < needFree) {
       return { ...base, excludedReason: free === Infinity ? "booked" : `held ${Math.round(free)}m` };
@@ -564,10 +609,22 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
   // Protect large tables (hard) — once every table is scored, drop a small party
   // from any large `ok` table *provided* a fitting non-large table is still open,
   // so the big top stays for big demand. Never strands the party: if only large
-  // tables fit, they remain seatable.
+  // tables fit, they remain seatable. Timed release: when protectLargeReleaseMin
+  // is set, only protect while genuine big demand is still further away than the
+  // release window — near a big booking the free-window guard already holds the
+  // table, and with no big demand coming the protection lifts.
   if (policy.protectLargeTables) {
+    const bigDemandFar =
+      policy.protectLargeReleaseMin <= 0 ||
+      ctx.reservations.some((L) => {
+        if (L.id === ctx.excludeReservationId) return false;
+        if (L.locationSlug !== ctx.locationSlug || L.date !== ctx.date) return false;
+        if (L.status !== "booked") return false;
+        const ls = timeToMinutes(L.time);
+        return Number.isFinite(ls) && ls - ctx.atMin > policy.protectLargeReleaseMin && L.partySize >= policy.largeTableSeats - 1;
+      });
     const hasNonLargeOk = out.some((s) => s.ok && s.seats < policy.largeTableSeats);
-    if (hasNonLargeOk) {
+    if (bigDemandFar && hasNonLargeOk) {
       for (const s of out) {
         if (s.ok && s.seats >= policy.largeTableSeats && party <= s.seats - 2) {
           s.ok = false;

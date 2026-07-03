@@ -161,7 +161,10 @@ button (`.core-bk-toolbtn.walk`) opens a `CoreDialog` that ranks tables at *now*
 and only seats a genuinely-free one (writes a `source:"walk-in"` seated
 reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog` with the
 preset + weight sliders + numeric **rules** (`.core-bk-rules` — reset buffer,
-pace cap, large-table seats, **section cap** per zone/15m), the **Guards**
+pace cap, large-table seats, **section cap** per zone/15m, **reserved grace**
+[keep a booked table held N min past its slot for a late guest] and **big-table
+release** [only protect a large table while big demand is further than N min
+away]), the **Guards**
 toggles (`.core-bk-toggles`/`.core-bk-toggle` — **Protect large tables** hard-drops
 a small party from a big top when a smaller one is free, **Auto-suggest**
 pre-selects the engine pick, **Learn from overrides** logs every seat, **Shadow
@@ -173,7 +176,11 @@ when one signal is behind ≥40% of overrides), all persisted per location (GET/
 `/api/admin/seating/policy`, Rule #7); **(4) learned turn-times** — the engine
 reads a model derived live from completed reservations' `seatedAt→completedAt`,
 learned per **party × daypart × weekday-group** (weekday vs Fri/Sat) with a
-confidence band (GET `/api/admin/seating/turn-model`), cold-starting on defaults;
+confidence band, and a **predicted-vs-actual accuracy** readout
+(`.core-bk-turnacc` — MAE, in-band %, and the bias direction, from
+`summariseTurnAccuracy`) over the location's real closes (GET
+`/api/admin/seating/turn-model` returns `{ cells, accuracy }`), cold-starting on
+defaults;
 **(5) trust loop** — every booked seat POSTs recommended-vs-chosen (+ the
 override-**reason** chips `.core-bk-orsn` shown when the pick differs from the
 recommendation, + the recommended pick's dominant signal) to

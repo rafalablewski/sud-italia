@@ -99,6 +99,7 @@ export function CoreBook() {
   const [policy, setPolicy] = useState<SeatingPolicy | undefined>(undefined);
   const [storedPolicy, setStoredPolicy] = useState<StoredSeatingPolicy | undefined>(undefined);
   const [turnModel, setTurnModel] = useState<TurnModel | undefined>(undefined);
+  const [turnAccuracy, setTurnAccuracy] = useState<{ n: number; maeMin: number; biasMin: number; withinBandPct: number } | null>(null);
   const [decisionSummary, setDecisionSummary] = useState<SeatingDecisionSummary | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [walkOpen, setWalkOpen] = useState(false);
@@ -139,6 +140,7 @@ export function CoreBook() {
       setWaitlist(Array.isArray(wl?.waitlist) ? wl.waitlist : []);
       if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
       setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
+      setTurnAccuracy(tm && tm.accuracy && typeof tm.accuracy.n === "number" ? tm.accuracy : null);
       setDecisionSummary(dec && typeof dec.n === "number" ? (dec as SeatingDecisionSummary) : null);
     } finally {
       setLoading(false);
@@ -417,12 +419,14 @@ export function CoreBook() {
         autoSuggest: policy.autoSuggest,
         learnFromOverrides: policy.learnFromOverrides,
         shadowMode: policy.shadowMode,
+        protectLargeReleaseMin: policy.protectLargeReleaseMin,
+        reservedGraceMin: policy.reservedGraceMin,
         ...over,
       },
     });
   };
   const setWeight = (key: keyof SeatingWeights, val: number) => commitPolicy({ weights: { ...policy!.weights, [key]: val } });
-  const setRule = (key: "resetBufferMin" | "paceCapPer15" | "largeTableSeats" | "sectionCapPer15", val: number) => commitPolicy({ [key]: val });
+  const setRule = (key: "resetBufferMin" | "paceCapPer15" | "largeTableSeats" | "sectionCapPer15" | "protectLargeReleaseMin" | "reservedGraceMin", val: number) => commitPolicy({ [key]: val });
   const setToggle = (key: "protectLargeTables" | "autoSuggest" | "learnFromOverrides" | "shadowMode", val: boolean) => commitPolicy({ [key]: val });
   const toggleVipZone = (zone: string) => {
     if (!policy) return;
@@ -1154,6 +1158,11 @@ export function CoreBook() {
           {policy && storedPolicy ? (
             <div className="core-bk-policy">
               <div className="core-bk-flab"><span>Preset</span><span className="mut">{turnModel && Object.keys(turnModel.cells).length ? "learning turn-times ✓" : "default turn-times"}</span></div>
+              {turnAccuracy && turnAccuracy.n > 0 && (
+                <div className="core-bk-turnacc">
+                  Turn model over {turnAccuracy.n} closes: <b>±{turnAccuracy.maeMin}m</b> avg error · {turnAccuracy.withinBandPct}% in band · {turnAccuracy.biasMin === 0 ? "no bias" : `${turnAccuracy.biasMin > 0 ? "+" : ""}${turnAccuracy.biasMin}m ${turnAccuracy.biasMin > 0 ? "longer" : "shorter"} than predicted`}
+                </div>
+              )}
               <div className="core-bk-presets">
                 {(Object.keys(POLICY_PRESETS) as PolicyPreset[]).map((p) => (
                   <button key={p} className={`core-bk-preset${storedPolicy.preset === p && !storedPolicy.overrides ? " on" : ""}`} onClick={() => setPreset(p)}>{p.replace(/-/g, " ")}</button>
@@ -1173,6 +1182,8 @@ export function CoreBook() {
                 <label>Pace cap<input className="core-inp" type="number" min={1} max={20} value={policy.paceCapPer15} onChange={(e) => setRule("paceCapPer15", Number(e.target.value))} /><span>/15m</span></label>
                 <label>Large table<input className="core-inp" type="number" min={3} max={20} value={policy.largeTableSeats} onChange={(e) => setRule("largeTableSeats", Number(e.target.value))} /><span>seats</span></label>
                 <label>Section cap<input className="core-inp" type="number" min={0} max={20} value={policy.sectionCapPer15} onChange={(e) => setRule("sectionCapPer15", Number(e.target.value))} /><span>/zone/15m</span></label>
+                <label>Reserved grace<input className="core-inp" type="number" min={0} max={60} value={policy.reservedGraceMin} onChange={(e) => setRule("reservedGraceMin", Number(e.target.value))} /><span>min past</span></label>
+                <label>Big-table release<input className="core-inp" type="number" min={0} max={120} value={policy.protectLargeReleaseMin} onChange={(e) => setRule("protectLargeReleaseMin", Number(e.target.value))} /><span>min before</span></label>
               </div>
 
               <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Guards</span><span className="mut">tap to toggle · saves instantly</span></div>
