@@ -17,6 +17,12 @@ export interface Location {
    *  description on the V8 LocationsGrid cards. Keep short — V8 styles
    *  this as a single Cormorant-italic line with an ochre left border. */
   teamLead?: string;
+  /** Short 3-letter site code (e.g. "KRK") — the fleet/atlas card identifier.
+   *  Free-form; operators can set an airport/city code. */
+  code?: string;
+  /** District / neighbourhood (e.g. "Rynek", "Śródmieście") shown next to the
+   *  code on the KDS fleet card. */
+  district?: string;
 }
 
 export type MenuCategory =
@@ -34,6 +40,22 @@ export const MENU_CATEGORY_LABELS: Record<MenuCategory, string> = {
   panini: "Panini",
   drinks: "Drinks",
   desserts: "Desserts",
+};
+
+/**
+ * Kitchen-STATION labels for the KDS (Forno/Primi/Dolci…), distinct from the
+ * menu-CATEGORY labels above. A dish's menu category maps to the line station
+ * that fires it — the pass, all-day board and fleet load chips read from here so
+ * the kitchen sees "Forno 88%" not "Pizza 88%". (One physical oven → one
+ * "Forno"; we don't fabricate Forno 1/2 without per-oven data.)
+ */
+export const KDS_STATION_LABELS: Record<MenuCategory, string> = {
+  pizza: "Forno",
+  pasta: "Primi",
+  antipasti: "Antipasti",
+  panini: "Griglia",
+  drinks: "Bar",
+  desserts: "Dolci",
 };
 
 // --- Allergens (EU regulation + Japanese 7 major) ---

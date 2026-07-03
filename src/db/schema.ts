@@ -874,6 +874,8 @@ export const locationsTable = pgTable(
     isActive: boolean("is_active").notNull().default(false),
     displayOrder: integer("display_order").notNull().default(0),
     teamLead: text("team_lead").notNull().default(""),
+    code: text("code").notNull().default(""), // short site code, e.g. "KRK"
+    district: text("district").notNull().default(""), // neighbourhood, e.g. "Rynek"
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

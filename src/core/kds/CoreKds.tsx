@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
@@ -11,7 +11,7 @@ import { idempotentFetch } from "@/lib/idempotentFetch";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket, type KdsTicketItem } from "@/lib/kds-ticket";
 import { useSelection, type CoreSelection } from "@/core/shell/SelectionContext";
-import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
+import { POS_COURSE_LABELS, POS_COURSE_ORDER, defaultCourseForCategory } from "@/lib/pos-coursing";
 import {
   KDS_COLUMNS,
   STATION_FILTERS,
@@ -21,20 +21,9 @@ import {
   prevStatus,
   toneForTicket,
 } from "@/core/kds/kds-board";
-import { MENU_CATEGORY_LABELS, type MenuCategory, type OrderStatus } from "@/data/types";
+import { KDS_STATION_LABELS, type MenuCategory, type OrderStatus, type PosCourse } from "@/data/types";
 
 type View = "fleet" | "floor" | "chef";
-
-// Kitchen-station display names for the Pass wall (mockup: Forno · Primi · Dolci)
-// rather than the menu-category labels — the line reads its stations, not menu tabs.
-const KDS_STATION_LABEL: Partial<Record<MenuCategory, string>> = {
-  pizza: "Forno",
-  pasta: "Primi",
-  antipasti: "Antipasti",
-  drinks: "Bar",
-  desserts: "Dolci",
-  panini: "Griglia",
-};
 
 // Mockup verbs: New → Start, Firing → Bump, Ready → Pass.
 const BUMP_LABEL: Partial<Record<OrderStatus, string>> = {
@@ -58,7 +47,7 @@ function groupItems(items: KdsTicketItem[]): [string, KdsTicketItem[]][] {
   }
   return [...groups.entries()]
     .sort((a, b) => catRank(a[0]) - catRank(b[0]))
-    .map(([, arr]) => [arr[0].categoryLabel, arr] as [string, KdsTicketItem[]]);
+    .map(([cat, arr]) => [KDS_STATION_LABELS[cat as MenuCategory] ?? arr[0].categoryLabel, arr] as [string, KdsTicketItem[]]);
 }
 
 // Short synthesised beep (no asset files) — the new-ticket bell + breach alarm.
@@ -333,6 +322,12 @@ export function CoreKds() {
   const [showAllDay, setShowAllDay] = useState(false);
   const [eightySixOpen, setEightySixOpen] = useState(false);
   const [recalls, setRecalls] = useState<{ orderId: string; label: string; at: number }[]>([]);
+  // Fleet: which kitchen the Atlas is scoped to (all → every truck), and a
+  // manual-refresh nonce so the toolbar ⟳ re-pulls the feed on demand.
+  const [fleetLoc, setFleetLoc] = useState<string>("all");
+  const [fleetNonce, setFleetNonce] = useState(0);
+  // Chef view focus: the expo pass (all-day + coursing) or all-day full-width.
+  const [chefFocus, setChefFocus] = useState<"expo" | "allday">("expo");
 
   const { orders, refresh, patchOrder } = useAdminOrdersStream(location, { paused, includeSimulated: true });
 
@@ -545,7 +540,28 @@ export function CoreKds() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [view]);
+  }, [view, fleetNonce]);
+
+  // Fleet-wide all-day — every still-to-make dish summed across the scoped
+  // trucks' live tickets (respects the kitchen filter). Same batch view as the
+  // floor's Σ rail, aggregated cross-truck from the feed (Rule #1, no mock data).
+  const fleetAllDay = useMemo(() => {
+    if (!fleet) return [] as { name: string; qty: number; tickets: number }[];
+    const agg = new Map<string, { name: string; qty: number; tickets: number }>();
+    for (const t of fleet.tiles) {
+      if (fleetLoc !== "all" && t.slug !== fleetLoc) continue;
+      for (const tk of t.tickets) {
+        if (tk.status === "ready") continue;
+        for (const it of tk.items) {
+          const cur = agg.get(it.name) ?? { name: it.name, qty: 0, tickets: 0 };
+          cur.qty += it.quantity;
+          cur.tickets += 1;
+          agg.set(it.name, cur);
+        }
+      }
+    }
+    return [...agg.values()].sort((a, b) => b.qty - a.qty);
+  }, [fleet, fleetLoc]);
 
   // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
   type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
@@ -574,13 +590,76 @@ export function CoreKds() {
     };
   }, [view, location]);
 
-  // The cook's focused-station depth: how many tickets touch this station and
-  // the oldest one waiting — the Chef view's queue pressure.
-  const chefDepth = useMemo(() => {
-    const ts = station === "all" ? allTickets : allTickets.filter((t) => t.items.some((it) => it.category === station));
-    const ages = ts.filter((t) => t.status !== "ready").map((t) => Math.max(0, (now - t.paidAtMs) / 1000));
-    return { count: ts.length, oldest: ages.length ? Math.max(...ages) : 0 };
-  }, [allTickets, station, now]);
+  // ----- Chef view — all-day-by-station + expo coursing, all live (Rule #1) -----
+  // All-day, grouped by station (canonical order): still-to-make dishes per
+  // category, with the station's live load from floor-ops.
+  const allDayByStation = useMemo(() => {
+    const byCat = new Map<MenuCategory, { name: string; qty: number }[]>();
+    for (const t of allTickets) {
+      if (t.status === "ready") continue;
+      for (const it of t.items) {
+        const arr = byCat.get(it.category) ?? [];
+        const ex = arr.find((x) => x.name === it.name);
+        if (ex) ex.qty += it.quantity;
+        else arr.push({ name: it.name, qty: it.quantity });
+        byCat.set(it.category, arr);
+      }
+    }
+    return [...byCat.entries()]
+      .sort((a, b) => catRank(a[0]) - catRank(b[0]))
+      .map(([cat, items]) => {
+        const ld = ops?.stations.find((x) => x.id === cat);
+        const sorted = [...items].sort((a, b) => b.qty - a.qty);
+        return {
+          cat,
+          label: KDS_STATION_LABELS[cat],
+          load: ld ? ld.util : null,
+          tier: ld?.tier ?? ("calm" as "calm" | "warn" | "risk"),
+          max: Math.max(...sorted.map((i) => i.qty), 1),
+          items: sorted,
+        };
+      });
+  }, [allTickets, ops]);
+
+  // Expo pass — each active check as a coursing spine. Course node status is
+  // derived from the real POS coursing (fired / held) + the order stage.
+  const expoChecks = useMemo(() => {
+    return [...allTickets]
+      .sort(
+        (a, b) =>
+          (TONE_RANK[toneForTicket(b, now)] ?? 0) - (TONE_RANK[toneForTicket(a, now)] ?? 0) ||
+          a.paidAtMs - b.paidAtMs,
+      )
+      .map((t) => {
+        const present = new Set(t.items.map((it) => defaultCourseForCategory(it.category)));
+        const held = new Set(t.coursing?.held ?? []);
+        const fired = new Set(t.coursing?.fired ?? []);
+        const nodes = POS_COURSE_ORDER.filter((c) => present.has(c)).map((c) => {
+          let st: "done" | "firing" | "wait";
+          if (t.status === "ready") st = "done";
+          else if (held.has(c)) st = "wait";
+          else if (t.status === "preparing" && (fired.size === 0 || fired.has(c))) st = "firing";
+          else st = "wait";
+          return { course: c, label: POS_COURSE_LABELS[c], st };
+        });
+        return { t, nodes };
+      });
+  }, [allTickets, now]);
+
+  // Chef stat strip — all live: on the pass (ready), checks awaiting a held
+  // course, longest hold age, total all-day items, in-progress, allergy flags.
+  const chefStats = useMemo(() => {
+    const holds = allTickets.filter((t) => (t.coursing?.held?.length ?? 0) > 0);
+    const holdAges = holds.filter((t) => t.status !== "ready").map((t) => Math.max(0, (now - t.paidAtMs) / 1000));
+    return {
+      onPass: counts.ready,
+      awaiting: holds.length,
+      longestHold: holdAges.length ? Math.max(...holdAges) : 0,
+      allDayItems: allDay.reduce((s, d) => s + d.qty, 0),
+      inProgress: counts.preparing,
+      allergy: allTickets.filter((t) => t.items.some((it) => it.allergens.length > 0)).length,
+    };
+  }, [allTickets, counts.ready, counts.preparing, allDay, now]);
 
   // Number-key bump (1–9, 0=10th) on the focused lane, or the leftmost
   // non-empty lane — the commercial bump-bar wiring. Ignored while typing.
@@ -695,15 +774,16 @@ export function CoreKds() {
         )}
         <button
           type="button"
-          className={showAllDay ? "core-iconbtn on" : "core-iconbtn"}
+          className={showAllDay ? "core-tpill on" : "core-tpill"}
           title="All-day — batch counts per dish"
           aria-pressed={showAllDay}
           onClick={() => setShowAllDay((v) => !v)}
         >
-          Σ
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h6" /></svg>
+          Σ all-day
         </button>
         <button type="button" className="core-iconbtn" title="Refresh now" aria-label="Refresh now" onClick={() => refresh()}><RefreshIcon /></button>
-        <button type="button" className="core-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
+        <button type="button" className="core-tpill danger" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
         <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
           <SoundIcon muted={!soundOn} />
         </button>
@@ -712,99 +792,136 @@ export function CoreKds() {
         </button>
       </>
     );
+  // Fleet toolbar — the Atlas carries a kitchen filter (All · per-truck) plus the
+  // same board actions the mockup keeps out of the command bar: Σ fleet all-day,
+  // refresh, 86, chime. Fullscreen-enter is added by the in-shell wrapper only.
+  // Live 86'd count for the toolbar badge, scoped to the kitchen filter.
+  const fleetEightySix = (fleet?.tiles ?? [])
+    .filter((t) => fleetLoc === "all" || t.slug === fleetLoc)
+    .reduce((s, t) => s + t.eightySix, 0);
+  const fleetControls =
+    view !== "fleet" ? null : (
+      <>
+        <div className="core-seg">
+          <button className={fleetLoc === "all" ? "on" : ""} onClick={() => setFleetLoc("all")}>
+            All kitchens
+          </button>
+          {(fleet?.tiles ?? []).map((t) => (
+            <button key={t.slug} className={fleetLoc === t.slug ? "on" : ""} onClick={() => setFleetLoc(t.slug)}>
+              {t.city}
+            </button>
+          ))}
+        </div>
+        <div className="core-kds-tb-sp" />
+        <button
+          type="button"
+          className={showAllDay ? "core-tpill on" : "core-tpill"}
+          title="Fleet all-day — batch counts per dish"
+          aria-pressed={showAllDay}
+          onClick={() => setShowAllDay((v) => !v)}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h6" /></svg>
+          Σ fleet all-day
+        </button>
+        <button type="button" className="core-iconbtn" title="Refresh fleet now" aria-label="Refresh fleet" onClick={() => setFleetNonce((n) => n + 1)}><RefreshIcon /></button>
+        <button type="button" className="core-tpill danger" title="86 an item" onClick={() => setEightySixOpen(true)}>
+          86{fleetEightySix > 0 ? ` · ${fleetEightySix}` : ""}
+        </button>
+        <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
+          <SoundIcon muted={!soundOn} />
+        </button>
+      </>
+    );
+
   // Kiosk top keeps them inline (no fullscreen-enter button there — the top
   // strip has its own Exit control).
   const controls =
-    view === "fleet" ? null : (
+    view === "fleet" ? (
+      fleetControls
+    ) : (
       <>
         {laneFilter}
         {boardActions}
       </>
     );
 
+  // 86 is per-kitchen: in Fleet, scope it to the selected truck (or the active
+  // location when viewing all kitchens); the boards use the current location.
+  const eightySixLoc = view === "fleet" && fleetLoc !== "all" ? fleetLoc : location || "";
   const overlays = (
-    <EightySix location={location || ""} open={eightySixOpen} onClose={() => setEightySixOpen(false)} />
+    <EightySix location={eightySixLoc} open={eightySixOpen} onClose={() => setEightySixOpen(false)} />
   );
+
+  // The live station strip (present stations, each a one-tap filter that also
+  // shows its predictive load) — shared by Floor + Chef.
+  const stationStrip = (
+    <div className="core-stations">
+      {stationsPresent.map((s) => {
+        const ld = s.id === "all" ? null : ops?.stations.find((x) => x.id === s.id);
+        const tone = ld ? (ld.tier === "risk" ? "var(--danger)" : ld.tier === "warn" ? "var(--amber)" : "var(--basil)") : null;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            className={station === s.id ? "core-stn on" : "core-stn"}
+            onClick={() => setStation(s.id)}
+          >
+            {tone && <span className="core-stn-dot" style={{ background: tone }} />}
+            {s.id === "all" ? "All stations" : KDS_STATION_LABELS[s.id as MenuCategory]}
+            {ld && (
+              <>
+                <span className="core-stn-load"><i style={{ width: `${Math.min(100, ld.util)}%`, background: tone! }} /></span>
+                <span className="core-stn-pct">{ld.util}%</span>
+              </>
+            )}
+          </button>
+        );
+      })}
+      <span className="core-stn core-stn-expo" aria-hidden><span className="core-stn-dot" style={{ background: "var(--basil)" }} />Expo<b>{counts.ready}</b></span>
+    </div>
+  );
+
+  // All-day batch rail (New + Firing, biggest first) — shared by Floor + Chef,
+  // toggled by the Σ control; live from the active tickets (Rule #1).
+  const allDayRail = showAllDay ? (
+    <div className="core-allday" role="list" aria-label="All-day batch counts">
+      <span className="core-allday-lbl">All-day</span>
+      {allDay.length === 0 ? (
+        <span className="core-allday-empty">Nothing on the line.</span>
+      ) : (
+        allDay.map((d) => (
+          <span key={d.name} className="core-allday-item" role="listitem" title={`${d.qty}× ${d.name} across ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}`}>
+            <b className="n">{d.qty}</b>
+            <span className="nm">{d.name}</span>
+            <span className="tk">·{d.tickets}</span>
+          </span>
+        ))
+      )}
+    </div>
+  ) : null;
 
   const board = (
     <div className={`core-kds${view !== "fleet" && pressureTier === "risk" ? " dense" : ""}`}>
         {view === "fleet" ? (
-          <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
-        ) : (
           <>
-            {/* dense-console head (mockup 02-kds) — the kitchen wall keeps its
-                dark board + frosted KPIs, but reads with the same breadcrumb +
-                section title as every other surface. */}
-            <div className="core-crumb">
-              CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
-            </div>
-            <div className="core-sectionhead">
-              <h1>KDS · Pass — {view === "chef" ? "Chef" : "Floor"}</h1>
-              <span className="sub">sla-toned tickets · start / bump / pass</span>
-            </div>
-            {/* Board toolbar — the lane filter + board actions the mockup keeps
-                OUT of the command bar. Fullscreen-enter lives here too. */}
             <div className="core-kds-toolbar">
-              {laneFilter}
-              <div className="core-kds-tb-sp" />
-              {boardActions}
+              {fleetControls}
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
-
-            {/* Unified 7-cell frosted stat strip (mockup 02-kds): Active · At risk
-                · Late · Ready · Throughput/hr · Covers/hr · Revenue/hr. All live —
-                counts from the board stream, per-hour figures from floor-ops
-                (real completed orders, Rule #1). "—" until a location is picked. */}
-            <div className="core-statstrip" role="group" aria-label="Kitchen metrics">
-              <div className="cell"><span className="lab">Active</span><span className="val">{counts.all}</span></div>
-              <div className="cell"><span className="lab">At risk</span><span className={counts.risk ? "val amber" : "val"}>{counts.risk}</span></div>
-              <div className="cell"><span className="lab">Late</span><span className={counts.late ? "val danger" : "val"}>{counts.late}</span></div>
-              <div className="cell"><span className="lab">Ready</span><span className={counts.ready ? "val basil" : "val"}>{counts.ready}</span></div>
-              <div className="cell"><span className="lab">Throughput</span><span className="val">{ops ? ops.throughputLastHour : "—"}<small> /hr</small></span></div>
-              <div className="cell"><span className="lab">Covers</span><span className="val">{ops ? ops.coversLastHour : "—"}<small> /hr</small></span></div>
-              <div className="cell"><span className="lab">Revenue</span><span className="val info">{ops ? Math.round(ops.revenueLastHourGrosze / 100).toLocaleString("pl-PL") : "—"}<small> zł/hr</small></span></div>
+            <div className="core-crumb">
+              CORE — KDS · FLEET · <b>liquid glass</b> · <span className="fix">all kitchens · one pass</span>
             </div>
-
-            {/* DARK BOARD (mockup: .kds-wall) — the stations + lanes live on a
-                near-black frosted-off panel so the SLA-toned tickets pop; the KPI
-                strip above stays frosted glass, matching the mockup exactly. */}
-            <div className="core-kds-wall">
-            {/* station strip — each present station shows its LIVE LOAD (mockup:
-                Forno 88% …) from the same predictive engine the board colours
-                from, and stays a one-tap filter. Load lookup by category. */}
-            <div className="core-stations">
-              {stationsPresent.map((s) => {
-                const ld = s.id === "all" ? null : ops?.stations.find((x) => x.id === s.id);
-                const tone = ld ? (ld.tier === "risk" ? "var(--danger)" : ld.tier === "warn" ? "var(--amber)" : "var(--basil)") : null;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={station === s.id ? "core-stn on" : "core-stn"}
-                    onClick={() => setStation(s.id)}
-                  >
-                    {tone && <span className="core-stn-dot" style={{ background: tone }} />}
-                    {s.id === "all" ? "All stations" : (KDS_STATION_LABEL[s.id as MenuCategory] ?? MENU_CATEGORY_LABELS[s.id as MenuCategory])}
-                    {ld && (
-                      <>
-                        <span className="core-stn-load"><i style={{ width: `${Math.min(100, ld.util)}%`, background: tone! }} /></span>
-                        <span className="core-stn-pct">{ld.util}%</span>
-                      </>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="core-sectionhead">
+              <h1>KDS · Fleet — All kitchens</h1>
+              <span className="sub">kraków + warszawa · live pass health</span>
             </div>
-
-            {/* All-day batch rail — what the line still has to cook, biggest
-                first. Toggled by the Σ control; live from the active tickets. */}
             {showAllDay && (
-              <div className="core-allday" role="list" aria-label="All-day batch counts">
+              <div className="core-allday" role="list" aria-label="Fleet all-day batch counts">
                 <span className="core-allday-lbl">All-day</span>
-                {allDay.length === 0 ? (
+                {fleetAllDay.length === 0 ? (
                   <span className="core-allday-empty">Nothing on the line.</span>
                 ) : (
-                  allDay.map((d) => (
+                  fleetAllDay.map((d) => (
                     <span key={d.name} className="core-allday-item" role="listitem" title={`${d.qty}× ${d.name} across ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}`}>
                       <b className="n">{d.qty}</b>
                       <span className="nm">{d.name}</span>
@@ -814,56 +931,92 @@ export function CoreKds() {
                 )}
               </div>
             )}
+            <FleetWall fleet={fleet} locFilter={fleetLoc} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
+          </>
+        ) : view === "chef" ? (
+          <ChefView
+            checks={expoChecks}
+            allDayGroups={allDayByStation}
+            stats={chefStats}
+            chefFocus={chefFocus}
+            onFocus={setChefFocus}
+            onFullscreen={toggleKiosk}
+            controls={boardActions}
+            onAdvance={advance}
+            onRegress={regress}
+            now={now}
+          />
+        ) : (
+          <>
+            {/* Board toolbar first (mockup: command row on top, divider under it),
+                then the breadcrumb + section title. */}
+            <div className="core-kds-toolbar">
+              {laneFilter}
+              <div className="core-kds-tb-sp" />
+              {boardActions}
+              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+            </div>
+            <div className="core-crumb">
+              CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
+            </div>
+            <div className="core-sectionhead">
+              <h1>KDS · Pass — Floor</h1>
+              <span className="sub">sla-toned tickets · start / bump / pass</span>
+            </div>
 
-            {view === "chef" ? (
-              <>
-                <div className="core-chef-depth">
-                  <div><span className="dl">In queue</span><span className="dv">{chefDepth.count}</span></div>
-                  <div><span className="dl">Oldest</span><span className={chefDepth.oldest >= 480 ? "dv warn" : "dv"}>{chefDepth.oldest ? fmtClock(chefDepth.oldest) : "—"}</span></div>
-                  <div className="dstn">{station === "all" ? "All stations" : MENU_CATEGORY_LABELS[station]}</div>
+            {/* frosted 7-cell strip — Active · At risk · Late · Ready ·
+                Throughput · Covers · Revenue (Rule #1: throughput/covers/revenue
+                from floor-ops, the rest from the live ticket stream). */}
+            <div className="core-statstrip core-kds-strip">
+              <div className="cell"><span className="lab">Active</span><span className="val">{counts.all}</span></div>
+              <div className="cell"><span className="lab">At risk</span><span className="val amber">{counts.risk}</span></div>
+              <div className="cell"><span className="lab">Late</span><span className="val danger">{counts.late}</span></div>
+              <div className="cell"><span className="lab">Ready</span><span className="val basil">{counts.ready}</span></div>
+              <div className="cell"><span className="lab">Throughput</span><span className="val">{ops?.throughputLastHour ?? "—"}<small> /hr</small></span></div>
+              <div className="cell"><span className="lab">Covers</span><span className="val">{ops?.coversLastHour ?? "—"}<small> /hr</small></span></div>
+              <div className="cell"><span className="lab">Revenue</span><span className="val info">{ops ? revPerHr(ops.revenueLastHourGrosze) : "—"}<small> zł/hr</small></span></div>
+            </div>
+
+            {allDayRail}
+
+            {/* dark wall board — the station strip + three SLA-toned lanes on the
+                inset board (mockup: New → Firing → Ready·Pass). */}
+            <div className="core-wall">
+              {stationStrip}
+              {lane === "all" ? (
+                <div className="core-lanes">
+                  {KDS_COLUMNS.map((col) => {
+                    const ts = visibleByStatus.get(col.id) ?? [];
+                    return (
+                      <div key={col.id} className="core-lane">
+                        <div className="core-lane-h">
+                          <span className="lt">{col.label}</span>
+                          <span className="lc">{ts.length}</span>
+                        </div>
+                        <div className="core-lane-b">
+                          {ts.length === 0 ? <div className="core-kds-empty">—</div> : ts.map(renderTicket)}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
                 <div className="core-chefq">
-                  {allTickets.length === 0 ? (
-                    <div className="core-kds-empty">No active tickets.</div>
-                  ) : (
-                    allTickets.map(renderTicket)
-                  )}
+                  {(visibleByStatus.get(lane) ?? []).map(renderTicket)}
                 </div>
-              </>
-            ) : lane === "all" ? (
-              <div className="core-lanes">
-                {KDS_COLUMNS.map((col) => {
-                  const ts = visibleByStatus.get(col.id) ?? [];
-                  return (
-                    <div key={col.id} className="core-lane">
-                      <div className="core-lane-h">
-                        <span className="lt">{col.label}</span>
-                        <span className="lc">{ts.length}</span>
-                      </div>
-                      <div className="core-lane-b">
-                        {ts.length === 0 ? <div className="core-kds-empty">—</div> : ts.map(renderTicket)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="core-chefq">
-                {(visibleByStatus.get(lane) ?? []).map(renderTicket)}
-              </div>
-            )}
-            </div>{/* /core-kds-wall */}
+              )}
+            </div>
           </>
         )}
     </div>
   );
 
-  // Fullscreen kiosk — drop the shell chrome for the bare wall (Floor/Chef).
-  if (kiosk && view !== "fleet") {
+  // Fullscreen kiosk — drop the shell chrome for the bare wall (Fleet/Floor/Chef).
+  if (kiosk) {
     return (
       <div className="core-kiosk">
         <div className="core-kiosk-top">
-          <span className="core-kiosk-brand">Ottaviano · KDS · {location || "line"}</span>
+          <span className="core-kiosk-brand">Ottaviano · KDS · {view === "fleet" ? "fleet" : location || "line"}</span>
           {controls}
           <button type="button" className="core-iconbtn" title="Exit fullscreen" onClick={toggleKiosk}>✕</button>
         </div>
@@ -962,12 +1115,19 @@ interface FleetStationWire {
 interface FleetTileWire {
   slug: string;
   name: string;
+  city: string;
+  code: string;
+  district: string;
+  area: string;
+  eightySix: number;
   counts: { active: number; ready: number; late: number; risk: number };
   health: number;
   healthState: string;
   healthClass: "good" | "warn" | "risk" | "alert";
   onShift: number;
   throughputHr: number;
+  coversHr: number;
+  revenueHr: number;
   promiseAccuracy: number;
   stations: FleetStationWire[];
   tickets: KdsTicket[];
@@ -983,10 +1143,12 @@ interface FleetWire {
 // Most-urgent-first ordering for the per-truck ticket preview.
 const TONE_RANK: Record<string, number> = { late: 4, risk: 3, warn: 2, firing: 1 };
 
-// Compact złoty-per-hour figure: 3140 grosze → "31", 310000 → "3.1k".
+// Złoty-per-hour figure, full with space-separated thousands (mockup: "2 180"):
+// 218000 grosze → "2 180", 124000 → "1 240".
 function revPerHr(grosze: number): string {
-  const z = grosze / 100;
-  return z >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
+  return Math.round(grosze / 100)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 // Compact "2× Margherita · Bufala +1" line for a preview row.
@@ -996,59 +1158,75 @@ function dishSummary(t: KdsTicket): string {
   return parts.join(" · ") + (extra > 0 ? ` +${extra}` : "");
 }
 
-function FleetWall({ fleet, now, onDrill }: { fleet: FleetWire | null; now: number; onDrill: (slug: string, view: View) => void }) {
+// healthClass → the status pill shown top-right on each truck card.
+const HEALTH_PILL: Record<FleetTileWire["healthClass"], { label: string; cls: string }> = {
+  good: { label: "On pace", cls: "ok" },
+  warn: { label: "Backed up", cls: "warn" },
+  risk: { label: "Under pressure", cls: "warn" },
+  alert: { label: "Slammed", cls: "bad" },
+};
+// Pace tier → the SLA tone the station load bar + dot paint with.
+const STN_TONE: Record<"calm" | "warn" | "risk", string> = {
+  calm: "var(--t-ready)",
+  warn: "var(--t-warn)",
+  risk: "var(--t-late)",
+};
+
+function FleetWall({
+  fleet,
+  locFilter,
+  now,
+  onDrill,
+}: {
+  fleet: FleetWire | null;
+  locFilter: string;
+  now: number;
+  onDrill: (slug: string, view: View) => void;
+}) {
   if (!fleet) return <div className="core-kds-empty pad">Loading fleet…</div>;
-  const { benchmark, promiseTarget, paceWindowMin } = fleet;
-  const leaderSlug = fleet.tiles.reduce<FleetTileWire | null>(
-    (best, t) => (t.promiseAccuracy > (best?.promiseAccuracy ?? -1) ? t : best),
-    null,
-  )?.slug;
-  const tot = fleet.totals;
+  // Scope to the filtered kitchen(s); re-aggregate the totals band so the strip
+  // reflects the selection (all trucks → the feed's totals verbatim).
+  const tiles = fleet.tiles.filter((t) => locFilter === "all" || t.slug === locFilter);
+  const tot =
+    locFilter === "all"
+      ? fleet.totals
+      : {
+          active: tiles.reduce((s, t) => s + t.counts.active, 0),
+          late: tiles.reduce((s, t) => s + t.counts.late, 0),
+          risk: tiles.reduce((s, t) => s + t.counts.risk, 0),
+          ready: tiles.reduce((s, t) => s + t.counts.ready, 0),
+          throughputHr: tiles.reduce((s, t) => s + t.throughputHr, 0),
+          coversHr: tiles.reduce((s, t) => s + t.coversHr, 0),
+          revenueHr: tiles.reduce((s, t) => s + t.revenueHr, 0),
+        };
   return (
     <div className="core-fleet">
-      <div className="core-sectionhead">
-        <h1>KDS · Fleet</h1>
-        <span className="sub">cross-truck · live kitchen atlas</span>
-      </div>
-      <div className="core-fleet-kpi">
-        <div className="kc"><div className="l">Active</div><div className="v">{tot.active}</div><div className="s">{tot.ready} ready for expo</div></div>
-        <div className="kc"><div className="l">At risk</div><div className="v warn">{tot.risk}</div><div className="s">predicted miss</div></div>
-        <div className="kc"><div className="l">Late</div><div className="v bad">{tot.late}</div><div className="s">over SLA</div></div>
-        <div className="kc"><div className="l">Ready</div><div className="v ok">{tot.ready}</div><div className="s">for expo</div></div>
-        <div className="kc"><div className="l">Throughput</div><div className="v">{tot.throughputHr}<span className="u">/hr</span></div><div className="s">last 60 min</div></div>
-        <div className="kc"><div className="l">Covers</div><div className="v">{tot.coversHr}<span className="u">/hr</span></div><div className="s">seated</div></div>
-        <div className="kc"><div className="l">Revenue</div><div className="v">{revPerHr(tot.revenueHr)}<span className="u"> zł/hr</span></div><div className="s">live</div></div>
-      </div>
-      <div className="core-fleet-bench">
-        <div className="hd">
-          <span>Promise-accuracy · cross-truck benchmark</span>
-          <span>
-            fleet {Math.round(benchmark.fleetAccuracy)}% · target {promiseTarget}%
-            {benchmark.leader && benchmark.gap > 0
-              ? ` · ${benchmark.leader} leads by ${Math.round(benchmark.gap)} pts`
-              : ""}
-          </span>
-        </div>
-        {fleet.tiles.map((t) => {
-          const below = t.promiseAccuracy < promiseTarget;
-          return (
-            <div key={t.slug} className="core-benchrow">
-              <span className="nm">{t.name}</span>
-              <div className="core-track">
-                <i className={below ? "warn" : ""} style={{ width: `${Math.min(100, Math.round(t.promiseAccuracy))}%` }} />
-              </div>
-              <span className="pv">
-                {Math.round(t.promiseAccuracy)}%{!below && t.slug === leaderSlug ? " LEAD" : ""}
-              </span>
-            </div>
-          );
-        })}
+      <div className="core-statstrip">
+        <div className="cell"><span className="lab">Kitchens</span><span className="val">{tiles.length}</span></div>
+        <div className="cell"><span className="lab">Active</span><span className="val">{tot.active}</span></div>
+        <div className="cell"><span className="lab">At risk</span><span className="val amber">{tot.risk}</span></div>
+        <div className="cell"><span className="lab">Late</span><span className="val danger">{tot.late}</span></div>
+        <div className="cell"><span className="lab">Ready</span><span className="val basil">{tot.ready}</span></div>
+        <div className="cell"><span className="lab">Throughput</span><span className="val">{tot.throughputHr}<small> /hr</small></span></div>
+        <div className="cell"><span className="lab">Covers</span><span className="val">{tot.coversHr}<small> /hr</small></span></div>
+        <div className="cell"><span className="lab">Revenue</span><span className="val info">{revPerHr(tot.revenueHr)}<small> zł/hr</small></span></div>
       </div>
       <div className="core-fleet-grid">
-        {fleet.tiles.map((t) => {
+        {tiles.map((t) => {
           // Only the loaded stations, hottest first — idle stations are noise.
           const stations = t.stations.filter((s) => s.demand > 0).sort((a, b) => b.pct - a.pct);
-          const fallingBehind = stations.some((s) => s.tier === "risk");
+          // Lane split from the live tickets (the counts band only carries active/
+          // ready/late/risk — New vs Firing is derived here, no mock data).
+          const lanes = { fresh: 0, firing: 0, ready: 0 };
+          for (const tk of t.tickets) {
+            if (tk.status === "confirmed") lanes.fresh += 1;
+            else if (tk.status === "preparing") lanes.firing += 1;
+            else if (tk.status === "ready") lanes.ready += 1;
+          }
+          // Avg / oldest cook age across the open (non-ready) tickets.
+          const ages = t.tickets.filter((tk) => tk.status !== "ready").map((tk) => Math.max(0, (now - tk.paidAtMs) / 1000));
+          const oldest = ages.length ? Math.max(...ages) : 0;
+          const avg = ages.length ? ages.reduce((a, b) => a + b, 0) / ages.length : 0;
           const preview = [...t.tickets]
             .sort(
               (a, b) =>
@@ -1056,74 +1234,246 @@ function FleetWall({ fleet, now, onDrill }: { fleet: FleetWire | null; now: numb
                 a.paidAtMs - b.paidAtMs,
             )
             .slice(0, 3);
+          const pill = HEALTH_PILL[t.healthClass];
           return (
-            <div key={t.slug} className="core-truck">
+            <div
+              key={t.slug}
+              className="core-truck glass"
+              role="button"
+              tabIndex={0}
+              title={`Open ${t.name} floor`}
+              onClick={() => onDrill(t.slug, "floor")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onDrill(t.slug, "floor");
+                }
+              }}
+            >
               <div className="core-truck-h">
-                <div className={`core-ring ${t.healthClass}`}>{t.health}</div>
+                <span className={`core-truck-flag ${pill.cls}`} />
                 <div className="core-truck-id">
-                  <div className="nm">{t.name}</div>
-                  <div className="sub">
-                    Open · {t.counts.active} active · <b className={`h-${t.healthClass}`}>{t.healthState.toUpperCase()}</b>
-                  </div>
+                  <span className="nm">{t.city}</span>
+                  <span className="code">
+                    {t.code ? `${t.code}${t.district ? ` · ${t.district}` : ""}` : t.area || t.city}
+                  </span>
                 </div>
-                <div className="core-truck-drill">
-                  <button type="button" onClick={() => onDrill(t.slug, "floor")}>Open floor →</button>
-                  <button type="button" onClick={() => onDrill(t.slug, "chef")}>Chef line →</button>
-                </div>
+                <span className={`core-truck-pill ${pill.cls}`}>{pill.label}</span>
               </div>
-              <div className="core-truck-stats">
-                <div><span className="sl">Active</span><span className="sv">{t.counts.active}</span></div>
-                <div><span className="sl">At risk</span><span className={t.counts.risk ? "sv warn" : "sv"}>{t.counts.risk}</span></div>
-                <div><span className="sl">Late</span><span className={t.counts.late ? "sv bad" : "sv"}>{t.counts.late}</span></div>
-                <div><span className="sl">Ready</span><span className="sv">{t.counts.ready}</span></div>
-                <div><span className="sl">On shift</span><span className="sv">{t.onShift}</span></div>
+              <div className="core-truck-mini">
+                <div><span className="k">Active</span><span className="v">{t.counts.active}</span></div>
+                <div><span className="k">Risk</span><span className={t.counts.risk ? "v warn" : "v"}>{t.counts.risk}</span></div>
+                <div><span className="k">Late</span><span className={t.counts.late ? "v bad" : "v"}>{t.counts.late}</span></div>
+                <div><span className="k">Avg cook</span><span className="v">{avg ? fmtClock(avg) : "—"}</span></div>
+                <div><span className="k">Oldest</span><span className={oldest >= 600 ? "v bad" : "v"}>{oldest ? fmtClock(oldest) : "—"}</span></div>
               </div>
-              {stations.length > 0 && (
-                <div className="core-pace">
-                  <div className="core-pace-h">
-                    Pace · next {paceWindowMin}m
-                    {fallingBehind && <span className="bad"> · predicted to fall behind</span>}
-                  </div>
-                  {stations.map((s) => (
-                    <div key={s.id} className="core-pace-row">
-                      <span className="lab">{s.label}</span>
-                      <div className="core-track">
-                        <i
-                          className={`tier-${s.tier}`}
-                          style={{
-                            width: `${Math.min(100, s.capacity > 0 ? Math.round((s.currentLoad / s.capacity) * 100) : 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="pv">
-                        {s.currentLoad}/{Math.round(s.capacity)}
-                        {s.forecast > 0 ? ` · +${s.forecast}` : ""}
+              <div className="core-truck-body">
+                {stations.length > 0 && (
+                  <div className="core-truck-stations">
+                    {stations.map((s) => (
+                      <span key={s.id} className="core-tstn">
+                        <span className="dot" style={{ background: STN_TONE[s.tier] }} />
+                        <span className="lab">{s.label}</span>
+                        <span className="bar"><i style={{ width: `${Math.min(100, s.pct)}%`, background: STN_TONE[s.tier] }} /></span>
+                        <span className="pct">{s.pct}%</span>
                       </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="core-preview">
-                {preview.length === 0 ? (
-                  <div className="core-preview-empty">No active tickets</div>
-                ) : (
-                  preview.map((tk) => {
-                    const due = dueLabel(tk, now);
-                    return (
-                      <div key={tk.id} className={`core-prow tone-${due.tone}`}>
-                        <span className="pid">#{tk.shortId}</span>
-                        <span className="chip">{channelTag(tk)}</span>
-                        <span className="dish">{dishSummary(tk)}</span>
-                        <span className={`t tone-${due.tone}`}>{due.text}</span>
-                      </div>
-                    );
-                  })
+                    ))}
+                  </div>
                 )}
+                <div className="core-lanesum">
+                  <div className="ls fresh"><b>{lanes.fresh}</b>New</div>
+                  <div className="ls firing"><b>{lanes.firing}</b>Firing</div>
+                  <div className="ls ready"><b>{lanes.ready}</b>Ready</div>
+                </div>
+                <div className="core-mtks">
+                  {preview.length === 0 ? (
+                    <div className="core-preview-empty">No active tickets</div>
+                  ) : (
+                    preview.map((tk) => {
+                      const due = dueLabel(tk, now);
+                      return (
+                        <div key={tk.id} className={`core-mtk tone-${due.tone}`}>
+                          <span className="mid">#{tk.shortId}</span>
+                          <span className="mdesc">{dishSummary(tk)}</span>
+                          <span className={`mtimer tone-${due.tone}`}>{due.text}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ---- Chef (expo pass + all-day, liquid-glass) ----
+type ExpoNode = { course: PosCourse; label: string; st: "done" | "firing" | "wait" };
+type ExpoCheck = { t: KdsTicket; nodes: ExpoNode[] };
+type AllDayGroup = {
+  cat: MenuCategory;
+  label: string;
+  load: number | null;
+  tier: "calm" | "warn" | "risk";
+  max: number;
+  items: { name: string; qty: number }[];
+};
+type ChefStats = { onPass: number; awaiting: number; longestHold: number; allDayItems: number; inProgress: number; allergy: number };
+
+const CHEF_TIER_TONE: Record<"calm" | "warn" | "risk", string> = {
+  calm: "var(--t-ready)",
+  warn: "var(--t-warn)",
+  risk: "var(--t-late)",
+};
+
+function ChefView({
+  checks,
+  allDayGroups,
+  stats,
+  chefFocus,
+  onFocus,
+  onFullscreen,
+  controls,
+  onAdvance,
+  onRegress,
+  now,
+}: {
+  checks: ExpoCheck[];
+  allDayGroups: AllDayGroup[];
+  stats: ChefStats;
+  chefFocus: "expo" | "allday";
+  onFocus: (f: "expo" | "allday") => void;
+  onFullscreen: () => void;
+  controls: ReactNode;
+  onAdvance: (t: KdsTicket) => void;
+  onRegress: (t: KdsTicket) => void;
+  now: number;
+}) {
+  const totalItems = allDayGroups.reduce((s, g) => s + g.items.reduce((n, i) => n + i.qty, 0), 0);
+  return (
+    <>
+      <div className="core-kds-toolbar">
+        <div className="core-seg">
+          <button className={chefFocus === "expo" ? "on" : ""} onClick={() => onFocus("expo")}>Expo</button>
+          <button className={chefFocus === "allday" ? "on" : ""} onClick={() => onFocus("allday")}>All-day</button>
+        </div>
+        <div className="core-kds-tb-sp" />
+        {controls}
+        <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
+      </div>
+      <div className="core-crumb">
+        CORE — KDS · CHEF · <b>liquid glass</b> · <span className="fix">expo pass · all-day prep</span>
+      </div>
+      <div className="core-sectionhead">
+        <h1>KDS · Chef — Expo &amp; all-day</h1>
+        <span className="sub">coursing · expedite · all-day prep counts</span>
+      </div>
+      <div className="core-statstrip core-kds-strip">
+        <div className="cell"><span className="lab">On the pass</span><span className="val basil">{stats.onPass}</span></div>
+        <div className="cell"><span className="lab">Awaiting course</span><span className="val amber">{stats.awaiting}</span></div>
+        <div className="cell"><span className="lab">Longest hold</span><span className={stats.longestHold >= 480 ? "val danger" : "val"}>{stats.longestHold ? fmtClock(stats.longestHold) : "—"}</span></div>
+        <div className="cell"><span className="lab">All-day items</span><span className="val">{stats.allDayItems}</span></div>
+        <div className="cell"><span className="lab">In progress</span><span className="val info">{stats.inProgress}</span></div>
+        <div className="cell"><span className="lab">Allergy flags</span><span className={stats.allergy ? "val danger" : "val"}>{stats.allergy}</span></div>
+      </div>
+      <div className={`core-chef-grid ${chefFocus}`}>
+        <div className="core-panel">
+          <div className="core-panel-h">All-day · by station <span className="c">{totalItems} items</span></div>
+          <div className="core-panel-b">
+            {allDayGroups.length === 0 ? (
+              <div className="core-kds-empty">Nothing on the line.</div>
+            ) : (
+              allDayGroups.map((g) => (
+                <div key={g.cat} className="core-ad-group">
+                  <div className="core-ad-glab">
+                    <span className="dot" style={{ background: CHEF_TIER_TONE[g.tier] }} />
+                    {g.label}
+                    {g.load !== null && <span className="load">load {g.load}%</span>}
+                  </div>
+                  {g.items.map((it) => (
+                    <div key={it.name} className="core-ad-row">
+                      <span className="ad-q">{it.qty}×</span>
+                      <span className="ad-nm">{it.name}</span>
+                      <span className="ad-bar"><i style={{ width: `${Math.round((it.qty / g.max) * 100)}%`, background: CHEF_TIER_TONE[g.tier] }} /></span>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        {chefFocus === "expo" && (
+          <div className="core-panel">
+            <div className="core-panel-h">Expo pass · coursing <span className="c">{checks.length} checks</span></div>
+            <div className="core-expo-list">
+              {checks.length === 0 ? (
+                <div className="core-kds-empty">No active checks.</div>
+              ) : (
+                checks.map(({ t, nodes }) => (
+                  <ExpoCard key={t.id} t={t} nodes={nodes} now={now} onAdvance={onAdvance} onRegress={onRegress} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ExpoCard({
+  t,
+  nodes,
+  now,
+  onAdvance,
+  onRegress,
+}: {
+  t: KdsTicket;
+  nodes: ExpoNode[];
+  now: number;
+  onAdvance: (t: KdsTicket) => void;
+  onRegress: (t: KdsTicket) => void;
+}) {
+  const due = dueLabel(t, now);
+  const next = nextStatus(t.status);
+  const canRecall = !!prevStatus(t.status);
+  const primary = t.status === "ready" ? "Expedite" : t.status === "preparing" ? "Bump to pass" : "Start firing";
+  return (
+    <div className={`core-expo-card t-${due.tone}`}>
+      <div className="core-expo-top">
+        <span className="tt">#{t.shortId}</span>
+        <span className="chip">{channelTag(t)}</span>
+        <span className={`due t-${due.tone}`}>{due.text}</span>
+      </div>
+      {nodes.length > 0 && (
+        <div className="core-cspine">
+          {nodes.map((n) => (
+            <div key={n.course} className={`core-cnode ${n.st}`}>
+              <span className="d" />
+              <span className="lb">{n.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {t.simulated ? (
+        <div className="core-expo-sim">Simulation — not a real order</div>
+      ) : (
+        <div className="core-expo-act">
+          {next && (
+            <button type="button" className="go" onClick={() => onAdvance(t)}>
+              {primary}
+            </button>
+          )}
+          {canRecall && (
+            <button type="button" onClick={() => onRegress(t)}>
+              Recall
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

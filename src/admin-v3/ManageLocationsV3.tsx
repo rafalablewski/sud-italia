@@ -80,6 +80,8 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
   const [shortDescription, setShortDescription] = useState(location?.shortDescription ?? "");
   const [description, setDescription] = useState(location?.description ?? "");
   const [teamLead, setTeamLead] = useState(location?.teamLead ?? "");
+  const [code, setCode] = useState(location?.code ?? "");
+  const [district, setDistrict] = useState(location?.district ?? "");
   const [heroImage, setHeroImage] = useState(location?.heroImage ?? "");
   const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(location?.hours?.length ? location.hours : [{ day: "Mon-Sun", open: "11:00", close: "21:00" }]);
   const [saving, setSaving] = useState(false);
@@ -108,6 +110,8 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
         shortDescription: shortDescription.trim(),
         description: description.trim(),
         teamLead: teamLead.trim(),
+        code: code.trim(),
+        district: district.trim(),
         heroImage: heroImage.trim(),
         currency: "PLN",
       };
@@ -125,6 +129,10 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
         <label className="av3-field"><span className="av3-field-label">City</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={city} onChange={(e) => setCity(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Slug</span><input className="av3-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!location} placeholder="auto" /></label>
+      </div>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
+        <label className="av3-field"><span className="av3-field-label">Site code</span><input className="av3-input" style={{ fontFamily: "var(--av3-mono, var(--av3-ui))" }} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. KRK" maxLength={8} /></label>
+        <label className="av3-field"><span className="av3-field-label">District</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="e.g. Rynek" maxLength={80} /></label>
       </div>
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Address</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={address} onChange={(e) => setAddress(e.target.value)} /></label>
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Short description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} placeholder="One line for cards & lists" maxLength={300} /></label>

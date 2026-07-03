@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getKdsServiceHistory, getLaborCostInRange, getOrders } from "@/lib/store";
+import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
-import { MENU_CATEGORY_LABELS } from "@/data/types";
+import { KDS_STATION_LABELS } from "@/data/types";
 import { buildKdsTicket } from "@/lib/kds-ticket";
 import {
   analyzeTruck,
@@ -64,6 +65,8 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
 
       const history = await getKdsServiceHistory(loc.slug, fromIso, toIso);
       const { openShifts } = await getLaborCostInRange(loc.slug, fromIso, dayEnd.toISOString());
+      // Live 86'd count for the toolbar badge — menu items currently unavailable.
+      const eightySix = (await getMenuWithOverrides(loc.slug)).filter((m) => m.available === false).length;
 
       const promiseAccuracy = history.promiseAccuracy ?? PROMISE_TARGET;
       const { health, state, cls } = computeHealth({
@@ -76,7 +79,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
 
       const stations = analysis.stations.map((s) => ({
         id: s.id,
-        label: MENU_CATEGORY_LABELS[s.id] ?? s.id,
+        label: KDS_STATION_LABELS[s.id] ?? s.id,
         currentLoad: s.currentLoad,
         forecast: s.forecast,
         demand: s.demand,
@@ -88,7 +91,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
       const bottleneck = analysis.bottleneck
         ? {
             id: analysis.bottleneck.id,
-            label: MENU_CATEGORY_LABELS[analysis.bottleneck.id] ?? analysis.bottleneck.id,
+            label: KDS_STATION_LABELS[analysis.bottleneck.id] ?? analysis.bottleneck.id,
             pct: Number.isFinite(analysis.bottleneck.util)
               ? Math.round(analysis.bottleneck.util * 100)
               : 999,
@@ -99,6 +102,12 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
       return {
         slug: loc.slug,
         name: loc.name,
+        city: loc.city,
+        code: loc.code ?? "",
+        district: loc.district ?? "",
+        // Street/area from the address (before the postcode) — fallback code line.
+        area: loc.address.split(",")[0].trim(),
+        eightySix,
         counts: analysis.counts,
         health,
         healthState: state,

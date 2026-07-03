@@ -190,7 +190,6 @@
 /* ---------- more surfaces: Floor · Guest · Book · Slots · KPI cards ---------- */
 /* frosted cards that float */
 .core[data-skin="liquid-glass"] .core-tbl2,
-.core[data-skin="liquid-glass"] .core-fleet-bench,
 .core[data-skin="liquid-glass"] .core-book-side,
 .core[data-skin="liquid-glass"] .core-slot {
   background: var(--lg-sheen), var(--lg-fill);
@@ -211,14 +210,10 @@
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   box-shadow: var(--lg-rim);
 }
-/* hairline-grid KPI bands — frost the band, keep the 1px gap, glass the cells */
-.core[data-skin="liquid-glass"] .core-fleet-kpi,
-.core[data-skin="liquid-glass"] .core-kpi,
+/* hairline-grid KPI band — frost the band, keep the 1px gap */
 .core[data-skin="liquid-glass"] .core-kpi-strip {
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
 }
-.core[data-skin="liquid-glass"] .core-kpi .k,
-.core[data-skin="liquid-glass"] .core-fleet-kpi .kc { background: var(--panel); }
 /* guest inbox panels */
 .core[data-skin="liquid-glass"] .core-convs,
 .core[data-skin="liquid-glass"] .core-conv-list,
