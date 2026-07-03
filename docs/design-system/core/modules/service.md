@@ -137,7 +137,11 @@ a seating time, every table is hard-filtered (fit · free-for-the-turn ·
 availability) then scored (right-size · runway · guest · pacing · yield), so the
 ✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
 reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
-`patio full this window`, `89 pts · exact fit`). Excluded tables dim. Below the
+`patio full this window`, `89 pts · exact fit`). Excluded tables dim. Entering a returning guest's **phone** pulls their CRM seating profile
+(`.core-bk-guestmatch`, GET `/api/admin/floor/guest-prefs` → `getGuestSeatingProfile`
+— VIP standing from spend/visits/loyalty, usual table + zone from reservation
+history) and feeds it into the engine's `guest` signal, so a regular is nudged
+toward their usual table/zone. Below the
 picker a **signals panel** (`.core-bk-signals`) lays the score open for the
 chosen (or recommended) table: the weighted contribution of each of the **six**
 signals as a labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield/**section**,

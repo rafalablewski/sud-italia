@@ -87,6 +87,8 @@ export function CoreBook() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [needs, setNeeds] = useState<TableFeature[]>([]);
+  // Matched returning guest (CRM) — feeds the engine's `guest` signal.
+  const [guestProfile, setGuestProfile] = useState<{ prefs: { zone?: string; vip?: boolean; usualTableId?: string }; name: string | null; vip: boolean; visits: number; usualTableLabel: string | null } | null>(null);
   const [overrideReason, setOverrideReason] = useState<OverrideReason | null>(null);
   const [override, setOverride] = useState(false);
   const toggleNeed = (f: TableFeature) => setNeeds((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
@@ -195,6 +197,7 @@ export function CoreBook() {
         setPhone("");
         setNotes("");
         setNeeds([]);
+        setGuestProfile(null);
         setTableId(null);
         setJoinSel(null);
         setOverrideReason(null);
@@ -279,8 +282,9 @@ export function CoreBook() {
       policy,
       turnModel,
       needs: needs.length ? needs : undefined,
+      prefs: guestProfile?.prefs,
     });
-  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel, needs]);
+  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel, needs, guestProfile]);
   const suggByTable = useMemo(() => {
     const m = new Map<string, Suggestion>();
     suggestions?.forEach((s) => m.set(s.tableId, s));
@@ -439,6 +443,24 @@ export function CoreBook() {
     for (const t of tables) if (t.zone) s.add(t.zone);
     return [...s].sort();
   }, [tables]);
+
+  // CRM lookup — when the phone has enough digits, pull the guest's seating
+  // profile (usual table · zone · VIP) so the engine can honour their preference.
+  // Debounced so typing a number doesn't hammer the endpoint.
+  useEffect(() => {
+    const p = phone.replace(/\D/g, "");
+    if (p.length < 6) { setGuestProfile(null); return; }
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/floor/guest-prefs?location=${encodeURIComponent(loc)}&phone=${encodeURIComponent(phone.trim())}`);
+        if (!res.ok || cancelled) return;
+        const j = await res.json();
+        if (!cancelled) setGuestProfile(j.visits > 0 || j.vip ? j : null);
+      } catch { /* non-fatal */ }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [phone, loc]);
 
   // Auto-suggest — when on (and not shadow-only), pre-select the engine's pick
   // so the operator can book with one tap. Only fills an empty choice; a manual
@@ -854,6 +876,18 @@ export function CoreBook() {
               <div className="core-bk-flab"><span>Guest</span></div>
               <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
               <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
+              {guestProfile && (
+                <div className="core-bk-guestmatch">
+                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
+                  <span className="gm-txt">
+                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
+                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
+                  </span>
+                  {name.trim() === "" && guestProfile.name && (
+                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
+                  )}
+                </div>
+              )}
               <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
             </div>
 

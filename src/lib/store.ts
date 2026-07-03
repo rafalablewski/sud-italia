@@ -14430,6 +14430,58 @@ export async function getSeatingDecisionSummary(locationSlug: string): Promise<S
   return summariseDecisions(await getSeatingDecisions(locationSlug));
 }
 
+// --- Guest seating profile (CRM → engine prefs) --------------------------
+// Turn what we know about a returning guest into the TablePrefs the seating
+// engine's `guest` signal reads: their usual table (most-sat table in history),
+// preferred zone (that table's zone), and VIP standing (a regular by spend /
+// visits / loyalty). Best-effort — an anonymous or unknown phone yields empty
+// prefs and the engine simply falls back to neutral.
+export interface GuestSeatingProfile {
+  prefs: { zone?: string; vip?: boolean; usualTableId?: string };
+  name: string | null;
+  vip: boolean;
+  visits: number;
+  usualTableId: string | null;
+  usualTableLabel: string | null;
+}
+
+const digits = (s: string) => s.replace(/\D/g, "");
+
+export async function getGuestSeatingProfile(locationSlug: string, rawPhone: string): Promise<GuestSeatingProfile> {
+  const empty: GuestSeatingProfile = { prefs: {}, name: null, vip: false, visits: 0, usualTableId: null, usualTableLabel: null };
+  const suffix = digits(rawPhone).slice(-9);
+  if (suffix.length < 6) return empty;
+
+  const [customer, reservations, tables] = await Promise.all([
+    getCustomer(rawPhone).catch(() => null),
+    getReservations(locationSlug).catch(() => [] as Reservation[]),
+    getTables(locationSlug).catch(() => [] as FloorTable[]),
+  ]);
+
+  // VIP = a genuine regular: healthy spend, repeat visits, or loyalty standing.
+  const vip = !!customer && (customer.orderCount >= 6 || customer.totalSpentGrosze >= 80_000 || customer.loyaltyPointsBalance >= 500);
+
+  // Usual table = the table this guest has sat at most across their history.
+  const mine = reservations.filter(
+    (r) => r.customerPhone && digits(r.customerPhone).slice(-9) === suffix && (r.status === "seated" || r.status === "completed") && r.tableId,
+  );
+  const counts = new Map<string, number>();
+  for (const r of mine) counts.set(r.tableId!, (counts.get(r.tableId!) ?? 0) + 1);
+  let usualTableId: string | null = null;
+  let best = 0;
+  for (const [id, c] of counts) if (c > best) { best = c; usualTableId = id; }
+  const usualTable = usualTableId ? tables.find((t) => t.id === usualTableId) : undefined;
+
+  return {
+    prefs: { vip: vip || undefined, usualTableId: usualTableId ?? undefined, zone: usualTable?.zone },
+    name: customer?.name ?? mine[0]?.customerName ?? null,
+    vip,
+    visits: mine.length,
+    usualTableId,
+    usualTableLabel: usualTable ? usualTable.number : null,
+  };
+}
+
 // --- Waitlist (the host's queue) -----------------------------------------
 // Walk-in parties waiting for a table, with the wait we quoted them. Per-location
 // list, same JSON pattern as reservations. Concept-5's Waitlist column reads it.
