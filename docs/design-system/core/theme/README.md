@@ -117,8 +117,8 @@ surface toolbar.
   flush 32px terminal icon buttons (hover → `--basil`).
 - **`.core-body`** — the surface body; `.bleed` lets a surface paint its
   own full-bleed background (KDS).
-- **Stat strip** — ONE look across every surface: KDS's `.core-kpi`, the
-  Guest `.core-kpi-strip` and POS's / Floor's / Orders' / Slots' `.core-statstrip` are
+- **Stat strip** — ONE look across every surface: the
+  Guest `.core-kpi-strip` and POS's / KDS's / Orders' / Slots' `.core-statstrip` are
   **undivided** columns (no inter-cell hairlines — the cells read as one open,
   continuous row, held apart by their own padding) with an uppercase mono label
   and a big **mono tabular** value. `.core-kpi` / `.core-kpi-strip` use `gap: 0`

@@ -210,12 +210,10 @@
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
   box-shadow: var(--lg-rim);
 }
-/* hairline-grid KPI bands — frost the band, keep the 1px gap, glass the cells */
-.core[data-skin="liquid-glass"] .core-kpi,
+/* hairline-grid KPI band — frost the band, keep the 1px gap */
 .core[data-skin="liquid-glass"] .core-kpi-strip {
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
 }
-.core[data-skin="liquid-glass"] .core-kpi .k { background: var(--panel); }
 /* guest inbox panels */
 .core[data-skin="liquid-glass"] .core-convs,
 .core[data-skin="liquid-glass"] .core-conv-list,

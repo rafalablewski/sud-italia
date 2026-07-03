@@ -18,34 +18,45 @@ The kitchen wall. `/core/kds`.
 A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
-The Floor/Chef boards open with a `.core-crumb` breadcrumb (`CORE — KDS ·
-KITCHEN WALL · liquid glass · dark board · frosted kpis`) + a `.core-sectionhead`
-(`KDS · Pass — Floor|Chef`), matching the dense-console mockup while keeping the
-kitchen wall dark (the KPIs, not the surface, are what's frosted).
+All three views (Fleet · Floor · Chef) render in the **liquid-glass** language
+1:1 with the Core-suite mockup: the in-shell board (`.core-body .core-kds`) sits
+on the warm KDS radial-gradient, each view opens with a `.core-crumb` +
+`.core-sectionhead`, and the KPI band is a frosted `.core-statstrip` (shared
+`.core-kds .core-statstrip` glass). The **fullscreen kiosk** (`.core-kiosk`,
+outside `.core-body`) keeps the flat dark wall.
 
-- **Floor** (default) — the expo board. A manager **ops band** (the
-  responsive `.core-kpi`: Open · New · Firing · Ready · At risk · Late ·
-  Oldest · Avg age · Done/hr · On shift) over three `.core-lane` columns
-  (**New → Firing → Ready·Expo**). Counts + Oldest/Avg-age are derived
-  from the live ticket stream; **Done/hr** and **On shift** come from
-  `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
-  the subbar focuses a single lane into the dense `.core-chefq` wrap.
-- **Station strip** (`.core-stations` / `.core-stn`) — each present station is
-  a one-tap filter chip that also shows its **live load** (mockup: `Forno 88%`):
-  a `.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/
-  danger by pace tier. Load comes from `floor-ops`'s `stations[]` (the same
-  `analyzeTruck` per-station `util`/`tier` the board colours from — Rule #1);
-  only stations with live demand carry a bar.
-- **All-day rail** (`.core-allday`) — toggled by the **`Σ`** control, an
+- **Floor** (default) — the expo board. A frosted 7-cell `.core-statstrip.core-kds-strip`
+  (**Active · At risk · Late · Ready · Throughput · Covers · Revenue** — counts
+  from the live ticket stream; throughput/covers/revenue from
+  `GET /api/admin/kds/floor-ops?location=`, 15s poll, Rule #1) over a **dark
+  `.core-wall` inset** that carries the station strip + three `.core-lane`
+  columns (**New → Firing → Ready·Expo**, transparent columns whose tickets
+  float on the wall). A stage filter in the subbar focuses a single lane into
+  the dense `.core-chefq` wrap. Bump tone (mockup): **Start / Bump** are
+  brand-ember, **Pass** (ready) is basil.
+- **Station strip** (`.core-stations` / `.core-stn`) — inside the wall, each
+  present station is a one-tap filter chip showing its **live load**
+  (`.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/
+  danger by pace tier, from `floor-ops`'s `stations[]` — Rule #1). A trailing
+  `.core-stn-expo` chip summarises the ready-for-pass count.
+- **All-day rail** (`.core-allday`) — toggled by the **`Σ`** control on Floor, an
   ember-washed strip of `.core-allday-item` chips: every still-to-make item
   (New + Firing, not Ready) summed **by dish across all active tickets**, biggest
-  first, with the ticket count. The line's "make-now" batch — derived live from
-  the same tickets (no mock data, Rule #1) and respecting the station filter.
-  Available in Floor + Chef views.
-- **Chef** — the same tickets as a single station-filtered make-queue
-  (`.core-chefq`), under a `.core-chef-depth` strip showing the cook's
-  focused-station **queue depth** + **oldest** ticket (amber past 8 min)
-  and the active station name.
+  first, with the ticket count. Derived live from the same tickets (Rule #1) and
+  respecting the station filter.
+- **Chef** — `ChefView`: **expo pass + all-day prep**, a two-panel
+  `.core-chef-grid` (an **Expo / All-day** `.core-seg` toggles All-day
+  full-width). A frosted 6-cell strip (**On the pass · Awaiting course · Longest
+  hold · All-day items · In progress · Allergy flags**, all live) over:
+  - **All-day · by station** (`.core-panel` → `.core-ad-group` per category in
+    canonical order) — still-to-make dishes grouped by station with a `.core-ad-bar`
+    per dish and the station's live **load %** from `floor-ops`.
+  - **Expo pass · coursing** (`.core-expo-list` of `.core-expo-card`) — each
+    active check as a `.core-cspine` course spine (`.core-cnode` per present
+    course, **done / firing / wait** derived from the real POS coursing
+    `fired`/`held` + order stage), the toned due clock, and `.core-expo-act`
+    actions (**Start firing / Bump to pass / Expedite** + **Recall**) wired to
+    the same optimistic bump/recall the boards use.
 - **Fleet** — `FleetWall`: the owner Atlas, and the **default view for
   owners** (the role from `/api/admin/me` flips the board to Fleet on load).
   Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
