@@ -121,6 +121,10 @@ Below, in order, the **safety-relevant** content the line needs:
 - `.core-tk-course.held` — *⊘ Mains · Dessert held* when a dine-in check
   has held courses (`t.coursing.held`) — dimmed with a ⊘ so the line knows
   they exist but aren't fired.
+- `.core-tk-voided` / `.core-tk-void-row` — a dish **cancelled after firing**
+  (`t.voided`, from `Order.voidedItems` when the POS voids a sent line): a loud
+  danger-washed **✕ CANCEL · Nx name · reason** row with the name struck-through,
+  so the line stops making it instead of it silently disappearing.
 - `.core-tk-items` — lines grouped by station (`.core-tk-grp` header per
   category, canonical order; headers shown only in the all-station Floor
   view). Each `.it` is `.q` qty + an `.it-body` (name, then `.mod`

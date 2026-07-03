@@ -532,6 +532,10 @@ export interface Order {
    *  coursed check fires; drives the KDS "course held" hint. Held courses are
    *  intentionally absent from `items` until they're fired. */
   coursing?: { fired: PosCourse[]; held: PosCourse[] };
+  /** Dishes cancelled AFTER firing — kept on the order so the kitchen display
+   *  can show them struck-through ("pulled"), never a silent disappearance.
+   *  Off the bill (removed from `items`); this is the accountability record. */
+  voidedItems?: { name: string; quantity: number; reason?: string; at: string }[];
   slotId: string;
   slotDate: string;
   slotTime: string;

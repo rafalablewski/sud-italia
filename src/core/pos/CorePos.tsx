@@ -1949,8 +1949,17 @@ export function CorePos({
                 type="button"
                 className="core-tchip"
                 onClick={() => {
+                  // Tell the kitchen first — a fired dish is pulled on the KDS
+                  // (struck-through), not silently dropped. Best-effort.
+                  if (active?.orderId) {
+                    void fetch(`/api/admin/kds/void-item?location=${encodeURIComponent(pageLoc)}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderId: active.orderId, name: voidLine.name, quantity: 1, reason: r }),
+                    }).catch(() => {});
+                  }
                   changeQty(voidLine.key, -1);
-                  toast(`Cancelled ${voidLine.name} · ${r}`, "default");
+                  toast(`Cancelled ${voidLine.name} · ${r} · kitchen notified`, "default");
                   setVoidLine(null);
                 }}
               >

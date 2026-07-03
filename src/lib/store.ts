@@ -1331,6 +1331,8 @@ interface OrderPayload {
   dispute?: Order["dispute"];
   channel?: Order["channel"];
   simulated?: Order["simulated"];
+  coursing?: Order["coursing"];
+  voidedItems?: Order["voidedItems"];
 }
 
 function rowToOrder(row: OrderRow): Order {
@@ -1365,6 +1367,8 @@ function rowToOrder(row: OrderRow): Order {
     dispute: payload.dispute,
     channel: payload.channel,
     simulated: payload.simulated,
+    coursing: payload.coursing,
+    voidedItems: payload.voidedItems,
   };
 }
 
@@ -1381,6 +1385,8 @@ function orderToValues(order: Order) {
     dispute: order.dispute,
     channel: order.channel,
     simulated: order.simulated,
+    coursing: order.coursing,
+    voidedItems: order.voidedItems,
   };
   return {
     id: order.id,
@@ -10577,6 +10583,40 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
     logger.warn("fireKdsTickets failed", { orderId: order.id, layer: "store.kds" }, err);
     return [];
   }
+}
+
+/**
+ * Cancel a dish that's already been fired — record it on the order's
+ * `voidedItems` so the KDS board can show it struck-through ("pulled"), instead
+ * of the item silently disappearing when the POS removes it from the check.
+ * Appends (never overwrites) so several cancels on one order accumulate.
+ */
+export async function voidKitchenItem(
+  orderId: string,
+  input: { name: string; quantity: number; reason?: string },
+): Promise<Order | null> {
+  const order = await getOrderById(orderId);
+  if (!order) return null;
+  const entry = {
+    name: input.name,
+    quantity: Math.max(1, Math.round(input.quantity || 1)),
+    reason: input.reason?.slice(0, 60) || undefined,
+    at: new Date().toISOString(),
+  };
+  const voidedItems = [...(order.voidedItems ?? []), entry].slice(-20);
+  // Drop the cancelled quantity from the active make-list too, so the board
+  // shows the dish struck (voided) and NOT still "to make" — matched by name.
+  let remaining = entry.quantity;
+  const items = order.items.map((ci) => ({ ...ci }));
+  for (let i = items.length - 1; i >= 0 && remaining > 0; i--) {
+    if (items[i].menuItem?.name === entry.name) {
+      const dec = Math.min(remaining, items[i].quantity);
+      items[i].quantity -= dec;
+      remaining -= dec;
+    }
+  }
+  const pruned = items.filter((ci) => ci.quantity > 0);
+  return (await updateOrder(orderId, { voidedItems, items: pruned })) ?? null;
 }
 
 /** Mark a ticket as ready (m2_3). Sets ready_at; returns the updated ticket. */

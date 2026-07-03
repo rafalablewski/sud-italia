@@ -175,7 +175,10 @@ The open-check selector (`.core-tabrail`) lives in the
   `decLine`, not `changeQty` directly: an unfired line decrements instantly, but
   removing the **last unit of a dish already sent to the kitchen** (its course in
   `firedCourses`, or a sent non-coursed check) opens a **cancel-with-reason**
-  `CoreDialog` (`VOID_REASONS` chips) so a cooking dish is never silently wiped;
+  `CoreDialog` (`VOID_REASONS` chips) so a cooking dish is never silently wiped —
+  confirming **notifies the kitchen** (POST `/api/admin/kds/void-item` →
+  `voidKitchenItem` records it on `Order.voidedItems` and drops it from the
+  make-list), so the KDS card shows it struck-through (see kds.md);
  a `.core-grip` handle (`⠿`,
   also hover-revealed on desktop); the **tappable line name** (`.ln-edit`, reveals
   a `✎` on hover → opens the line editor) and a mono line price (modifier deltas
