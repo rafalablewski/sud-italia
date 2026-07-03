@@ -1,0 +1,53 @@
+/* Core parity (kds) — dense-console 1:1 fixes for the Pass wall.
+   Scope every rule under .core (and the dark .core-kds board). */
+
+/* --- ticket header: bold display title + symbol-prefixed due (mockup .tt/.due) --- */
+.core .core-kds .core-tk-h { align-items: baseline; }
+.core .core-kds .core-tk-h .tt {
+  font-family: var(--display); font-weight: 700; font-size: 14px; letter-spacing: -.01em; color: var(--ink);
+}
+
+/* --- meta row: lowercase channel badge + "fired m:ss ago" (mockup .meta) --- */
+.core .core-kds .core-tk-meta { display: flex; align-items: center; gap: 8px; margin: -2px 0 7px; }
+.core .core-kds .core-chan {
+  font-family: var(--mono); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: 1px 6px; border-radius: 99px; white-space: nowrap;
+}
+.core .core-kds .core-chan.dine { color: var(--t-firing); background: rgba(84, 188, 224, .16); }
+.core .core-kds .core-chan.take { color: var(--t-warn); background: rgba(240, 173, 70, .16); }
+.core .core-kds .core-chan.deliv { color: var(--brand-bright); background: var(--brand-wash); }
+.core .core-kds .core-tk-ago { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
+
+/* --- station strip: compact bordered pills (mockup .station) — dot · name ·
+   load bar · %. Slightly smaller than the base chip to match the mockup. --- */
+.core .core-kds .core-stn { height: 28px; padding: 0 11px; font-size: 10.5px; font-weight: 600; }
+
+/* item quantities read in the mockup's mono ink (not amber) unless flagged */
+.core .core-kds .core-tk-items .it .q { color: var(--ink-3); }
+
+/* --- flat item list (mockup): drop the PIZZA/ANTIPASTI/DRINKS group labels --- */
+.core .core-kds .core-tk-grp { display: none; }
+.core .core-kds .core-tk-grp-block + .core-tk-grp-block { margin-top: 3px; }
+
+/* --- tone-tinted ticket background (mockup: .ticket.fire/.risk/.late/.ready) ---
+   the app card carried only a left border; the mockup washes the whole card. */
+.core .core-kds .core-tk.t-firing { background: rgba(84, 188, 224, .07); }
+.core .core-kds .core-tk.t-warn   { background: rgba(240, 173, 70, .07); }
+.core .core-kds .core-tk.t-risk   { background: rgba(240, 173, 70, .08); }
+.core .core-kds .core-tk.t-late   { background: rgba(229, 72, 74, .09); }
+.core .core-kds .core-tk.t-ready  { background: rgba(111, 177, 85, .07); }
+
+/* --- action button toned by lane (mockup): New = ember, Firing = neutral,
+   Ready = basil — not the app's green-everywhere default. --- */
+.core .core-kds .core-bump.bump-confirmed {
+  background: linear-gradient(180deg, var(--brand-bright), var(--brand)); color: var(--on-accent);
+}
+.core .core-kds .core-bump.bump-preparing { background: var(--kds-veil); color: var(--ink); }
+.core .core-kds .core-bump.bump-ready { background: var(--t-ready); color: var(--on-basil); }
+
+/* --- allergens: the mockup ticket has no red bar — keep the callout as a
+   compact danger-red text line (safety kept, but it reads like the mockup). --- */
+.core .core-kds .core-tk-alrg {
+  margin-top: 5px; padding: 2px 0 0; background: none; border: none;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0; color: var(--t-late);
+}

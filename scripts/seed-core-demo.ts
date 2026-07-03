@@ -39,6 +39,20 @@ import {
   deleteSlot,
   deleteReservation,
   addLoyaltyMember,
+  recomputeCustomerRollupsBulk,
+  saveStaff,
+  getStaff,
+  deleteStaff,
+  assignOrderDriver,
+  mutateWaSession,
+  appendWaMessage,
+  clearWaSession,
+  deleteWaTranscript,
+  createFamilyWallet,
+  inviteFamilyWalletMember,
+  storeWalletInviteOtp,
+  confirmFamilyWalletMember,
+  findWalletByPhone,
   getMenuOverrides,
   setMenuOverride,
   logAgentCall,
@@ -128,7 +142,14 @@ async function makeOrder(
     paidAt: createdAt,
     channel: Math.random() > 0.7 ? "whatsapp" : "web",
   };
-  await createOrder(order, { suppressNotifications: true });
+  // suppressCascades: the fire-and-forget rollup + fireKdsTickets (→ updateOrder)
+  // race the next insert on the shared kv orders blob (filesystem/sim) and clobber
+  // just-inserted rows — the seed was losing ~85% of its orders this way, leaving
+  // the whole /core suite reading empty. We fire ONE awaited bulk rollup after all
+  // orders land (see main()); the KDS board derives tickets live from the orders,
+  // so it needs no per-order ticket write, and leaving estimatedReadyAt unset lets
+  // the board show the fresh *predicted* SLA instead of a stale fired time.
+  await createOrder(order, { suppressNotifications: true, suppressCascades: true });
 }
 
 async function seedTables(locationSlug: string): Promise<string[]> {
@@ -152,6 +173,33 @@ async function seedTables(locationSlug: string): Promise<string[]> {
       seats: t.seats,
       zone: t.zone,
       status: seated ? "seated" : "available",
+    });
+    ids.push(saved.id);
+  }
+  return ids;
+}
+
+/** Delivery-group staff so Service · Dispatch shows a live driver roster
+ *  (getStaff filtered to the "delivery" role group) instead of "No drivers on
+ *  shift". Fixed ids → idempotent upsert on re-seed. */
+const DRIVERS: { name: string; role: "driver" | "courier" }[] = [
+  { name: "Tomek Wójcik", role: "driver" },
+  { name: "Kasia Lewandowska", role: "courier" },
+  { name: "Piotr Zieliński", role: "driver" },
+  { name: "Ola Dąbrowska", role: "courier" },
+];
+async function seedDrivers(locationSlug: string): Promise<string[]> {
+  const ids: string[] = [];
+  for (let i = 0; i < DRIVERS.length; i++) {
+    const d = DRIVERS[i];
+    const saved = await saveStaff({
+      id: `demo-drv-${locationSlug}-${i}`,
+      name: d.name,
+      role: d.role,
+      locationSlug,
+      hourlyRateGrosze: 2800,
+      status: "active",
+      hireDate: TODAY,
     });
     ids.push(saved.id);
   }
@@ -265,6 +313,9 @@ async function cleanup(): Promise<void> {
   }
   const tables = await getTables();
   for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
+  const staff = await getStaff();
+  for (const s of staff) if (s.id.startsWith("demo-drv")) await deleteStaff(s.id);
+  for (const g of GUESTS) { await clearWaSession(g.phone); await deleteWaTranscript(g.phone); }
   const slots = await getSlots();
   for (const s of slots) if (s.id.startsWith("demo-slot")) await deleteSlot(s.id);
   const resvs = await getReservations(undefined, TODAY);
@@ -347,6 +398,81 @@ async function seedAgentCalls(): Promise<void> {
   console.log(`agent-call telemetry seeded (${mix.reduce((s, m) => s + m.n, 0)} calls)`);
 }
 
+/** Seed a few live WhatsApp conversations so Guest · Inbox lands populated
+ *  (3-pane: conversation list + thread + guest context) like the mockup. These
+ *  ride the channel's real session + transcript stores (Rule #1). Sessions carry
+ *  a 90-min TTL, so a fresh seed keeps them live for the demo window. Idempotent:
+ *  each phone's session + transcript is cleared before re-seeding. */
+type WaSeedMsg = { mins: number; dir: "in" | "out"; actor: "customer" | "bot" | "operator"; body: string; meta?: Record<string, unknown> };
+async function seedWhatsApp(menu: MenuItem[], slug: string): Promise<number> {
+  const cart = (cats: [string, number][]): CartItem[] =>
+    cats.map(([c, q]) => lineFrom(menu, c, slug, q)).filter((l): l is CartItem => !!l);
+  const convos: { guest: (typeof GUESTS)[number]; cart: CartItem[]; fulfillment: FulfillmentType; pendingPay?: boolean; msgs: WaSeedMsg[] }[] = [
+    {
+      guest: GUESTS[2], cart: cart([["pizza", 1], ["antipasti", 1]]), fulfillment: "takeout",
+      msgs: [
+        { mins: 14, dir: "in", actor: "customer", body: "Hi! Is the Margherita available on a gluten-free base?" },
+        { mins: 13, dir: "out", actor: "bot", body: "Yes — Margherita on a GF base (+6 zł). Shall I add it?", meta: { card: [{ label: "Margherita · GF base", value: "42 zł" }, { label: "Allergens", value: "milk", tone: "info" }] } },
+        { mins: 12, dir: "in", actor: "customer", body: "Perfect, one for pickup in 30 min please." },
+        { mins: 6, dir: "out", actor: "operator", body: "Got it Marek — firing now, ready in ~6 min 🍕", meta: { staffName: "Kasia" } },
+      ],
+    },
+    {
+      guest: GUESTS[4], cart: cart([["pizza", 2], ["drinks", 1]]), fulfillment: "delivery", pendingPay: true,
+      msgs: [
+        { mins: 22, dir: "in", actor: "customer", body: "Can I get 2 Diavola delivered to Kazimierz?" },
+        { mins: 21, dir: "out", actor: "bot", body: "Sure! Your cart is ready — tap to pay and we'll start cooking.", meta: { card: [{ label: "2× Diavola", value: "65 zł" }, { label: "Delivery · Kazimierz", value: "+9 zł" }] } },
+        { mins: 20, dir: "in", actor: "customer", body: "Sending payment now 👍" },
+      ],
+    },
+    {
+      guest: GUESTS[1], cart: cart([["pizza", 1], ["desserts", 1]]), fulfillment: "dine-in",
+      msgs: [
+        { mins: 40, dir: "in", actor: "customer", body: "Do you have a table for 4 tonight around 8?" },
+        { mins: 39, dir: "out", actor: "operator", body: "We do! Booked you for 20:00, table by the window. See you then, Giulia ✨", meta: { staffName: "Marek" } },
+        { mins: 4, dir: "in", actor: "customer", body: "Amazing, thank you!" },
+      ],
+    },
+  ];
+  let n = 0;
+  for (const c of convos) {
+    const phone = c.guest.phone;
+    await clearWaSession(phone);
+    await deleteWaTranscript(phone);
+    for (const m of c.msgs) {
+      await appendWaMessage(phone, { at: iso(min(m.mins)), direction: m.dir, kind: "text", body: m.body, actor: m.actor, meta: m.meta });
+    }
+    await mutateWaSession(phone, (cur) => ({
+      ...cur,
+      locationSlug: slug,
+      customerName: c.guest.name,
+      cartItems: c.cart,
+      fulfillmentType: c.fulfillment,
+      pendingOrderId: c.pendingPay ? rid("demo-wa-ord") : null,
+      pendingPaymentUrl: c.pendingPay ? "https://checkout.stripe.com/c/pay/demo" : null,
+    }));
+    n++;
+  }
+  return n;
+}
+
+/** A shared family wallet so Guest · Loyalty's Wallets tab lands populated (owner
+ *  + confirmed members, shared balance). Real store rows (Rule #1) via the actual
+ *  create → invite → confirm flow (a known OTP is stored then consumed).
+ *  Idempotent: skips if the owner already holds a wallet. */
+async function seedFamilyWallet(): Promise<number> {
+  const head = GUESTS[0].phone; // Lucia Bianchi — the household owner
+  if (await findWalletByPhone(head)) return 0;
+  const w = await createFamilyWallet(head);
+  if (!w) return 0;
+  for (const m of [GUESTS[1].phone, GUESTS[2].phone]) {
+    await inviteFamilyWalletMember(w.id, head, m);
+    await storeWalletInviteOtp(m, w.id, "000000");
+    await confirmFamilyWalletMember(m, "000000");
+  }
+  return 1;
+}
+
 async function main() {
   console.log(`store mode: ${useDB ? "Neon Postgres (DATABASE_URL set)" : "filesystem (.data)"}`);
   if (useDB && process.env.ALLOW_DB_SEED !== "1") {
@@ -372,7 +498,8 @@ async function main() {
 
     const tableIds = await seedTables(slug);
     await seedSlots(slug);
-    console.log(`[${slug}] tables + slots seeded`);
+    const driverIds = await seedDrivers(slug);
+    console.log(`[${slug}] tables + slots + ${driverIds.length} drivers seeded`);
 
     // History — completed orders over the last 30 days (CRM LTV + loyalty).
     let n = 0;
@@ -395,6 +522,18 @@ async function main() {
       n++;
     }
     console.log(`[${slug}] orders seeded: ${n}`);
+
+    // Put a couple of active delivery orders on drivers so Dispatch shows the
+    // assigned-to-driver state (not just unassigned cards). Awaited, single
+    // calls — no cascade race.
+    try {
+      const activeDeliv = (await getOrders(slug)).filter(
+        (o) => o.fulfillmentType === "delivery" && ["confirmed", "preparing", "ready"].includes(o.status),
+      );
+      for (let i = 0; i < Math.min(2, activeDeliv.length) && i < driverIds.length; i++) {
+        await assignOrderDriver(activeDeliv[i].id, driverIds[i]);
+      }
+    } catch { /* non-fatal */ }
 
     // Open checks on the till → POS · Order shows a live board, not an empty screen.
     const openTabs = await seedOpenTabs(slug, menu, tableIds);
@@ -437,6 +576,22 @@ async function main() {
     });
   }
   console.log("\nloyalty members seeded");
+
+  // One awaited CRM/loyalty rollup after all orders + members land — replaces the
+  // per-order fire-and-forget rollups we suppressed above (which raced + clobbered
+  // the orders blob). This is what makes CRM lifetime-spend / repeat-rate and the
+  // loyalty points/tier boards read populated instead of all-zero.
+  await recomputeCustomerRollupsBulk(GUESTS.map((g) => g.phone));
+  console.log("customer rollups computed");
+
+  // Live WhatsApp conversations so Guest · Inbox lands populated (channel-wide,
+  // seeded against the first truck's menu).
+  const waMenu = await getMenuWithOverrides(locations[0].slug);
+  const waCount = await seedWhatsApp(waMenu, locations[0].slug);
+  console.log(`whatsapp conversations seeded (${waCount})`);
+
+  const walletCount = await seedFamilyWallet();
+  console.log(`family wallet seeded (${walletCount})`);
 
   await seedAgentCalls();
 

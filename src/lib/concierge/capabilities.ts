@@ -26,42 +26,42 @@ export const CAPABILITY_META: Record<ConciergeCapabilityId, CapabilityMeta> = {
   get_menu: {
     id: "get_menu",
     kind: "resource",
-    label: "get_menu",
+    label: "Menu lookup",
     desc: "Full menu with prices, categories and dietary tags.",
     transport: "public",
   },
   check_availability: {
     id: "check_availability",
     kind: "tool",
-    label: "check_availability",
+    label: "Table availability",
     desc: "Live availability + prep time per item and location.",
     transport: "public",
   },
   get_allergens: {
     id: "get_allergens",
     kind: "tool",
-    label: "get_allergens",
+    label: "Allergen check",
     desc: "EU-14 allergen + dietary breakdown for any item.",
     transport: "public",
   },
   place_order: {
     id: "place_order",
     kind: "tool",
-    label: "place_order",
+    label: "Place order",
     desc: "Create a takeout / delivery order. Returns order id + ETA.",
     transport: "conversational",
   },
   create_payment: {
     id: "create_payment",
     kind: "tool",
-    label: "create_payment",
+    label: "Create payment",
     desc: "Issue a Stripe payment link / take payment for an order.",
     transport: "conversational",
   },
   locate_truck: {
     id: "locate_truck",
     kind: "tool",
-    label: "locate_truck",
+    label: "Locate truck",
     desc: "Our locations, addresses & today's opening hours per city.",
     transport: "public",
   },
@@ -115,9 +115,9 @@ export interface AllergenMatrix {
 
 export async function buildAllergenMatrix(slug: string): Promise<AllergenMatrix> {
   const menu = await getMenuWithOverrides(slug);
-  const present = new Set<Allergen>();
-  for (const m of menu) for (const a of m.allergens ?? []) present.add(a);
-  // Stable EU-14 ordering, only columns that actually appear on this menu.
+  // Always emit the full EU-14 (FIC Annex II) column set — a proper allergen
+  // matrix has consistent columns; absent allergens render as empty cells. This
+  // matches the dense-console mockup's 14-column grid.
   const order: Allergen[] = [
     "gluten",
     "dairy",
@@ -135,7 +135,6 @@ export async function buildAllergenMatrix(slug: string): Promise<AllergenMatrix>
     "lupin",
   ];
   const columns = order
-    .filter((a) => present.has(a))
     .map((a) => ({ key: a, label: ALLERGEN_LABELS[a].en, emoji: ALLERGEN_LABELS[a].emoji }));
   const rows = menu.map((m) => ({
     id: m.id,

@@ -23,13 +23,20 @@ KITCHEN WALL · liquid glass · dark board · frosted kpis`) + a `.core-sectionh
 (`KDS · Pass — Floor|Chef`), matching the dense-console mockup while keeping the
 kitchen wall dark (the KPIs, not the surface, are what's frosted).
 
-- **Floor** (default) — the expo board. A manager **ops band** (the
-  responsive `.core-kpi`: Open · New · Firing · Ready · At risk · Late ·
-  Oldest · Avg age · Done/hr · On shift) over three `.core-lane` columns
-  (**New → Firing → Ready·Expo**). Counts + Oldest/Avg-age are derived
-  from the live ticket stream; **Done/hr** and **On shift** come from
-  `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
-  the subbar focuses a single lane into the dense `.core-chefq` wrap.
+- **Floor** (default) — the expo board. A **7-cell frosted stat strip**
+  (the shared `.core-statstrip`: Active · At risk · Late · Ready ·
+  Throughput /hr · Covers /hr · Revenue zł/hr) — brought 1:1 with the
+  dense-console mockup (was the 10-cell `.core-kpi`). Active/At risk/Late/Ready
+  are derived from the live ticket stream; **Throughput**, **Covers** and
+  **Revenue** per hour come from `GET /api/admin/kds/floor-ops?location=`
+  (15s poll — real completed orders in the last hour, Rule #1; `—` until a
+  location is picked). The strip stays frosted glass while the board itself is a
+  **dark board** (`.core-kds-wall`, near-black overlay + rim) wrapping the station
+  strip + three `.core-lane` columns (**New → Firing → Ready·Pass**), so the
+  SLA-toned tickets lift off it — matching the mockup's "dark board · frosted KPIs
+  only". The board scrolls as one; lanes size to content (no per-lane scrollbars).
+  Bump verbs read **Start / Bump / Pass**. A stage filter in the subbar focuses a
+  single lane into the dense `.core-chefq` wrap.
 - **Station strip** (`.core-stations` / `.core-stn`) — each present station is
   a one-tap filter chip that also shows its **live load** (mockup: `Forno 88%`):
   a `.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/
@@ -140,3 +147,7 @@ amber) rather than a bare glyph, so the affordance reads at a glance; two
 opt-in chimes (bright bell on a new ticket, lower alarm the
 instant a ticket breaches SLA), the **`Σ` all-day** toggle (`.core-allday`), and
 the 86 control (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature.
+
+## Ticket + station parity (2026-07-02)
+
+`src/app/themes/core/parity/kds.css` (imported after base+skin; scoped under `.core .core-kds`). Pass-card header is a bold display **`.tt`** title + a symbol-prefixed **`.due`** (◉ firing · ▲ at-risk · ✓ ready · "−m:ss late"); a **`.core-tk-meta`** row carries a lowercase channel badge (`.core-chan.dine/.take/.deliv`) + party + "fired m:ss ago" (from `paidAtMs`). The station strip renders as plain load rows (dot · name · bar · %) instead of bordered filter pills (the "All stations" chip stays a subtle pill). Allergens keep their danger callout but compact, so the card reads like the mockup's clean ticket while preserving the safety row.

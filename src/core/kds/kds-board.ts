@@ -13,7 +13,7 @@ import type { KdsTicket } from "@/lib/kds-ticket";
 export const KDS_COLUMNS: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
   { id: "confirmed", label: "New", tone: "warning" },
   { id: "preparing", label: "Firing", tone: "info" },
-  { id: "ready", label: "Ready · Expo", tone: "success" },
+  { id: "ready", label: "Ready · Pass", tone: "success" },
 ];
 
 export const STATION_FILTERS: { id: MenuCategory | "all"; label: string }[] = [

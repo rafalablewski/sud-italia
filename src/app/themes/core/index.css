@@ -301,7 +301,9 @@
    See docs → theme "Stat strip". */
 .core .core-statstrip { display: flex; align-items: stretch; margin: 10px 14px; flex: none; overflow: hidden;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
-.core .core-statstrip .cell { flex: 1; min-width: 0; padding: 9px 15px; display: flex; flex-direction: column; gap: 3px; }
+.core .core-statstrip .cell { flex: 1; min-width: 0; padding: 9px 15px; display: flex; flex-direction: column; gap: 3px; position: relative; }
+/* hairline divider between cells (mockup: .statstrip .cell + .cell::before) */
+.core .core-statstrip .cell + .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
 .core .core-statstrip .lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core .core-statstrip .val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 600; color: var(--ink); line-height: 1.02; letter-spacing: -.01em; }
 .core .core-statstrip .val small { font-size: 11px; color: var(--ink-3); font-weight: 400; }
@@ -794,7 +796,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   --line: rgba(255, 247, 235, .09); --line-2: rgba(255, 247, 235, .16);
   --kds-veil: rgba(255, 247, 235, .07); --kds-track: rgba(255, 247, 235, .10);
   --t-firing: #3fa7ce; --t-warn: #e8a23c; --t-risk: #9b7bd0; --t-late: #e5484a; --t-ready: #6fb155; --t-queued: #8a7c6b;
-  flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); overflow: hidden;
+  flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); overflow-x: hidden; overflow-y: auto;
 }
 /* light KDS — only the in-shell board (not the fullscreen kiosk, which stays a
    dark wall). Light surfaces + tones tuned for contrast on a pale board. */
@@ -820,6 +822,22 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-kpi .kv { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 19px; margin-top: 2px; line-height: 1.05; }
 .core .core-kpi .kv.i { color: var(--t-firing); } .core .core-kpi .kv.ok { color: var(--t-ready); }
 .core .core-kpi .kv.warn { color: var(--t-warn); } .core .core-kpi .kv.bad { color: var(--t-late); }
+
+/* Dark board (mockup: .kds-wall) — wraps stations + lanes on a near-black
+   panel so the SLA-toned tickets lift off it; the frosted KPI strip stays
+   above it. The board sits inside the already-dark `.core-kds`, so a soft
+   black overlay + rim gives the distinct "wall" separation of the mockup. */
+.core .core-kds-wall { margin: 12px 14px 14px; padding: 10px; background: rgba(0, 0, 0, .30); border: 1px solid var(--line); border-radius: var(--r-md, 10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); flex: none; }
+.core .core-kds.dense .core-kds-wall { margin: 8px 12px 12px; }
+/* inside the wall the stations/lanes no longer need their own outer gutters —
+   the board provides the padding. */
+.core .core-kds-wall .core-stations { padding: 0 0 10px; }
+.core .core-kds-wall .core-lanes,
+.core .core-kds-wall .core-chefq { padding: 0; }
+/* the board scrolls as one (mockup), so lanes size to content — no inner
+   per-lane scrollbars, no fixed-height flex fill. */
+.core .core-kds-wall .core-lanes { align-items: start; }
+.core .core-kds-wall .core-lane-b { overflow: visible; }
 
 /* station strip */
 .core .core-stations { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
@@ -1739,8 +1757,8 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-surge-banner { display: flex; align-items: center; gap: 12px; margin: 0 16px 12px; padding: 9px 14px; border-radius: var(--r-md); background: var(--amber-wash); border: 1px solid rgba(240,173,70,.4); box-shadow: inset 0 0 0 1px rgba(240,173,70,.15); flex: none; }
 .core .core-surge-banner .sb-ic { width: 26px; height: 26px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--amber); background: rgba(240,173,70,.15); flex: 0 0 26px; }
 .core .core-surge-banner .sb-txt { flex: 1; min-width: 0; }
-.core .core-surge-banner .sb-h { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--ink); }
-.core .core-surge-banner .sb-s { font-family: var(--mono); font-size: 10px; color: var(--ink-2); margin-top: 1px; }
+.core .core-surge-banner .sb-h { display: block; font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--ink); }
+.core .core-surge-banner .sb-s { display: block; font-family: var(--mono); font-size: 10px; color: var(--ink-2); margin-top: 1px; }
 .core .core-surge-banner .sb-s b { color: var(--amber); }
 .core .core-surge-banner .sb-act { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--on-accent); background: var(--amber); border: 0; border-radius: var(--pill); padding: 6px 13px; cursor: pointer; }
 .core .core-surge-banner .sb-act:hover { filter: brightness(1.06); }

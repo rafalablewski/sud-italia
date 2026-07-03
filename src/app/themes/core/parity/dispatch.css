@@ -1,0 +1,77 @@
+/* Core parity (dispatch) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* LEFT — free-standing order-pass cards (no wrapping bordered frame). The header
+   sits above the cards; cards float on the canvas. */
+.core .core-disp-left { min-width: 0; }
+.core .core-disp-qhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 10px; }
+.core .core-disp-qhead .t { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: -.01em; }
+.core .core-disp-qhead .fbadge { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
+
+.core .core-dcards { display: flex; flex-direction: column; gap: 9px; }
+
+/* Order-pass card — status-colored left border + tinted wash background. */
+.core .core-dcard { padding: 11px 12px; border-radius: var(--r-sm); background: var(--panel-2);
+  border: 1px solid var(--line); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14));
+  border-left: 3px solid var(--ink-3); display: flex; flex-direction: column; gap: 7px; }
+.core .core-dcard.ready { border-left-color: var(--basil); background: rgba(125,196,100,.06); }
+.core .core-dcard.inkitchen { border-left-color: var(--info); background: rgba(84,188,224,.06); }
+.core .core-dcard.road { border-left-color: var(--brand-bright, var(--brand)); background: rgba(232,107,62,.06); }
+
+.core .core-dcard .dc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.core .core-dcard .idz { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.core .core-dcard .oid { font-family: var(--display); font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
+.core .core-dcard .zone { font-family: var(--mono); font-size: 10px; color: var(--ink-2); display: flex; align-items: center; gap: 4px;
+  min-width: 0; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.core .core-dcard .zone svg { color: var(--ink-3); flex: none; }
+
+/* Status pill — filled wash pill, lowercase (mockup .dstat). */
+.core .core-dcard .core-dstat { font-family: var(--mono); font-size: 9px; font-weight: 600; text-transform: lowercase;
+  letter-spacing: .04em; padding: 2px 8px; border-radius: 99px; white-space: nowrap; flex: none; }
+.core .core-dcard .core-dstat.rdy { color: var(--basil); background: var(--basil-wash); }
+.core .core-dcard .core-dstat.inkitchen { color: var(--info); background: var(--info-wash); }
+.core .core-dcard .core-dstat.road { color: var(--brand-bright, var(--brand)); background: var(--brand-wash); }
+
+/* Itemized lines (mockup "3× Margherita · 1× Bufala DOP …"). */
+.core .core-dcard .dc-items { font-size: 11px; color: var(--ink-2); line-height: 1.4; }
+.core .core-dcard .dc-items b { font-family: var(--mono); color: var(--ink-3); font-weight: 400; }
+.core .core-dcard .dc-items .muted { color: var(--ink-3); }
+
+.core .core-dcard .dc-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 1px; }
+.core .core-dcard .dc-bottom .val { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+
+/* Assigned — driver line with a glowing pin dot; the line itself advances the
+   lifecycle (fold-in of the removed full-width advance button). */
+.core .core-dcard .core-dc-drv { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.core .core-dcard .drv { font-family: var(--mono); font-size: 10px; color: var(--ink-3); display: flex; align-items: center; gap: 5px;
+  background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.core .core-dcard .drv:hover:not(:disabled) { color: var(--ink); }
+.core .core-dcard .drv:disabled { cursor: default; }
+.core .core-dcard .drv .pin { width: 5px; height: 5px; border-radius: 50%; background: var(--basil); box-shadow: 0 0 6px var(--basil); flex: none; }
+.core .core-dcard .core-dc-x { font-family: var(--mono); font-size: 10px; line-height: 1; color: var(--ink-3); background: none;
+  border: 1px solid var(--line); border-radius: 99px; width: 18px; height: 18px; display: grid; place-items: center; cursor: pointer; flex: none; }
+.core .core-dcard .core-dc-x:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+
+/* Unassigned — Auto-nearest (ghost) + Assign (solid) buttons. */
+.core .core-dcard .core-dc-actions { display: flex; gap: 6px; }
+.core .core-assign-btn { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .03em; cursor: pointer;
+  border-radius: var(--pill); padding: 4px 11px; color: var(--on-accent); border: 0;
+  background: linear-gradient(180deg, var(--brand-bright, var(--brand)), var(--brand)); box-shadow: 0 4px 12px -5px var(--brand); white-space: nowrap; }
+.core .core-assign-btn:hover:not(:disabled) { filter: brightness(1.06); }
+.core .core-assign-btn:disabled { opacity: .5; cursor: default; box-shadow: none; }
+.core .core-assign-btn.ghost { color: var(--info); background: transparent; border: 1px solid rgba(84,188,224,.4); box-shadow: none; }
+.core .core-assign-btn.ghost:hover:not(:disabled) { background: var(--info-wash); filter: none; }
+
+/* Inline driver picker revealed by Assign. */
+.core .core-dcard .core-dc-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-dcard .core-dc-picker.muted { font-size: 11px; color: var(--ink-3); }
+
+/* RIGHT — roster ETA column: status pill stacked over a colored ETA value. */
+.core .core-disp-driver .core-roster-eta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.core .core-roster-eta .eta { font-family: var(--mono); font-size: 10px; text-align: right; color: var(--ink-3); }
+.core .core-roster-eta .eta.info { color: var(--info); }
+.core .core-roster-eta .eta.amber { color: var(--amber); }
+.core .core-roster-eta .eta.basil { color: var(--basil); }
+.core .core-roster-eta .eta.mut { color: var(--ink-3); }
+/* Roster meta can carry a full delivery address — clamp so the row keeps height. */
+.core .core-disp-driver .who .mt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

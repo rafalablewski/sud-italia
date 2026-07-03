@@ -10425,7 +10425,15 @@ export async function resolveOrderStationFanout(
 function computePromisedReadyAt(order: Order, firedAt: Date, prepOpts?: PrepOpts): Date {
   if (order.slotDate && order.slotTime) {
     const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
-    if (Number.isFinite(slotInstant.getTime())) return slotInstant;
+    // Only honour a slot-based promise when it's actually in the FUTURE at fire
+    // time. A walk-in POS/coursed check carries its rung-up time as slotTime (in
+    // server-local, which may not be the +02:00 the string assumes), so a fired
+    // check would otherwise "promise" a time already in the past → a KDS ticket
+    // that reads hours late the instant it's fired. When the slot has passed (or
+    // isn't a real future reservation) we cook from now: firedAt + prep.
+    if (Number.isFinite(slotInstant.getTime()) && slotInstant.getTime() > firedAt.getTime()) {
+      return slotInstant;
+    }
   }
   // Shared with the cart's pre-pay "Ready by" quote so the time we promise the
   // customer before they pay matches the SLA the KDS holds the line to. The
