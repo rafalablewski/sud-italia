@@ -20,8 +20,9 @@ for owners (role from `/api/admin/me`).
 
 All three views (Fleet · Floor · Chef) render in the **liquid-glass** language
 1:1 with the Core-suite mockup: the in-shell board (`.core-body .core-kds`) sits
-on the warm KDS radial-gradient, each view opens with a `.core-crumb` +
-`.core-sectionhead`, and the KPI band is a frosted `.core-statstrip` (shared
+on the warm KDS radial-gradient, and each view opens with the **`.core-kds-toolbar`
+command row on top** (divider under it) followed by the `.core-crumb` breadcrumb +
+`.core-sectionhead`, then the frosted `.core-statstrip` KPI band (shared
 `.core-kds .core-statstrip` glass). The **fullscreen kiosk** (`.core-kiosk`,
 outside `.core-body`) keeps the flat dark wall.
 

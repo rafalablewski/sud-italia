@@ -887,16 +887,16 @@ export function CoreKds() {
     <div className={`core-kds${view !== "fleet" && pressureTier === "risk" ? " dense" : ""}`}>
         {view === "fleet" ? (
           <>
+            <div className="core-kds-toolbar">
+              {fleetControls}
+              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+            </div>
             <div className="core-crumb">
               CORE — KDS · FLEET · <b>liquid glass</b> · <span className="fix">all kitchens · one pass</span>
             </div>
             <div className="core-sectionhead">
               <h1>KDS · Fleet — All kitchens</h1>
               <span className="sub">kraków + warszawa · live pass health</span>
-            </div>
-            <div className="core-kds-toolbar">
-              {fleetControls}
-              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
             {showAllDay && (
               <div className="core-allday" role="list" aria-label="Fleet all-day batch counts">
@@ -931,22 +931,20 @@ export function CoreKds() {
           />
         ) : (
           <>
-            {/* dense-console head — dark wall + frosted KPIs, same breadcrumb +
-                section title as every other surface. */}
+            {/* Board toolbar first (mockup: command row on top, divider under it),
+                then the breadcrumb + section title. */}
+            <div className="core-kds-toolbar">
+              {laneFilter}
+              <div className="core-kds-tb-sp" />
+              {boardActions}
+              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+            </div>
             <div className="core-crumb">
               CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
             </div>
             <div className="core-sectionhead">
               <h1>KDS · Pass — Floor</h1>
               <span className="sub">sla-toned tickets · start / bump / pass</span>
-            </div>
-            {/* Board toolbar — the lane filter + board actions the mockup keeps
-                OUT of the command bar. Fullscreen-enter lives here too. */}
-            <div className="core-kds-toolbar">
-              {laneFilter}
-              <div className="core-kds-tb-sp" />
-              {boardActions}
-              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
 
             {/* frosted 7-cell strip — Active · At risk · Late · Ready ·
@@ -1336,13 +1334,6 @@ function ChefView({
   const totalItems = allDayGroups.reduce((s, g) => s + g.items.reduce((n, i) => n + i.qty, 0), 0);
   return (
     <>
-      <div className="core-crumb">
-        CORE — KDS · CHEF · <b>liquid glass</b> · <span className="fix">expo pass · all-day prep</span>
-      </div>
-      <div className="core-sectionhead">
-        <h1>KDS · Chef — Expo &amp; all-day</h1>
-        <span className="sub">coursing · expedite · all-day prep counts</span>
-      </div>
       <div className="core-kds-toolbar">
         <div className="core-seg">
           <button className={chefFocus === "expo" ? "on" : ""} onClick={() => onFocus("expo")}>Expo</button>
@@ -1351,6 +1342,13 @@ function ChefView({
         <div className="core-kds-tb-sp" />
         {controls}
         <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
+      </div>
+      <div className="core-crumb">
+        CORE — KDS · CHEF · <b>liquid glass</b> · <span className="fix">expo pass · all-day prep</span>
+      </div>
+      <div className="core-sectionhead">
+        <h1>KDS · Chef — Expo &amp; all-day</h1>
+        <span className="sub">coursing · expedite · all-day prep counts</span>
       </div>
       <div className="core-statstrip core-kds-strip">
         <div className="cell"><span className="lab">On the pass</span><span className="val basil">{stats.onPass}</span></div>
