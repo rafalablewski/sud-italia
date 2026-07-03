@@ -39,7 +39,10 @@ outside `.core-body`) keeps the flat dark wall.
   present station is a one-tap filter chip showing its **live load**
   (`.core-stn-dot` + `.core-stn-load` bar + `.core-stn-pct`, toned basil/amber/
   danger by pace tier, from `floor-ops`'s `stations[]` — Rule #1). A trailing
-  `.core-stn-expo` chip summarises the ready-for-pass count.
+  `.core-stn-expo` chip summarises the ready-for-pass count. Stations read with
+  **kitchen-station** labels (`KDS_STATION_LABELS`: Forno · Primi · Antipasti ·
+  Bevande · Dolci) — distinct from the menu-category labels — across the strip,
+  the fleet load chips, the Chef all-day board, and the ticket group headers.
 - **All-day rail** (`.core-allday`) — toggled by the **`Σ`** control on Floor, an
   ember-washed strip of `.core-allday-item` chips: every still-to-make item
   (New + Firing, not Ready) summed **by dish across all active tickets**, biggest
@@ -81,9 +84,11 @@ outside `.core-body`) keeps the flat dark wall.
   - **Truck cards** — a 2-up `.core-fleet-grid` of **glass `.core-truck`** tiles,
     each a whole-card drill (click / Enter → **Open floor** for that truck). Card
     anatomy: a `.core-truck-h` header (a toned `.core-truck-flag` dot + the `city`
-    name + the street `.code` (the address's first segment) + a `.core-truck-pill`
-    status — **On pace · Backed up · Under pressure · Slammed**, mapped from
-    `healthClass`); a 5-up `.core-truck-mini`
+    name + a `.code` line — the location's short **site code + district**
+    (`KRK · Rynek`, `WAW · Śródmieście`; new `Location.code`/`Location.district`
+    fields, editable in the Locations manager), falling back to the street when
+    unset — + a `.core-truck-pill` status — **On pace · Backed up · Under pressure ·
+    Slammed**, mapped from `healthClass`); a 5-up `.core-truck-mini`
     row (**Active · Risk · Late · Avg cook · Oldest** — the last two derived from
     the tile's live ticket ages); then a `.core-truck-body` with
     **`.core-tstn` station load chips** (dot + label + bar + `%`, hottest first,

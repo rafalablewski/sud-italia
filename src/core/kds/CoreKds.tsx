@@ -21,7 +21,7 @@ import {
   prevStatus,
   toneForTicket,
 } from "@/core/kds/kds-board";
-import { MENU_CATEGORY_LABELS, type MenuCategory, type OrderStatus, type PosCourse } from "@/data/types";
+import { KDS_STATION_LABELS, type MenuCategory, type OrderStatus, type PosCourse } from "@/data/types";
 
 type View = "fleet" | "floor" | "chef";
 
@@ -46,7 +46,7 @@ function groupItems(items: KdsTicketItem[]): [string, KdsTicketItem[]][] {
   }
   return [...groups.entries()]
     .sort((a, b) => catRank(a[0]) - catRank(b[0]))
-    .map(([, arr]) => [arr[0].categoryLabel, arr] as [string, KdsTicketItem[]]);
+    .map(([cat, arr]) => [KDS_STATION_LABELS[cat as MenuCategory] ?? arr[0].categoryLabel, arr] as [string, KdsTicketItem[]]);
 }
 
 // Short synthesised beep (no asset files) — the new-ticket bell + breach alarm.
@@ -595,7 +595,7 @@ export function CoreKds() {
         const sorted = [...items].sort((a, b) => b.qty - a.qty);
         return {
           cat,
-          label: MENU_CATEGORY_LABELS[cat],
+          label: KDS_STATION_LABELS[cat],
           load: ld ? ld.util : null,
           tier: ld?.tier ?? ("calm" as "calm" | "warn" | "risk"),
           max: Math.max(...sorted.map((i) => i.qty), 1),
@@ -850,7 +850,7 @@ export function CoreKds() {
             onClick={() => setStation(s.id)}
           >
             {tone && <span className="core-stn-dot" style={{ background: tone }} />}
-            {s.id === "all" ? "All stations" : MENU_CATEGORY_LABELS[s.id as MenuCategory]}
+            {s.id === "all" ? "All stations" : KDS_STATION_LABELS[s.id as MenuCategory]}
             {ld && (
               <>
                 <span className="core-stn-load"><i style={{ width: `${Math.min(100, ld.util)}%`, background: tone! }} /></span>
@@ -1099,6 +1099,8 @@ interface FleetTileWire {
   slug: string;
   name: string;
   city: string;
+  code: string;
+  district: string;
   area: string;
   eightySix: number;
   counts: { active: number; ready: number; late: number; risk: number };
@@ -1235,7 +1237,9 @@ function FleetWall({
                 <span className={`core-truck-flag ${pill.cls}`} />
                 <div className="core-truck-id">
                   <span className="nm">{t.city}</span>
-                  <span className="code">{t.area}</span>
+                  <span className="code">
+                    {t.code ? `${t.code}${t.district ? ` · ${t.district}` : ""}` : t.area || t.city}
+                  </span>
                 </div>
                 <span className={`core-truck-pill ${pill.cls}`}>{pill.label}</span>
               </div>

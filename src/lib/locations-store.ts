@@ -39,6 +39,8 @@ const LOCATIONS_DDL = [
   )`,
   // Added after the table shipped — idempotent so existing deployments gain it.
   `ALTER TABLE locations ADD COLUMN IF NOT EXISTS team_lead text NOT NULL DEFAULT ''`,
+  `ALTER TABLE locations ADD COLUMN IF NOT EXISTS code text NOT NULL DEFAULT ''`,
+  `ALTER TABLE locations ADD COLUMN IF NOT EXISTS district text NOT NULL DEFAULT ''`,
   `CREATE INDEX IF NOT EXISTS locations_is_active_idx ON locations (is_active)`,
   `CREATE INDEX IF NOT EXISTS locations_display_order_idx ON locations (display_order)`,
 ];
@@ -72,6 +74,8 @@ function rowToLocation(row: LocationRow): LocationWithOrder {
     currency: row.currency as "PLN",
     servesAlcohol: row.servesAlcohol,
     teamLead: row.teamLead || undefined,
+    code: row.code || undefined,
+    district: row.district || undefined,
     displayOrder: row.displayOrder,
   };
 }
@@ -92,6 +96,8 @@ function locationToValues(loc: Location, displayOrder: number) {
     servesAlcohol: !!loc.servesAlcohol,
     isActive: loc.isActive,
     teamLead: loc.teamLead ?? "",
+    code: loc.code ?? "",
+    district: loc.district ?? "",
     displayOrder,
     updatedAt: new Date(),
   };
