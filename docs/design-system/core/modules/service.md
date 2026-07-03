@@ -198,11 +198,15 @@ the override rate and the tuning nudge are measured numbers, not a guess.
 occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
 `buildTableSessions`) — so they can never disagree: **Timeline** (the plan),
 **Floor** (`.core-bk-floorlens` — a live table-tile grid built from the sessions:
-`seated` tiles show the guest + elapsed with Complete, `due` bookings show "due" +
-Seat, `held` tiles show the next booking's countdown, `free` tiles tap to seat a
-walk-in, and a table seated **off-book on the legacy floor** with no reservation
-renders as a dashed **`.offbook`** "occupied · walk-in" tile — surfaced, not
-actioned here), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
+`seated` tiles show the guest + elapsed with Complete **and open the table's POS
+check** on tap (or the 🧾 Check button) as a docked embedded `CorePos` drawer
+(`.core-check-overlay`/`.core-check-panel`, portaled to the `.core` root — the
+same till the standalone Floor uses; the book **page** resolves
+`menusByLocation`/`upsellByLocation` and passes them to `CoreBook`), `due`
+bookings show "due" + Seat, `held` tiles show the next booking's countdown,
+`free` tiles tap to seat a walk-in, and a table seated **off-book on the legacy
+floor** renders as a dashed **`.offbook`** "occupied · walk-in" tile that also
+opens its check), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
 · Waitlist · Seated**). The **Waitlist** column (`.core-bk-wladd` add row +
 `.apc.waitc` entries, backed by `/api/admin/floor/waitlist`) queues walk-ins with
 a **live wait quote** from `estimateWaitMin` (soonest a fitting table frees, pushed

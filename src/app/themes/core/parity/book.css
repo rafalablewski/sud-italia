@@ -407,6 +407,9 @@
 .core .core-bk-ftile .ft-seat { font-family: var(--mono); font-size: 9.5px; color: var(--brand-bright); }
 .core .core-bk-ftile.seated { background: var(--info-wash); border-color: rgba(84, 188, 224, .45); }
 .core .core-bk-ftile.seated .ft-sub { color: var(--info); }
+/* Seated tiles open their POS check on tap. */
+.core .core-bk-ftile.tappable { cursor: pointer; }
+.core .core-bk-ftile.tappable:hover { border-color: var(--info); }
 /* Seated off-book (a floor/POS walk-in with no booking) — muted, non-actionable
    here; the room reads true but it's managed on Floor/POS. */
 .core .core-bk-ftile.seated.offbook { background: var(--panel-2); border-color: var(--line); border-style: dashed; }

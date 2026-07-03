@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -26,7 +28,8 @@ import {
   type SeatingDecisionSummary,
   type ServiceSimulation,
 } from "@/lib/seating";
-import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem } from "@/data/types";
+import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 
 const DURATION_MIN = 90;
@@ -57,7 +60,13 @@ function todayLocal(): string {
  * cancel via DELETE /api/admin/floor/reservations. Conflicts via the pure
  * findReservationConflicts.
  */
-export function CoreBook() {
+export function CoreBook({
+  menusByLocation = {},
+  upsellByLocation = {},
+}: {
+  menusByLocation?: Record<string, MenuItem[]>;
+  upsellByLocation?: Record<string, UpsellConfig | null>;
+} = {}) {
   const toast = useCoreToast();
   const { selected, select } = useSelection();
   const { location, activeLocations } = useLocation();
@@ -122,6 +131,13 @@ export function CoreBook() {
   // The three lenses over one shared reservation truth (concept 5): Timeline
   // (plan), Floor (spatial, live occupancy), Arrivals (the host queue).
   const [viewMode, setViewMode] = useState<"timeline" | "floor" | "arrivals">("timeline");
+  // The table whose POS check is open as a docked drawer over the Floor lens
+  // (same embedded CorePos the standalone Floor uses). Portaled to the .core
+  // theme root so it inherits core tokens (Rule #4 — never rely on z-index).
+  const [checkTableId, setCheckTableId] = useState<string | null>(null);
+  const [coreRoot, setCoreRoot] = useState<Element | null>(null);
+  useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
+  const openCheck = (tableId?: string) => { if (tableId) setCheckTableId(tableId); };
 
   const load = useCallback(async () => {
     if (!date) return;
@@ -940,27 +956,30 @@ export function CoreBook() {
                 {sessions.map((sess) => {
                   const { table: t, reservation: r } = sess;
                   const meta = <span className="ft-t">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>;
-                  // Seated off a booking — the party is named, Complete clears it.
+                  // Seated off a booking — the party is named. Tap the tile to
+                  // open its POS check; Complete clears it.
                   if (sess.state === "seated" && r) {
                     return (
-                      <div key={t.id} className="core-bk-ftile seated">
+                      <div key={t.id} role="button" tabIndex={0} className="core-bk-ftile seated tappable" onClick={() => openCheck(t.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCheck(t.id); } }} title="Open check">
                         <div className="ft-h"><span className="tn">{tLabel(t.number)}</span>{meta}</div>
                         <div className="ft-who">{r.customerName} · {r.partySize}</div>
                         <div className="ft-sub">seated · {sess.seatedMin ?? 0}m · {sess.source === "walk-in" ? "walk-in" : "booking"}</div>
                         <div className="ft-acts">
-                          <button disabled={acting === r.id} onClick={() => void setResStatus(r, "completed", "Completed")}>Complete</button>
+                          <button className="prim" onClick={(e) => { e.stopPropagation(); openCheck(t.id); }}>🧾 Check</button>
+                          <button disabled={acting === r.id} onClick={(e) => { e.stopPropagation(); void setResStatus(r, "completed", "Completed"); }}>Complete</button>
                         </div>
                       </div>
                     );
                   }
-                  // Seated off-book from the legacy floor — no reservation to act
-                  // on; surfaced so the room reads true, managed on Floor/POS.
+                  // Seated off-book from the legacy floor — a walk-in with a POS
+                  // tab but no reservation. Tap to open its check.
                   if (sess.state === "seated") {
                     return (
-                      <div key={t.id} className="core-bk-ftile seated offbook">
+                      <div key={t.id} role="button" tabIndex={0} className="core-bk-ftile seated offbook tappable" onClick={() => openCheck(t.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCheck(t.id); } }} title="Open check">
                         <div className="ft-h"><span className="tn">{tLabel(t.number)}</span>{meta}</div>
                         <div className="ft-who">occupied</div>
                         <div className="ft-sub">walk-in · seated on floor</div>
+                        <div className="ft-acts"><button className="prim" onClick={(e) => { e.stopPropagation(); openCheck(t.id); }}>🧾 Check</button></div>
                       </div>
                     );
                   }
@@ -1280,6 +1299,29 @@ export function CoreBook() {
           )}
         </CoreDialog>
       </div>
+
+      {/* The table's POS check, docked over the Floor lens — the same embedded
+          CorePos the standalone Floor uses. Portaled to the .core root so the
+          fixed panel escapes any stacking context (Rule #4). */}
+      {checkTableId && coreRoot && createPortal(
+        <div
+          className="core-check-overlay"
+          role="dialog"
+          aria-label="Table check"
+          onClick={(e) => { if (e.target === e.currentTarget) setCheckTableId(null); }}
+        >
+          <div className="core-check-panel">
+            <CorePos
+              embedded
+              menusByLocation={menusByLocation}
+              upsellByLocation={upsellByLocation}
+              initialTableId={checkTableId}
+              onClose={() => { setCheckTableId(null); void load(); }}
+            />
+          </div>
+        </div>,
+        coreRoot,
+      )}
     </CoreShell>
   );
 }
