@@ -825,17 +825,67 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    omits (mockup: KDS carries no bar tools). Sits at the top of the board. */
 .core .core-kds-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
-/* KDS toolbar segments mirror the mockup's `.seg-lane` capsule — the Fleet
-   kitchen filter (All kitchens · Kraków · Warszawa), the Floor lane filter,
-   and the Chef Expo/All-day toggle. Two things set them apart from the generic
-   rounded-rect `.core-seg`: the mockup's monospace label face (matching the
-   .core-tpill pills beside them) and a fully-rounded pill shape on both the
-   track and its buttons. Scoped to the KDS wall (in-shell board + fullscreen
-   kiosk) so the POS / Orders / Guest segments keep their own rounded-rect type. */
+/* ---- KDS toolbar → dense-console mockup (02-kds.html) ----
+   The Fleet/Floor/Chef board toolbar (in-shell board + fullscreen kiosk)
+   matches the dense mockup's command-bar controls rather than the larger,
+   heavier default core controls: compact heights, 10–11px regular-weight
+   MONO labels, fully-rounded pill capsules, translucent glass-washed fills,
+   an inset-rim active tab, a red inset-ring 86 pill, and bare hover-fill tool
+   icons (the mockup's `.tico`). Values mirror .seg-lane / .pill / .tico. The
+   KDS wall resets --panel-2/--line to opaque dark (the "dark wall" rule), so
+   the glassy control fills are written as explicit white/red washes here.
+   Scoped to .core-kds / .core-kiosk-top so POS / Orders / Guest keep the
+   larger, opaque default controls. */
+
+/* segment — compact glass capsule, 10px regular mono buttons */
 .core .core-kds .core-seg,
-.core .core-kiosk-top .core-seg { border-radius: var(--pill); }
+.core .core-kiosk-top .core-seg {
+  padding: 3px; border-radius: var(--pill);
+  background: rgba(255, 255, 255, .05); border-color: rgba(255, 247, 235, .14);
+}
 .core .core-kds .core-seg button,
-.core .core-kiosk-top .core-seg button { font-family: var(--mono); border-radius: var(--pill); }
+.core .core-kiosk-top .core-seg button {
+  height: auto; padding: 3px 9px; border-radius: var(--pill);
+  font-family: var(--mono); font-size: 10px; font-weight: 400;
+}
+/* active tab — light frost + inset glass rim (not dark fill + drop shadow) */
+.core .core-kds .core-seg button.on,
+.core .core-kiosk-top .core-seg button.on {
+  background: rgba(255, 255, 255, .11); box-shadow: var(--lg-rim);
+}
+
+/* labelled pills (Σ all-day, 86) — 11px regular, compact, glass-washed */
+.core .core-kds .core-tpill,
+.core .core-kiosk-top .core-tpill {
+  height: auto; padding: 3px 9px; gap: 6px;
+  font-size: 11px; font-weight: 400;
+  background: rgba(255, 255, 255, .05); border-color: rgba(255, 247, 235, .14);
+}
+/* danger 86 pill — neutral glass fill + red text + red inset ring */
+.core .core-kds .core-tpill.danger,
+.core .core-kiosk-top .core-tpill.danger {
+  background: rgba(255, 255, 255, .05);
+  border-color: rgba(255, 247, 235, .14);
+  color: var(--t-late);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--t-late) 45%, transparent);
+}
+.core .core-kds .core-tpill.danger:hover,
+.core .core-kiosk-top .core-tpill.danger:hover {
+  background: color-mix(in oklab, var(--t-late) 14%, transparent);
+}
+
+/* tool icons — bare 28px glyph, fill on hover only (mockup .tico) */
+.core .core-kds .core-iconbtn:not(.core-recall-btn),
+.core .core-kiosk-top .core-iconbtn:not(.core-recall-btn) {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  background: transparent; border-color: transparent; color: var(--ink-3);
+}
+.core .core-kds .core-iconbtn:not(.core-recall-btn):hover,
+.core .core-kiosk-top .core-iconbtn:not(.core-recall-btn):hover {
+  background: rgba(255, 255, 255, .05); color: var(--ink);
+}
+.core .core-kds .core-iconbtn.on,
+.core .core-kiosk-top .core-iconbtn.on { color: var(--basil); }
 /* labelled toolbar pills (mockup: "Σ fleet all-day", "86 · 2") — pill vs the
    34px icon squares; `on` washes basil, `danger` washes the late/86 red. */
 .core .core-tpill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
