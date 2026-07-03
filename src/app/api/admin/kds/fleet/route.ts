@@ -99,6 +99,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
       return {
         slug: loc.slug,
         name: loc.name,
+        city: loc.city,
         counts: analysis.counts,
         health,
         healthState: state,

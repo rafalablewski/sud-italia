@@ -47,21 +47,36 @@ kitchen wall dark (the KPIs, not the surface, are what's frosted).
   focused-station **queue depth** + **oldest** ticket (amber past 8 min)
   and the active station name.
 - **Fleet** — `FleetWall`: the owner Atlas, and the **default view for
-  owners** (the role from `/api/admin/me` flips the board to Fleet on
-  load). A cross-truck totals band (`.core-fleet-kpi`: Active · At risk ·
-  Late · Ready · Throughput/hr · Covers/hr · Revenue zł/hr, from the feed
-  `totals`) over the `.core-fleet-bench` (one promise-accuracy `.core-track`
-  bar per truck,
-  leader flagged) over a 2-up `.core-fleet-grid` of `.core-truck` tiles. Each
-  tile carries a health `.core-ring`, the `Open · N active · STATE` line, a
-  5-up `.core-truck-stats` strip (**Active · At risk · Late · Ready · On
-  shift**), per-station **`.core-pace` bars** (`Pace · next 15m`, one
-  `.core-track` per loaded station, hottest first, coloured by tier — the
-  header flips to *predicted to fall behind* when any station hits the
-  **risk** tier), and a 3-row `.core-preview` ticket stack (`#shortId` ·
-  channel chip · dish summary · toned due clock, most-urgent first). Two
-  drills per tile — **Open floor →** / **Chef line →** — set the location
-  and switch to that view.
+  owners** (the role from `/api/admin/me` flips the board to Fleet on load).
+  Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
+  `.core-fleet` container carries the warm KDS radial-gradient wash, opening with
+  a `.core-crumb` (`CORE — KDS · FLEET · liquid glass · all kitchens · one pass`)
+  + a `.core-sectionhead` (`KDS · Fleet — All kitchens`) + a `.core-kds-toolbar`.
+  - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
+    button per truck, labelled by `city`) that scopes the grid **and
+    re-aggregates the totals strip** to the selection, then the board actions the
+    command bar omits: **`Σ`** fleet all-day, **`⟳`** refresh (bumps the 6s feed
+    poll on demand), **`86`** (scoped to the selected truck, or the active
+    location when viewing all), a **chime** toggle, and **fullscreen** (Fleet now
+    joins Floor/Chef in the kiosk).
+  - **Totals strip** — a frosted **`.core-statstrip`** (8 cells: **Kitchens ·
+    Active · At risk · Late · Ready · Throughput/hr · Covers/hr · Revenue zł/hr**),
+    colour-toned mono values from the feed `totals` (re-summed from the filtered
+    tiles when a single kitchen is selected).
+  - **All-day rail** — the same `.core-allday` strip as Floor/Chef, toggled by
+    `Σ`, but summed **cross-truck** from the scoped tiles' live tickets (Rule #1).
+  - **Truck cards** — a 2-up `.core-fleet-grid` of **glass `.core-truck`** tiles,
+    each a whole-card drill (click / Enter → **Open floor** for that truck). Card
+    anatomy: a `.core-truck-h` header (a toned `.core-truck-flag` dot + name +
+    `city` `.code` + a `.core-truck-pill` status — **On pace · Backed up · Under
+    pressure · Slammed**, mapped from `healthClass`); a 5-up `.core-truck-mini`
+    row (**Active · Risk · Late · Avg cook · Oldest** — the last two derived from
+    the tile's live ticket ages); then a `.core-truck-body` with
+    **`.core-tstn` station load chips** (dot + label + bar + `%`, hottest first,
+    toned by pace tier — only stations with live demand), a 3-box
+    **`.core-lanesum`** (New / Firing / Ready, split from the tickets), and a
+    3-row **`.core-mtk`** mini-ticket stack (`#shortId` · dish summary · toned due
+    clock, most-urgent first).
 
 ## Ticket card (`.core-tk`)
 
