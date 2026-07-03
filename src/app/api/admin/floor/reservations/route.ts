@@ -33,7 +33,11 @@ async function reconcileFloorTable(locationSlug: string, tableId: string, date: 
   if (!table || table.status === "out-of-service") return;
 
   const dayRes = await getReservations(locationSlug, date);
-  const seatedHere = dayRes.some((r) => r.tableId === tableId && r.status === "seated");
+  // A table is "seated" if it's the primary OR one of the joined tables of a
+  // seated booking (a combined big-party spread across several tables).
+  const seatedHere = dayRes.some(
+    (r) => r.status === "seated" && (r.tableId === tableId || r.joinedTableIds?.includes(tableId)),
+  );
 
   if (seatedHere) {
     if (table.status !== "seated") await saveTable({ ...table, status: "seated" });
@@ -96,6 +100,10 @@ export const POST = withAdmin(
       ? (body.needs.filter((n: unknown) => TABLE_FEATURES.includes(n as TableFeature)) as TableFeature[]).slice(0, 3)
       : [];
     const needs = needsList.length ? needsList : undefined;
+    const joinedList = Array.isArray(body.joinedTableIds)
+      ? (body.joinedTableIds.filter((t: unknown) => typeof t === "string" && t) as string[]).filter((t) => t !== tableId).slice(0, 4)
+      : [];
+    const joinedTableIds = joinedList.length ? joinedList : undefined;
 
     // Conflict check against the day's active bookings on the same table.
     const candidate = {
@@ -140,6 +148,7 @@ export const POST = withAdmin(
       seatedAt,
       completedAt,
       needs,
+      joinedTableIds,
     });
     // Mirror the live seat/clear onto the shared floor table (TableSession
     // spine). Reconcile the current table and — on a reassignment — the table
@@ -148,6 +157,11 @@ export const POST = withAdmin(
     const toReconcile = new Set<string>();
     if (tableId) toReconcile.add(tableId);
     if (priorTableId && priorTableId !== tableId) toReconcile.add(priorTableId);
+    // Joined tables (current + the ones this booking held before this write) so a
+    // combined big party seats/frees every table together.
+    for (const tid of joinedTableIds ?? []) toReconcile.add(tid);
+    const priorJoined = typeof body.id === "string" ? sameDay.find((r) => r.id === body.id)?.joinedTableIds : undefined;
+    for (const tid of priorJoined ?? []) toReconcile.add(tid);
     for (const tid of toReconcile) {
       try {
         await reconcileFloorTable(locationSlug, tid, date);
@@ -168,11 +182,14 @@ export const DELETE = withAdmin(
     // frees its floor table (TableSession spine).
     const doomed = locationSlug ? (await getReservations(locationSlug)).find((r) => r.id === id) : undefined;
     const ok = await deleteReservation(id, locationSlug ?? undefined);
-    if (ok && locationSlug && doomed?.tableId) {
-      try {
-        await reconcileFloorTable(locationSlug, doomed.tableId, doomed.date);
-      } catch {
-        /* non-fatal */
+    if (ok && locationSlug && doomed) {
+      const tids = [doomed.tableId, ...(doomed.joinedTableIds ?? [])].filter((t): t is string => !!t);
+      for (const tid of tids) {
+        try {
+          await reconcileFloorTable(locationSlug, tid, doomed.date);
+        } catch {
+          /* non-fatal */
+        }
       }
     }
     return NextResponse.json({ ok });

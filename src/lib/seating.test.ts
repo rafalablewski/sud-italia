@@ -10,6 +10,7 @@ import {
   buildTurnModel,
   turnBucket,
   resolvePolicy,
+  suggestJoins,
   BALANCED_POLICY,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
@@ -291,6 +292,36 @@ test("advanced toggles default off/neutral so a bare preset never regresses rank
   assert.equal(o.sectionCapPer15, 3);
   assert.deepEqual(o.vipHoldZones, ["patio"]);
   assert.equal(o.shadowMode, true);
+});
+
+// ── table joins ───────────────────────────────────────────────────────────────
+test("suggestJoins combines the fewest same-zone tables to fit a big party", () => {
+  // party of 7, no single fits; two 4-tops in 'main' combine to 8
+  const tables = [table("t5", 4, "main"), table("t6", 4, "main"), table("t2", 2, "window")];
+  const joins = suggestJoins(ctx(7, at("18:58"), tables));
+  assert.ok(joins.length >= 1);
+  assert.deepEqual(joins[0].tableIds.sort(), ["t5", "t6"]);
+  assert.equal(joins[0].seats, 8);
+  assert.equal(joins[0].zone, "main");
+});
+
+test("suggestJoins returns nothing when a single table already fits", () => {
+  const joins = suggestJoins(ctx(4, at("18:58"), [table("t6", 4, "main"), table("t5", 4, "main")]));
+  assert.equal(joins.length, 0);
+});
+
+test("suggestJoins won't combine across zones (adjacency proxy)", () => {
+  // 4 + 4 but in different zones → no single zone reaches 7
+  const tables = [table("t5", 4, "main"), table("t2", 4, "window")];
+  const joins = suggestJoins(ctx(7, at("18:58"), tables));
+  assert.equal(joins.length, 0);
+});
+
+test("suggestJoins skips occupied / held tables", () => {
+  const tables = [table("t5", 4, "main"), table("t6", 4, "main")];
+  const rs = [resv("t6", "18:00", 90, "seated")]; // t6 busy now
+  const joins = suggestJoins(ctx(7, at("18:58"), tables, rs));
+  assert.equal(joins.length, 0); // only t5 free → can't reach 7
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────

@@ -10,9 +10,11 @@ import { findReservationConflicts } from "@/lib/floor";
 import { buildTableSessions } from "@/lib/table-session";
 import {
   suggestTables,
+  suggestJoins,
   expectedTurnMin,
   POLICY_PRESETS,
   type Suggestion,
+  type JoinSuggestion,
   type SeatingPolicy,
   type StoredSeatingPolicy,
   type PolicyPreset,
@@ -71,6 +73,9 @@ export function CoreBook() {
   const [slotId, setSlotId] = useState<string | null>(null);
   const [partyN, setPartyN] = useState(2);
   const [tableId, setTableId] = useState<string | null>(null);
+  // A selected table-join (combine several tables for a big party). Picking a
+  // single table clears it; picking a join sets tableId to its primary.
+  const [joinSel, setJoinSel] = useState<JoinSuggestion | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -144,6 +149,9 @@ export function CoreBook() {
     const n = tables.find((t) => t.id === id)?.number;
     return n ? tLabel(n) : "—";
   };
+  // A reservation's table label, combining any joined tables ("T5 + T6").
+  const resTableLabel = (r: Reservation) =>
+    [r.tableId, ...(r.joinedTableIds ?? [])].filter(Boolean).map((id) => tableLabel(id)).join(" + ") || "—";
   const canBook = !!selectedSlot && !!tableId && !!name.trim() && partyN >= 1 && !booking;
 
   const book = async () => {
@@ -153,7 +161,7 @@ export function CoreBook() {
       const res = await fetch(`/api/admin/booking?location=${encodeURIComponent(loc)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedSlot.id, tableId, customerName: name.trim(), customerPhone: phone.trim() || undefined, partySize: partyN, durationMin: DURATION_MIN, notes: notes.trim() || undefined, needs: needs.length ? needs : undefined, override }),
+        body: JSON.stringify({ slotId: selectedSlot.id, tableId, customerName: name.trim(), customerPhone: phone.trim() || undefined, partySize: partyN, durationMin: DURATION_MIN, notes: notes.trim() || undefined, needs: needs.length ? needs : undefined, joinedTableIds: joinSel ? joinSel.tableIds.slice(1) : undefined, override }),
       });
       if (res.ok) {
         toast(`Booked · ${name.trim()} · ${partyN}p · ${selectedSlot.time}`, "success");
@@ -164,6 +172,7 @@ export function CoreBook() {
         setNotes("");
         setNeeds([]);
         setTableId(null);
+        setJoinSel(null);
         setOverride(false);
         await load();
       } else {
@@ -252,6 +261,15 @@ export function CoreBook() {
     suggestions?.forEach((s) => m.set(s.tableId, s));
     return m;
   }, [suggestions]);
+  // Table-join proposals — only surface when no single table fits the party.
+  const joins = useMemo<JoinSuggestion[]>(() => {
+    if (!selectedSlot) return [];
+    return suggestJoins({ party: partyN, atMin: toMin(selectedSlot.time), date: selectedSlot.date, locationSlug: loc, tables, reservations, policy, turnModel, needs: needs.length ? needs : undefined });
+  }, [selectedSlot, partyN, tables, reservations, loc, policy, turnModel, needs]);
+  // Pick a single table → drop any join selection.
+  const pickTable = (id: string) => { setJoinSel(null); setTableId(id); };
+  // Pick a join → seat its primary, remember the combined set.
+  const pickJoin = (j: JoinSuggestion) => { setJoinSel(j); setTableId(j.tableIds[0]); };
   // The row that wears the ✨ Recommend tag: the engine's top pick when a slot
   // is chosen, else the smallest fitting-and-free table (pre-slot fallback).
   const recTableId = useMemo(
@@ -674,12 +692,29 @@ export function CoreBook() {
                         key={t.id}
                         className={`core-bk-tpick${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
                         disabled={dim && !override}
-                        onClick={() => setTableId(t.id)}
+                        onClick={() => pickTable(t.id)}
                         title={title}
                       >
                         <span className="tn">{tLabel(t.number)}</span>
                         <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
                         <span className="tfit">{tag}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Table joins — surfaced only when no single table fits the party.
+                  Picking one seats the primary + holds the rest together. */}
+              {joins.length > 0 && (
+                <div className="core-bk-joins">
+                  <div className="core-bk-flab" style={{ marginTop: 4 }}><span>Combine tables</span><span className="mut">no single table fits {partyN}</span></div>
+                  {joins.map((j) => {
+                    const on = joinSel?.tableIds.join(",") === j.tableIds.join(",");
+                    return (
+                      <button key={j.tableIds.join("-")} type="button" className={`core-bk-join${on ? " on" : ""}`} onClick={() => pickJoin(j)} title={j.reason}>
+                        <span className="jn">{j.tableIds.map((_, i) => tLabel(j.numbers[i])).join(" + ")}</span>
+                        <span className="jc">{j.seats} seats{j.zone ? ` · ${j.zone}` : ""}</span>
+                        <span className="jfit">{on ? "✓ combined" : "combine"}</span>
                       </button>
                     );
                   })}
@@ -840,7 +875,7 @@ export function CoreBook() {
                   return (
                     <div key={r.id} className={`apc${late ? " late" : ""}`}>
                       <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{r.time}{late ? " · late" : ""}</span></div>
-                      <div className="r2">◈ {tableLabel(r.tableId)}{r.notes ? ` · ${r.notes}` : ""}</div>
+                      <div className="r2">◈ {resTableLabel(r)}{r.notes ? ` · ${r.notes}` : ""}</div>
                       <div className="aact">
                         <button className="prim" disabled={acting === r.id} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
                         <button disabled={acting === r.id} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
@@ -864,7 +899,7 @@ export function CoreBook() {
                   const mins = Math.max(0, nowMin - toMin(r.time));
                   return (
                     <div key={r.id} className="apc seatedc">
-                      <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{tableLabel(r.tableId)} · {mins}m</span></div>
+                      <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{resTableLabel(r)} · {mins}m</span></div>
                       <div className="r2">{r.source === "walk-in" ? "walk-in" : "from booking"}</div>
                       <div className="aact"><button disabled={acting === r.id} onClick={() => void setResStatus(r, "completed", "Completed")}>Complete</button></div>
                     </div>
@@ -893,7 +928,7 @@ export function CoreBook() {
                   <span className="btm">{r.time}</span>
                   <span className="bnm">{r.customerName}{r.source === "walk-in" ? <span className="bwalk"> walk-in</span> : null}</span>
                   <span className="bcov">{r.partySize} cov</span>
-                  <span className="btbl">{tableLabel(r.tableId)}</span>
+                  <span className="btbl">{resTableLabel(r)}</span>
                   <span className={`bstat ${sm.c}`}>{sm.l}</span>
                   <span className="bacts" onClick={(e) => e.stopPropagation()}>
                     {r.status === "booked" && (

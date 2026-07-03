@@ -665,6 +665,9 @@ export interface Reservation {
   /** Accessibility features this party requires — the engine only offers tables
    *  that provide every one. */
   needs?: TableFeature[];
+  /** Extra tables combined with `tableId` to seat a large party (a "join"). All
+   *  of them are held/seated/freed together. Empty/absent for a normal single. */
+  joinedTableIds?: string[];
   createdAt: string;
 }
 

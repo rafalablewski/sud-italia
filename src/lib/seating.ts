@@ -560,6 +560,79 @@ export function recommendTable(ctx: SuggestContext): Suggestion | null {
   return top ?? null;
 }
 
+// ─── Table joins — combine tables for a party no single table fits ────────────
+
+export interface JoinSuggestion {
+  /** The tables to combine, largest-first (the first is the primary). */
+  tableIds: string[];
+  numbers: string[];
+  /** Total seats across the combined tables. */
+  seats: number;
+  /** Shared zone (joins only combine within one zone — an adjacency proxy). */
+  zone?: string;
+  /** Minutes all the tables are free from now (the min across them). */
+  freeWindowMin: number;
+  reason: string;
+}
+
+/**
+ * When no single table seats the party, propose the smallest set of free tables
+ * in one zone whose seats sum to the party (a "join"). Physical availability
+ * only — each table must be free for the full turn, not occupied now, not
+ * out-of-service, and satisfy any accessibility needs. Greedy largest-first,
+ * so the combine uses as few tables as possible; ranked by fewest tables then
+ * least wasted seats. Pure & deterministic. Returns [] when a single table
+ * already fits or no combination reaches the party.
+ */
+export function suggestJoins(ctx: SuggestContext): JoinSuggestion[] {
+  const policy = ctx.policy ?? DEFAULT_POLICY;
+  const party = Math.max(1, Math.floor(ctx.party || 1));
+  const turn = expectedTurnMin(party, ctx.atMin, ctx.turnModel);
+  const needFree = turn + policy.resetBufferMin;
+
+  // A single table already fits → no need to combine.
+  const availables = ctx.tables.filter((t) => {
+    if (t.status === "out-of-service") return false;
+    if (ctx.needs?.length && ctx.needs.some((n) => !(t.features ?? []).includes(n))) return false;
+    if (occupiedMinLeft(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId) != null) return false;
+    const free = freeWindowMin(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId);
+    return free >= needFree;
+  });
+  if (availables.some((t) => t.seats >= party)) return [];
+
+  // group by zone (undefined → its own "—" bucket) and greedily combine.
+  const byZone = new Map<string, FloorTable[]>();
+  for (const t of availables) {
+    const z = t.zone ?? "—";
+    (byZone.get(z) ?? byZone.set(z, []).get(z)!).push(t);
+  }
+  const out: JoinSuggestion[] = [];
+  for (const [z, group] of byZone) {
+    const sorted = [...group].sort((a, b) => b.seats - a.seats);
+    const picked: FloorTable[] = [];
+    let seats = 0;
+    for (const t of sorted) {
+      if (seats >= party) break;
+      if (picked.length >= 4) break; // combining >4 tables isn't realistic
+      picked.push(t);
+      seats += t.seats;
+    }
+    if (seats >= party && picked.length >= 2) {
+      const free = Math.min(...picked.map((t) => freeWindowMin(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId)));
+      out.push({
+        tableIds: picked.map((t) => t.id),
+        numbers: picked.map((t) => t.number),
+        seats,
+        zone: z === "—" ? undefined : z,
+        freeWindowMin: free,
+        reason: `combine ${picked.length} tables${z === "—" ? "" : ` in ${z}`} · seats ${seats}`,
+      });
+    }
+  }
+  // fewest tables first, then least wasted seats
+  return out.sort((a, b) => a.tableIds.length - b.tableIds.length || a.seats - party - (b.seats - party)).slice(0, 3);
+}
+
 // ─── Trust loop — learn-from-overrides / shadow-mode telemetry ────────────────
 
 /** One logged seat decision: what the engine recommended vs. what the operator

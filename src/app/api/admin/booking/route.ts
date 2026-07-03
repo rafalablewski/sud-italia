@@ -20,6 +20,7 @@ const BookingSchema = z.object({
   durationMin: z.number().int().min(15).max(600).optional(),
   notes: z.string().max(500).optional(),
   needs: z.array(z.enum(["accessible", "high-chair", "step-free"])).max(3).optional(),
+  joinedTableIds: z.array(z.string().min(1)).max(4).optional(),
   override: z.boolean().optional(),
 });
 

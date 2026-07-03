@@ -147,7 +147,12 @@ expected turn ±band, and the predicted **frees-at** time), the `reasons`, and a
 capacity check. A **Guest needs** chip row (`.core-bk-needs` — accessible ·
 high-chair · step-free) hard-filters the picker to tables that offer every
 required feature (tables carry `features`, edited in the Floor table dialog's
-Accessibility toggles). Then capture the guest and confirm. The engine has these
+Accessibility toggles). When **no single table fits** the party, a **Combine
+tables** section (`.core-bk-joins`/`.core-bk-join`, from `suggestJoins`) proposes
+the fewest same-zone free tables that sum to the party; picking one seats the
+primary and holds the rest together (`Reservation.joinedTableIds` — the seat
+spine seats/frees every combined table as one, shown as "T5 + T6"). Then capture
+the guest and confirm. The engine has these
 live surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
 **Seat / No-show / Complete** actions (`.bact`) that transition the reservation
 and stamp `seatedAt`/`completedAt` (POST `/api/admin/floor/reservations`), so

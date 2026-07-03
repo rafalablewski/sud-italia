@@ -14305,6 +14305,7 @@ export async function saveReservation(
     seatedAt: input.seatedAt,
     completedAt: input.completedAt,
     needs: input.needs,
+    joinedTableIds: input.joinedTableIds,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return reservationsBlob.upsert(res);
