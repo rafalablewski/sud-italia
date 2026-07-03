@@ -269,3 +269,61 @@
 .core .core-bk-rules label { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
 .core .core-bk-rules label input { width: 62px; text-align: center; margin-left: auto; }
 .core .core-bk-rules label span { color: var(--ink-3); flex: 0 0 auto; }
+
+/* ── Book & Seat lenses — Timeline · Floor · Arrivals over shared reservations ─ */
+/* lens toggle in the section header */
+.core .core-bk-lenses { display: inline-flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.core .core-bk-lenses button { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-3); background: transparent; border: 0; padding: 5px 13px; border-radius: 999px; cursor: pointer; }
+.core .core-bk-lenses button:hover { color: var(--ink-2); }
+.core .core-bk-lenses button.on { color: var(--ink); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .5); }
+
+/* FLOOR lens — a card of table tiles (full width in the book grid) */
+.core .core-bk-floorlens { grid-column: 1 / -1; margin: 0 0 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.core .core-bk-floorhead { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.core .core-bk-floorhead .t { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.core .core-bk-floorhead .sm { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.core .core-bk-floorgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 14px; }
+.core .core-bk-ftile { text-align: left; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); padding: 10px; min-height: 92px; display: flex; flex-direction: column; gap: 3px; cursor: default; }
+.core .core-bk-ftile .ft-h { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.core .core-bk-ftile .tn { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-ftile .ft-t { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
+.core .core-bk-ftile .ft-who { font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-bk-ftile .ft-who.mut { color: var(--ink-3); font-weight: 500; }
+.core .core-bk-ftile .ft-sub { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
+.core .core-bk-ftile .ft-ribbon { margin-top: auto; font-family: var(--mono); font-size: 9px; padding: 3px 6px; border-radius: 6px; background: rgba(240, 173, 70, .22); color: var(--amber); }
+.core .core-bk-ftile .ft-acts { margin-top: auto; display: flex; }
+.core .core-bk-ftile .ft-acts button { font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-3); color: var(--ink-2); }
+.core .core-bk-ftile .ft-acts button:hover:not(:disabled) { color: var(--ink); }
+.core .core-bk-ftile .ft-acts button:disabled { opacity: .5; cursor: default; }
+.core .core-bk-ftile .ft-acts button.prim { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-ftile .ft-seat { font-family: var(--mono); font-size: 9.5px; color: var(--brand-bright); }
+.core .core-bk-ftile.seated { background: var(--info-wash); border-color: rgba(84, 188, 224, .45); }
+.core .core-bk-ftile.seated .ft-sub { color: var(--info); }
+.core .core-bk-ftile.due { background: var(--amber-wash); border-color: rgba(240, 173, 70, .5); }
+.core .core-bk-ftile.held { border-color: rgba(240, 173, 70, .45); }
+.core .core-bk-ftile.free { border-color: rgba(125, 196, 100, .35); cursor: pointer; }
+.core .core-bk-ftile.free:hover { background: var(--panel-3); border-color: rgba(125, 196, 100, .6); }
+.core .core-bk-ftile.free .tn, .core .core-bk-ftile.free .ft-who { color: var(--basil); }
+
+/* ARRIVALS lens — three queue columns (full width) */
+.core .core-bk-arrivals { grid-column: 1 / -1; margin: 0 0 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.core .core-bk-arrivals .acol { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); display: flex; flex-direction: column; min-height: 360px; overflow: hidden; }
+.core .core-bk-arrivals .acolh { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.core .core-bk-arrivals .acolh .t { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.core .core-bk-arrivals .acolh .c { font-family: var(--mono); font-size: 9px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; }
+.core .core-bk-arrivals .acolb { padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.core .core-bk-arrivals .apc { border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; background: var(--panel-2); }
+.core .core-bk-arrivals .apc.late { border-color: rgba(255, 90, 92, .5); box-shadow: inset 0 0 0 1px rgba(255, 90, 92, .2); }
+.core .core-bk-arrivals .apc.seatedc { border-color: rgba(84, 188, 224, .4); background: var(--info-wash); }
+.core .core-bk-arrivals .apc .r1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.core .core-bk-arrivals .apc .nm { font-weight: 600; font-size: 13px; }
+.core .core-bk-arrivals .apc .tm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.core .core-bk-arrivals .apc.late .tm { color: var(--danger); }
+.core .core-bk-arrivals .apc .r2 { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 3px; }
+.core .core-bk-arrivals .apc .aact { display: flex; gap: 6px; margin-top: 9px; }
+.core .core-bk-arrivals .apc .aact button { flex: 1; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 6px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-3); color: var(--ink-2); }
+.core .core-bk-arrivals .apc .aact button:hover:not(:disabled) { color: var(--ink); }
+.core .core-bk-arrivals .apc .aact button:disabled { opacity: .5; cursor: default; }
+.core .core-bk-arrivals .apc .aact button.prim { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-walkcta { font-family: var(--mono); font-size: 11px; color: var(--brand-bright); background: var(--brand-wash); border: 1px dashed rgba(232, 107, 62, .5); border-radius: 10px; padding: 10px; cursor: pointer; }
+@media (max-width: 1000px) { .core .core-bk-arrivals { grid-template-columns: 1fr; } }

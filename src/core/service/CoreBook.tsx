@@ -10,6 +10,7 @@ import { findReservationConflicts } from "@/lib/floor";
 import {
   suggestTables,
   expectedTurnMin,
+  freeWindowMin,
   POLICY_PRESETS,
   type Suggestion,
   type SeatingPolicy,
@@ -86,6 +87,9 @@ export function CoreBook() {
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkParty, setWalkParty] = useState(2);
   const [policyOpen, setPolicyOpen] = useState(false);
+  // The three lenses over one shared reservation truth (concept 5): Timeline
+  // (plan), Floor (spatial, live occupancy), Arrivals (the host queue).
+  const [viewMode, setViewMode] = useState<"timeline" | "floor" | "arrivals">("timeline");
 
   const load = useCallback(async () => {
     if (!date) return;
@@ -272,7 +276,16 @@ export function CoreBook() {
       : "today";
   })();
   const isToday = date === todayLocal();
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  // Live "now" in minutes — seeded on the client only (0 during SSR + the first
+  // client render so hydration matches), then it ticks every 30s so the Floor /
+  // Arrivals lenses stay current without a reload.
+  const [nowMin, setNowMin] = useState(0);
+  useEffect(() => {
+    const tick = () => setNowMin(new Date().getHours() * 60 + new Date().getMinutes());
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Seating actions — transition a booking through its lifecycle. The route
   // stamps seatedAt/completedAt; we resend the full record so nothing is lost.
@@ -338,6 +351,24 @@ export function CoreBook() {
     void putPolicy({ preset: storedPolicy.preset, overrides: { weights: policy.weights, resetBufferMin: policy.resetBufferMin, paceCapPer15: policy.paceCapPer15, largeTableSeats: policy.largeTableSeats, [key]: val } });
   };
 
+  // ── Lens-derived state (all from the same reservations, so every lens agrees).
+  const nowHM = `${String(Math.floor(nowMin / 60)).padStart(2, "0")}:${String(nowMin % 60).padStart(2, "0")}`;
+  const durOf = (r: Reservation) => r.durationMin ?? DURATION_MIN;
+  const floorTiles = useMemo(
+    () =>
+      sortedTables.map((t) => {
+        const occ = reservations.find((r) => r.tableId === t.id && RES_HOLDS.has(r.status) && toMin(r.time) <= nowMin && nowMin < toMin(r.time) + durOf(r)) ?? null;
+        const held = reservations
+          .filter((r) => r.tableId === t.id && RES_HOLDS.has(r.status) && toMin(r.time) > nowMin)
+          .sort((a, b) => a.time.localeCompare(b.time))[0] ?? null;
+        const free = freeWindowMin(t.id, nowMin, date, loc, reservations);
+        return { t, occ, held, free };
+      }),
+    [sortedTables, reservations, nowMin, date, loc],
+  );
+  const expected = useMemo(() => reservations.filter((r) => r.status === "booked").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
+  const seatedList = useMemo(() => reservations.filter((r) => r.status === "seated").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
+
   return (
     <CoreShell
       eyebrow="Service · Book"
@@ -379,9 +410,16 @@ export function CoreBook() {
           CORE — BOOK · RESERVATIONS · <b>liquid glass</b> · <span className="fix">timeline view</span>
         </div>
         <div className="core-sectionhead">
-          <h1>Book · Timeline</h1>
+          <h1>Book &amp; Seat</h1>
           <span className="sub">{daySub} · dinner service · {loc}</span>
           <div className="core-sp" />
+          <div className="core-bk-lenses" role="tablist" aria-label="View">
+            {(["timeline", "floor", "arrivals"] as const).map((m) => (
+              <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
+                {m}
+              </button>
+            ))}
+          </div>
         </div>
         {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Booking metrics">
@@ -416,6 +454,8 @@ export function CoreBook() {
             <span className="delta">of seats</span>
           </div>
         </div>
+        {viewMode === "timeline" && (
+        <>
         {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
         <div className="core-book-tlpanel">
@@ -601,6 +641,107 @@ export function CoreBook() {
             </button>
           </div>
         </div>
+        </>
+        )}
+
+        {/* FLOOR lens — spatial live occupancy from the shared reservations. */}
+        {viewMode === "floor" && (
+          <section className="core-bk-floorlens">
+            <div className="core-bk-floorhead">
+              <span className="t">Floor · live</span>
+              <span className="sm">now {nowHM} · {seatedList.length} seated · tap a free table to seat a walk-in</span>
+            </div>
+            {tables.length === 0 ? (
+              <div className="core-ctx-empty pad">No tables configured.</div>
+            ) : (
+              <div className="core-bk-floorgrid">
+                {floorTiles.map(({ t, occ, held, free }) => {
+                  if (occ) {
+                    const seated = occ.status === "seated";
+                    const mins = Math.max(0, nowMin - toMin(occ.time));
+                    return (
+                      <div key={t.id} className={`core-bk-ftile ${seated ? "seated" : "due"}`}>
+                        <div className="ft-h"><span className="tn">{tLabel(t.number)}</span><span className="ft-t">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span></div>
+                        <div className="ft-who">{occ.customerName} · {occ.partySize}</div>
+                        <div className="ft-sub">{seated ? `seated · ${mins}m` : "due — not seated"}</div>
+                        <div className="ft-acts">
+                          {seated ? (
+                            <button disabled={acting === occ.id} onClick={() => void setResStatus(occ, "completed", "Completed")}>Complete</button>
+                          ) : (
+                            <button className="prim" disabled={acting === occ.id} onClick={() => void setResStatus(occ, "seated", "Seated")}>Seat</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (held && toMin(held.time) - nowMin <= 45) {
+                    return (
+                      <div key={t.id} className="core-bk-ftile held">
+                        <div className="ft-h"><span className="tn">{tLabel(t.number)}</span><span className="ft-t">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span></div>
+                        <div className="ft-who mut">free</div>
+                        <div className="ft-ribbon">◷ {held.customerName} · {held.time} · in {toMin(held.time) - nowMin}m</div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button key={t.id} type="button" className="core-bk-ftile free" onClick={() => { setWalkParty((n) => Math.min(t.seats, Math.max(2, n))); setWalkOpen(true); }} title="Seat a walk-in">
+                      <div className="ft-h"><span className="tn">{tLabel(t.number)}</span><span className="ft-t">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span></div>
+                      <div className="ft-who">free</div>
+                      <div className="ft-sub">{free === Infinity ? "open all night" : `open until ${fmtHM(nowMin + free)}`}</div>
+                      <div className="ft-acts"><span className="ft-seat">+ seat walk-in</span></div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ARRIVALS lens — the host queue: Expected · Walk-ins · Seated. */}
+        {viewMode === "arrivals" && (
+          <section className="core-bk-arrivals">
+            <div className="acol">
+              <div className="acolh"><span className="t">Expected</span><span className="c">{expected.length}</span></div>
+              <div className="acolb">
+                {expected.length === 0 ? <div className="core-ctx-empty pad">Nothing due.</div> : expected.map((r) => {
+                  const late = isToday && toMin(r.time) < nowMin;
+                  return (
+                    <div key={r.id} className={`apc${late ? " late" : ""}`}>
+                      <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{r.time}{late ? " · late" : ""}</span></div>
+                      <div className="r2">◈ {tableLabel(r.tableId)}{r.notes ? ` · ${r.notes}` : ""}</div>
+                      <div className="aact">
+                        <button className="prim" disabled={acting === r.id} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
+                        <button disabled={acting === r.id} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="acol">
+              <div className="acolh"><span className="t">Walk-ins</span></div>
+              <div className="acolb">
+                <button className="core-bk-walkcta" onClick={() => setWalkOpen(true)}>+ Add walk-in — engine picks a safe table</button>
+                <p className="sm" style={{ padding: "2px 4px", lineHeight: 1.4 }}>Seated straight onto an engine-vetted table (never a reserved-soon one). They then appear under Seated.</p>
+              </div>
+            </div>
+            <div className="acol">
+              <div className="acolh"><span className="t">Seated</span><span className="c">{seatedList.length}</span></div>
+              <div className="acolb">
+                {seatedList.length === 0 ? <div className="core-ctx-empty pad">Nobody seated.</div> : seatedList.map((r) => {
+                  const mins = Math.max(0, nowMin - toMin(r.time));
+                  return (
+                    <div key={r.id} className="apc seatedc">
+                      <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{tableLabel(r.tableId)} · {mins}m</span></div>
+                      <div className="r2">{r.source === "walk-in" ? "walk-in" : "from booking"}</div>
+                      <div className="aact"><button disabled={acting === r.id} onClick={() => void setResStatus(r, "completed", "Completed")}>Complete</button></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* today's bookings — full-width blist */}
         <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to open on the timeline</div>
