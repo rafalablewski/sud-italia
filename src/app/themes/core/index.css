@@ -721,8 +721,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tender-tot span { font-size: 13px; color: var(--ink-2); } .core .core-tender-tot b { font-size: 28px; font-weight: 700; }
 .core .core-tender-note { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 .core .core-tender-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-.core .core-pay { height: 64px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel-2); font-weight: 700; font-size: 16px; color: var(--ink); }
+.core .core-pay { height: 64px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel-2); font-weight: 700; font-size: 16px; color: var(--ink); cursor: pointer; }
 .core .core-pay:hover { background: var(--brand-wash); border-color: var(--brand); } .core .core-pay:disabled { opacity: .5; cursor: default; }
+/* Cash+Card (mixed tender) spans the full width under Card / Cash. */
+.core .core-pay.mixed { grid-column: 1 / -1; height: 52px; font-size: 14px; color: var(--ink-2); }
+.core .core-pay.mixed:hover { color: var(--ink); }
 /* tender sheet: tip · comp · split · cash change */
 .core .core-tender-breakdown { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
 .core .core-tender-breakdown .comp { color: var(--brand-bright); font-weight: 600; } .core .core-tender-breakdown .tip { color: var(--basil); font-weight: 600; }

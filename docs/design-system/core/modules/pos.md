@@ -171,7 +171,12 @@ The open-check selector (`.core-tabrail`) lives in the
 - **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
   `.core-lqz` quantity zone that reads a clean **`N×`** (`.core-lqty`) at rest like
   the mockup and swaps to the live `.core-qstep` −/＋ counter on hover (touch tills
-  have no hover, so they show the stepper outright); a `.core-grip` handle (`⠿`,
+  have no hover, so they show the stepper outright). The `−` runs through
+  `decLine`, not `changeQty` directly: an unfired line decrements instantly, but
+  removing the **last unit of a dish already sent to the kitchen** (its course in
+  `firedCourses`, or a sent non-coursed check) opens a **cancel-with-reason**
+  `CoreDialog` (`VOID_REASONS` chips) so a cooking dish is never silently wiped;
+ a `.core-grip` handle (`⠿`,
   also hover-revealed on desktop); the **tappable line name** (`.ln-edit`, reveals
   a `✎` on hover → opens the line editor) and a mono line price (modifier deltas
   included). Under the name, `.core-line-mods`
@@ -295,6 +300,10 @@ It composes the tender and PATCHes it as `{ tabId, tender }`:
 - **Cash change** — choosing Cash on a single tender opens `.core-cashpad`:
   quick denomination chips + a free amount, a live `.core-change-row` change-due,
   and a Confirm gated until the cash covers the total.
+- **Cash + Card** (`.core-pay.mixed`, full-width under Card/Cash) — one payer
+  paying part cash + part card. Reuses `.core-cashpad`: type the cash portion,
+  the card remainder auto-computes (`.core-split-rows` shows both), and Charge
+  sends `payments:[{cash},{card}]` that always sum to the total.
 
 **Every figure is server-authoritative** (`chargeTab`, `src/lib/pos/fireTab.ts`):
 the bill comes from `buildOrderShape`; the comp is clamped to the bill and gated
