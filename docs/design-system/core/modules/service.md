@@ -152,15 +152,22 @@ Rule #7); **(4) learned turn-times** — the engine reads a model derived live f
 completed reservations' `seatedAt→completedAt` (GET `/api/admin/seating/turn-model`),
 cold-starting on defaults. **Today's bookings** (`.core-bk-blist`) is a
 **full-width list below**, with cancel. A **lens toggle** in the section header
-(`.core-bk-lenses`) switches the surface between three views over the *same*
-reservation truth (concept 5), so they can never disagree: **Timeline** (the
-plan), **Floor** (`.core-bk-floorlens` — a live table-tile grid: seated tiles
-show the guest + elapsed with Complete, overdue bookings show "due" + Seat, held
-tiles show the next booking's countdown, free tiles tap to seat a walk-in), and
-**Arrivals** (`.core-bk-arrivals` — the host queue: Expected · Walk-ins ·
-Seated). `nowMin` is live client state (ticks every 30s) so Floor/Arrivals stay
-current. (The standalone `/core/service/floor` — the POS-integrated `floor-twin`
-surface — is not yet unified with this; that's the `TableSession`-spine follow-on.) Timeline rows + the table-pick list read **`T{n}`, ordered by table
+(`.core-bk-lenses`) switches the surface between three views over **one shared
+occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
+`buildTableSessions`) — so they can never disagree: **Timeline** (the plan),
+**Floor** (`.core-bk-floorlens` — a live table-tile grid built from the sessions:
+`seated` tiles show the guest + elapsed with Complete, `due` bookings show "due" +
+Seat, `held` tiles show the next booking's countdown, `free` tiles tap to seat a
+walk-in, and a table seated **off-book on the legacy floor** with no reservation
+renders as a dashed **`.offbook`** "occupied · walk-in" tile — surfaced, not
+actioned here), and **Arrivals** (`.core-bk-arrivals` — the host queue: Expected ·
+Walk-ins · Seated). `nowMin` is live client state (ticks every 30s) so
+Floor/Arrivals stay current. **The spine is bidirectional**: seating/completing a
+booking here fans out to `FloorTable.status` (via `reconcileFloorTable` in the
+reservations route), so the POS-integrated `/core/service/floor` (`floor-twin`)
+reflects it immediately; conversely a walk-in seated from that floor shows in this
+Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
+`nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
 number** (shared with Floor's `tLabel`). The **surface sub-bar**
 (`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
 use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a

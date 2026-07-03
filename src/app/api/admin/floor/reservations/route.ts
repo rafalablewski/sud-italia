@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getReservations, saveReservation, deleteReservation } from "@/lib/store";
+import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders } from "@/lib/store";
 import { findReservationConflicts, timeToMinutes } from "@/lib/floor";
 import type { ReservationStatus } from "@/data/types";
 
@@ -12,6 +12,43 @@ import type { ReservationStatus } from "@/data/types";
  */
 
 const STATUSES: ReservationStatus[] = ["booked", "seated", "completed", "cancelled", "no-show"];
+/** Order statuses that physically hold a table (mirror the floor-twin set). */
+const ORDER_HOLDS_TABLE = new Set(["confirmed", "preparing", "ready"]);
+
+/**
+ * TableSession spine — mirror a reservation's live occupancy onto the shared
+ * FloorTable.status so Book & Seat and the legacy /core/service/floor read ONE
+ * truth. Seating a booking here now flips its table to `seated`; completing /
+ * no-showing / cancelling frees it — but only when nothing else holds it (no
+ * other seated booking on that table, no open dine-in check). Called after the
+ * reservation is saved, scoped to the reservation's own date so a future edit
+ * never disturbs tonight's floor. Best-effort: a floor hiccup must not fail the
+ * booking write, so the caller swallows errors.
+ */
+async function reconcileFloorTable(locationSlug: string, tableId: string, date: string): Promise<void> {
+  const tables = await getTables(locationSlug);
+  const table = tables.find((t) => t.id === tableId);
+  // Only the two occupancy states are ours to drive — never touch a table an
+  // operator has parked out-of-service or explicitly marked reserved.
+  if (!table || table.status === "out-of-service") return;
+
+  const dayRes = await getReservations(locationSlug, date);
+  const seatedHere = dayRes.some((r) => r.tableId === tableId && r.status === "seated");
+
+  if (seatedHere) {
+    if (table.status !== "seated") await saveTable({ ...table, status: "seated" });
+    return;
+  }
+  // Nobody's seated here per the bookings — free the table, unless an open
+  // dine-in check still holds it (a POS walk-in the reservations layer can't see).
+  if (table.status === "seated") {
+    const orders = await getOrders(locationSlug);
+    const heldByCheck = orders.some(
+      (o) => o.tableId === tableId && !o.simulated && ORDER_HOLDS_TABLE.has(o.status),
+    );
+    if (!heldByCheck) await saveTable({ ...table, status: "available" });
+  }
+}
 
 export const GET = withAdmin(
   { roles: ["manager"], locationParam: "location" },
@@ -66,6 +103,10 @@ export const POST = withAdmin(
       durationMin,
     };
     const sameDay = await getReservations(locationSlug, date);
+    // The table this booking sat on before this write — if a seated party is
+    // reassigned to another table, the old one must be freed too.
+    const priorTableId =
+      typeof body.id === "string" ? sameDay.find((r) => r.id === body.id)?.tableId : undefined;
     const conflicts = findReservationConflicts(sameDay, candidate);
     if (conflicts.length > 0 && body.override !== true) {
       return NextResponse.json(
@@ -95,6 +136,20 @@ export const POST = withAdmin(
       seatedAt,
       completedAt,
     });
+    // Mirror the live seat/clear onto the shared floor table (TableSession
+    // spine). Reconcile the current table and — on a reassignment — the table
+    // it moved off, so no ghost stays seated. Best-effort: a floor write must
+    // never fail a saved booking.
+    const toReconcile = new Set<string>();
+    if (tableId) toReconcile.add(tableId);
+    if (priorTableId && priorTableId !== tableId) toReconcile.add(priorTableId);
+    for (const tid of toReconcile) {
+      try {
+        await reconcileFloorTable(locationSlug, tid, date);
+      } catch {
+        /* non-fatal: the booking is saved; floor status self-heals on next write */
+      }
+    }
     return NextResponse.json({ reservation, conflicts });
   },
 );
@@ -104,7 +159,17 @@ export const DELETE = withAdmin(
   async (req, _ctx, { locationSlug }) => {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    // Capture the table before the record's gone, so a cancelled seated party
+    // frees its floor table (TableSession spine).
+    const doomed = locationSlug ? (await getReservations(locationSlug)).find((r) => r.id === id) : undefined;
     const ok = await deleteReservation(id, locationSlug ?? undefined);
+    if (ok && locationSlug && doomed?.tableId) {
+      try {
+        await reconcileFloorTable(locationSlug, doomed.tableId, doomed.date);
+      } catch {
+        /* non-fatal */
+      }
+    }
     return NextResponse.json({ ok });
   },
 );
