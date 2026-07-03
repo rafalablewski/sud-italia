@@ -1567,7 +1567,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ============================================================
    Guest · Book (shared with Service) — slot + table console
    ============================================================ */
-.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; align-content: start; }
+.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; align-content: start; padding: 0 14px 16px; column-gap: 10px; }
+/* The grid owns the horizontal gutter (14px) + the timeline↔form gap (10px), so
+   every row — full-width header rows AND the timeline/form columns — shares one
+   left/right edge. The stat strip carries its own side margin for other
+   surfaces, so zero it inside Book to align it with the columns. */
+.core .core-book > .core-statstrip { margin-left: 0; margin-right: 0; }
 /* dense-console Book layout (mockup 11-book): timeline left, new-reservation
    form as the right rail, today's bookings full-width below. */
 .core .core-book-tlpanel { grid-column: 1; min-width: 0; }
