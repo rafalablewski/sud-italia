@@ -825,6 +825,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    omits (mockup: KDS carries no bar tools). Sits at the top of the board. */
 .core .core-kds-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
+/* KDS toolbar segments carry the mockup's monospace treatment — the Fleet
+   kitchen filter (All kitchens · Kraków · Warszawa), the Floor lane filter,
+   and the Chef Expo/All-day toggle — so their labels match the .core-tpill
+   pills sitting beside them instead of falling back to the proportional UI
+   font. Scoped to the KDS wall (in-shell board + fullscreen kiosk) so the
+   POS / Orders / Guest segments keep their own type. */
+.core .core-kds .core-seg button,
+.core .core-kiosk-top .core-seg button { font-family: var(--mono); }
 /* labelled toolbar pills (mockup: "Σ fleet all-day", "86 · 2") — pill vs the
    34px icon squares; `on` washes basil, `danger` washes the late/86 red. */
 .core .core-tpill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
