@@ -288,7 +288,7 @@ const TicketCard = memo(function TicketCard({
         <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
       </div>
       {next && (
-        <button type="button" className="core-bump" disabled={updating} onPointerDown={stop} onClick={(e) => { stop(e); onAdvance(t); }}>
+        <button type="button" className={`core-bump bump-${t.status}`} disabled={updating} onPointerDown={stop} onClick={(e) => { stop(e); onAdvance(t); }}>
           {BUMP_LABEL[t.status]}
         </button>
       )}
