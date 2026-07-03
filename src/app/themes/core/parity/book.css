@@ -270,6 +270,51 @@
 .core .core-bk-rules label input { width: 62px; text-align: center; margin-left: auto; }
 .core .core-bk-rules label span { color: var(--ink-3); flex: 0 0 auto; }
 
+/* ── Policy · advanced guards (toggles) ─────────────────────────────────────── */
+.core .core-bk-toggles { display: flex; flex-direction: column; gap: 6px; }
+.core .core-bk-toggle { display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+.core .core-bk-toggle:hover { border-color: var(--line-2, var(--line)); }
+.core .core-bk-toggle .tg-sw { flex: 0 0 auto; width: 30px; height: 18px; border-radius: 999px; background: var(--panel-4, var(--panel-3)); border: 1px solid var(--line); position: relative; transition: background .15s; }
+.core .core-bk-toggle .tg-dot { position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-3); transition: transform .15s, background .15s; }
+.core .core-bk-toggle.on .tg-sw { background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-toggle.on .tg-dot { transform: translateX(12px); background: var(--on-basil); }
+.core .core-bk-toggle .tg-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.core .core-bk-toggle .tg-l { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.core .core-bk-toggle .tg-h { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); line-height: 1.35; }
+
+/* VIP-hold zone chips */
+.core .core-bk-vipzones { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-vipzone { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.core .core-bk-vipzone.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
+
+/* Trust-loop readout */
+.core .core-bk-trust { display: flex; flex-wrap: wrap; gap: 8px; }
+.core .core-bk-trust .tr-cell { flex: 1 1 68px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); }
+.core .core-bk-trust .tr-v { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
+.core .core-bk-trust .tr-v small { font-size: 10px; color: var(--ink-3); margin-left: 1px; }
+.core .core-bk-trust .tr-k { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+
+/* ── Table signals — the score, laid open (explainability) ──────────────────── */
+.core .core-bk-signals { margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
+.core .core-bk-signals .sg-head { display: flex; align-items: baseline; gap: 8px; }
+.core .core-bk-signals .sg-t { font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-signals .sg-score { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--brand-bright); }
+.core .core-bk-signals .sg-score small { font-size: 9px; color: var(--ink-3); }
+.core .core-bk-signals .sg-shadow { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--on-accent); background: var(--amber); border-radius: 4px; padding: 1px 5px; }
+.core .core-bk-signals .sg-bars { display: flex; flex-direction: column; gap: 4px; }
+.core .core-bk-signals .sg-bar { display: grid; grid-template-columns: 52px 1fr 26px; align-items: center; gap: 8px; }
+.core .core-bk-signals .sg-k { font-family: var(--mono); font-size: 10px; text-transform: capitalize; color: var(--ink-2); }
+.core .core-bk-signals .sg-track { height: 6px; border-radius: 999px; background: var(--panel-4, var(--panel-3)); overflow: hidden; }
+.core .core-bk-signals .sg-fill { display: block; height: 100%; border-radius: 999px; background: var(--info); }
+.core .core-bk-signals .sg-fill.fit { background: var(--basil); }
+.core .core-bk-signals .sg-fill.runway { background: var(--info); }
+.core .core-bk-signals .sg-fill.guest { background: var(--brand); }
+.core .core-bk-signals .sg-fill.pacing { background: var(--amber); }
+.core .core-bk-signals .sg-fill.yield { background: #b58ae0; }
+.core .core-bk-signals .sg-v { font-family: var(--mono); font-size: 10px; color: var(--ink-3); text-align: right; }
+.core .core-bk-signals .sg-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
+.core .core-bk-signals .sg-reason { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); background: var(--panel-3); border-radius: 5px; padding: 2px 7px; }
+
 /* ── Book & Seat lenses — Timeline · Floor · Arrivals over shared reservations ─ */
 /* lens toggle in the section header */
 .core .core-bk-lenses { display: inline-flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }

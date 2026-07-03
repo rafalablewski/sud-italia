@@ -18,6 +18,7 @@ import {
   type PolicyPreset,
   type SeatingWeights,
   type TurnModel,
+  type SeatingDecisionSummary,
 } from "@/lib/seating";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
@@ -83,6 +84,7 @@ export function CoreBook() {
   const [policy, setPolicy] = useState<SeatingPolicy | undefined>(undefined);
   const [storedPolicy, setStoredPolicy] = useState<StoredSeatingPolicy | undefined>(undefined);
   const [turnModel, setTurnModel] = useState<TurnModel | undefined>(undefined);
+  const [decisionSummary, setDecisionSummary] = useState<SeatingDecisionSummary | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkParty, setWalkParty] = useState(2);
@@ -95,18 +97,20 @@ export function CoreBook() {
     if (!date) return;
     setLoading(true);
     try {
-      const [s, t, r, pol, tm] = await Promise.all([
+      const [s, t, r, pol, tm, dec] = await Promise.all([
         fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/turn-model?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+        fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
       ]);
       setSlots(Array.isArray(s) ? s : s.slots ?? []);
       setTables(Array.isArray(t) ? t : t.tables ?? []);
       setReservations(Array.isArray(r) ? r : r.reservations ?? []);
       if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
       setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
+      setDecisionSummary(dec && typeof dec.n === "number" ? (dec as SeatingDecisionSummary) : null);
     } finally {
       setLoading(false);
     }
@@ -151,6 +155,8 @@ export function CoreBook() {
       });
       if (res.ok) {
         toast(`Booked · ${name.trim()} · ${partyN}p · ${selectedSlot.time}`, "success");
+        // Trust loop — record recommended-vs-chosen for this seat (best-effort).
+        await recordDecision(recTableId, tableId, toMin(selectedSlot.time), partyN);
         setName("");
         setPhone("");
         setNotes("");
@@ -251,6 +257,13 @@ export function CoreBook() {
         : tables.filter((t) => tableState(t).ok).sort((a, b) => a.seats - b.seats)[0]?.id ?? null,
     [suggestions, tables, tableState],
   );
+  // The suggestion whose signals the explainability panel shows: the chosen
+  // table, else the engine's recommendation — so "why this table?" is always
+  // answered with a real score breakdown, not a black box.
+  const shownSug = useMemo<Suggestion | null>(
+    () => (tableId ? suggByTable.get(tableId) : null) ?? (recTableId ? suggByTable.get(recTableId) : null) ?? suggestions?.find((s) => s.ok) ?? null,
+    [tableId, recTableId, suggByTable, suggestions],
+  );
   // Full-width booking list — everything but cancellations, chronological.
   const bookingList = useMemo(
     () => reservations.filter((r) => r.status !== "cancelled").sort((a, b) => a.time.localeCompare(b.time)),
@@ -341,14 +354,60 @@ export function CoreBook() {
   };
   // Selecting a preset explicitly clears any prior overrides (overrides: null).
   const setPreset = (preset: PolicyPreset) => void putPolicy({ preset, overrides: null });
-  const setWeight = (key: keyof SeatingWeights, val: number) => {
+  // One commit path for every weight/rule/toggle: rebuild the FULL override set
+  // from the current effective policy and apply the patch, so tuning one lever
+  // never silently drops another (Rule #7 — saves immediately).
+  const commitPolicy = (over: Partial<NonNullable<StoredSeatingPolicy["overrides"]>>) => {
     if (!policy || !storedPolicy) return;
-    const weights = { ...policy.weights, [key]: val };
-    void putPolicy({ preset: storedPolicy.preset, overrides: { weights, resetBufferMin: policy.resetBufferMin, paceCapPer15: policy.paceCapPer15, largeTableSeats: policy.largeTableSeats } });
+    void putPolicy({
+      preset: storedPolicy.preset,
+      overrides: {
+        weights: policy.weights,
+        resetBufferMin: policy.resetBufferMin,
+        paceCapPer15: policy.paceCapPer15,
+        largeTableSeats: policy.largeTableSeats,
+        sectionCapPer15: policy.sectionCapPer15,
+        protectLargeTables: policy.protectLargeTables,
+        vipHoldZones: policy.vipHoldZones,
+        autoSuggest: policy.autoSuggest,
+        learnFromOverrides: policy.learnFromOverrides,
+        shadowMode: policy.shadowMode,
+        ...over,
+      },
+    });
   };
-  const setRule = (key: "resetBufferMin" | "paceCapPer15" | "largeTableSeats", val: number) => {
-    if (!policy || !storedPolicy) return;
-    void putPolicy({ preset: storedPolicy.preset, overrides: { weights: policy.weights, resetBufferMin: policy.resetBufferMin, paceCapPer15: policy.paceCapPer15, largeTableSeats: policy.largeTableSeats, [key]: val } });
+  const setWeight = (key: keyof SeatingWeights, val: number) => commitPolicy({ weights: { ...policy!.weights, [key]: val } });
+  const setRule = (key: "resetBufferMin" | "paceCapPer15" | "largeTableSeats" | "sectionCapPer15", val: number) => commitPolicy({ [key]: val });
+  const setToggle = (key: "protectLargeTables" | "autoSuggest" | "learnFromOverrides" | "shadowMode", val: boolean) => commitPolicy({ [key]: val });
+  const toggleVipZone = (zone: string) => {
+    if (!policy) return;
+    const has = policy.vipHoldZones.some((z) => z.toLowerCase() === zone.toLowerCase());
+    commitPolicy({ vipHoldZones: has ? policy.vipHoldZones.filter((z) => z.toLowerCase() !== zone.toLowerCase()) : [...policy.vipHoldZones, zone] });
+  };
+  // Distinct zones on the floor — the VIP-hold picker's options.
+  const zoneList = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of tables) if (t.zone) s.add(t.zone);
+    return [...s].sort();
+  }, [tables]);
+
+  // Auto-suggest — when on (and not shadow-only), pre-select the engine's pick
+  // so the operator can book with one tap. Only fills an empty choice; a manual
+  // pick always wins. Shadow mode is advisory, so it never auto-applies.
+  useEffect(() => {
+    if (policy?.autoSuggest && !policy.shadowMode && recTableId && tableId == null) setTableId(recTableId);
+  }, [policy?.autoSuggest, policy?.shadowMode, recTableId, tableId]);
+
+  // Trust loop — log what the engine recommended vs. what was booked, so the
+  // override rate is real. Fires when learn-from-overrides or shadow mode is on.
+  const recordDecision = async (recommendedTableId: string | null, chosenTableId: string, atMin: number, party: number) => {
+    if (!policy || (!policy.learnFromOverrides && !policy.shadowMode)) return;
+    try {
+      await fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendedTableId, chosenTableId, atMin, party, override: chosenTableId !== recommendedTableId, shadow: policy.shadowMode }),
+      });
+    } catch { /* telemetry is best-effort */ }
   };
 
   // ── Lens-derived state — the Floor lens reads the SAME session spine the
@@ -611,6 +670,36 @@ export function CoreBook() {
                   })}
                 </div>
               )}
+              {/* Signals — the engine's score, laid open. Answers "why this
+                  table?" with the weighted contribution of each signal + the
+                  human reasons, so the pick is never a black box. */}
+              {shownSug && shownSug.ok && (
+                <div className="core-bk-signals">
+                  <div className="sg-head">
+                    <span className="sg-t">Why {tLabel(shownSug.number)}</span>
+                    <span className="sg-score">{shownSug.score}<small>/100</small></span>
+                    {policy?.shadowMode && <span className="sg-shadow" title="Advisory only — shadow mode is on">shadow</span>}
+                  </div>
+                  <div className="sg-bars">
+                    {([
+                      ["fit", shownSug.breakdown.fit],
+                      ["runway", shownSug.breakdown.runway],
+                      ["guest", shownSug.breakdown.guest],
+                      ["pacing", shownSug.breakdown.pacing],
+                      ["yield", shownSug.breakdown.yield],
+                    ] as const).map(([k, v]) => (
+                      <div key={k} className="sg-bar">
+                        <span className="sg-k">{k}</span>
+                        <span className="sg-track"><span className={`sg-fill ${k}`} style={{ width: `${Math.min(100, Math.round(v))}%` }} /></span>
+                        <span className="sg-v">{Math.round(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {shownSug.reasons.length > 0 && (
+                    <div className="sg-reasons">{shownSug.reasons.map((r, i) => <span key={i} className="sg-reason">{r}</span>)}</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="core-bk-field">
@@ -859,6 +948,54 @@ export function CoreBook() {
                 <label>Reset buffer<input className="core-inp" type="number" min={0} max={60} value={policy.resetBufferMin} onChange={(e) => setRule("resetBufferMin", Number(e.target.value))} /><span>min</span></label>
                 <label>Pace cap<input className="core-inp" type="number" min={1} max={20} value={policy.paceCapPer15} onChange={(e) => setRule("paceCapPer15", Number(e.target.value))} /><span>/15m</span></label>
                 <label>Large table<input className="core-inp" type="number" min={3} max={20} value={policy.largeTableSeats} onChange={(e) => setRule("largeTableSeats", Number(e.target.value))} /><span>seats</span></label>
+                <label>Section cap<input className="core-inp" type="number" min={0} max={20} value={policy.sectionCapPer15} onChange={(e) => setRule("sectionCapPer15", Number(e.target.value))} /><span>/zone/15m</span></label>
+              </div>
+
+              <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Guards</span><span className="mut">tap to toggle · saves instantly</span></div>
+              <div className="core-bk-toggles">
+                {([
+                  ["protectLargeTables", "Protect large tables", "small parties never take a big top when a smaller one is free"],
+                  ["autoSuggest", "Auto-suggest", "pre-select the engine's pick so you book in one tap"],
+                  ["learnFromOverrides", "Learn from overrides", "log recommended-vs-chosen to measure the override rate"],
+                  ["shadowMode", "Shadow mode", "advisory only — the engine recommends but never auto-applies"],
+                ] as const).map(([k, label, hint]) => (
+                  <button key={k} type="button" className={`core-bk-toggle${policy[k] ? " on" : ""}`} onClick={() => setToggle(k, !policy[k])} aria-pressed={policy[k]}>
+                    <span className="tg-sw" aria-hidden><span className="tg-dot" /></span>
+                    <span className="tg-txt"><span className="tg-l">{label}</span><span className="tg-h">{hint}</span></span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="core-bk-flab" style={{ marginTop: 16 }}><span>VIP hold</span><span className="mut">zones kept for VIPs</span></div>
+              {zoneList.length === 0 ? (
+                <div className="core-ctx-empty">No zones on the floor to hold.</div>
+              ) : (
+                <div className="core-bk-vipzones">
+                  {zoneList.map((z) => {
+                    const on = policy.vipHoldZones.some((v) => v.toLowerCase() === z.toLowerCase());
+                    return (
+                      <button key={z} type="button" className={`core-bk-vipzone${on ? " on" : ""}`} onClick={() => toggleVipZone(z)} aria-pressed={on}>
+                        {on ? "★ " : ""}{z}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Trust loop — the real override rate, so shadow mode can prove the
+                  engine before it drives. No fabricated numbers (Rule #1). */}
+              <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Trust loop</span><span className="mut">recommended vs. chosen</span></div>
+              <div className="core-bk-trust">
+                {decisionSummary && decisionSummary.n > 0 ? (
+                  <>
+                    <div className="tr-cell"><span className="tr-v">{Math.round(decisionSummary.agreeRate * 100)}<small>%</small></span><span className="tr-k">agreement</span></div>
+                    <div className="tr-cell"><span className="tr-v">{decisionSummary.n}</span><span className="tr-k">seats logged</span></div>
+                    <div className="tr-cell"><span className="tr-v">{decisionSummary.overrides}</span><span className="tr-k">overrides</span></div>
+                    {decisionSummary.shadow > 0 && <div className="tr-cell"><span className="tr-v">{decisionSummary.shadow}</span><span className="tr-k">in shadow</span></div>}
+                  </>
+                ) : (
+                  <div className="core-ctx-empty" style={{ margin: 0 }}>No seats logged yet — turn on Learn from overrides, then book to build trust.</div>
+                )}
               </div>
             </div>
           ) : (

@@ -136,21 +136,36 @@ Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
 a seating time, every table is hard-filtered (fit · free-for-the-turn ·
 availability) then scored (right-size · runway · guest · pacing · yield), so the
 ✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
-reason (e.g. `held 32m`, `large table — held back for big parties`, `89 pts ·
-exact fit`). Excluded tables dim. Before a slot is picked it falls back to a
-plain capacity check. Then capture the guest and confirm. The engine has four
-live surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
+reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
+`patio full this window`, `89 pts · exact fit`). Excluded tables dim. Below the
+picker a **signals panel** (`.core-bk-signals`) lays the score open for the
+chosen (or recommended) table: the weighted contribution of each signal as a
+labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield, each colour-coded), the
+0–100 total, the `reasons`, and a **shadow** badge when shadow mode is on — so a
+pick is never a black box. Before a slot is picked it falls back to a plain
+capacity check. Then capture the guest and confirm. The engine has these live
+surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
 **Seat / No-show / Complete** actions (`.bact`) that transition the reservation
 and stamp `seatedAt`/`completedAt` (POST `/api/admin/floor/reservations`), so
 Book answers "who's at T5?"; **(2) walk-in guard** — a subbar **+ Walk-in**
 button (`.core-bk-toolbtn.walk`) opens a `CoreDialog` that ranks tables at *now*
 and only seats a genuinely-free one (writes a `source:"walk-in"` seated
-reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog`
-(`.core-bk-presets`/`.core-bk-slider`/`.core-bk-rules`) editing the preset +
-weights + rules, persisted per location (GET/PUT `/api/admin/seating/policy`,
-Rule #7); **(4) learned turn-times** — the engine reads a model derived live from
+reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog` with the
+preset + weight sliders + numeric **rules** (`.core-bk-rules` — reset buffer,
+pace cap, large-table seats, **section cap** per zone/15m), the **Guards**
+toggles (`.core-bk-toggles`/`.core-bk-toggle` — **Protect large tables** hard-drops
+a small party from a big top when a smaller one is free, **Auto-suggest**
+pre-selects the engine pick, **Learn from overrides** logs every seat, **Shadow
+mode** makes the engine advisory-only), a **VIP hold** zone picker
+(`.core-bk-vipzones` — held zones exclude non-VIP parties), and a **Trust loop**
+readout (`.core-bk-trust` — the real agreement/override rate over logged seats),
+all persisted per location (GET/PUT `/api/admin/seating/policy`, Rule #7);
+**(4) learned turn-times** — the engine reads a model derived live from
 completed reservations' `seatedAt→completedAt` (GET `/api/admin/seating/turn-model`),
-cold-starting on defaults. **Today's bookings** (`.core-bk-blist`) is a
+cold-starting on defaults; **(5) trust loop** — every booked seat POSTs
+recommended-vs-chosen to `/api/admin/seating/decisions` (when Learn-from-overrides
+or Shadow mode is on), so the override rate is a measured number, not a guess.
+**Today's bookings** (`.core-bk-blist`) is a
 **full-width list below**, with cancel. A **lens toggle** in the section header
 (`.core-bk-lenses`) switches the surface between three views over **one shared
 occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
