@@ -231,6 +231,34 @@ export function freeWindowMin(
   return next;
 }
 
+/**
+ * If a holding reservation is *currently* occupying this table at `atMin` (its
+ * [start, start+dur) window covers the instant), the minutes still left on that
+ * turn; otherwise `null`. This is what makes "the table is busy right now" a
+ * hard constraint — `freeWindowMin` only measures the *forward* window and would
+ * otherwise call an occupied table "open all night".
+ */
+export function occupiedMinLeft(
+  tableId: string,
+  atMin: number,
+  date: string,
+  locationSlug: string,
+  reservations: Reservation[],
+  excludeReservationId?: string,
+): number | null {
+  let left: number | null = null;
+  for (const r of reservations) {
+    if (r.id === excludeReservationId) continue;
+    if (r.tableId !== tableId || r.locationSlug !== locationSlug || r.date !== date) continue;
+    if (!HOLDS.includes(r.status)) continue;
+    const start = timeToMinutes(r.time);
+    if (!Number.isFinite(start)) continue;
+    const end = start + (r.durationMin || 0);
+    if (start <= atMin && atMin < end) left = Math.max(left ?? 0, end - atMin);
+  }
+  return left;
+}
+
 // ─── Scoring ─────────────────────────────────────────────────────────────────
 
 export interface SuggestionBreakdown {
@@ -329,6 +357,10 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     // ── hard constraints ───────────────────────────────────────────
     if (t.status === "out-of-service") return { ...base, excludedReason: "out of service" };
     if (t.seats < party) return { ...base, excludedReason: "too small" };
+    // occupied *right now* by a seated/booked party → hard block (freeWindowMin
+    // only sees the forward window, so this must be checked separately)
+    const occLeft = occupiedMinLeft(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId);
+    if (occLeft != null) return { ...base, excludedReason: `occupied · ${Math.round(occLeft)}m left` };
     if (free < needFree) {
       return { ...base, excludedReason: free === Infinity ? "booked" : `held ${Math.round(free)}m` };
     }

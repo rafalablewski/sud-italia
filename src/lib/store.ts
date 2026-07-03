@@ -14337,7 +14337,10 @@ export async function saveSeatingPolicy(locationSlug: string, patch: Partial<Sto
     const current = all[locationSlug] ?? { preset: "balanced" };
     const next: StoredSeatingPolicy = {
       preset: patch.preset ?? current.preset,
-      overrides: patch.overrides === undefined ? current.overrides : patch.overrides,
+      // distinguish "not provided" (keep) from an explicit clear/replace — the
+      // key being present (even as undefined) means "set it", so picking a preset
+      // can actually clear a prior override set.
+      overrides: "overrides" in patch ? patch.overrides : current.overrides,
     };
     all[locationSlug] = next;
     await writeJSON(SEATING_POLICY_FILE, all);

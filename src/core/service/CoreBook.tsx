@@ -319,14 +319,15 @@ export function CoreBook() {
   };
 
   // ── Policy — persist a preset (clears overrides) or a full override set.
-  const putPolicy = async (patch: Partial<StoredSeatingPolicy>) => {
+  const putPolicy = async (patch: { preset?: PolicyPreset; overrides?: StoredSeatingPolicy["overrides"] | null }) => {
     const res = await fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
     });
     if (res.ok) { const j = await res.json(); setPolicy(j.policy); setStoredPolicy(j.stored); }
     else toast("Could not save policy", "danger");
   };
-  const setPreset = (preset: PolicyPreset) => void putPolicy({ preset });
+  // Selecting a preset explicitly clears any prior overrides (overrides: null).
+  const setPreset = (preset: PolicyPreset) => void putPolicy({ preset, overrides: null });
   const setWeight = (key: keyof SeatingWeights, val: number) => {
     if (!policy || !storedPolicy) return;
     const weights = { ...policy.weights, [key]: val };

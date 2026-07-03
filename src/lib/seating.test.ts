@@ -85,6 +85,14 @@ test("walk-in guard: a table reserved within the turn window is excluded (held)"
   assert.ok(res[0].excludedReason?.startsWith("held"));
 });
 
+test("a table occupied RIGHT NOW is excluded (not just future holds)", () => {
+  // a party seated at 18:00 for 90m occupies T1 until 19:30; at 19:00 it's busy
+  const seated = resv("t1", "18:00", 90, "seated");
+  const res = suggestTables(ctx(2, at("19:00"), [table("t1", 2)], [seated]));
+  assert.equal(res[0].ok, false);
+  assert.ok(res[0].excludedReason?.startsWith("occupied"), `got ${res[0].excludedReason}`);
+});
+
 test("a table free for the whole turn passes and is recommended", () => {
   const res = suggestTables(ctx(4, at("18:58"), [table("t11", 4, "main")]));
   assert.equal(res[0].ok, true);
