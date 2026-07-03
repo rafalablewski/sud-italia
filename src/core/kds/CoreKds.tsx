@@ -757,15 +757,16 @@ export function CoreKds() {
         )}
         <button
           type="button"
-          className={showAllDay ? "core-iconbtn on" : "core-iconbtn"}
+          className={showAllDay ? "core-tpill on" : "core-tpill"}
           title="All-day — batch counts per dish"
           aria-pressed={showAllDay}
           onClick={() => setShowAllDay((v) => !v)}
         >
-          Σ
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h6" /></svg>
+          Σ all-day
         </button>
         <button type="button" className="core-iconbtn" title="Refresh now" aria-label="Refresh now" onClick={() => refresh()}><RefreshIcon /></button>
-        <button type="button" className="core-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
+        <button type="button" className="core-tpill danger" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
         <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
           <SoundIcon muted={!soundOn} />
         </button>
@@ -777,6 +778,10 @@ export function CoreKds() {
   // Fleet toolbar — the Atlas carries a kitchen filter (All · per-truck) plus the
   // same board actions the mockup keeps out of the command bar: Σ fleet all-day,
   // refresh, 86, chime. Fullscreen-enter is added by the in-shell wrapper only.
+  // Live 86'd count for the toolbar badge, scoped to the kitchen filter.
+  const fleetEightySix = (fleet?.tiles ?? [])
+    .filter((t) => fleetLoc === "all" || t.slug === fleetLoc)
+    .reduce((s, t) => s + t.eightySix, 0);
   const fleetControls =
     view !== "fleet" ? null : (
       <>
@@ -793,15 +798,18 @@ export function CoreKds() {
         <div className="core-kds-tb-sp" />
         <button
           type="button"
-          className={showAllDay ? "core-iconbtn on" : "core-iconbtn"}
+          className={showAllDay ? "core-tpill on" : "core-tpill"}
           title="Fleet all-day — batch counts per dish"
           aria-pressed={showAllDay}
           onClick={() => setShowAllDay((v) => !v)}
         >
-          Σ
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h6" /></svg>
+          Σ fleet all-day
         </button>
         <button type="button" className="core-iconbtn" title="Refresh fleet now" aria-label="Refresh fleet" onClick={() => setFleetNonce((n) => n + 1)}><RefreshIcon /></button>
-        <button type="button" className="core-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
+        <button type="button" className="core-tpill danger" title="86 an item" onClick={() => setEightySixOpen(true)}>
+          86{fleetEightySix > 0 ? ` · ${fleetEightySix}` : ""}
+        </button>
         <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
           <SoundIcon muted={!soundOn} />
         </button>
@@ -1093,6 +1101,8 @@ interface FleetTileWire {
   slug: string;
   name: string;
   city: string;
+  area: string;
+  eightySix: number;
   counts: { active: number; ready: number; late: number; risk: number };
   health: number;
   healthState: string;
@@ -1116,10 +1126,12 @@ interface FleetWire {
 // Most-urgent-first ordering for the per-truck ticket preview.
 const TONE_RANK: Record<string, number> = { late: 4, risk: 3, warn: 2, firing: 1 };
 
-// Compact złoty-per-hour figure: 3140 grosze → "31", 310000 → "3.1k".
+// Złoty-per-hour figure, full with space-separated thousands (mockup: "2 180"):
+// 218000 grosze → "2 180", 124000 → "1 240".
 function revPerHr(grosze: number): string {
-  const z = grosze / 100;
-  return z >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
+  return Math.round(grosze / 100)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 // Compact "2× Margherita · Bufala +1" line for a preview row.
@@ -1224,8 +1236,8 @@ function FleetWall({
               <div className="core-truck-h">
                 <span className={`core-truck-flag ${pill.cls}`} />
                 <div className="core-truck-id">
-                  <span className="nm">{t.name}</span>
-                  <span className="code">{t.city}</span>
+                  <span className="nm">{t.city}</span>
+                  <span className="code">{t.area}</span>
                 </div>
                 <span className={`core-truck-pill ${pill.cls}`}>{pill.label}</span>
               </div>

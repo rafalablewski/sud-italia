@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getKdsServiceHistory, getLaborCostInRange, getOrders } from "@/lib/store";
+import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { buildKdsTicket } from "@/lib/kds-ticket";
@@ -64,6 +65,8 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
 
       const history = await getKdsServiceHistory(loc.slug, fromIso, toIso);
       const { openShifts } = await getLaborCostInRange(loc.slug, fromIso, dayEnd.toISOString());
+      // Live 86'd count for the toolbar badge — menu items currently unavailable.
+      const eightySix = (await getMenuWithOverrides(loc.slug)).filter((m) => m.available === false).length;
 
       const promiseAccuracy = history.promiseAccuracy ?? PROMISE_TARGET;
       const { health, state, cls } = computeHealth({
@@ -100,6 +103,9 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
         slug: loc.slug,
         name: loc.name,
         city: loc.city,
+        // Street/area from the address (before the postcode) — the card's code line.
+        area: loc.address.split(",")[0].trim(),
+        eightySix,
         counts: analysis.counts,
         health,
         healthState: state,

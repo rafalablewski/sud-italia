@@ -66,10 +66,11 @@ outside `.core-body`) keeps the flat dark wall.
   - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
     button per truck, labelled by `city`) that scopes the grid **and
     re-aggregates the totals strip** to the selection, then the board actions the
-    command bar omits: **`Σ`** fleet all-day, **`⟳`** refresh (bumps the 6s feed
-    poll on demand), **`86`** (scoped to the selected truck, or the active
-    location when viewing all), a **chime** toggle, and **fullscreen** (Fleet now
-    joins Floor/Chef in the kiosk).
+    command bar omits: a labelled **`.core-tpill`** **`Σ fleet all-day`**, **`⟳`**
+    refresh (bumps the 6s feed poll on demand), a danger **`.core-tpill`**
+    **`86 · N`** (the live 86'd count from the feed, scoped to the selected truck
+    or summed across all), a **chime** toggle, and **fullscreen** (Fleet now joins
+    Floor/Chef in the kiosk). Floor + Chef carry the same `Σ all-day` / `86` pills.
   - **Totals strip** — a frosted **`.core-statstrip`** (8 cells: **Kitchens ·
     Active · At risk · Late · Ready · Throughput/hr · Covers/hr · Revenue zł/hr**),
     colour-toned mono values from the feed `totals` (re-summed from the filtered
@@ -78,9 +79,10 @@ outside `.core-body`) keeps the flat dark wall.
     `Σ`, but summed **cross-truck** from the scoped tiles' live tickets (Rule #1).
   - **Truck cards** — a 2-up `.core-fleet-grid` of **glass `.core-truck`** tiles,
     each a whole-card drill (click / Enter → **Open floor** for that truck). Card
-    anatomy: a `.core-truck-h` header (a toned `.core-truck-flag` dot + name +
-    `city` `.code` + a `.core-truck-pill` status — **On pace · Backed up · Under
-    pressure · Slammed**, mapped from `healthClass`); a 5-up `.core-truck-mini`
+    anatomy: a `.core-truck-h` header (a toned `.core-truck-flag` dot + the `city`
+    name + the street `.code` (the address's first segment) + a `.core-truck-pill`
+    status — **On pace · Backed up · Under pressure · Slammed**, mapped from
+    `healthClass`); a 5-up `.core-truck-mini`
     row (**Active · Risk · Late · Avg cook · Oldest** — the last two derived from
     the tile's live ticket ages); then a `.core-truck-body` with
     **`.core-tstn` station load chips** (dot + label + bar + `%`, hottest first,
