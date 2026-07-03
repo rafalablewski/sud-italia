@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { recordSeatingDecision, getSeatingDecisionSummary } from "@/lib/store";
+import { OVERRIDE_REASONS, type OverrideReason, type SeatingWeights } from "@/lib/seating";
+
+const SIGNALS: (keyof SeatingWeights)[] = ["fit", "runway", "guest", "pacing", "yield", "section"];
 
 /**
  * Seating decisions — the trust loop behind learn-from-overrides and shadow
@@ -36,6 +39,8 @@ export const POST = withAdmin(
       chosenTableId,
       override: Boolean(body.override),
       shadow: Boolean(body.shadow),
+      reason: OVERRIDE_REASONS.includes(body.reason) ? (body.reason as OverrideReason) : undefined,
+      topSignal: SIGNALS.includes(body.topSignal) ? (body.topSignal as keyof SeatingWeights) : undefined,
     });
     return NextResponse.json({ decision });
   },

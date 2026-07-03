@@ -167,13 +167,18 @@ a small party from a big top when a smaller one is free, **Auto-suggest**
 pre-selects the engine pick, **Learn from overrides** logs every seat, **Shadow
 mode** makes the engine advisory-only), a **VIP hold** zone picker
 (`.core-bk-vipzones` — held zones exclude non-VIP parties), and a **Trust loop**
-readout (`.core-bk-trust` — the real agreement/override rate over logged seats),
-all persisted per location (GET/PUT `/api/admin/seating/policy`, Rule #7);
-**(4) learned turn-times** — the engine reads a model derived live from
-completed reservations' `seatedAt→completedAt` (GET `/api/admin/seating/turn-model`),
-cold-starting on defaults; **(5) trust loop** — every booked seat POSTs
-recommended-vs-chosen to `/api/admin/seating/decisions` (when Learn-from-overrides
-or Shadow mode is on), so the override rate is a measured number, not a guess.
+readout (`.core-bk-trust` — the agreement/override rate over logged seats, the
+most common override **reason**, and a weight-tuning **nudge** `.core-bk-nudge`
+when one signal is behind ≥40% of overrides), all persisted per location (GET/PUT
+`/api/admin/seating/policy`, Rule #7); **(4) learned turn-times** — the engine
+reads a model derived live from completed reservations' `seatedAt→completedAt`,
+learned per **party × daypart × weekday-group** (weekday vs Fri/Sat) with a
+confidence band (GET `/api/admin/seating/turn-model`), cold-starting on defaults;
+**(5) trust loop** — every booked seat POSTs recommended-vs-chosen (+ the
+override-**reason** chips `.core-bk-orsn` shown when the pick differs from the
+recommendation, + the recommended pick's dominant signal) to
+`/api/admin/seating/decisions` when Learn-from-overrides or Shadow mode is on, so
+the override rate and the tuning nudge are measured numbers, not a guess.
 **Today's bookings** (`.core-bk-blist`) is a
 **full-width list below**, with cancel. A **lens toggle** in the section header
 (`.core-bk-lenses`) switches the surface between three views over **one shared

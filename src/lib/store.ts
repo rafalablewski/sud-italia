@@ -6,7 +6,7 @@ import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
-import { resolvePolicy, buildTurnModel, summariseDecisions, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type SeatingDecision, type SeatingDecisionSummary } from "@/lib/seating";
+import { resolvePolicy, buildTurnModel, summariseDecisions, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -14365,7 +14365,8 @@ export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
     const minutes = Math.round((end - start) / 60000);
     const atMin = timeToMinutes(r.time);
     if (!Number.isFinite(atMin)) continue;
-    samples.push({ party: r.partySize, atMin, minutes });
+    const dow = dowOf(r.date);
+    samples.push({ party: r.partySize, atMin, minutes, dow });
   }
   return buildTurnModel(samples);
 }
@@ -14380,7 +14381,7 @@ const DECISION_CAP = 500;
 
 export async function recordSeatingDecision(
   locationSlug: string,
-  input: { party: number; atMin: number; recommendedTableId: string | null; chosenTableId: string; override: boolean; shadow: boolean },
+  input: { party: number; atMin: number; recommendedTableId: string | null; chosenTableId: string; override: boolean; shadow: boolean; reason?: OverrideReason; topSignal?: keyof SeatingWeights },
 ): Promise<SeatingDecision> {
   return withLock(SEATING_DECISIONS_FILE, async () => {
     const all = await readJSON<Record<string, SeatingDecision[]>>(SEATING_DECISIONS_FILE, {});
@@ -14394,6 +14395,8 @@ export async function recordSeatingDecision(
       chosenTableId: input.chosenTableId,
       override: input.override,
       shadow: input.shadow,
+      reason: input.override ? input.reason : undefined,
+      topSignal: input.topSignal,
     };
     const list = all[locationSlug] ?? [];
     list.push(decision);

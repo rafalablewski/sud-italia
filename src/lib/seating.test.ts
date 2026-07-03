@@ -13,6 +13,8 @@ import {
   suggestJoins,
   simulateService,
   estimateWaitMin,
+  summariseDecisions,
+  dowGroupOf,
   BALANCED_POLICY,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
@@ -390,6 +392,53 @@ test("estimateWaitMin: parties ahead push the quote out", () => {
 test("estimateWaitMin: null when no table can ever seat the party", () => {
   const q = estimateWaitMin({ party: 8, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [table("t1", 2)], reservations: [], aheadCount: 0 });
   assert.equal(q, null);
+});
+
+// ── weekday turn-time learning ────────────────────────────────────────────────
+test("dowGroupOf splits Fri/Sat from the rest of the week", () => {
+  assert.equal(dowGroupOf(5), "we"); // Friday
+  assert.equal(dowGroupOf(6), "we"); // Saturday
+  assert.equal(dowGroupOf(2), "wd"); // Tuesday
+  assert.equal(dowGroupOf(undefined), "wd");
+});
+
+test("turn model learns weekday and weekend cells separately", () => {
+  const prime = at("19:30");
+  const samples: TurnSample[] = [
+    ...Array.from({ length: 30 }, () => ({ party: 2, atMin: prime, minutes: 80, dow: 2 })), // Tue: quick
+    ...Array.from({ length: 30 }, () => ({ party: 2, atMin: prime, minutes: 140, dow: 6 })), // Sat: lingering
+  ];
+  const model = buildTurnModel(samples);
+  const wd = expectedTurnMin(2, prime, model, 2); // Tuesday
+  const we = expectedTurnMin(2, prime, model, 6); // Saturday
+  assert.ok(we > wd + 30, `weekend ${we} should be well above weekday ${wd}`);
+});
+
+// ── trust loop summary ────────────────────────────────────────────────────────
+function decision(over: boolean, reason?: "guest-request" | "server-balance" | "large-party" | "vip" | "other", topSignal?: "fit" | "runway" | "guest" | "pacing" | "yield" | "section") {
+  return { id: "d", locationSlug: LOC, at: "2026-07-07T19:00:00Z", party: 2, atMin: 1140, recommendedTableId: "a", chosenTableId: over ? "b" : "a", override: over, shadow: false, reason, topSignal };
+}
+test("summariseDecisions surfaces the top override reason + a signal nudge", () => {
+  const decisions = [
+    decision(false),
+    decision(true, "guest-request", "yield"),
+    decision(true, "guest-request", "yield"),
+    decision(true, "server-balance", "yield"),
+    decision(true, "guest-request", "fit"),
+  ];
+  const s = summariseDecisions(decisions);
+  assert.equal(s.n, 5);
+  assert.equal(s.overrides, 4);
+  assert.equal(s.topReason?.reason, "guest-request");
+  assert.equal(s.topReason?.count, 3);
+  // yield is the top signal on 3 of 4 overrides (≥3, ≥40%) → nudge fires
+  assert.equal(s.nudge?.signal, "yield");
+  assert.equal(s.nudge?.overrides, 3);
+});
+
+test("summariseDecisions gives no nudge when overrides are diffuse", () => {
+  const s = summariseDecisions([decision(true, "other", "fit"), decision(true, "other", "guest")]);
+  assert.equal(s.nudge, null);
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────

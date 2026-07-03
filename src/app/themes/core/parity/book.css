@@ -324,8 +324,18 @@
 .core .core-bk-vipzone { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .core .core-bk-vipzone.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
 
+/* Override-reason chips (captured when the operator picks a non-recommended table) */
+.core .core-bk-orsn { margin-top: 8px; }
+.core .core-bk-orsnchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-orsnchip { font-family: var(--mono); font-size: 10.5px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.core .core-bk-orsnchip.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
+
 /* Trust-loop readout */
 .core .core-bk-trust { display: flex; flex-wrap: wrap; gap: 8px; }
+.core .core-bk-trustnote { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 6px; }
+.core .core-bk-trustnote b { color: var(--ink-2); }
+.core .core-bk-nudge { margin-top: 6px; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(240, 173, 70, .4); background: var(--amber-wash); font-size: 11.5px; color: var(--ink-2); line-height: 1.4; }
+.core .core-bk-nudge b { color: var(--amber); text-transform: capitalize; }
 .core .core-bk-trust .tr-cell { flex: 1 1 68px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); }
 .core .core-bk-trust .tr-v { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
 .core .core-bk-trust .tr-v small { font-size: 10px; color: var(--ink-3); margin-left: 1px; }

@@ -14,6 +14,8 @@ import {
   estimateWaitMin,
   expectedTurnMin,
   POLICY_PRESETS,
+  OVERRIDE_REASONS,
+  type OverrideReason,
   type Suggestion,
   type JoinSuggestion,
   type SeatingPolicy,
@@ -85,6 +87,7 @@ export function CoreBook() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [needs, setNeeds] = useState<TableFeature[]>([]);
+  const [overrideReason, setOverrideReason] = useState<OverrideReason | null>(null);
   const [override, setOverride] = useState(false);
   const toggleNeed = (f: TableFeature) => setNeeds((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
   const [booking, setBooking] = useState(false);
@@ -185,13 +188,14 @@ export function CoreBook() {
       if (res.ok) {
         toast(`Booked · ${name.trim()} · ${partyN}p · ${selectedSlot.time}`, "success");
         // Trust loop — record recommended-vs-chosen for this seat (best-effort).
-        await recordDecision(recTableId, tableId, toMin(selectedSlot.time), partyN);
+        await recordDecision(recTableId, tableId, toMin(selectedSlot.time), partyN, overrideReason);
         setName("");
         setPhone("");
         setNotes("");
         setNeeds([]);
         setTableId(null);
         setJoinSel(null);
+        setOverrideReason(null);
         setOverride(false);
         await load();
       } else {
@@ -441,12 +445,21 @@ export function CoreBook() {
 
   // Trust loop — log what the engine recommended vs. what was booked, so the
   // override rate is real. Fires when learn-from-overrides or shadow mode is on.
-  const recordDecision = async (recommendedTableId: string | null, chosenTableId: string, atMin: number, party: number) => {
+  const recordDecision = async (recommendedTableId: string | null, chosenTableId: string, atMin: number, party: number, reason: OverrideReason | null) => {
     if (!policy || (!policy.learnFromOverrides && !policy.shadowMode)) return;
+    const wasOverride = chosenTableId !== recommendedTableId;
+    // The signal that carried the recommended pick — so the tuning loop can spot
+    // a signal operators keep overriding.
+    const recSug = recommendedTableId ? suggByTable.get(recommendedTableId) : undefined;
+    let topSignal: keyof Suggestion["breakdown"] | undefined;
+    if (recSug) {
+      const b = recSug.breakdown;
+      topSignal = (Object.keys(b) as (keyof Suggestion["breakdown"])[]).reduce((a, k) => (b[k] > b[a] ? k : a), "fit" as keyof Suggestion["breakdown"]);
+    }
     try {
       await fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recommendedTableId, chosenTableId, atMin, party, override: chosenTableId !== recommendedTableId, shadow: policy.shadowMode }),
+        body: JSON.stringify({ recommendedTableId, chosenTableId, atMin, party, override: wasOverride, shadow: policy.shadowMode, reason: wasOverride ? reason ?? undefined : undefined, topSignal }),
       });
     } catch { /* telemetry is best-effort */ }
   };
@@ -851,6 +864,21 @@ export function CoreBook() {
               Override conflicts & capacity
             </label>
 
+            {/* Override reason — captured only when you pick a table the engine
+                didn't recommend AND learn-from-overrides is on. Feeds the nudge. */}
+            {policy?.learnFromOverrides && tableId && recTableId && tableId !== recTableId && (
+              <div className="core-bk-orsn">
+                <div className="core-bk-flab"><span>Why not {tableLabel(recTableId)}?</span><span className="mut">tunes the engine</span></div>
+                <div className="core-bk-orsnchips">
+                  {OVERRIDE_REASONS.map((rn) => (
+                    <button key={rn} type="button" className={`core-bk-orsnchip${overrideReason === rn ? " on" : ""}`} onClick={() => setOverrideReason((cur) => (cur === rn ? null : rn))}>
+                      {rn.replace("-", " ")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button className="core-bk-bookbtn" disabled={!canBook} onClick={() => void book()}>
               {canBook && selectedSlot ? `✓ Book table · ${selectedSlot.time} · ${tableLabel(tableId)} · ${partyN}` : "✓ Book slot + table"}
             </button>
@@ -1193,6 +1221,14 @@ export function CoreBook() {
                   <div className="core-ctx-empty" style={{ margin: 0 }}>No seats logged yet — turn on Learn from overrides, then book to build trust.</div>
                 )}
               </div>
+              {decisionSummary?.topReason && (
+                <div className="core-bk-trustnote">Most overrides: <b>{decisionSummary.topReason.reason.replace("-", " ")}</b> ({decisionSummary.topReason.count})</div>
+              )}
+              {decisionSummary?.nudge && (
+                <div className="core-bk-nudge">
+                  <span aria-hidden>◇</span> Operators override the engine on <b>{decisionSummary.nudge.signal}</b> {Math.round(decisionSummary.nudge.share * 100)}% of the time — consider lowering its weight.
+                </div>
+              )}
             </div>
           ) : (
             <div className="core-ctx-empty pad">Loading policy…</div>

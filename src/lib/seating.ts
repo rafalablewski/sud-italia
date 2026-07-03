@@ -42,6 +42,18 @@ export function turnBucket(party: number): TurnBucket {
   return "7+";
 }
 
+/** Weekend nights (Fri/Sat) turn slower than weekdays; the model learns the two
+ *  separately. `dow` is 0=Sun…6=Sat; undefined defaults to a weekday. */
+export type DowGroup = "wd" | "we";
+export function dowGroupOf(dow?: number): DowGroup {
+  return dow === 5 || dow === 6 ? "we" : "wd";
+}
+/** Local weekday (0–6) for a YYYY-MM-DD date, read at noon to dodge DST edges. */
+export function dowOf(date: string): number | undefined {
+  const d = new Date(`${date}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? undefined : d.getDay();
+}
+
 /** Base expected dining minutes by party bucket (before the daypart factor). */
 const BASE_TURN: Record<TurnBucket, number> = { "1-2": 75, "3-4": 95, "5-6": 120, "7+": 150 };
 
@@ -50,15 +62,17 @@ export interface TurnSample {
   party: number;
   atMin: number;
   minutes: number;
+  /** Local weekday (0–6) the party sat; splits weekday vs weekend learning. */
+  dow?: number;
 }
 
 /**
- * A learned turn-time model: mean minutes + sample count per (bucket × daypart).
- * Absent cells fall back to the default. Built by `buildTurnModel` from real
- * closes; the engine reads it through `expectedTurnMin` (concept v3).
+ * A learned turn-time model: mean minutes + sample count per
+ * (bucket × daypart × weekday-group). Absent cells fall back to the default.
+ * Built by `buildTurnModel` from real closes; read via `expectedTurnMin`.
  */
 export interface TurnModel {
-  cells: Partial<Record<`${TurnBucket}:${Daypart}`, { mean: number; n: number }>>;
+  cells: Partial<Record<`${TurnBucket}:${Daypart}:${DowGroup}`, { mean: number; n: number }>>;
 }
 
 /** Shrinkage strength — how many "prior" samples the default is worth. Higher =
@@ -71,7 +85,7 @@ export function buildTurnModel(samples: TurnSample[]): TurnModel {
   const acc = new Map<string, { sum: number; n: number }>();
   for (const s of samples) {
     if (!Number.isFinite(s.minutes) || s.minutes <= 0 || s.minutes > 600) continue;
-    const key = `${turnBucket(s.party)}:${daypartOf(s.atMin)}`;
+    const key = `${turnBucket(s.party)}:${daypartOf(s.atMin)}:${dowGroupOf(s.dow)}`;
     const a = acc.get(key) ?? { sum: 0, n: 0 };
     a.sum += s.minutes;
     a.n += 1;
@@ -79,7 +93,7 @@ export function buildTurnModel(samples: TurnSample[]): TurnModel {
   }
   const cells: TurnModel["cells"] = {};
   for (const [key, a] of acc) {
-    const [bucket, daypart] = key.split(":") as [TurnBucket, Daypart];
+    const [bucket, daypart] = key.split(":") as [TurnBucket, Daypart, DowGroup];
     // shrink toward the same default this cell would otherwise fall back to
     const prior = Math.round(BASE_TURN[bucket] * DAYPART_FACTOR[daypart]);
     const mean = (a.sum + TURN_SHRINKAGE * prior) / (a.n + TURN_SHRINKAGE);
@@ -94,10 +108,10 @@ export function buildTurnModel(samples: TurnSample[]): TurnModel {
  * party-bucket default × daypart factor. The engine's single source of
  * turn-time truth — swapping defaults for learning changes no caller.
  */
-export function expectedTurnMin(party: number, atMin: number, model?: TurnModel): number {
+export function expectedTurnMin(party: number, atMin: number, model?: TurnModel, dow?: number): number {
   const bucket = turnBucket(party);
   const daypart = daypartOf(atMin);
-  const learned = model?.cells[`${bucket}:${daypart}`];
+  const learned = model?.cells[`${bucket}:${daypart}:${dowGroupOf(dow)}`];
   if (learned) return learned.mean;
   return Math.round(BASE_TURN[bucket] * DAYPART_FACTOR[daypart]);
 }
@@ -107,11 +121,11 @@ export function expectedTurnMin(party: number, atMin: number, model?: TurnModel)
  *  is thin. Cold-start (no learned cell) gives a low-confidence, wide band so a
  *  host knows to use judgement. */
 const CONF_K = 8;
-export function turnConfidence(party: number, atMin: number, model?: TurnModel): { confidence: number; bandMin: number; n: number } {
-  const learned = model?.cells[`${turnBucket(party)}:${daypartOf(atMin)}`];
+export function turnConfidence(party: number, atMin: number, model?: TurnModel, dow?: number): { confidence: number; bandMin: number; n: number } {
+  const learned = model?.cells[`${turnBucket(party)}:${daypartOf(atMin)}:${dowGroupOf(dow)}`];
   const n = learned?.n ?? 0;
   const confidence = n > 0 ? n / (n + CONF_K) : 0.35; // priors give a modest floor
-  const turn = expectedTurnMin(party, atMin, model);
+  const turn = expectedTurnMin(party, atMin, model, dow);
   const bandMin = Math.max(6, Math.round(turn * (0.2 - 0.12 * confidence)));
   return { confidence, bandMin, n };
 }
@@ -385,7 +399,8 @@ function fmtHM(min: number): string {
 export function suggestTables(ctx: SuggestContext): Suggestion[] {
   const policy = ctx.policy ?? DEFAULT_POLICY;
   const party = Math.max(1, Math.floor(ctx.party || 1));
-  const turn = expectedTurnMin(party, ctx.atMin, ctx.turnModel);
+  const dow = dowOf(ctx.date);
+  const turn = expectedTurnMin(party, ctx.atMin, ctx.turnModel, dow);
   const needFree = turn + policy.resetBufferMin;
   const prefs = ctx.prefs;
 
@@ -426,7 +441,7 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
 
   // Turn-estimate trust + the downstream free-at time — same for every table
   // (they depend on the party & time, not the table).
-  const { confidence, bandMin } = turnConfidence(party, ctx.atMin, ctx.turnModel);
+  const { confidence, bandMin } = turnConfidence(party, ctx.atMin, ctx.turnModel, dow);
   const freesAtMin = ctx.atMin + needFree;
 
   const out: Suggestion[] = ctx.tables.map((t) => {
@@ -796,6 +811,10 @@ export function simulateService(input: {
 
 /** One logged seat decision: what the engine recommended vs. what the operator
  *  chose. The raw material for the override rate and, later, learning. */
+/** The reasons an operator can give when overriding the engine's pick. */
+export type OverrideReason = "guest-request" | "server-balance" | "large-party" | "vip" | "other";
+export const OVERRIDE_REASONS: OverrideReason[] = ["guest-request", "server-balance", "large-party", "vip", "other"];
+
 export interface SeatingDecision {
   id: string;
   locationSlug: string;
@@ -808,6 +827,11 @@ export interface SeatingDecision {
   override: boolean;
   /** The engine was advisory-only (shadow mode) when this was logged. */
   shadow: boolean;
+  /** Why the operator overrode (only meaningful when `override`). */
+  reason?: OverrideReason;
+  /** The signal that contributed most to the recommended pick's score — so the
+   *  tuning loop can spot a signal operators keep overriding. */
+  topSignal?: keyof SeatingWeights;
 }
 
 /** Rolled-up trust signal over a location's recent decisions. */
@@ -818,14 +842,38 @@ export interface SeatingDecisionSummary {
   agreeRate: number;
   shadow: number;
   lastAt: string | null;
+  /** The most common override reason (null when no reasons captured). */
+  topReason: { reason: OverrideReason; count: number } | null;
+  /** A weight-tuning nudge: the signal most associated with overrides + the
+   *  share of overrides where it was the recommended pick's top signal. Null
+   *  until there's enough signal to suggest a change. */
+  nudge: { signal: keyof SeatingWeights; share: number; overrides: number } | null;
 }
 
 /** Summarise decisions into the trust readout. Pure so the UI and any report
- *  share one definition of "agreement". */
+ *  share one definition of "agreement" and the tuning nudge. */
 export function summariseDecisions(decisions: SeatingDecision[]): SeatingDecisionSummary {
   const n = decisions.length;
-  const overrides = decisions.filter((d) => d.override).length;
+  const overridden = decisions.filter((d) => d.override);
+  const overrides = overridden.length;
   const shadow = decisions.filter((d) => d.shadow).length;
   const lastAt = decisions.reduce<string | null>((a, d) => (a && a > d.at ? a : d.at), null);
-  return { n, overrides, agreeRate: n ? (n - overrides) / n : 0, shadow, lastAt };
+
+  // most common override reason
+  const reasonCounts = new Map<OverrideReason, number>();
+  for (const d of overridden) if (d.reason) reasonCounts.set(d.reason, (reasonCounts.get(d.reason) ?? 0) + 1);
+  let topReason: SeatingDecisionSummary["topReason"] = null;
+  for (const [reason, count] of reasonCounts) if (!topReason || count > topReason.count) topReason = { reason, count };
+
+  // tuning nudge — which signal dominates the overridden recommendations?
+  const signalCounts = new Map<keyof SeatingWeights, number>();
+  for (const d of overridden) if (d.topSignal) signalCounts.set(d.topSignal, (signalCounts.get(d.topSignal) ?? 0) + 1);
+  let nudge: SeatingDecisionSummary["nudge"] = null;
+  for (const [signal, count] of signalCounts) {
+    const share = overrides ? count / overrides : 0;
+    // only nudge once a signal is behind a clear majority of overrides (≥3, ≥40%)
+    if (count >= 3 && share >= 0.4 && (!nudge || count > nudge.overrides)) nudge = { signal, share, overrides: count };
+  }
+
+  return { n, overrides, agreeRate: n ? (n - overrides) / n : 0, shadow, lastAt, topReason, nudge };
 }
