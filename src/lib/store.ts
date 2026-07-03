@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
@@ -14413,6 +14413,74 @@ export async function getSeatingDecisions(locationSlug: string): Promise<Seating
  *  decisions. Pure summary shared with the UI (summariseDecisions). */
 export async function getSeatingDecisionSummary(locationSlug: string): Promise<SeatingDecisionSummary> {
   return summariseDecisions(await getSeatingDecisions(locationSlug));
+}
+
+// --- Waitlist (the host's queue) -----------------------------------------
+// Walk-in parties waiting for a table, with the wait we quoted them. Per-location
+// list, same JSON pattern as reservations. Concept-5's Waitlist column reads it.
+const WAITLIST_FILE = "waitlist.json";
+
+export async function getWaitlist(locationSlug: string, date?: string): Promise<WaitlistEntry[]> {
+  const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+  const list = all[locationSlug] ?? [];
+  return date ? list.filter((w) => w.date === date) : list;
+}
+
+export async function addWaitlistEntry(
+  locationSlug: string,
+  input: { date: string; customerName: string; partySize: number; customerPhone?: string; notes?: string; needs?: WaitlistEntry["needs"]; quotedMin: number },
+): Promise<WaitlistEntry> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const entry: WaitlistEntry = {
+      id: `wl-${crypto.randomUUID().slice(0, 8)}`,
+      locationSlug,
+      date: input.date,
+      customerName: input.customerName,
+      partySize: input.partySize,
+      customerPhone: input.customerPhone,
+      notes: input.notes,
+      needs: input.needs,
+      status: "waiting",
+      quotedMin: input.quotedMin,
+      addedAt: new Date().toISOString(),
+    };
+    const list = all[locationSlug] ?? [];
+    list.push(entry);
+    all[locationSlug] = list.slice(-200);
+    await writeJSON(WAITLIST_FILE, all);
+    return entry;
+  });
+}
+
+export async function updateWaitlistEntry(
+  locationSlug: string,
+  id: string,
+  patch: { status?: WaitlistStatus },
+): Promise<WaitlistEntry | null> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const list = all[locationSlug] ?? [];
+    const i = list.findIndex((w) => w.id === id);
+    if (i < 0) return null;
+    const next: WaitlistEntry = { ...list[i], ...patch };
+    if (patch.status === "seated" && !next.seatedAt) next.seatedAt = new Date().toISOString();
+    list[i] = next;
+    all[locationSlug] = list;
+    await writeJSON(WAITLIST_FILE, all);
+    return next;
+  });
+}
+
+export async function removeWaitlistEntry(locationSlug: string, id: string): Promise<boolean> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const list = all[locationSlug] ?? [];
+    const next = list.filter((w) => w.id !== id);
+    all[locationSlug] = next;
+    await writeJSON(WAITLIST_FILE, all);
+    return next.length !== list.length;
+  });
 }
 
 // --- POS open checks (tabs) ----------------------------------------------

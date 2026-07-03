@@ -98,6 +98,7 @@ export function CoreFloor({
   const [orders, setOrders] = useState<FloorOrderRow[]>([]);
   const [lookup, setLookup] = useState("");
   const [settling, setSettling] = useState<string | null>(null);
+  const [waitlistCount, setWaitlistCount] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -130,6 +131,20 @@ export function CoreFloor({
   }, [loc]);
   useEffect(() => { void loadOrders(); }, [loadOrders]);
   usePolling(loadOrders, 10000);
+
+  // Live waitlist count (the host queue) — a real source now, not a fabricated 0.
+  const loadWaitlist = useCallback(async () => {
+    try {
+      const today = new Date();
+      const d = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const res = await fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&date=${d}`);
+      if (!res.ok) return;
+      const j = await res.json();
+      setWaitlistCount(Array.isArray(j.waitlist) ? j.waitlist.filter((w: { status: string }) => w.status === "waiting").length : 0);
+    } catch { /* non-fatal */ }
+  }, [loc]);
+  useEffect(() => { void loadWaitlist(); }, [loadWaitlist]);
+  usePolling(loadWaitlist, 15000);
 
   const ordersByTable = useMemo(() => {
     const m = new Map<string, FloorOrderRow[]>();
@@ -346,11 +361,9 @@ export function CoreFloor({
       if (t.occupied) covers += t.party ?? t.seats;
       else if (t.status === "available") { free++; if (t.seats >= 4) freeFourtops++; }
     }
-    // Waitlist: no live waiting-party feed exists on the twin/order model yet,
-    // so this is a graceful 0 (never fabricated) — see DATA NEEDED.
-    const waitlist = 0;
-    return { free, freeFourtops, billing, dueGrosze, covers, waitlist };
-  }, [twin, ordersByTable]);
+    // Waitlist: live from the host queue (Book & Seat's Arrivals waitlist).
+    return { free, freeFourtops, billing, dueGrosze, covers, waitlist: waitlistCount };
+  }, [twin, ordersByTable, waitlistCount]);
   const stateOf = (t: TwinTableRow): { cls: string; label: string } => {
     if (t.status === "out-of-service") return { cls: "oos", label: "Out of service" };
     if (t.occupied && t.predictedFreeInMin != null && t.predictedFreeInMin <= 15)

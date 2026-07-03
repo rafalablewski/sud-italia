@@ -184,9 +184,14 @@ occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
 Seat, `held` tiles show the next booking's countdown, `free` tiles tap to seat a
 walk-in, and a table seated **off-book on the legacy floor** with no reservation
 renders as a dashed **`.offbook`** "occupied · walk-in" tile — surfaced, not
-actioned here), and **Arrivals** (`.core-bk-arrivals` — the host queue: Expected ·
-Walk-ins · Seated). `nowMin` is live client state (ticks every 30s) so
-Floor/Arrivals stay current. **The spine is bidirectional**: seating/completing a
+actioned here), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
+· Waitlist · Seated**). The **Waitlist** column (`.core-bk-wladd` add row +
+`.apc.waitc` entries, backed by `/api/admin/floor/waitlist`) queues walk-ins with
+a **live wait quote** from `estimateWaitMin` (soonest a fitting table frees, pushed
+out by the parties ahead); an entry flips to "table ready" and **Seat** drops them
+onto the engine's pick (a `walk-in` seated reservation) and closes them out of the
+queue. `nowMin` is live client state (ticks every 30s) so Floor/Arrivals stay
+current. **The spine is bidirectional**: seating/completing a
 booking here fans out to `FloorTable.status` (via `reconcileFloorTable` in the
 reservations route), so the POS-integrated `/core/service/floor` (`floor-twin`)
 reflects it immediately; conversely a walk-in seated from that floor shows in this
@@ -279,6 +284,6 @@ The Floor board pairs the predictive twin with the table's **live orders**:
 
 Parity layers: `src/app/themes/core/parity/{floor,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
-- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; Waitlist graceful 0 — no queue source yet); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
+- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; **Waitlist is live** from the host queue `/api/admin/floor/waitlist`, polled every 15s); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
 - **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

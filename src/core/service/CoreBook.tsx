@@ -11,6 +11,7 @@ import { buildTableSessions } from "@/lib/table-session";
 import {
   suggestTables,
   suggestJoins,
+  estimateWaitMin,
   expectedTurnMin,
   POLICY_PRESETS,
   type Suggestion,
@@ -23,7 +24,7 @@ import {
   type SeatingDecisionSummary,
   type ServiceSimulation,
 } from "@/lib/seating";
-import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
 const DURATION_MIN = 90;
@@ -69,7 +70,10 @@ export function CoreBook() {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [tables, setTables] = useState<FloorTable[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [waitName, setWaitName] = useState("");
+  const [waitPartyN, setWaitPartyN] = useState(2);
 
   const [slotId, setSlotId] = useState<string | null>(null);
   const [partyN, setPartyN] = useState(2);
@@ -117,17 +121,19 @@ export function CoreBook() {
     if (!date) return;
     setLoading(true);
     try {
-      const [s, t, r, pol, tm, dec] = await Promise.all([
+      const [s, t, r, pol, tm, dec, wl] = await Promise.all([
         fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/turn-model?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+        fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
       ]);
       setSlots(Array.isArray(s) ? s : s.slots ?? []);
       setTables(Array.isArray(t) ? t : t.tables ?? []);
       setReservations(Array.isArray(r) ? r : r.reservations ?? []);
+      setWaitlist(Array.isArray(wl?.waitlist) ? wl.waitlist : []);
       if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
       setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
       setDecisionSummary(dec && typeof dec.n === "number" ? (dec as SeatingDecisionSummary) : null);
@@ -457,6 +463,57 @@ export function CoreBook() {
   const seatedCount = useMemo(() => sessions.filter((s) => s.state === "seated").length, [sessions]);
   const expected = useMemo(() => reservations.filter((r) => r.status === "booked").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
   const seatedList = useMemo(() => reservations.filter((r) => r.status === "seated").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
+
+  // ── Waitlist (the host queue) — live wait quotes from the engine. Each party's
+  // quote accounts for the parties ahead of it competing for the same tables.
+  const waiting = useMemo(() => waitlist.filter((w) => w.status === "waiting").sort((a, b) => a.addedAt.localeCompare(b.addedAt)), [waitlist]);
+  const quoteFor = useCallback(
+    (party: number, aheadCount: number, wNeeds?: TableFeature[]) =>
+      estimateWaitMin({ party, atMin: nowMin, date, locationSlug: loc, tables, reservations, aheadCount, needs: wNeeds, resetBufferMin: policy?.resetBufferMin, turnModel }),
+    [nowMin, date, loc, tables, reservations, policy, turnModel],
+  );
+  const addQuote = useMemo(() => quoteFor(waitPartyN, waiting.length), [quoteFor, waitPartyN, waiting.length]);
+  const addToWaitlist = async () => {
+    const nm = waitName.trim() || "Walk-in";
+    setActing("wl-add");
+    try {
+      const res = await fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, customerName: nm, partySize: waitPartyN, quotedMin: addQuote ?? 0 }),
+      });
+      if (res.ok) { toast(`${nm} added to waitlist${addQuote != null ? ` · ~${addQuote}m` : ""}`, "success"); setWaitName(""); await load(); }
+      else toast("Could not add to waitlist", "danger");
+    } finally { setActing(null); }
+  };
+  const removeFromWaitlist = async (w: WaitlistEntry, status: "seated" | "left") => {
+    setActing(`wl-${w.id}`);
+    try {
+      const res = await fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(w.id)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }),
+      });
+      if (res.ok) await load();
+    } finally { setActing(null); }
+  };
+  // Seat a waiting party straight onto the engine's pick now, then close them out
+  // of the queue (marked seated). Falls back to a toast if nothing is free.
+  const seatFromWaitlist = async (w: WaitlistEntry) => {
+    const picks = suggestTables({ party: w.partySize, atMin: nowMin, date, locationSlug: loc, tables, reservations, policy, turnModel, needs: w.needs });
+    const pick = picks.find((s) => s.ok);
+    if (!pick) { toast("No free table for that party yet", "danger"); return; }
+    setActing(`wl-${w.id}`);
+    try {
+      const hm = `${String(Math.floor(nowMin / 60)).padStart(2, "0")}:${String(nowMin % 60).padStart(2, "0")}`;
+      const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerName: w.customerName, partySize: w.partySize, date, time: hm, durationMin: expectedTurnMin(w.partySize, nowMin, turnModel), tableId: pick.tableId, status: "seated", source: "walk-in", needs: w.needs, override: true }),
+      });
+      if (res.ok) {
+        await fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(w.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "seated" }) });
+        toast(`${w.customerName} seated · ${tLabel(pick.number)}`, "success");
+        await load();
+      } else toast("Could not seat", "danger");
+    } finally { setActing(null); }
+  };
 
   return (
     <CoreShell
@@ -902,10 +959,36 @@ export function CoreBook() {
               </div>
             </div>
             <div className="acol">
-              <div className="acolh"><span className="t">Walk-ins</span></div>
+              <div className="acolh"><span className="t">Waitlist</span><span className="c">{waiting.length}</span></div>
               <div className="acolb">
-                <button className="core-bk-walkcta" onClick={() => setWalkOpen(true)}>+ Add walk-in — engine picks a safe table</button>
-                <p className="sm" style={{ padding: "2px 4px", lineHeight: 1.4 }}>Seated straight onto an engine-vetted table (never a reserved-soon one). They then appear under Seated.</p>
+                {/* Add to the queue — a live engine quote for the wait. */}
+                <div className="core-bk-wladd">
+                  <input className="core-inp" value={waitName} onChange={(e) => setWaitName(e.target.value)} placeholder="Name (optional)" />
+                  <div className="core-covers sm">
+                    <button onClick={() => setWaitPartyN((n) => Math.max(1, n - 1))} aria-label="Fewer">−</button>
+                    <span className="mono">{waitPartyN}</span>
+                    <button onClick={() => setWaitPartyN((n) => Math.min(20, n + 1))} aria-label="More">+</button>
+                  </div>
+                  <button className="core-bk-wlqbtn" disabled={acting === "wl-add"} onClick={() => void addToWaitlist()} title={addQuote == null ? "no table fits this party" : `quote ~${addQuote}m`}>
+                    + {addQuote == null ? "no fit" : `wait ~${addQuote}m`}
+                  </button>
+                </div>
+                {waiting.length === 0 ? (
+                  <div className="core-ctx-empty pad">Queue empty.</div>
+                ) : waiting.map((w, i) => {
+                  const q = quoteFor(w.partySize, i, w.needs);
+                  const canSeat = q === 0;
+                  return (
+                    <div key={w.id} className="apc waitc">
+                      <div className="r1"><span className="nm">{w.customerName} · {w.partySize}</span><span className={`tm${canSeat ? " ready" : ""}`}>{q == null ? "no fit" : q === 0 ? "table ready" : `~${q}m`}</span></div>
+                      <div className="r2">quoted ~{w.quotedMin}m · waiting {Math.max(0, nowMin - toMin(new Date(w.addedAt).toTimeString().slice(0, 5)))}m</div>
+                      <div className="aact">
+                        <button className="prim" disabled={acting === `wl-${w.id}` || q == null} onClick={() => void seatFromWaitlist(w)}>Seat</button>
+                        <button disabled={acting === `wl-${w.id}`} onClick={() => void removeFromWaitlist(w, "left")}>Left</button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="acol">

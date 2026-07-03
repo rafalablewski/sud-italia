@@ -650,6 +650,47 @@ export function suggestJoins(ctx: SuggestContext): JoinSuggestion[] {
   return out.sort((a, b) => a.tableIds.length - b.tableIds.length || a.seats - party - (b.seats - party)).slice(0, 3);
 }
 
+// ─── Waitlist quote — how long until a fitting table frees ────────────────────
+
+/**
+ * Estimate the wait (minutes) for a party joining the queue now: the soonest a
+ * table that fits them frees, pushed out by the parties already waiting ahead
+ * that compete for the same tables. Free-now tables quote 0; occupied ones quote
+ * their remaining turn + a reset buffer. `null` when no table could ever seat the
+ * party (too big / lacks a needed feature). Pure & deterministic.
+ */
+export function estimateWaitMin(input: {
+  party: number;
+  atMin: number;
+  date: string;
+  locationSlug: string;
+  tables: FloorTable[];
+  reservations: Reservation[];
+  aheadCount: number;
+  needs?: TableFeature[];
+  resetBufferMin?: number;
+  turnModel?: TurnModel;
+}): number | null {
+  const reset = input.resetBufferMin ?? DEFAULT_POLICY.resetBufferMin;
+  const fitting = input.tables.filter(
+    (t) => t.status !== "out-of-service" && t.seats >= input.party && (input.needs?.every((n) => (t.features ?? []).includes(n)) ?? true),
+  );
+  if (!fitting.length) return null;
+  // when each fitting table next becomes available (0 = free now)
+  const avail = fitting
+    .map((t) => {
+      const occ = occupiedMinLeft(t.id, input.atMin, input.date, input.locationSlug, input.reservations);
+      return occ == null ? 0 : Math.round(occ + reset);
+    })
+    .sort((a, b) => a - b);
+  const ahead = Math.max(0, Math.floor(input.aheadCount));
+  if (ahead < avail.length) return avail[ahead];
+  // more waiting parties than fitting tables → extra full turns beyond the last
+  const turn = expectedTurnMin(input.party, input.atMin, input.turnModel) + reset;
+  const extraRounds = Math.floor((ahead - avail.length) / Math.max(1, avail.length)) + 1;
+  return avail[avail.length - 1] + extraRounds * turn;
+}
+
 // ─── Pre-service simulation — forecast the night before it starts ─────────────
 
 export interface SimAtRisk {

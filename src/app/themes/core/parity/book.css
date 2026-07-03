@@ -419,4 +419,14 @@
 .core .core-bk-arrivals .apc .aact button:disabled { opacity: .5; cursor: default; }
 .core .core-bk-arrivals .apc .aact button.prim { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
 .core .core-bk-walkcta { font-family: var(--mono); font-size: 11px; color: var(--brand-bright); background: var(--brand-wash); border: 1px dashed rgba(232, 107, 62, .5); border-radius: 10px; padding: 10px; cursor: pointer; }
+/* Waitlist column: add row + ready state */
+.core .core-bk-arrivals .apc.waitc { border-color: rgba(240, 173, 70, .4); }
+.core .core-bk-arrivals .apc .tm.ready { color: var(--basil); }
+.core .core-bk-wladd { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; padding: 2px 0 6px; border-bottom: 1px dashed var(--line); margin-bottom: 2px; }
+.core .core-bk-wladd .core-inp { padding: 6px 8px; font-size: 12px; }
+.core .core-covers.sm { display: inline-flex; align-items: center; gap: 6px; }
+.core .core-covers.sm button { width: 22px; height: 22px; font-size: 13px; }
+.core .core-covers.sm .mono { min-width: 14px; text-align: center; font-size: 12px; }
+.core .core-bk-wlqbtn { font-family: var(--mono); font-size: 10px; font-weight: 600; white-space: nowrap; color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border: 0; border-radius: 99px; padding: 7px 10px; cursor: pointer; }
+.core .core-bk-wlqbtn:disabled { opacity: .5; cursor: default; }
 @media (max-width: 1000px) { .core .core-bk-arrivals { grid-template-columns: 1fr; } }

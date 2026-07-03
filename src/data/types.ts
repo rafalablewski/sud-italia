@@ -671,6 +671,24 @@ export interface Reservation {
   createdAt: string;
 }
 
+/** A walk-in party waiting for a table (the host's queue). */
+export type WaitlistStatus = "waiting" | "seated" | "left";
+export interface WaitlistEntry {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  customerName: string;
+  partySize: number;
+  customerPhone?: string;
+  notes?: string;
+  needs?: TableFeature[];
+  status: WaitlistStatus;
+  /** Minutes we quoted the guest when they were added (frozen at add time). */
+  quotedMin: number;
+  addedAt: string;
+  seatedAt?: string;
+}
+
 // --- POS open checks (tabs) ---
 
 export type PosTabStatus = "open" | "parked" | "pay";

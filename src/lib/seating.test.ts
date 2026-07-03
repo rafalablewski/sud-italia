@@ -12,6 +12,7 @@ import {
   resolvePolicy,
   suggestJoins,
   simulateService,
+  estimateWaitMin,
   BALANCED_POLICY,
   GUEST_FIRST_POLICY,
   MAXIMISE_COVERS_POLICY,
@@ -364,6 +365,31 @@ test("simulateService clears a joined big party as seatable (not too small)", ()
   const joined: Reservation = { ...resvFull("j", "19:00", 7, "t5"), joinedTableIds: ["t6"] } as Reservation;
   const sim = simulateService({ tables, reservations: [joined], date: DATE, locationSlug: LOC });
   assert.equal(sim.atRisk.length, 0); // 4 + 4 seats ≥ 7
+});
+
+// ── waitlist quote ────────────────────────────────────────────────────────────
+test("estimateWaitMin: 0 when a fitting table is free now", () => {
+  const q = estimateWaitMin({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [table("t1", 2)], reservations: [], aheadCount: 0 });
+  assert.equal(q, 0);
+});
+
+test("estimateWaitMin: waits for the remaining turn + reset when all fitting tables are busy", () => {
+  const seated = resv("t1", "18:00", 90, "seated"); // frees at 19:30
+  const q = estimateWaitMin({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [table("t1", 2)], reservations: [seated], aheadCount: 0 });
+  assert.equal(q, 30 + 10); // 30m left + 10m reset buffer
+});
+
+test("estimateWaitMin: parties ahead push the quote out", () => {
+  const t = [table("t1", 2), table("t2", 2)]; // two free tables
+  const first = estimateWaitMin({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: t, reservations: [], aheadCount: 0 });
+  const third = estimateWaitMin({ party: 2, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: t, reservations: [], aheadCount: 2 });
+  assert.equal(first, 0);
+  assert.ok((third ?? 0) > 0); // 2 ahead, only 2 tables → 3rd waits a turn
+});
+
+test("estimateWaitMin: null when no table can ever seat the party", () => {
+  const q = estimateWaitMin({ party: 8, atMin: at("19:00"), date: DATE, locationSlug: LOC, tables: [table("t1", 2)], reservations: [], aheadCount: 0 });
+  assert.equal(q, null);
 });
 
 // ── recommendTable ───────────────────────────────────────────────────────────
