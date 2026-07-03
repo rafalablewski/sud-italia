@@ -2,9 +2,11 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
+import { timeToMinutes } from "@/lib/floor";
+import { resolvePolicy, buildTurnModel, summariseDecisions, summariseTurnAccuracy, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type TurnAccuracy, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -1329,6 +1331,8 @@ interface OrderPayload {
   dispute?: Order["dispute"];
   channel?: Order["channel"];
   simulated?: Order["simulated"];
+  coursing?: Order["coursing"];
+  voidedItems?: Order["voidedItems"];
 }
 
 function rowToOrder(row: OrderRow): Order {
@@ -1363,6 +1367,8 @@ function rowToOrder(row: OrderRow): Order {
     dispute: payload.dispute,
     channel: payload.channel,
     simulated: payload.simulated,
+    coursing: payload.coursing,
+    voidedItems: payload.voidedItems,
   };
 }
 
@@ -1379,6 +1385,8 @@ function orderToValues(order: Order) {
     dispute: order.dispute,
     channel: order.channel,
     simulated: order.simulated,
+    coursing: order.coursing,
+    voidedItems: order.voidedItems,
   };
   return {
     id: order.id,
@@ -10577,6 +10585,40 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
   }
 }
 
+/**
+ * Cancel a dish that's already been fired — record it on the order's
+ * `voidedItems` so the KDS board can show it struck-through ("pulled"), instead
+ * of the item silently disappearing when the POS removes it from the check.
+ * Appends (never overwrites) so several cancels on one order accumulate.
+ */
+export async function voidKitchenItem(
+  orderId: string,
+  input: { name: string; quantity: number; reason?: string },
+): Promise<Order | null> {
+  const order = await getOrderById(orderId);
+  if (!order) return null;
+  const entry = {
+    name: input.name,
+    quantity: Math.max(1, Math.round(input.quantity || 1)),
+    reason: input.reason?.slice(0, 60) || undefined,
+    at: new Date().toISOString(),
+  };
+  const voidedItems = [...(order.voidedItems ?? []), entry].slice(-20);
+  // Drop the cancelled quantity from the active make-list too, so the board
+  // shows the dish struck (voided) and NOT still "to make" — matched by name.
+  let remaining = entry.quantity;
+  const items = order.items.map((ci) => ({ ...ci }));
+  for (let i = items.length - 1; i >= 0 && remaining > 0; i--) {
+    if (items[i].menuItem?.name === entry.name) {
+      const dec = Math.min(remaining, items[i].quantity);
+      items[i].quantity -= dec;
+      remaining -= dec;
+    }
+  }
+  const pruned = items.filter((ci) => ci.quantity > 0);
+  return (await updateOrder(orderId, { voidedItems, items: pruned })) ?? null;
+}
+
 /** Mark a ticket as ready (m2_3). Sets ready_at; returns the updated ticket. */
 export async function markTicketReady(ticketId: string): Promise<KdsTicket | null> {
   const db = await getDomainDb();
@@ -14241,6 +14283,7 @@ export async function saveTable(
     zone: input.zone,
     status: input.status,
     notes: input.notes,
+    features: input.features,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   let prevStatus: string | null = null;
@@ -14298,6 +14341,11 @@ export async function saveReservation(
     slotId: input.slotId,
     status: input.status,
     notes: input.notes,
+    source: input.source,
+    seatedAt: input.seatedAt,
+    completedAt: input.completedAt,
+    needs: input.needs,
+    joinedTableIds: input.joinedTableIds,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return reservationsBlob.upsert(res);
@@ -14305,6 +14353,241 @@ export async function saveReservation(
 
 export async function deleteReservation(id: string, locationSlug?: string): Promise<boolean> {
   return reservationsBlob.remove(id, locationSlug);
+}
+
+// --- Seating Intelligence Engine: policy + learned turn-times --------------
+//
+// The seating policy is the manager-tunable weight/rule set the engine scores
+// with (src/lib/seating.ts). Stored per location as a partial patch over the
+// shipped default so re-tuning the defaults later still applies. The learned
+// turn-time model is *derived* (not stored) from the day-to-day reservations
+// that have both a seatedAt and a completedAt — so it needs no extra blob and
+// can never drift from reality (Rule #1).
+
+const SEATING_POLICY_FILE = "seating-policy.json";
+
+/** Resolve the effective policy for a location (preset ⊕ overrides ⊕ default). */
+export async function getSeatingPolicy(locationSlug: string): Promise<{ policy: SeatingPolicy; stored: StoredSeatingPolicy }> {
+  const all = await readJSON<Record<string, StoredSeatingPolicy>>(SEATING_POLICY_FILE, {});
+  const stored: StoredSeatingPolicy = all[locationSlug] ?? { preset: "balanced" };
+  return { policy: resolvePolicy(stored), stored };
+}
+
+/** Persist a location's policy choice (preset + overrides). Merges over current. */
+export async function saveSeatingPolicy(locationSlug: string, patch: Partial<StoredSeatingPolicy>): Promise<StoredSeatingPolicy> {
+  return withLock(SEATING_POLICY_FILE, async () => {
+    const all = await readJSON<Record<string, StoredSeatingPolicy>>(SEATING_POLICY_FILE, {});
+    const current = all[locationSlug] ?? { preset: "balanced" };
+    const next: StoredSeatingPolicy = {
+      preset: patch.preset ?? current.preset,
+      // distinguish "not provided" (keep) from an explicit clear/replace — the
+      // key being present (even as undefined) means "set it", so picking a preset
+      // can actually clear a prior override set.
+      overrides: "overrides" in patch ? patch.overrides : current.overrides,
+    };
+    all[locationSlug] = next;
+    await writeJSON(SEATING_POLICY_FILE, all);
+    return next;
+  });
+}
+
+/** Realised dining durations for a location — one TurnSample per completed
+ *  reservation with a seatedAt → completedAt span. The raw material for both the
+ *  learned model and its accuracy readout. */
+async function getTurnSamples(locationSlug: string): Promise<TurnSample[]> {
+  const reservations = await getReservations(locationSlug);
+  const samples: TurnSample[] = [];
+  for (const r of reservations) {
+    if (r.status !== "completed" || !r.seatedAt || !r.completedAt) continue;
+    const start = new Date(r.seatedAt).getTime();
+    const end = new Date(r.completedAt).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    const minutes = Math.round((end - start) / 60000);
+    const atMin = timeToMinutes(r.time);
+    if (!Number.isFinite(atMin)) continue;
+    samples.push({ party: r.partySize, atMin, minutes, dow: dowOf(r.date) });
+  }
+  return samples;
+}
+
+/** Build the learned turn-time model for a location from realised dining
+ *  durations. Empty until parties have closed — the engine falls back to defaults. */
+export async function getTurnModel(locationSlug: string): Promise<TurnModel> {
+  return buildTurnModel(await getTurnSamples(locationSlug));
+}
+
+/** The model plus how well it predicts reality (predicted-vs-actual turn error). */
+export async function getTurnModelReport(locationSlug: string): Promise<TurnModel & { accuracy: TurnAccuracy }> {
+  const samples = await getTurnSamples(locationSlug);
+  const model = buildTurnModel(samples);
+  return { ...model, accuracy: summariseTurnAccuracy(samples, model) };
+}
+
+// --- Seating decisions (trust loop) --------------------------------------
+// Every seat records what the engine recommended vs. what the operator chose,
+// so the override rate is a real, measured number (Rule #1 — never fabricated)
+// and shadow-mode can prove the engine before it drives. Per-location list,
+// capped to the most recent DECISION_CAP so the file can't grow unbounded.
+const SEATING_DECISIONS_FILE = "seating-decisions.json";
+const DECISION_CAP = 500;
+
+export async function recordSeatingDecision(
+  locationSlug: string,
+  input: { party: number; atMin: number; recommendedTableId: string | null; chosenTableId: string; override: boolean; shadow: boolean; reason?: OverrideReason; topSignal?: keyof SeatingWeights },
+): Promise<SeatingDecision> {
+  return withLock(SEATING_DECISIONS_FILE, async () => {
+    const all = await readJSON<Record<string, SeatingDecision[]>>(SEATING_DECISIONS_FILE, {});
+    const decision: SeatingDecision = {
+      id: `sd-${crypto.randomUUID().slice(0, 8)}`,
+      locationSlug,
+      at: new Date().toISOString(),
+      party: input.party,
+      atMin: input.atMin,
+      recommendedTableId: input.recommendedTableId,
+      chosenTableId: input.chosenTableId,
+      override: input.override,
+      shadow: input.shadow,
+      reason: input.override ? input.reason : undefined,
+      topSignal: input.topSignal,
+    };
+    const list = all[locationSlug] ?? [];
+    list.push(decision);
+    // keep the most recent DECISION_CAP
+    all[locationSlug] = list.slice(-DECISION_CAP);
+    await writeJSON(SEATING_DECISIONS_FILE, all);
+    return decision;
+  });
+}
+
+export async function getSeatingDecisions(locationSlug: string): Promise<SeatingDecision[]> {
+  const all = await readJSON<Record<string, SeatingDecision[]>>(SEATING_DECISIONS_FILE, {});
+  return all[locationSlug] ?? [];
+}
+
+/** The trust readout for a location — override rate + shadow count over recent
+ *  decisions. Pure summary shared with the UI (summariseDecisions). */
+export async function getSeatingDecisionSummary(locationSlug: string): Promise<SeatingDecisionSummary> {
+  return summariseDecisions(await getSeatingDecisions(locationSlug));
+}
+
+// --- Guest seating profile (CRM → engine prefs) --------------------------
+// Turn what we know about a returning guest into the TablePrefs the seating
+// engine's `guest` signal reads: their usual table (most-sat table in history),
+// preferred zone (that table's zone), and VIP standing (a regular by spend /
+// visits / loyalty). Best-effort — an anonymous or unknown phone yields empty
+// prefs and the engine simply falls back to neutral.
+export interface GuestSeatingProfile {
+  prefs: { zone?: string; vip?: boolean; usualTableId?: string };
+  name: string | null;
+  vip: boolean;
+  visits: number;
+  usualTableId: string | null;
+  usualTableLabel: string | null;
+}
+
+const digits = (s: string) => s.replace(/\D/g, "");
+
+export async function getGuestSeatingProfile(locationSlug: string, rawPhone: string): Promise<GuestSeatingProfile> {
+  const empty: GuestSeatingProfile = { prefs: {}, name: null, vip: false, visits: 0, usualTableId: null, usualTableLabel: null };
+  const suffix = digits(rawPhone).slice(-9);
+  if (suffix.length < 6) return empty;
+
+  const [customer, reservations, tables] = await Promise.all([
+    getCustomer(rawPhone).catch(() => null),
+    getReservations(locationSlug).catch(() => [] as Reservation[]),
+    getTables(locationSlug).catch(() => [] as FloorTable[]),
+  ]);
+
+  // VIP = a genuine regular: healthy spend, repeat visits, or loyalty standing.
+  const vip = !!customer && (customer.orderCount >= 6 || customer.totalSpentGrosze >= 80_000 || customer.loyaltyPointsBalance >= 500);
+
+  // Usual table = the table this guest has sat at most across their history.
+  const mine = reservations.filter(
+    (r) => r.customerPhone && digits(r.customerPhone).slice(-9) === suffix && (r.status === "seated" || r.status === "completed") && r.tableId,
+  );
+  const counts = new Map<string, number>();
+  for (const r of mine) counts.set(r.tableId!, (counts.get(r.tableId!) ?? 0) + 1);
+  let usualTableId: string | null = null;
+  let best = 0;
+  for (const [id, c] of counts) if (c > best) { best = c; usualTableId = id; }
+  const usualTable = usualTableId ? tables.find((t) => t.id === usualTableId) : undefined;
+
+  return {
+    prefs: { vip: vip || undefined, usualTableId: usualTableId ?? undefined, zone: usualTable?.zone },
+    name: customer?.name ?? mine[0]?.customerName ?? null,
+    vip,
+    visits: mine.length,
+    usualTableId,
+    usualTableLabel: usualTable ? usualTable.number : null,
+  };
+}
+
+// --- Waitlist (the host's queue) -----------------------------------------
+// Walk-in parties waiting for a table, with the wait we quoted them. Per-location
+// list, same JSON pattern as reservations. Concept-5's Waitlist column reads it.
+const WAITLIST_FILE = "waitlist.json";
+
+export async function getWaitlist(locationSlug: string, date?: string): Promise<WaitlistEntry[]> {
+  const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+  const list = all[locationSlug] ?? [];
+  return date ? list.filter((w) => w.date === date) : list;
+}
+
+export async function addWaitlistEntry(
+  locationSlug: string,
+  input: { date: string; customerName: string; partySize: number; customerPhone?: string; notes?: string; needs?: WaitlistEntry["needs"]; quotedMin: number },
+): Promise<WaitlistEntry> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const entry: WaitlistEntry = {
+      id: `wl-${crypto.randomUUID().slice(0, 8)}`,
+      locationSlug,
+      date: input.date,
+      customerName: input.customerName,
+      partySize: input.partySize,
+      customerPhone: input.customerPhone,
+      notes: input.notes,
+      needs: input.needs,
+      status: "waiting",
+      quotedMin: input.quotedMin,
+      addedAt: new Date().toISOString(),
+    };
+    const list = all[locationSlug] ?? [];
+    list.push(entry);
+    all[locationSlug] = list.slice(-200);
+    await writeJSON(WAITLIST_FILE, all);
+    return entry;
+  });
+}
+
+export async function updateWaitlistEntry(
+  locationSlug: string,
+  id: string,
+  patch: { status?: WaitlistStatus },
+): Promise<WaitlistEntry | null> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const list = all[locationSlug] ?? [];
+    const i = list.findIndex((w) => w.id === id);
+    if (i < 0) return null;
+    const next: WaitlistEntry = { ...list[i], ...patch };
+    if (patch.status === "seated" && !next.seatedAt) next.seatedAt = new Date().toISOString();
+    list[i] = next;
+    all[locationSlug] = list;
+    await writeJSON(WAITLIST_FILE, all);
+    return next;
+  });
+}
+
+export async function removeWaitlistEntry(locationSlug: string, id: string): Promise<boolean> {
+  return withLock(WAITLIST_FILE, async () => {
+    const all = await readJSON<Record<string, WaitlistEntry[]>>(WAITLIST_FILE, {});
+    const list = all[locationSlug] ?? [];
+    const next = list.filter((w) => w.id !== id);
+    all[locationSlug] = next;
+    await writeJSON(WAITLIST_FILE, all);
+    return next.length !== list.length;
+  });
 }
 
 // --- POS open checks (tabs) ----------------------------------------------

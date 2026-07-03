@@ -1,5 +1,18 @@
 /* Core parity (book) — dense-console 1:1 fixes. Scope every rule under .core */
 
+/* ── Surface sub-bar (mockup `.subbar`) — day label · date chip · pill ───── */
+/* Compact date chip so it reads like the mockup's datefield, not a full input */
+.core .core-bk-datefield { width: auto; height: 30px; padding: 3px 9px; font-size: 11px; }
+/* Brand-tinted "New reservation" pill (mockup `.pill.new`) */
+.core .core-bk-newpill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--brand-bright);
+  background: var(--brand-wash); border: 1px solid rgba(232, 107, 62, .4);
+  padding: 4px 11px; border-radius: 999px; cursor: pointer;
+}
+.core .core-bk-newpill:hover { background: rgba(232, 107, 62, .28); }
+.core .core-bk-newpill span { font-size: 13px; line-height: 1; }
+
 /* ── Timeline panel — glass card wrapping the tlbar + fixed-tick grid ───── */
 .core .core-book-tlpanel {
   background: var(--panel);
@@ -114,11 +127,13 @@
 .core .core-bk-slotchip.warm small { color: var(--brand-bright); }
 .core .core-bk-slotchip.full { color: var(--danger); box-shadow: inset 0 0 0 1px rgba(255, 90, 92, .4); border-color: transparent; opacity: .6; }
 .core .core-bk-slotchip.full small { color: var(--danger); }
+/* selected slot — translucent brand wash + bright text (mockup `.slotchip.on`),
+   not a heavy solid fill */
 .core .core-bk-slotchip.on {
-  background: var(--brand); color: var(--on-accent); border-color: var(--brand);
-  box-shadow: inset 0 0 0 1px var(--brand), 0 0 14px -5px var(--brand);
+  background: var(--brand-wash); color: var(--brand-bright); border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .6), 0 0 14px -5px var(--brand);
 }
-.core .core-bk-slotchip.on small { color: rgba(255, 255, 255, .85); }
+.core .core-bk-slotchip.on small { color: var(--brand-bright); }
 
 /* party stepper + fit hint */
 .core .core-bk-partyrow { display: flex; align-items: center; gap: 10px; }
@@ -174,11 +189,11 @@
 .core .core-bk-divlabel {
   grid-column: 1 / -1;
   font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
-  color: var(--ink-3); margin: 22px 14px 8px; display: flex; align-items: center; gap: 10px;
+  color: var(--ink-3); margin: 22px 0 8px; display: flex; align-items: center; gap: 10px;
 }
 .core .core-bk-divlabel::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .core .core-bk-blist {
-  grid-column: 1 / -1; margin: 0 14px 14px;
+  grid-column: 1 / -1; margin: 0 0 14px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
 }
 .core .core-bk-blisth { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
@@ -188,7 +203,7 @@
   padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3);
 }
 .core .core-bk-brow {
-  display: grid; grid-template-columns: 64px 1fr 70px 60px 96px 34px;
+  display: grid; grid-template-columns: 60px 1fr 56px 46px 76px auto 34px;
   align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer;
 }
 .core .core-bk-brow:last-child { border-bottom: 0; }
@@ -210,3 +225,231 @@
   background: var(--panel-2); color: var(--ink-3); display: grid; place-items: center; cursor: pointer;
 }
 .core .core-bk-brow .bcancel:hover { color: var(--danger); border-color: rgba(255, 90, 92, .5); background: var(--danger-wash); }
+
+/* ── Seating Intelligence Engine controls ───────────────────────────────────
+   Subbar Policy/Walk-in buttons, Today's-bookings row actions, and the walk-in
+   + policy dialogs (src/lib/seating.ts, wired in CoreBook). */
+.core .core-bk-toolbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line);
+  padding: 4px 11px; border-radius: 999px; cursor: pointer;
+}
+.core .core-bk-toolbtn:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-toolbtn.walk { color: var(--basil); border-color: rgba(125, 196, 100, .4); background: var(--basil-wash); }
+.core .core-bk-toolbtn span { font-size: 13px; line-height: 1; }
+
+/* row action buttons (Seat · No-show · Complete) + walk-in tag */
+.core .core-bk-brow .bnm .bwalk { font-family: var(--mono); font-size: 9px; color: var(--basil); text-transform: uppercase; letter-spacing: .04em; }
+.core .core-bk-brow .bacts { display: flex; gap: 5px; justify-content: flex-end; }
+.core .core-bk-brow .bact {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .03em;
+  padding: 3px 9px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2);
+}
+.core .core-bk-brow .bact:hover:not(:disabled) { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-brow .bact:disabled { opacity: .5; cursor: default; }
+.core .core-bk-brow .bact.seat { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-brow .bact.done { color: var(--on-accent); background: linear-gradient(180deg, #7fd0ec, var(--info)); border-color: transparent; }
+
+/* walk-in + policy dialog bodies */
+.core .core-bk-walk, .core .core-bk-policy { display: flex; flex-direction: column; min-width: 320px; max-width: 440px; }
+.core .core-bk-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-preset {
+  font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.core .core-bk-preset:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-preset.on { color: var(--brand-bright); background: var(--brand-wash); border-color: rgba(232, 107, 62, .5); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
+.core .core-bk-slider { display: grid; grid-template-columns: 64px 1fr 42px; align-items: center; gap: 10px; margin: 5px 0; }
+.core .core-bk-slider .sl-k { font-family: var(--mono); font-size: 11px; color: var(--ink-2); text-transform: capitalize; }
+.core .core-bk-slider input[type="range"] { width: 100%; accent-color: var(--brand); }
+.core .core-bk-slider .sl-v { font-family: var(--mono); font-size: 11px; color: var(--brand-bright); text-align: right; }
+.core .core-bk-rules { display: flex; flex-direction: column; gap: 8px; }
+.core .core-bk-rules label { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-bk-rules label input { width: 62px; text-align: center; margin-left: auto; }
+.core .core-bk-rules label span { color: var(--ink-3); flex: 0 0 auto; }
+
+/* ── Policy · advanced guards (toggles) ─────────────────────────────────────── */
+.core .core-bk-toggles { display: flex; flex-direction: column; gap: 6px; }
+.core .core-bk-toggle { display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+.core .core-bk-toggle:hover { border-color: var(--line-2, var(--line)); }
+.core .core-bk-toggle .tg-sw { flex: 0 0 auto; width: 30px; height: 18px; border-radius: 999px; background: var(--panel-4, var(--panel-3)); border: 1px solid var(--line); position: relative; transition: background .15s; }
+.core .core-bk-toggle .tg-dot { position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-3); transition: transform .15s, background .15s; }
+.core .core-bk-toggle.on .tg-sw { background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-toggle.on .tg-dot { transform: translateX(12px); background: var(--on-basil); }
+.core .core-bk-toggle .tg-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.core .core-bk-toggle .tg-l { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.core .core-bk-toggle .tg-h { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); line-height: 1.35; }
+
+/* Pre-service forecast dialog */
+.core .core-bk-sim { display: flex; flex-direction: column; gap: 10px; min-width: 340px; max-width: 480px; }
+.core .core-bk-simkpis { display: flex; gap: 8px; }
+.core .core-bk-simkpis .cell { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); }
+.core .core-bk-simkpis .v { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); }
+.core .core-bk-simkpis .v.danger { color: var(--danger); }
+.core .core-bk-simkpis .v.basil { color: var(--basil); }
+.core .core-bk-simkpis .v small { font-size: 10px; color: var(--ink-3); }
+.core .core-bk-simkpis .k { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.core .core-bk-simhead { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin-top: 4px; }
+.core .core-bk-simhead .ok { color: var(--basil); text-transform: none; letter-spacing: 0; }
+.core .core-bk-simchart { display: flex; align-items: flex-end; gap: 3px; height: 84px; padding: 6px 2px 0; border-radius: 10px; background: rgba(0,0,0,.18); border: 1px solid var(--line); }
+.core .core-bk-simchart .simcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; }
+.core .core-bk-simchart .simbar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.core .core-bk-simchart .simbar { width: 100%; border-radius: 3px 3px 0 0; background: var(--basil); }
+.core .core-bk-simchart .simbar.warm { background: var(--amber); }
+.core .core-bk-simchart .simbar.hot { background: var(--danger); }
+.core .core-bk-simchart .simx { font-family: var(--mono); font-size: 8px; color: var(--ink-3); height: 10px; }
+.core .core-bk-simrisks { display: flex; flex-direction: column; gap: 5px; }
+.core .core-bk-simrisks .simrisk { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,90,92,.4); background: var(--danger-wash); }
+.core .core-bk-simrisks .rt { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-bk-simrisks .rn { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.core .core-bk-simrisks .rr { font-family: var(--mono); font-size: 10px; color: var(--danger); }
+
+/* Table-join proposals (combine tables for a big party) */
+.core .core-bk-joins { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.core .core-bk-join { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; text-align: left; padding: 8px 11px; border-radius: 10px; border: 1px dashed rgba(84, 188, 224, .5); background: var(--info-wash); cursor: pointer; }
+.core .core-bk-join.on { border-style: solid; border-color: var(--info); }
+.core .core-bk-join .jn { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-join .jc { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.core .core-bk-join .jfit { font-family: var(--mono); font-size: 10px; color: var(--info); }
+
+/* Guest-needs chips (accessibility) in the booking form */
+.core .core-bk-needs { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-need { font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.core .core-bk-need.on { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+
+/* VIP-hold zone chips */
+.core .core-bk-vipzones { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-vipzone { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.core .core-bk-vipzone.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
+
+/* Matched returning guest (CRM) chip in the booking form */
+.core .core-bk-guestmatch { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 6px 9px; border-radius: 9px; background: var(--info-wash); border: 1px solid rgba(84, 188, 224, .35); }
+.core .core-bk-guestmatch .gm-vip { font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-radius: 4px; padding: 1px 6px; }
+.core .core-bk-guestmatch .gm-txt { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); }
+.core .core-bk-guestmatch .gm-use { font-family: var(--mono); font-size: 10px; color: var(--info); background: transparent; border: 1px solid rgba(84,188,224,.5); border-radius: 99px; padding: 3px 9px; cursor: pointer; margin-left: auto; }
+
+/* Turn-model accuracy readout */
+.core .core-bk-turnacc { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); line-height: 1.4; margin: 2px 0 4px; padding: 6px 8px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-bk-turnacc b { color: var(--info); }
+
+/* Override-reason chips (captured when the operator picks a non-recommended table) */
+.core .core-bk-orsn { margin-top: 8px; }
+.core .core-bk-orsnchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-bk-orsnchip { font-family: var(--mono); font-size: 10.5px; text-transform: capitalize; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.core .core-bk-orsnchip.on { color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border-color: transparent; }
+
+/* Trust-loop readout */
+.core .core-bk-trust { display: flex; flex-wrap: wrap; gap: 8px; }
+.core .core-bk-trustnote { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 6px; }
+.core .core-bk-trustnote b { color: var(--ink-2); }
+.core .core-bk-nudge { margin-top: 6px; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(240, 173, 70, .4); background: var(--amber-wash); font-size: 11.5px; color: var(--ink-2); line-height: 1.4; }
+.core .core-bk-nudge b { color: var(--amber); text-transform: capitalize; }
+.core .core-bk-trust .tr-cell { flex: 1 1 68px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); }
+.core .core-bk-trust .tr-v { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
+.core .core-bk-trust .tr-v small { font-size: 10px; color: var(--ink-3); margin-left: 1px; }
+.core .core-bk-trust .tr-k { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+
+/* ── Table signals — the score, laid open (explainability) ──────────────────── */
+.core .core-bk-signals { margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
+.core .core-bk-signals .sg-head { display: flex; align-items: baseline; gap: 8px; }
+.core .core-bk-signals .sg-t { font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-signals .sg-score { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--brand-bright); }
+.core .core-bk-signals .sg-score small { font-size: 9px; color: var(--ink-3); }
+.core .core-bk-signals .sg-shadow { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--on-accent); background: var(--amber); border-radius: 4px; padding: 1px 5px; }
+.core .core-bk-signals .sg-bars { display: flex; flex-direction: column; gap: 4px; }
+.core .core-bk-signals .sg-bar { display: grid; grid-template-columns: 52px 1fr 26px; align-items: center; gap: 8px; }
+.core .core-bk-signals .sg-k { font-family: var(--mono); font-size: 10px; text-transform: capitalize; color: var(--ink-2); }
+.core .core-bk-signals .sg-track { height: 6px; border-radius: 999px; background: var(--panel-4, var(--panel-3)); overflow: hidden; }
+.core .core-bk-signals .sg-fill { display: block; height: 100%; border-radius: 999px; background: var(--info); }
+.core .core-bk-signals .sg-fill.fit { background: var(--basil); }
+.core .core-bk-signals .sg-fill.runway { background: var(--info); }
+.core .core-bk-signals .sg-fill.guest { background: var(--brand); }
+.core .core-bk-signals .sg-fill.pacing { background: var(--amber); }
+.core .core-bk-signals .sg-fill.yield { background: #b58ae0; }
+.core .core-bk-signals .sg-fill.section { background: #4bd4b0; }
+.core .core-bk-signals .sg-v { font-family: var(--mono); font-size: 10px; color: var(--ink-3); text-align: right; }
+.core .core-bk-signals .sg-facts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; border-top: 1px solid var(--line); }
+.core .core-bk-signals .sg-fact { display: flex; flex-direction: column; gap: 1px; flex: 1 1 60px; }
+.core .core-bk-signals .sg-fact .fk { font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.core .core-bk-signals .sg-fact .fv { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-signals .sg-fact .fv small { font-size: 9px; color: var(--ink-3); margin-left: 1px; }
+.core .core-bk-signals .sg-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
+.core .core-bk-signals .sg-reason { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); background: var(--panel-3); border-radius: 5px; padding: 2px 7px; }
+
+/* ── Book & Seat lenses — Timeline · Floor · Arrivals over shared reservations ─ */
+/* lens toggle in the section header */
+.core .core-bk-lenses { display: inline-flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.core .core-bk-lenses button { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-3); background: transparent; border: 0; padding: 5px 13px; border-radius: 999px; cursor: pointer; }
+.core .core-bk-lenses button:hover { color: var(--ink-2); }
+.core .core-bk-lenses button.on { color: var(--ink); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .5); }
+
+/* FLOOR lens — a card of table tiles (full width in the book grid) */
+.core .core-bk-floorlens { grid-column: 1 / -1; margin: 0 0 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.core .core-bk-floorhead { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.core .core-bk-floorhead .t { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.core .core-bk-floorhead .sm { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.core .core-bk-floorgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 14px; }
+.core .core-bk-ftile { text-align: left; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); padding: 10px; min-height: 92px; display: flex; flex-direction: column; gap: 3px; cursor: default; }
+.core .core-bk-ftile .ft-h { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.core .core-bk-ftile .tn { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-ftile .ft-t { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
+.core .core-bk-ftile .ft-who { font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-bk-ftile .ft-who.mut { color: var(--ink-3); font-weight: 500; }
+.core .core-bk-ftile .ft-sub { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
+.core .core-bk-ftile .ft-ribbon { margin-top: auto; font-family: var(--mono); font-size: 9px; padding: 3px 6px; border-radius: 6px; background: rgba(240, 173, 70, .22); color: var(--amber); }
+.core .core-bk-ftile .ft-acts { margin-top: auto; display: flex; }
+.core .core-bk-ftile .ft-acts button { font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-3); color: var(--ink-2); }
+.core .core-bk-ftile .ft-acts button:hover:not(:disabled) { color: var(--ink); }
+.core .core-bk-ftile .ft-acts button:disabled { opacity: .5; cursor: default; }
+.core .core-bk-ftile .ft-acts button.prim { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-ftile .ft-seat { font-family: var(--mono); font-size: 9.5px; color: var(--brand-bright); }
+.core .core-bk-ftile.seated { background: var(--info-wash); border-color: rgba(84, 188, 224, .45); }
+.core .core-bk-ftile.seated .ft-sub { color: var(--info); }
+/* Seated tiles open their POS check on tap. */
+.core .core-bk-ftile.tappable { cursor: pointer; }
+.core .core-bk-ftile.tappable:hover { border-color: var(--info); }
+/* Seated off-book (a floor/POS walk-in with no booking) — muted, non-actionable
+   here; the room reads true but it's managed on Floor/POS. */
+.core .core-bk-ftile.seated.offbook { background: var(--panel-2); border-color: var(--line); border-style: dashed; }
+.core .core-bk-ftile.seated.offbook .ft-who { color: var(--ink-2); }
+.core .core-bk-ftile.seated.offbook .ft-sub { color: var(--ink-3); }
+.core .core-bk-ftile.due { background: var(--amber-wash); border-color: rgba(240, 173, 70, .5); }
+.core .core-bk-ftile.held { border-color: rgba(240, 173, 70, .45); }
+.core .core-bk-ftile.free { border-color: rgba(125, 196, 100, .35); cursor: pointer; }
+.core .core-bk-ftile.free:hover { background: var(--panel-3); border-color: rgba(125, 196, 100, .6); }
+.core .core-bk-ftile.free .tn, .core .core-bk-ftile.free .ft-who { color: var(--basil); }
+
+/* ARRIVALS lens — three queue columns (full width) */
+.core .core-bk-arrivals { grid-column: 1 / -1; margin: 0 0 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.core .core-bk-arrivals .acol { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); display: flex; flex-direction: column; min-height: 360px; overflow: hidden; }
+.core .core-bk-arrivals .acolh { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.core .core-bk-arrivals .acolh .t { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.core .core-bk-arrivals .acolh .c { font-family: var(--mono); font-size: 9px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; }
+.core .core-bk-arrivals .acolb { padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.core .core-bk-arrivals .apc { border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; background: var(--panel-2); }
+.core .core-bk-arrivals .apc.late { border-color: rgba(255, 90, 92, .5); box-shadow: inset 0 0 0 1px rgba(255, 90, 92, .2); }
+.core .core-bk-arrivals .apc.seatedc { border-color: rgba(84, 188, 224, .4); background: var(--info-wash); }
+.core .core-bk-arrivals .apc .r1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.core .core-bk-arrivals .apc .nm { font-weight: 600; font-size: 13px; }
+.core .core-bk-arrivals .apc .tm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.core .core-bk-arrivals .apc.late .tm { color: var(--danger); }
+.core .core-bk-arrivals .apc .r2 { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 3px; }
+.core .core-bk-arrivals .apc .aact { display: flex; gap: 6px; margin-top: 9px; }
+.core .core-bk-arrivals .apc .aact button { flex: 1; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 6px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-3); color: var(--ink-2); }
+.core .core-bk-arrivals .apc .aact button:hover:not(:disabled) { color: var(--ink); }
+.core .core-bk-arrivals .apc .aact button:disabled { opacity: .5; cursor: default; }
+.core .core-bk-arrivals .apc .aact button.prim { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
+.core .core-bk-walkcta { font-family: var(--mono); font-size: 11px; color: var(--brand-bright); background: var(--brand-wash); border: 1px dashed rgba(232, 107, 62, .5); border-radius: 10px; padding: 10px; cursor: pointer; }
+/* Waitlist column: add row + ready state */
+.core .core-bk-arrivals .apc.waitc { border-color: rgba(240, 173, 70, .4); }
+.core .core-bk-arrivals .apc .tm.ready { color: var(--basil); }
+.core .core-bk-wladd { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; padding: 2px 0 6px; border-bottom: 1px dashed var(--line); margin-bottom: 2px; }
+.core .core-bk-wladd .core-inp { padding: 6px 8px; font-size: 12px; }
+.core .core-covers.sm { display: inline-flex; align-items: center; gap: 6px; }
+.core .core-covers.sm button { width: 22px; height: 22px; font-size: 13px; }
+.core .core-covers.sm .mono { min-width: 14px; text-align: center; font-size: 12px; }
+.core .core-bk-wlqbtn { font-family: var(--mono); font-size: 10px; font-weight: 600; white-space: nowrap; color: var(--on-accent); background: linear-gradient(180deg, #f4c064, var(--amber)); border: 0; border-radius: 99px; padding: 7px 10px; cursor: pointer; }
+.core .core-bk-wlqbtn:disabled { opacity: .5; cursor: default; }
+@media (max-width: 1000px) { .core .core-bk-arrivals { grid-template-columns: 1fr; } }

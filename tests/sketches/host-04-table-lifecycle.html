@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept 4 · Table-Session Architecture — Sud Italia Service OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 6% 0%,rgba(125,196,100,.13),transparent 60%),radial-gradient(60% 60% at 98% 100%,rgba(232,107,62,.15),transparent 62%),radial-gradient(46% 40% at 82% 6%,rgba(84,188,224,.10),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.cnav a.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.5);box-shadow:0 0 16px -6px var(--brand)}
+.hero{padding:46px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-bright)}
+h1{font-family:var(--display);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:18px;color:var(--ink-2);max-width:800px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.chip.b{color:var(--brand-bright);border-color:rgba(232,107,62,.4);background:var(--brand-wash)}
+section{margin-top:26px}
+h2{font-family:var(--display);font-weight:700;font-size:23px;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .n{font-family:var(--mono);font-size:12px;color:var(--brand-bright);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--brand-wash)}
+.lead{color:var(--ink-2);max-width:840px;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+small,.sm{font-size:12.5px;color:var(--ink-3)}
+.callout{padding:14px 16px;border-radius:var(--r-sm);background:var(--brand-wash);border:1px dashed rgba(232,107,62,.5);color:var(--ink);font-size:14px}
+/* entity diagram */
+.diagram{padding:22px;display:flex;flex-direction:column;gap:0;align-items:center}
+.erow{display:flex;align-items:stretch;gap:16px;justify-content:center;flex-wrap:wrap}
+.ent{border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);min-width:220px;overflow:hidden}
+.ent .eh{font-family:var(--mono);font-size:12px;font-weight:600;padding:8px 12px;border-bottom:1px solid var(--line);letter-spacing:.03em}
+.ent .ef{padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--ink-3);display:flex;flex-direction:column;gap:3px}
+.ent .ef b{color:var(--ink-2);font-weight:500}
+.ent.core{border-color:var(--brand);box-shadow:0 0 26px -10px var(--brand)}
+.ent.core .eh{color:var(--brand-bright);background:var(--brand-wash)}
+.ent.res .eh{color:var(--amber);background:var(--amber-wash)}
+.ent.tbl .eh{color:var(--info);background:var(--info-wash)}
+.ent.chk .eh{color:var(--basil);background:var(--basil-wash)}
+.conn{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);text-align:center;padding:10px 0}
+.conn .l{display:block;height:22px;width:1px;background:var(--line-2);margin:0 auto 4px}
+/* state machine */
+.sm{padding:20px;overflow-x:auto}
+.smrow{display:flex;align-items:center;gap:6px;min-width:760px;flex-wrap:nowrap}
+.st{border-radius:10px;padding:8px 12px;font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);background:var(--panel-2);white-space:nowrap;text-align:center}
+.st .s{display:block;font-size:8.5px;color:var(--ink-3);margin-top:2px}
+.st.booked{color:var(--amber);border-color:rgba(240,173,70,.5);background:var(--amber-wash)}
+.st.active{color:var(--info);border-color:rgba(84,188,224,.5);background:var(--info-wash)}
+.st.closed{color:var(--basil);border-color:rgba(125,196,100,.5);background:var(--basil-wash)}
+.st.dead{color:var(--danger);border-color:rgba(255,90,92,.5);background:var(--danger-wash)}
+.arrw{font-family:var(--mono);font-size:9px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;min-width:78px}
+.arrw span{color:var(--brand-bright)}
+.arrw::before{content:"→";font-size:16px;color:var(--line-2)}
+/* engine */
+.engine{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.22);border:1px solid var(--line)}
+.engine pre{font-family:var(--mono);font-size:12px;color:var(--ink-2);line-height:1.6;white-space:pre-wrap;overflow-x:auto}
+.engine .kw{color:var(--brand-bright)} .engine .fn{color:var(--info)} .engine .st2{color:var(--basil)} .engine .cm{color:var(--ink-3)}
+.scoreboard{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.srow{display:grid;grid-template-columns:60px 1fr 56px;gap:10px;align-items:center;font-family:var(--mono);font-size:11px}
+.srow .bar{height:9px;border-radius:99px;background:var(--panel-3);overflow:hidden}
+.srow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--basil),var(--brand))}
+.srow .tn{color:var(--ink)} .srow .sc{text-align:right;color:var(--basil)}
+.srow.no .sc{color:var(--danger)} .srow.no .bar i{background:var(--danger)}
+/* api */
+.arch{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.arch code{font-family:var(--mono);font-size:12.5px;color:var(--brand-bright);background:rgba(232,107,62,.1);padding:1px 5px;border-radius:5px}
+.arch .row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.arch .row:last-child{border:0}
+.arch .row b{flex:0 0 190px;font-family:var(--mono);font-size:11px;color:var(--info);padding-top:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.list{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.list h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.list.pro h4{color:var(--basil)} .list.con h4{color:var(--amber)}
+.list li{list-style:none;font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative}
+.list.pro li::before{content:"✓";position:absolute;left:0;color:var(--basil);font-weight:700}
+.list.con li::before{content:"△";position:absolute;left:0;color:var(--amber)}
+.effort{display:inline-flex;gap:4px;align-items:center}
+.effort i{width:8px;height:8px;border-radius:2px;background:var(--line-2);display:inline-block}
+.effort i.on{background:var(--brand)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.cols{grid-template-columns:1fr}h1{font-size:32px}.arch .row b{flex-basis:130px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · seating problem</b>
+  <a href="host-01-unified-floor.html">1 · Unified Floor</a>
+  <a href="host-02-live-timeline.html">2 · Live Timeline</a>
+  <a href="host-03-arrivals-board.html">3 · Arrivals Board</a>
+  <a class="on" href="host-04-table-lifecycle.html">4 · Table-Session Arch</a>
+  <a href="host-05-recommendation.html">5 · Recommendation ★</a>
+  <a href="host-06-engine.html">6 · Engine ⚙</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Concept 4 of 5 · Architecture-forward</div>
+  <h1>The Table-Session model</h1>
+  <p class="tag">The other four concepts are <em>views</em>. This is the <em>foundation</em> they all want underneath them: one entity that unifies "a booking," "a seated party," and "a walk-in" into a single lifecycle — so every surface reads the same truth about who occupies what, when.</p>
+  <div class="chips">
+    <span class="chip b">The layer under everything else</span>
+    <span class="chip">One entity: TableSession</span>
+    <span class="chip g">+ an assignment engine</span>
+  </div>
+</header>
+
+<section>
+  <div class="callout"><b>Why the break exists at all.</b> Today a <code>Reservation</code> (with <code>tableId</code> + <code>status</code>) and a <code>FloorTable</code> (with <code>status</code>) each hold <em>half</em> the truth, and nothing owns the join. "Who is at T5 right now, and until when?" has no single record to answer it. A walk-in has <em>no</em> record at all. We fix the model, and every view gets correct for free.</div>
+</section>
+
+<!-- ENTITY MODEL -->
+<section>
+  <h2><span class="n">model</span> One record owns "party × table × span"</h2>
+  <p class="lead">Introduce <b><code>TableSession</code></b> — the single occupancy record. A reservation is a <em>future intent</em>; on arrival it's realised into a session (source <code>booking</code>). A walk-in creates a session directly (source <code>walk-in</code>). The table's live status is <em>derived</em> from its sessions, never set by hand.</p>
+
+  <div class="glass diagram">
+    <div class="erow">
+      <div class="ent res"><div class="eh">Reservation <span style="color:var(--ink-3)">(intent)</span></div><div class="ef"><b>party, date, time</b><b>durationMin</b><b>tableId? (preferred)</b><b>status: booked→seated</b></div></div>
+      <div class="ent tbl"><div class="eh">FloorTable <span style="color:var(--ink-3)">(physical)</span></div><div class="ef"><b>number, seats, zone</b><b>status = derived ▾</b><span style="color:var(--ink-3)">from its sessions</span></div></div>
+      <div class="ent chk"><div class="eh">PosCheck <span style="color:var(--ink-3)">(money)</span></div><div class="ef"><b>items, total</b><b>tableSessionId ▲</b></div></div>
+    </div>
+    <div class="conn"><span class="l"></span>realises ▼ &nbsp;&nbsp; opens ▼ &nbsp;&nbsp; occupies ▼</div>
+    <div class="erow">
+      <div class="ent core"><div class="eh">★ TableSession <span style="color:var(--ink-3)">— the new join</span></div><div class="ef">
+        <b>id · locationSlug</b>
+        <b>tableId</b>
+        <b>reservationId?  <span style="color:var(--ink-3)">(null = walk-in)</span></b>
+        <b>source: "booking" | "walk-in"</b>
+        <b>party · guestName?</b>
+        <b>seatedAt · expectedEndAt</b>
+        <b>closedAt?  ·  checkId?</b>
+        <b>state: held→active→closed</b>
+      </div></div>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">"Who's at T5 until when?" = the T5 session where <code>state=active</code>. "Is T5 free at 20:15?" = no active session <em>and</em> no <code>held</code>/reservation overlapping. One question, one record.</p>
+</section>
+
+<!-- STATE MACHINE -->
+<section>
+  <h2><span class="n">lifecycle</span> One state machine, two entry points</h2>
+  <div class="glass sm">
+    <div class="smrow">
+      <div class="st booked">Reservation<span class="s">booked</span></div>
+      <div class="arrw"><span>arrive / seat</span></div>
+      <div class="st active">TableSession<span class="s">active · source=booking</span></div>
+      <div class="arrw"><span>pay / leave</span></div>
+      <div class="st closed">Session closed<span class="s">table freed · Reservation completed</span></div>
+    </div>
+    <div class="smrow" style="margin-top:14px">
+      <div class="st dead">no-show<span class="s">grace elapsed → table released</span></div>
+      <div style="width:80px"></div>
+      <div class="st active" style="background:var(--basil-wash);color:var(--basil);border-color:rgba(125,196,100,.5)">Walk-in<span class="s">active · source=walk-in · no reservation</span></div>
+      <div class="arrw"><span>pay / leave</span></div>
+      <div class="st closed">Session closed<span class="s">table freed</span></div>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">Seating a booking and seating a walk-in converge on the <em>same</em> <code>active</code> session — that's what makes both problems disappear: Book learns the table filled (via <code>reservationId</code>), and the floor learns a walk-in exists (a session with no reservation).</p>
+</section>
+
+<!-- ASSIGNMENT ENGINE -->
+<section>
+  <h2><span class="n">engine</span> The assignment / free-window engine</h2>
+  <p class="lead">One pure module every view calls. It answers "what can I safely seat this party on, right now?" by scoring each table on fit, free-window (won't collide with the next reservation) and preference — and refuses the ones that aren't genuinely free.</p>
+  <div class="glass engine">
+<pre><span class="cm">// pure, testable — the brain behind "smart seat" everywhere</span>
+<span class="kw">function</span> <span class="fn">suggestTables</span>(party, at, prefs) {
+  <span class="kw">return</span> tables
+    .map(t =&gt; ({ t,
+      fits:   t.seats &gt;= party &amp;&amp; t.seats &lt;= party + 2,   <span class="cm">// right-sized</span>
+      freeFor: <span class="fn">freeWindowMin</span>(t, at),                  <span class="cm">// until next reservation/session</span>
+      zoneHit: prefs.zone ? t.zone === prefs.zone : <span class="st2">true</span>,
+    }))
+    .map(x =&gt; ({ ...x, ok: x.fits &amp;&amp; x.freeFor &gt;= TURN_MIN(party),
+                 score: <span class="fn">score</span>(x) }))          <span class="cm">// fit + runway + zone − oversize</span>
+    .sort((a,b) =&gt; b.score - a.score);
+}
+<span class="cm">// freeWindowMin = minutes from `at` until this table's next hold</span>
+<span class="cm">//   (active session end, OR an upcoming reservation start). 0 ⇒ occupied.</span></pre>
+    <div class="scoreboard">
+      <div class="srow"><span class="tn">T11 · 4</span><span class="bar"><i style="width:92%"></i></span><span class="sc">✓ 92</span></div>
+      <div class="srow"><span class="tn">T6 · 4</span><span class="bar"><i style="width:78%"></i></span><span class="sc">✓ 78</span></div>
+      <div class="srow no"><span class="tn">T7 · 6</span><span class="bar"><i style="width:24%"></i></span><span class="sc">✗ held</span></div>
+      <div class="srow no"><span class="tn">T2 · 4</span><span class="bar"><i style="width:12%"></i></span><span class="sc">✗ 2m</span></div>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">Party of 4 at 18:58: T11 wins (fits, open till 21:30). T7 is a bigger table but <b>held</b> for Mazur 19:30 → excluded. T2 frees in 2 min for Kowalski → excluded. The engine is the "protection" every other concept leans on.</p>
+</section>
+
+<!-- API -->
+<section>
+  <h2><span class="n">api</span> The surface it exposes</h2>
+  <div class="arch">
+    <div class="row"><b>POST /table-sessions</b><span>Seat a party. Body <code>{tableId, reservationId?|party, source}</code> → creates an <code>active</code> session, flips the reservation to <code>seated</code>, opens a check. The one write both "seat booking" and "seat walk-in" call.</span></div>
+    <div class="row"><b>PATCH /…/:id/close</b><span>Guest leaves → <code>closed</code>, table derived free, reservation <code>completed</code>.</span></div>
+    <div class="row"><b>POST /…/reassign</b><span>Move a live session to another table (with the same collision guard).</span></div>
+    <div class="row"><b>GET /floor/state?at=</b><span>Derived snapshot: every table + its current session + next hold + <code>freeWindowMin</code>. The single feed all five views render.</span></div>
+    <div class="row"><b>GET /suggest?party=&amp;at=</b><span>The ranked list above — powers "smart seat," walk-in guard, and quote engine.</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">trade-offs</span> Honest read</h2>
+  <div class="cols">
+    <div class="list pro"><h4>Strengths</h4>
+      <li>Fixes the root cause, not a symptom — every view becomes correct.</li>
+      <li>Walk-ins finally have a record; reporting &amp; covers get accurate.</li>
+      <li>One derived floor-state feed = no more two-systems drift.</li>
+      <li>Assignment engine is reusable, pure, unit-testable.</li>
+    </div>
+    <div class="list con"><h4>Limits</h4>
+      <li>Biggest lift — new entity, migration, backfill, endpoints.</li>
+      <li>Not a UI on its own; needs a view (Concepts 1–3) on top.</li>
+      <li>Deriving table status changes existing Floor write paths.</li>
+      <li>Over-engineered if you only ever run one small room.</li>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <span>Effort <span class="effort"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> high · the durable foundation</span>
+  <span>Next → <a style="color:var(--brand-bright)" href="host-05-recommendation.html">Concept 5 · The Recommendation ★</a></span>
+</div>
+
+</div>
+</body></html>

@@ -721,8 +721,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tender-tot span { font-size: 13px; color: var(--ink-2); } .core .core-tender-tot b { font-size: 28px; font-weight: 700; }
 .core .core-tender-note { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 .core .core-tender-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-.core .core-pay { height: 64px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel-2); font-weight: 700; font-size: 16px; color: var(--ink); }
+.core .core-pay { height: 64px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel-2); font-weight: 700; font-size: 16px; color: var(--ink); cursor: pointer; }
 .core .core-pay:hover { background: var(--brand-wash); border-color: var(--brand); } .core .core-pay:disabled { opacity: .5; cursor: default; }
+/* Cash+Card (mixed tender) spans the full width under Card / Cash. */
+.core .core-pay.mixed { grid-column: 1 / -1; height: 52px; font-size: 14px; color: var(--ink-2); }
+.core .core-pay.mixed:hover { color: var(--ink); }
 /* tender sheet: tip · comp · split · cash change */
 .core .core-tender-breakdown { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
 .core .core-tender-breakdown .comp { color: var(--brand-bright); font-weight: 600; } .core .core-tender-breakdown .tip { color: var(--basil); font-weight: 600; }
@@ -976,6 +979,13 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* held courses — present but not fired; dimmed with a ⊘ so the line knows they
    exist without them cluttering the active items. */
 .core .core-tk-course.held { color: var(--ink-3); opacity: .72; }
+/* Cancelled-after-firing callout — a dish pulled from the line. Loud + struck,
+   so the cook stops making it; never a silent disappearance. */
+.core .core-tk-voided { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.core .core-tk-void-row { display: flex; align-items: center; gap: 7px; padding: 4px 8px; border-radius: 6px; background: var(--danger-wash); border: 1px solid rgba(255, 90, 92, .5); }
+.core .core-tk-void-row .vx { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: var(--danger); }
+.core .core-tk-void-row .vn { font-size: 12px; font-weight: 600; color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--danger); }
+.core .core-tk-void-row .vr { margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--danger); text-transform: lowercase; }
 /* whole card = bump target (one wet hand); long-press = recall a step. */
 .core .core-tk.bumpable { cursor: pointer; transition: transform 120ms var(--fast), box-shadow 120ms var(--fast); }
 .core .core-tk.bumpable:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
@@ -1567,7 +1577,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* ============================================================
    Guest · Book (shared with Service) — slot + table console
    ============================================================ */
-.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; align-content: start; }
+.core .core-book { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; align-content: start; padding: 0 14px 16px; column-gap: 10px; }
+/* The grid owns the horizontal gutter (14px) + the timeline↔form gap (10px), so
+   every row — full-width header rows AND the timeline/form columns — shares one
+   left/right edge. The stat strip carries its own side margin for other
+   surfaces, so zero it inside Book to align it with the columns. */
+.core .core-book > .core-statstrip { margin-left: 0; margin-right: 0; }
 /* dense-console Book layout (mockup 11-book): timeline left, new-reservation
    form as the right rail, today's bookings full-width below. */
 .core .core-book-tlpanel { grid-column: 1; min-width: 0; }
@@ -1853,6 +1868,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 12px; color: var(--ink-2); }
 .core .core-tbl-field:last-child { margin-bottom: 0; }
 .core .core-tbl-field .core-inp { width: 100%; }
+.core .core-tbl-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.core .core-tbl-feat { font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.core .core-tbl-feat.on { color: var(--on-basil); background: linear-gradient(180deg, #93d67c, var(--basil)); border-color: transparent; }
 .core .core-btn.danger { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
 .core .core-btn.danger:hover { background: var(--danger); color: var(--on-danger); }
 

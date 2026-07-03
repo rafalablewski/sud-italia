@@ -532,6 +532,10 @@ export interface Order {
    *  coursed check fires; drives the KDS "course held" hint. Held courses are
    *  intentionally absent from `items` until they're fired. */
   coursing?: { fired: PosCourse[]; held: PosCourse[] };
+  /** Dishes cancelled AFTER firing — kept on the order so the kitchen display
+   *  can show them struck-through ("pulled"), never a silent disappearance.
+   *  Off the bill (removed from `items`); this is the accountability record. */
+  voidedItems?: { name: string; quantity: number; reason?: string; at: string }[];
   slotId: string;
   slotDate: string;
   slotTime: string;
@@ -601,6 +605,11 @@ export interface PosPayment {
 
 export type TableStatus = "available" | "seated" | "reserved" | "out-of-service";
 
+/** Physical accessibility features a table can offer / a guest can require. The
+ *  seating engine treats a required feature the table lacks as a hard exclusion. */
+export type TableFeature = "accessible" | "high-chair" | "step-free";
+export const TABLE_FEATURES: TableFeature[] = ["accessible", "high-chair", "step-free"];
+
 /** A physical table on a location's floor. `number` is the operator-facing
  *  label (free-form so it can be "12", "Bar 3", "Patio A"). */
 export interface FloorTable {
@@ -613,6 +622,9 @@ export interface FloorTable {
   /** Free-text service note for the table (allergy, VIP, high-chair, …),
    *  edited live from the Service → Floor table detail. */
   notes?: string;
+  /** Accessibility features this table offers (wheelchair-accessible, has a
+   *  high-chair, step-free). The engine matches these against a party's needs. */
+  features?: TableFeature[];
   createdAt: string;
 }
 
@@ -645,7 +657,40 @@ export interface Reservation {
   slotId?: string;
   status: ReservationStatus;
   notes?: string;
+  /** How the party reached a table: a planned `booking` (default) or an ad-hoc
+   *  `walk-in` seated on arrival (Seating Intelligence Engine walk-in flow). */
+  source?: "booking" | "walk-in";
+  /** Stamped when the booking is seated — the start of its live occupancy. Feeds
+   *  the "who's seated where" view and the learned turn-time model. */
+  seatedAt?: string;
+  /** Stamped when the party leaves (status → completed). With `seatedAt` this is
+   *  one realised dining duration the turn-time model learns from. */
+  completedAt?: string;
+  /** Accessibility features this party requires — the engine only offers tables
+   *  that provide every one. */
+  needs?: TableFeature[];
+  /** Extra tables combined with `tableId` to seat a large party (a "join"). All
+   *  of them are held/seated/freed together. Empty/absent for a normal single. */
+  joinedTableIds?: string[];
   createdAt: string;
+}
+
+/** A walk-in party waiting for a table (the host's queue). */
+export type WaitlistStatus = "waiting" | "seated" | "left";
+export interface WaitlistEntry {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  customerName: string;
+  partySize: number;
+  customerPhone?: string;
+  notes?: string;
+  needs?: TableFeature[];
+  status: WaitlistStatus;
+  /** Minutes we quoted the guest when they were added (frozen at add time). */
+  quotedMin: number;
+  addedAt: string;
+  seatedAt?: string;
 }
 
 // --- POS open checks (tabs) ---

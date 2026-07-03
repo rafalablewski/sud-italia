@@ -7,10 +7,11 @@ import { CORE_SURFACES } from "@/core/routes";
 
 /**
  * The Lens Rail — the left, icon-only rail (60px) that switches how you view the
- * room, not which app you're in. Exactly the four Service OS lenses, in spec
- * order: Floor (the map) · POS (the till / ordering) · KDS (the pass) · Book
- * (slots / reservations). We keep the **old, plain names** (POS / KDS) rather
- * than "Line"/"Pass" — operators know them.
+ * room, not which app you're in. The three Service OS lenses, in spec order:
+ * Floor (the map) · POS (the till / ordering) · KDS (the pass). We keep the
+ * **old, plain names** (POS / KDS) rather than "Line"/"Pass" — operators know
+ * them. Book (slots / reservations) is a **Service** view (a tab under the
+ * Floor lens, alongside Slots · Dispatch), not its own lens.
  *
  * The rail is collapsed to icons by default and expands to reveal labels only
  * when the operator **pins** it (a click on the pin toggle) — never on hover, so
@@ -19,9 +20,10 @@ import { CORE_SURFACES } from "@/core/routes";
  * every lens (SelectionContext + CoreDock), so switching lens re-renders the
  * SAME selection.
  *
- * Orders and Guest are cross-cutting surfaces, not room lenses — they are
- * reached from the Command Bar's ⌘K ("the tiramisu order", "Kowalski"). Active
- * state is derived from the pathname; hrefs come from @/core/routes.
+ * Guest is a lens too — its own hub (Inbox · CRM · Loyalty · Concierge).
+ * Orders stays a cross-cutting surface (not a room lens) — reached from the
+ * Command Bar's ⌘K ("the tiramisu order", "Kowalski"). Active state is derived
+ * from the pathname; hrefs come from @/core/routes.
  *
  * The rail owns the `.core-lens` class (distinct from the POS category
  * `.core-rail`) — see docs/design-system/core/theme/README.md → "Chrome".
@@ -29,7 +31,8 @@ import { CORE_SURFACES } from "@/core/routes";
 
 // Icons trace the dense-console mockup's lens rail 1:1 (tests/sketches/
 // core-pages/*.html → `.lens`): Floor = 2×2 grid, POS = register with legs,
-// KDS = split pass panel, Book = calendar, Reports = line chart, Settings = gear.
+// KDS = split pass panel, Guest = two people, Reports = line chart,
+// Settings = gear.
 const ICON: Record<string, ReactNode> = {
   service: (
     <>
@@ -46,7 +49,13 @@ const ICON: Record<string, ReactNode> = {
     </>
   ),
   kds: <path d="M4 4h16v5H4zM4 13h16v7H4zM8 4v5M16 13v7" />,
-  book: <path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />,
+  guest: (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
   reports: <path d="M3 3v18h18M7 14l3-4 3 3 5-6" />,
   settings: (
     <>
@@ -56,12 +65,14 @@ const ICON: Record<string, ReactNode> = {
   ),
 };
 
-// The four room lenses, in the spec's rail order. Labels are the plain names.
+// The room lenses, in rail order. Labels are the plain names. Book is not a lens
+// (it's a Service view, reached from the Floor lens tabs); Guest IS a lens —
+// its own hub of Inbox · CRM · Loyalty · Concierge.
 const LENSES: { key: keyof typeof ICON; href: string; label: string; sub: string }[] = [
   { key: "service", href: CORE_SURFACES.service, label: "Floor", sub: "tables · covers" },
   { key: "pos", href: CORE_SURFACES.pos, label: "POS", sub: "order & charge" },
   { key: "kds", href: CORE_SURFACES.kds, label: "KDS", sub: "kitchen wall" },
-  { key: "book", href: CORE_SURFACES.book, label: "Book", sub: "reservations" },
+  { key: "guest", href: CORE_SURFACES.guest, label: "Guest", sub: "inbox · crm" },
 ];
 // Below the divider — the two ops adjacencies the mockup rail pins (they live
 // in the admin shell, so these leave the Core canvas by design).

@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { CoreBook } from "@/core/guest/CoreBook";
+import { coreHref } from "@/core/routes";
 
 /**
- * The Book lens (`/core/book`) — the top-level Service OS lens for slots &
- * reservations, promoted out of the Guest sub-nav. Renders the booking timeline
- * standalone (its own "Book" eyebrow, no Guest subbar).
+ * Book moved from a top-level Lens into a **Service** view
+ * (`/core/service/book`, alongside Floor · Slots · Dispatch). This legacy path
+ * forwards there so old links / bookmarks keep working.
  */
-export default async function CoreBookLensPage() {
-  if (!(await isAuthenticated())) redirect("/login");
-  return <CoreBook standalone />;
+export default function LegacyCoreBookPage() {
+  redirect(coreHref("/service/book"));
 }

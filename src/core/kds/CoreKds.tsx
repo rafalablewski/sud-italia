@@ -256,6 +256,17 @@ const TicketCard = memo(function TicketCard({
       {held.length > 0 && (
         <div className="core-tk-course held">⊘ {held.map((c) => POS_COURSE_LABELS[c]).join(" · ")} held</div>
       )}
+      {(t.voided?.length ?? 0) > 0 && (
+        <div className="core-tk-voided" role="alert">
+          {t.voided!.map((v, i) => (
+            <div key={i} className="core-tk-void-row">
+              <span className="vx">✕ CANCEL</span>
+              <span className="vn">{v.quantity}× {v.name}</span>
+              {v.reason && <span className="vr">{v.reason}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="core-tk-items">
         {groups.map(([label, items]) => (
           <div key={label} className="core-tk-grp-block">

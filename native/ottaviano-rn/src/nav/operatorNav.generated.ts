@@ -33,7 +33,7 @@ export const OPERATOR_NAV_DATA: GeneratedNavSection[] = [
     { path: "/core/orders", label: "Orders", requiredRole: "staff", status: "live", blurb: "Every live order across fulfilment types, in one board." },
     { path: "/core/guest", label: "Guest Engagement", requiredRole: "staff", status: "live", blurb: "Loyalty, guest profiles (CRM) and table bookings." },
     { path: "/core/service", label: "Service", requiredRole: "staff", status: "live", blurb: "Floor plan, table turns and reservation slots." },
-    { path: "/core/book", label: "Book", requiredRole: "staff", status: "live", blurb: "Reservations & slots — book a table against the floor timeline." },
+    { path: "/core/service/book", label: "Book", requiredRole: "staff", status: "live", blurb: "Reservations & slots — book a table against the floor timeline." },
   ] },
   { id: "overview", label: "Overview", items: [
     { path: "/admin/welcome", label: "Welcome", requiredRole: "kitchen", status: "live", blurb: "Day-one tour and quick links into the operation." },

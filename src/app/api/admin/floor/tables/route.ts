@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getTables, saveTable, deleteTable } from "@/lib/store";
-import type { TableStatus } from "@/data/types";
+import { TABLE_FEATURES, type TableStatus, type TableFeature } from "@/data/types";
 
 /**
  * Floor tables — per-location CRUD. Manager+ with location scope enforced by
@@ -35,6 +35,9 @@ export const POST = withAdmin(
       return NextResponse.json({ error: "Seats must be 1–50" }, { status: 400 });
     }
     const status: TableStatus = STATUSES.includes(body.status) ? body.status : "available";
+    const features = Array.isArray(body.features)
+      ? (body.features.filter((f: unknown) => TABLE_FEATURES.includes(f as TableFeature)) as TableFeature[])
+      : undefined;
 
     const table = await saveTable({
       id: typeof body.id === "string" ? body.id : undefined,
@@ -44,6 +47,7 @@ export const POST = withAdmin(
       zone: body.zone ? String(body.zone).trim() : undefined,
       status,
       notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 280) || undefined : undefined,
+      features: features && features.length ? features : undefined,
     });
     return NextResponse.json(table);
   },

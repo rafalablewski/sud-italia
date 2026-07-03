@@ -13,7 +13,7 @@
 | Orders | `/core/orders` | staff | 🟢 live | — |
 | Guest Engagement | `/core/guest` | staff | 🟢 live | `/api/v1/admin/loyalty` |
 | Service | `/core/service` | staff | 🟢 live | `/api/v1/admin/slots` |
-| Book | `/core/book` | staff | 🟢 live | — |
+| Book | `/core/service/book` | staff | 🟢 live | — |
 
 ## Overview
 

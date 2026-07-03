@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engine · Seating Intelligence — Sud Italia Service OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--violet:#b98cff;--violet-wash:rgba(185,140,255,.16);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 6% 0%,rgba(185,140,255,.14),transparent 60%),radial-gradient(60% 60% at 98% 100%,rgba(232,107,62,.16),transparent 62%),radial-gradient(46% 40% at 82% 6%,rgba(84,188,224,.10),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.cnav a.on{color:var(--ink);background:var(--violet-wash);border-color:rgba(185,140,255,.5);box-shadow:0 0 16px -6px var(--violet)}
+.hero{padding:46px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
+h1{font-family:var(--display);font-weight:800;font-size:42px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:18px;color:var(--ink-2);max-width:830px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.v{color:var(--violet);border-color:rgba(185,140,255,.4);background:var(--violet-wash)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+section{margin-top:30px}
+h2{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .n{font-family:var(--mono);font-size:12px;color:var(--violet);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--violet-wash)}
+.lead{color:var(--ink-2);max-width:850px;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+small,.sm{font-size:12.5px;color:var(--ink-3)}
+.callout{padding:16px 18px;border-radius:var(--r-sm);background:var(--violet-wash);border:1px dashed rgba(185,140,255,.5);color:var(--ink);font-size:14.5px}
+.callout b{color:var(--violet)}
+/* pipeline */
+.pipe{padding:20px;display:flex;align-items:stretch;gap:10px;overflow-x:auto}
+.stage{flex:1;min-width:150px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);padding:13px}
+.stage .sn{font-family:var(--mono);font-size:10px;color:var(--violet);letter-spacing:.05em}
+.stage h4{font-family:var(--display);font-size:15px;margin:4px 0 5px}
+.stage p{font-size:12px;color:var(--ink-2)}
+.stage.hard{border-color:rgba(255,90,92,.35)} .stage.hard .sn{color:var(--danger)}
+.stage.soft{border-color:rgba(240,173,70,.35)} .stage.soft .sn{color:var(--amber)}
+.stage.look{border-color:rgba(84,188,224,.35)} .stage.look .sn{color:var(--info)}
+.stage.out{border-color:rgba(125,196,100,.4)} .stage.out .sn{color:var(--basil)}
+.arrowc{align-self:center;color:var(--line-2);font-size:20px;flex:0 0 auto}
+/* signals */
+.siggrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sigcol{padding:16px;border-radius:var(--r-sm);background:rgba(0,0,0,.18);border:1px solid var(--line)}
+.sigcol h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.sigcol.hard h4{color:var(--danger)} .sigcol.soft h4{color:var(--amber)}
+.sig{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.sig:last-child{border:0}
+.sig .si{flex:0 0 30px;height:30px;border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-size:13px;background:var(--panel-2);border:1px solid var(--line)}
+.sig .sb b{font-size:13px;display:block}
+.sig .sb span{font-size:12px;color:var(--ink-3)}
+/* score breakdown */
+.scorewrap{padding:18px;display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+.rank{display:flex;flex-direction:column;gap:9px}
+.rrow{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--panel-2)}
+.rrow.win{border-color:rgba(125,196,100,.5);box-shadow:0 0 22px -10px var(--basil)}
+.rrow.no{opacity:.6}
+.rr1{display:flex;justify-content:space-between;align-items:baseline}
+.rr1 .tn{font-family:var(--mono);font-weight:600;font-size:13px}
+.rr1 .sc{font-family:var(--display);font-weight:800;font-size:20px}
+.rrow.win .sc{color:var(--basil)} .rrow.no .sc{color:var(--danger);font-size:13px;font-weight:600}
+.stack{display:flex;height:10px;border-radius:99px;overflow:hidden;margin:8px 0 6px;background:var(--panel-3)}
+.stack i{height:100%}
+.s-fit{background:var(--basil)} .s-run{background:var(--info)} .s-guest{background:var(--violet)} .s-pace{background:var(--amber)} .s-yield{background:var(--brand)} .s-sec{background:#7a8cff}
+.rwhy{font-size:11.5px;color:var(--ink-2)}
+.rwhy .k{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:9px;height:9px;border-radius:3px}
+.formula{padding:14px 16px;border-radius:var(--r-sm);background:rgba(0,0,0,.24);border:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.7}
+.formula b{color:var(--violet)} .formula .c{color:var(--ink-3)}
+/* turn-time */
+.tt{padding:18px}
+.ttgrid{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.ttgrid th,.ttgrid td{padding:8px 10px;text-align:center;border:1px solid var(--line)}
+.ttgrid th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:500}
+.ttgrid td:first-child,.ttgrid th:first-child{text-align:left;color:var(--ink-2)}
+.ttcell{position:relative}
+.ttcell b{color:var(--ink)} .ttcell span{color:var(--ink-3);font-size:10px}
+.heat0{background:rgba(125,196,100,.1)} .heat1{background:rgba(240,173,70,.12)} .heat2{background:rgba(232,107,62,.14)} .heat3{background:rgba(255,90,92,.16)}
+/* config panel */
+.cfg{padding:18px;display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.presetrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.preset{font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--pill);padding:5px 12px;cursor:pointer}
+.preset.on{color:var(--violet);background:var(--violet-wash);border-color:rgba(185,140,255,.5);box-shadow:inset 0 0 0 1px rgba(185,140,255,.4)}
+.slider{margin-bottom:13px}
+.slider .sl-h{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.slider .sl-h b{font-weight:600} .slider .sl-h .v{font-family:var(--mono);color:var(--violet)}
+.track{height:8px;border-radius:99px;background:var(--panel-3);position:relative}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--brand))}
+.track .knob{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:var(--ink);transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.rulebox{border-radius:var(--r-sm);background:rgba(0,0,0,.18);border:1px solid var(--line);padding:14px}
+.rule{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.rule:last-child{border:0}
+.rule .rl b{font-size:13px} .rule .rl span{display:block;font-size:11px;color:var(--ink-3)}
+.rule .val{font-family:var(--mono);font-size:12px;color:var(--violet);white-space:nowrap}
+.tog{width:38px;height:22px;border-radius:99px;background:var(--panel-3);position:relative;flex:0 0 38px}
+.tog.on{background:var(--basil-wash);box-shadow:inset 0 0 0 1px var(--basil)}
+.tog i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--ink-3);transition:.15s}
+.tog.on i{left:19px;background:var(--basil)}
+/* lookahead */
+.la{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.lac{border-radius:var(--r-sm);border:1px solid var(--line);background:rgba(0,0,0,.18);padding:14px}
+.lac h4{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);margin-bottom:10px}
+.lac.bad h4{color:var(--danger)} .lac.good h4{color:var(--basil)}
+.bars{display:flex;flex-direction:column;gap:7px}
+.bl{display:grid;grid-template-columns:44px 1fr 40px;gap:8px;align-items:center;font-family:var(--mono);font-size:11px}
+.bl .bar{height:10px;border-radius:99px;background:var(--panel-3);overflow:hidden}
+.bl .bar i{display:block;height:100%}
+.lac.bad .bar i{background:var(--danger)} .lac.good .bar i{background:var(--basil)}
+.lanote{font-size:12px;color:var(--ink-2);margin-top:12px}
+/* api */
+.arch{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.arch code{font-family:var(--mono);font-size:12.5px;color:var(--violet);background:rgba(185,140,255,.1);padding:1px 5px;border-radius:5px}
+.arch .row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.arch .row:last-child{border:0}
+.arch .row b{flex:0 0 150px;font-family:var(--mono);font-size:11px;color:var(--info);padding-top:2px}
+.arch pre{font-family:var(--mono);font-size:12px;color:var(--ink-2);line-height:1.6;white-space:pre-wrap;margin-top:2px}
+.arch .kw{color:var(--violet)} .arch .cm{color:var(--ink-3)} .arch .st{color:var(--basil)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.list{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.list h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.list.pro h4{color:var(--basil)} .list.con h4{color:var(--amber)}
+.list li{list-style:none;font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative}
+.list.pro li::before{content:"✓";position:absolute;left:0;color:var(--basil);font-weight:700}
+.list.con li::before{content:"△";position:absolute;left:0;color:var(--amber)}
+/* delivery */
+.vers{display:flex;flex-direction:column;gap:10px}
+.ver{display:grid;grid-template-columns:70px 1fr;gap:14px;align-items:center;padding:14px 16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.ver .vt{font-family:var(--mono);font-weight:700;color:var(--violet);text-align:center;font-size:14px}
+.ver.v1{border-color:rgba(125,196,100,.4)} .ver.v1 .vt{color:var(--basil)}
+.ver h4{font-family:var(--display);font-size:15px;margin-bottom:2px}
+.ver p{font-size:13px;color:var(--ink-2)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.siggrid,.scorewrap,.cfg,.la,.cols{grid-template-columns:1fr}h1{font-size:32px}.arch .row b{flex-basis:120px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · seating problem</b>
+  <a href="host-01-unified-floor.html">1 · Unified Floor</a>
+  <a href="host-02-live-timeline.html">2 · Live Timeline</a>
+  <a href="host-03-arrivals-board.html">3 · Arrivals Board</a>
+  <a href="host-04-table-lifecycle.html">4 · Table-Session Arch</a>
+  <a href="host-05-recommendation.html">5 · Recommendation ★</a>
+  <a class="on" href="host-06-engine.html">6 · Engine ⚙</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Deep dive · the brain behind every seat</div>
+  <h1>Seating Intelligence Engine</h1>
+  <p class="tag">One pure, explainable, tunable module that answers <em>"what's the best table for this party, right now — without hurting the rest of the night?"</em> It weighs a dozen signals, learns your real turn-times, looks ahead at the whole book, and shows its work — and a manager can re-shape its judgement with sliders, no code.</p>
+  <div class="chips">
+    <span class="chip v">Explainable · every score has a "why"</span>
+    <span class="chip">Learns turn-times from history</span>
+    <span class="chip g">Manager-tunable policy</span>
+  </div>
+</header>
+
+<section>
+  <div class="callout"><b>Design principle.</b> A seating engine only gets used if operators <em>trust</em> it and can <em>steer</em> it. So two rules govern everything below: (1) <b>hard constraints are never violated</b> — the engine physically can't suggest a table that doesn't fit or is spoken for; (2) <b>every soft judgement is transparent and tunable</b> — the host sees the reasons, the manager owns the weights.</div>
+</section>
+
+<!-- PIPELINE -->
+<section>
+  <h2><span class="n">pipeline</span> Four stages, one call</h2>
+  <div class="glass pipe">
+    <div class="stage hard"><div class="sn">1 · FILTER</div><h4>Hard constraints</h4><p>Drop any table that can't legally hold this party. Pass/fail, no scoring.</p></div>
+    <div class="arrowc">→</div>
+    <div class="stage soft"><div class="sn">2 · SCORE</div><h4>Weighted signals</h4><p>Rate each survivor 0–100 on fit, runway, guest, pacing, yield, section — with policy weights.</p></div>
+    <div class="arrowc">→</div>
+    <div class="stage look"><div class="sn">3 · LOOK-AHEAD</div><h4>Night impact</h4><p>Penalise choices that fragment inventory or block a known upcoming party.</p></div>
+    <div class="arrowc">→</div>
+    <div class="stage out"><div class="sn">4 · EXPLAIN</div><h4>Ranked + reasons</h4><p>Return the sorted list, each with a score breakdown, a one-line why, and confidence.</p></div>
+  </div>
+</section>
+
+<!-- SIGNALS -->
+<section>
+  <h2><span class="n">signals</span> What it weighs</h2>
+  <p class="lead">Signals split cleanly into <b>hard</b> (a filter — violate one and the table is out) and <b>soft</b> (a score — traded off against each other by policy weights). That split is what keeps it both safe and smart.</p>
+  <div class="siggrid">
+    <div class="sigcol hard">
+      <h4>◆ Hard constraints — must pass</h4>
+      <div class="sig"><span class="si">↔</span><span class="sb"><b>Capacity fit</b><span>seats ≥ party (a 2-top can't hold 4)</span></span></div>
+      <div class="sig"><span class="si">◷</span><span class="sb"><b>Free for the full turn</b><span>free-window ≥ expected turn + reset buffer, else combinable</span></span></div>
+      <div class="sig"><span class="si">♿</span><span class="sb"><b>Accessibility</b><span>wheelchair / high-chair / step-free when the guest needs it</span></span></div>
+      <div class="sig"><span class="si">⛔</span><span class="sb"><b>Availability</b><span>not out-of-service, not held for a VIP, not already seated</span></span></div>
+      <div class="sig"><span class="si">⊕</span><span class="sb"><b>Join feasibility</b><span>large party → only adjacent, combinable tables qualify</span></span></div>
+    </div>
+    <div class="sigcol soft">
+      <h4>◆ Soft signals — scored &amp; traded off</h4>
+      <div class="sig"><span class="si">▣</span><span class="sb"><b>Right-size</b><span>reward seats == party; penalise seating 2 at an 8-top (wasted covers)</span></span></div>
+      <div class="sig"><span class="si">◷</span><span class="sb"><b>Runway comfort</b><span>more clear time after the turn = safer, higher score</span></span></div>
+      <div class="sig"><span class="si">★</span><span class="sb"><b>Guest preference</b><span>VIP · usual table · window/booth · zone · quiet — from CRM</span></span></div>
+      <div class="sig"><span class="si">⧗</span><span class="sb"><b>Pacing</b><span>avoid stacking seatings in one 15-min bucket (kitchen surge)</span></span></div>
+      <div class="sig"><span class="si">◈</span><span class="sb"><b>Yield / inventory</b><span>protect big tables &amp; prime windows for known demand</span></span></div>
+      <div class="sig"><span class="si">⚖</span><span class="sb"><b>Section balance</b><span>spread covers evenly across server stations</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SCORE BREAKDOWN -->
+<section>
+  <h2><span class="n">explainable</span> Every suggestion shows its work</h2>
+  <p class="lead">The score is a transparent weighted sum of normalised sub-scores — never a black box. Host taps a suggestion and sees exactly why it ranked where it did, and why the excluded tables were excluded.</p>
+  <div class="glass scorewrap">
+    <div>
+      <div class="formula"><span class="c">// party of 4 · 18:58 · prefers window · policy “Balanced”</span><br>
+      score = <b>w_fit</b>·fit + <b>w_run</b>·runway + <b>w_guest</b>·guest<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <b>w_pace</b>·pace + <b>w_yield</b>·yield + <b>w_sec</b>·section<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c">− lookAheadPenalty</span></div>
+      <div class="rank" style="margin-top:14px">
+        <div class="rrow win"><div class="rr1"><span class="tn">T11 · 4-top · window</span><span class="sc">92</span></div>
+          <div class="stack"><i class="s-fit" style="width:28%"></i><i class="s-run" style="width:24%"></i><i class="s-guest" style="width:18%"></i><i class="s-pace" style="width:9%"></i><i class="s-yield" style="width:8%"></i><i class="s-sec" style="width:5%"></i></div>
+          <div class="rwhy"><span class="k">why →</span> exact fit, open until 21:30, window match, station light. <b style="color:var(--basil)">Recommend.</b></div></div>
+        <div class="rrow"><div class="rr1"><span class="tn">T6 · 4-top · main</span><span class="sc">74</span></div>
+          <div class="stack"><i class="s-fit" style="width:28%"></i><i class="s-run" style="width:22%"></i><i class="s-guest" style="width:4%"></i><i class="s-pace" style="width:9%"></i><i class="s-yield" style="width:6%"></i><i class="s-sec" style="width:5%"></i></div>
+          <div class="rwhy"><span class="k">why →</span> good fit &amp; runway, but no window; server section filling up.</div></div>
+        <div class="rrow no"><div class="rr1"><span class="tn">T9 · 8-top · booth</span><span class="sc">✗ yield</span></div>
+          <div class="rwhy"><span class="k">excluded →</span> fits, but burns an 8-top on 4 at peak — held for Michalski 20:00.</div></div>
+        <div class="rrow no"><div class="rr1"><span class="tn">T7 · 6-top · window</span><span class="sc">✗ held</span></div>
+          <div class="rwhy"><span class="k">excluded →</span> reserved for Mazur 19:30 — runway 32m &lt; turn 95m.</div></div>
+      </div>
+      <div class="legend">
+        <span><i class="s-fit"></i>fit</span><span><i class="s-run"></i>runway</span><span><i class="s-guest"></i>guest</span><span><i class="s-pace"></i>pacing</span><span><i class="s-yield"></i>yield</span><span><i class="s-sec"></i>section</span>
+      </div>
+    </div>
+    <div>
+      <div class="rulebox">
+        <div class="rule"><div class="rl"><b>Confidence</b><span>from turn-time sample size &amp; data freshness</span></div><span class="val">High · 94%</span></div>
+        <div class="rule"><div class="rl"><b>Expected turn</b><span>learned: 4-top · Fri dinner</span></div><span class="val">95 min ±11</span></div>
+        <div class="rule"><div class="rl"><b>Frees next table at</b><span>this seat's downstream effect</span></div><span class="val">~20:35</span></div>
+        <div class="rule"><div class="rl"><b>Override</b><span>host can pick any table + reason</span></div><span class="val">logged →</span></div>
+      </div>
+      <p class="sm" style="margin-top:12px">Confidence and the learned turn-time travel <em>with</em> the suggestion, so a host knows when to trust the engine and when to use judgement. Overrides are one tap — and every override is captured to tune the weights (below).</p>
+    </div>
+  </div>
+</section>
+
+<!-- TURN TIME LEARNING -->
+<section>
+  <h2><span class="n">learns</span> Real turn-times, not a flat 90 minutes</h2>
+  <p class="lead">The single biggest lever on accuracy is <b>how long a party actually stays</b>. The engine learns it per <b>party-size × daypart × weekday</b> from every real <code>seatedAt → closedAt</code>, with a confidence band, and shrinks to sensible priors when a cell is thin. Cold-start works day one; it sharpens every service.</p>
+  <div class="glass tt">
+    <table class="ttgrid">
+      <tr><th>Learned turn (min)</th><th>Lunch</th><th>Early dinner</th><th>Prime · Fri/Sat</th><th>Late</th></tr>
+      <tr><td>2-top</td><td class="ttcell heat0"><b>62</b> <span>±7</span></td><td class="ttcell heat0"><b>74</b> <span>±9</span></td><td class="ttcell heat1"><b>88</b> <span>±11</span></td><td class="ttcell heat0"><b>70</b> <span>±14</span></td></tr>
+      <tr><td>4-top</td><td class="ttcell heat0"><b>78</b> <span>±10</span></td><td class="ttcell heat1"><b>95</b> <span>±11</span></td><td class="ttcell heat2"><b>112</b> <span>±13</span></td><td class="ttcell heat1"><b>92</b> <span>±18</span></td></tr>
+      <tr><td>6-top</td><td class="ttcell heat1"><b>96</b> <span>±14</span></td><td class="ttcell heat2"><b>118</b> <span>±15</span></td><td class="ttcell heat3"><b>141</b> <span>±19</span></td><td class="ttcell heat2"><b>120</b> <span>~prior</span></td></tr>
+      <tr><td>8-top+</td><td class="ttcell heat2"><b>120</b> <span>±20</span></td><td class="ttcell heat3"><b>150</b> <span>±22</span></td><td class="ttcell heat3"><b>170</b> <span>~prior</span></td><td class="ttcell heat3"><b>150</b> <span>~prior</span></td></tr>
+    </table>
+    <p class="sm" style="margin-top:12px">Warmer = longer stays (protect those tables harder). <span class="mono">±</span> is the 1σ band; <span class="mono">~prior</span> = too few samples yet, using the shrinkage prior. A birthday/large-party or a “lingering” flag widens the estimate automatically.</p>
+  </div>
+</section>
+
+<!-- LOOK-AHEAD -->
+<section>
+  <h2><span class="n">look-ahead</span> Optimise the night, not just the seat</h2>
+  <p class="lead">Greedy "best table for this party" is short-sighted — it can leave the book un-seatable later. The engine scores the <b>marginal cost</b> of each choice against the rest of the evening's demand (bookings + walk-in forecast), penalising fragmentation and any move that would block a known party.</p>
+  <div class="glass la">
+    <div class="lac bad"><h4>✗ Greedy — seat the 4 on the 8-top T9</h4>
+      <div class="bars">
+        <div class="bl"><span>19:00</span><span class="bar"><i style="width:70%"></i></span><span>full</span></div>
+        <div class="bl"><span>20:00</span><span class="bar"><i style="width:100%"></i></span><span>⚠ Michalski · 8 has no table</span></div>
+        <div class="bl"><span>21:00</span><span class="bar"><i style="width:55%"></i></span><span>turned away 8</span></div>
+      </div>
+      <p class="lanote">Covers lost tonight: <b style="color:var(--danger)">−8</b>. Burned the only 8-top on a party of 4.</p>
+    </div>
+    <div class="lac good"><h4>✓ Look-ahead — seat the 4 on T11</h4>
+      <div class="bars">
+        <div class="bl"><span>19:00</span><span class="bar"><i style="width:74%"></i></span><span>full</span></div>
+        <div class="bl"><span>20:00</span><span class="bar"><i style="width:96%"></i></span><span>Michalski · 8 → T9 ✓</span></div>
+        <div class="bl"><span>21:00</span><span class="bar"><i style="width:82%"></i></span><span>capacity preserved</span></div>
+      </div>
+      <p class="lanote">Covers tonight: <b style="color:var(--basil)">+8 preserved</b>. Same guest seated, big-party demand protected.</p>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">Implemented as a fast heuristic (best-fit-decreasing + a fragmentation penalty) for live use, with an optional full-night optimiser that runs in the background to pre-plan the book and flag "at-risk" moments before service.</p>
+</section>
+
+<!-- CONFIG / MANAGEABLE -->
+<section>
+  <h2><span class="n">manageable</span> A manager owns the judgement — with sliders</h2>
+  <p class="lead">This is what makes it <em>professional</em> rather than a magic box: the whole policy is a config object a manager edits in the admin, per location, versioned. Pick a preset or hand-tune the weights and rules. The engine's behaviour is legible and yours to shape.</p>
+  <div class="glass cfg">
+    <div>
+      <div class="presetrow">
+        <span class="preset">Maximise covers</span>
+        <span class="preset on">Balanced</span>
+        <span class="preset">Guest-experience first</span>
+        <span class="preset">Slow night</span>
+      </div>
+      <div class="slider"><div class="sl-h"><b>Right-size fit</b><span class="v">0.28</span></div><div class="track"><i style="width:28%"></i><span class="knob" style="left:28%"></span></div></div>
+      <div class="slider"><div class="sl-h"><b>Runway comfort</b><span class="v">0.22</span></div><div class="track"><i style="width:22%"></i><span class="knob" style="left:22%"></span></div></div>
+      <div class="slider"><div class="sl-h"><b>Guest preference</b><span class="v">0.20</span></div><div class="track"><i style="width:20%"></i><span class="knob" style="left:20%"></span></div></div>
+      <div class="slider"><div class="sl-h"><b>Yield / protect inventory</b><span class="v">0.14</span></div><div class="track"><i style="width:14%"></i><span class="knob" style="left:14%"></span></div></div>
+      <div class="slider"><div class="sl-h"><b>Pacing</b><span class="v">0.10</span></div><div class="track"><i style="width:10%"></i><span class="knob" style="left:10%"></span></div></div>
+      <div class="slider"><div class="sl-h"><b>Section balance</b><span class="v">0.06</span></div><div class="track"><i style="width:6%"></i><span class="knob" style="left:6%"></span></div></div>
+      <p class="sm">Weights auto-normalise to 1.0. “Guest-experience first” lifts preference &amp; runway; “Maximise covers” lifts fit &amp; yield &amp; pacing.</p>
+    </div>
+    <div class="rulebox">
+      <div class="rule"><div class="rl"><b>Reset / buffer</b><span>bussing time added after every turn</span></div><span class="val">10 min</span></div>
+      <div class="rule"><div class="rl"><b>Pace cap</b><span>max new seatings per 15-min bucket</span></div><span class="val">4 / 15m</span></div>
+      <div class="rule"><div class="rl"><b>Section cap</b><span>max covers per server station</span></div><span class="val">18</span></div>
+      <div class="rule"><div class="rl"><b>Protect large tables</b><span>hold 6-tops+ for parties of 5+ until…</span></div><span class="val">T-30m</span></div>
+      <div class="rule"><div class="rl"><b>VIP hold</b><span>keep a prime table past a VIP's booking</span></div><span class="val">20 min</span></div>
+      <div class="rule"><div class="rl"><b>Auto-suggest walk-in table</b><span>engine proposes on add</span></div><span class="tog on"><i></i></span></div>
+      <div class="rule"><div class="rl"><b>Learn from overrides</b><span>feed accept/override back into weights</span></div><span class="tog on"><i></i></span></div>
+      <div class="rule"><div class="rl"><b>Shadow mode</b><span>suggest but never auto-assign</span></div><span class="tog"><i></i></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TELEMETRY / TRUST LOOP -->
+<section>
+  <h2><span class="n">closes the loop</span> It gets better because you use it</h2>
+  <p class="lead">Every suggestion → accept / override(reason) → outcome (actual turn, walk-out, complaint) is telemetry. That drives three things: turn-time learning, a weekly <b>weight-tuning</b> nudge ("hosts override 'yield' 40% of the time on slow nights — lower it?"), and an <b>acceptance-rate</b> dashboard so you can see the engine earning trust before you let it drive.</p>
+  <div class="glass arch">
+    <div class="row"><b>Track</b><span>suggestionId → shown rank, chosen table, override reason, realised turn, section load at seat.</span></div>
+    <div class="row"><b>Tune</b><span>rolling acceptance rate per signal → surfaced as tuning suggestions in the config panel (never auto-changed without approval).</span></div>
+    <div class="row"><b>Prove</b><span>dashboard: acceptance %, avg covers/night vs baseline, predicted-vs-actual turn error, walk-in wait accuracy.</span></div>
+  </div>
+</section>
+
+<!-- API -->
+<section>
+  <h2><span class="n">contract</span> Pure, versioned, testable</h2>
+  <div class="arch">
+    <div class="row"><b>suggest()</b><span><code>suggest(party, at, prefs, policy, book) → Ranked[]</code>. Pure function. Each result: <code>{tableId|join, score, breakdown, reasons[], confidence, expectedTurn, freesAt}</code>. Deterministic → snapshot-testable.</span></div>
+    <div class="row"><b>simulate()</b><span><code>simulate(book, policy) → {utilization, predictedWaits, atRisk[]}</code>. Runs the engine over the whole reservation book pre-service to forecast pressure and flag un-seatable parties early.</span></div>
+    <div class="row"><b>learnTurn()</b><span><code>updateTurnModel(session)</code> on every close → the (party×daypart×dow) estimate + confidence. Bounded, incremental.</span></div>
+    <div class="row"><b>policy</b><span>Versioned config per location: weights, caps, buffers, hold rules, presets. Lives beside loyalty/growth settings; editable in admin. Backward-compatible defaults.</span></div>
+  </div>
+  <div class="arch" style="margin-top:12px">
+<pre><span class="cm">// one call, everywhere — floor "smart seat", walk-in guard, waitlist quote</span>
+<span class="kw">const</span> [best, ...alts] = <span style="color:var(--info)">suggest</span>(party, now, guest.prefs, location.policy, todaysBook);
+<span class="kw">if</span> (best.score &gt;= policy.autoThreshold &amp;&amp; !policy.shadowMode) preselect(best);
+<span class="cm">// host always sees best + alts + the "why"; override is one tap and is logged</span></pre>
+  </div>
+</section>
+
+<!-- PRO/CON + DELIVERY -->
+<section>
+  <h2><span class="n">delivery</span> Ship the intelligence in three versions</h2>
+  <div class="vers">
+    <div class="ver v1"><div class="vt">v1<br>rules</div><div><h4>Explainable rules engine</h4><p>Hard filters + weighted soft score with static, sensible weights + preset presets. Turn-time = size-based defaults. Ships the "smart seat" + walk-in guard with full explainability. <b>Enough to be trusted.</b></p></div></div>
+    <div class="ver"><div class="vt">v2<br>tunable</div><div><h4>Manager policy + pacing/yield/section</h4><p>The config panel (weights, caps, holds, presets), pacing/yield/section signals, and the pre-service <code>simulate()</code> forecast. <b>Now it's yours to shape.</b></p></div></div>
+    <div class="ver"><div class="vt">v3<br>learning</div><div><h4>Turn-time learning + look-ahead + trust loop</h4><p>Learned turn-times with confidence, the look-ahead fragmentation optimiser, override-driven weight tuning, and the acceptance/utilisation dashboard. <b>It compounds.</b></p></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="cols">
+    <div class="list pro"><h4>Why this is professional-grade</h4>
+      <li>Hard constraints are inviolable — safe by construction.</li>
+      <li>Every decision is explained &amp; every override audited.</li>
+      <li>Pure &amp; deterministic → unit + snapshot testable.</li>
+      <li>Cold-starts on defaults, sharpens with data.</li>
+      <li>Policy is versioned config, not code — per location.</li>
+    </div>
+    <div class="list con"><h4>What to watch</h4>
+      <li>Turn-time learning needs a few weeks of closes to beat defaults.</li>
+      <li>Look-ahead optimiser adds compute — keep it heuristic for live, exact for pre-service.</li>
+      <li>Too many weights can confuse — lead with presets, hide the sliders under "advanced."</li>
+      <li>Section balance needs server-station data (Phase-3 alongside TableSession).</li>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <span>⚙ The engine behind Concept 5 · pairs with the TableSession spine (Concept 4)</span>
+  <span>Back to → <a style="color:var(--violet)" href="host-05-recommendation.html">Concept 5 · Recommendation</a></span>
+</div>
+
+</div>
+</body></html>

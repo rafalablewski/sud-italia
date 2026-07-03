@@ -1,4 +1,4 @@
-import type { TableStatus } from "@/data/types";
+import type { TableStatus, TableFeature } from "@/data/types";
 
 /**
  * Floor Twin engine — keystone of Module 3 (see
@@ -30,6 +30,7 @@ export interface TwinTableInput {
   zone?: string;
   status: TableStatus;
   notes?: string;
+  features?: TableFeature[];
 }
 
 export interface TwinOrderInput {
@@ -86,6 +87,8 @@ export interface TwinTableRow {
   openCheckGrosze: number | null;
   /** Free-text service note carried through from the FloorTable. */
   notes?: string;
+  /** Accessibility features carried through from the FloorTable. */
+  features?: TableFeature[];
 }
 
 export interface SeatingSuggestion {
@@ -231,6 +234,7 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
       zone: t.zone,
       status: t.status,
       notes: t.notes,
+      features: t.features,
       turns: samples.length,
       medianDwellMin: medianDwellMin != null ? Math.round(medianDwellMin) : null,
       dwellSource,

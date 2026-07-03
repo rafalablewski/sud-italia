@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Docked Check Drawer — 5 advanced variants · Sud Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel:rgba(255,255,255,.035);--panel-2:rgba(255,255,255,.06);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--violet:#b98cff;--violet-wash:rgba(185,140,255,.16);--danger:#ff5a5c;--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 4% 0%,rgba(232,107,62,.22),transparent 60%),radial-gradient(65% 60% at 98% 100%,rgba(185,140,255,.13),transparent 62%),radial-gradient(46% 40% at 88% 4%,rgba(84,188,224,.12),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.hero{padding:44px 0 22px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
+h1{font-family:var(--display);font-weight:800;font-size:39px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:17px;color:var(--ink-2);max-width:880px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.v{color:var(--violet);border-color:rgba(185,140,255,.4);background:var(--violet-wash)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.callout{margin-top:22px;padding:16px 18px;border-radius:var(--r-sm);background:var(--violet-wash);border:1px dashed rgba(185,140,255,.5);color:var(--ink);font-size:14.5px}
+.callout b{color:var(--violet)}
+section{margin-top:26px}
+.sh{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+.sh .n{font-family:var(--mono);font-size:12px;color:var(--violet);border:1px solid var(--line-2);border-radius:8px;padding:3px 9px;background:var(--violet-wash)}
+.sh h2{font-family:var(--display);font-weight:700;font-size:23px;letter-spacing:-.01em}
+.sh .who{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-left:auto}
+.lead{color:var(--ink-2);max-width:900px;margin:6px 0 14px;font-size:14px}
+.card{padding:18px;display:grid;grid-template-columns:1fr 290px;gap:20px;margin-bottom:16px}
+.card .mock{border-radius:var(--r-sm);background:rgba(0,0,0,.24);border:1px solid var(--line);padding:0;min-height:236px;overflow:hidden;position:relative}
+.card .meta{display:flex;flex-direction:column;gap:12px}
+.card h3{font-family:var(--display);font-size:18px;margin-bottom:5px}
+.card p{font-size:13.5px;color:var(--ink-2)}
+.feat{display:flex;flex-direction:column;gap:5px}
+.feat .li{font-size:12.5px;color:var(--ink-2);padding-left:19px;position:relative;line-height:1.4}
+.feat .li::before{content:"✦";position:absolute;left:0;color:var(--violet);font-size:11px;top:1px}
+.wire{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:10px;line-height:1.5}
+.wire code{color:var(--brand-bright);background:rgba(232,107,62,.1);padding:1px 5px;border-radius:5px}
+.eff{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.eff i{width:8px;height:8px;border-radius:2px;background:var(--line-2);display:inline-block}
+.eff i.on{background:var(--violet)}
+/* ── shared mock frame: dimmed floor + a right drawer ── */
+.frame{position:absolute;inset:0;padding:12px}
+.floorbg{position:absolute;inset:0;padding:12px;opacity:.4}
+.floorbg .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:46%}
+.ft{border-radius:8px;border:1px solid var(--line);background:var(--panel-2);height:40px;padding:6px}
+.ft .n{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--ink-3)}
+.ft.sel{outline:2px solid var(--violet);outline-offset:1px;background:var(--violet-wash)}
+.ft.sel .n{color:var(--violet)}
+.dw{position:absolute;top:12px;right:12px;bottom:12px;width:54%;background:linear-gradient(160deg,rgba(22,16,12,.98),rgba(14,10,8,.99));border:1px solid var(--line-2);border-radius:var(--r-sm);padding:11px;display:flex;flex-direction:column;gap:6px;box-shadow:-18px 0 44px -14px rgba(0,0,0,.7)}
+.dh{display:flex;justify-content:space-between;align-items:baseline}
+.dh b{font-size:12px} .dh span{font-family:var(--mono);font-size:9px;color:var(--ink-3)}
+.line{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-2);padding:3px 0;border-bottom:1px solid var(--line)}
+.line .q{color:var(--brand-bright)}
+.dtot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;font-weight:600;margin-top:2px}
+.dbtns{display:flex;gap:5px;margin-top:auto}
+.dbtns button{flex:1;font-family:var(--mono);font-size:9px;font-weight:600;padding:6px;border-radius:99px;border:1px solid var(--line);background:var(--panel-3);color:var(--ink-2)}
+.dbtns button.pri{color:#2a160b;background:linear-gradient(180deg,#93d67c,var(--basil));border-color:transparent}
+/* variant-specific atoms */
+.snaps{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:3}
+.snap{font-family:var(--mono);font-size:8px;color:var(--ink-3);border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:rgba(0,0,0,.4);text-align:center}
+.snap.on{color:var(--violet);border-color:var(--violet);background:var(--violet-wash)}
+.tabs{display:flex;gap:4px;margin-bottom:2px}
+.tab{font-family:var(--mono);font-size:8.5px;padding:4px 8px;border-radius:7px 7px 0 0;background:var(--panel-2);border:1px solid var(--line);border-bottom:0;color:var(--ink-3)}
+.tab.on{color:var(--ink);background:var(--panel-3);border-color:var(--violet)}
+.tab .d{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin-left:4px}
+.actband{border-radius:8px;padding:8px 10px;background:var(--amber-wash);border:1px solid rgba(240,173,70,.5);display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.actband .ic{font-size:13px}
+.actband .tx{font-size:10.5px;color:var(--ink);flex:1;line-height:1.3}
+.actband .go{font-family:var(--mono);font-size:9px;font-weight:600;color:#2a160b;background:linear-gradient(180deg,#f4c064,var(--amber));border-radius:99px;padding:5px 10px}
+.covers{display:flex;gap:5px}
+.cov{flex:1;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);padding:6px;font-family:var(--mono);font-size:8.5px}
+.cov b{color:var(--info);font-size:10px}
+.cov.a{border-color:rgba(84,188,224,.5);background:var(--info-wash)}
+.paybar{display:flex;gap:5px;margin-top:4px}
+.paybar span{flex:1;text-align:center;font-family:var(--mono);font-size:8.5px;padding:5px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.paybar span.on{color:var(--basil);border-color:var(--basil);background:var(--basil-wash)}
+.course{display:flex;flex-direction:column;gap:5px}
+.crow{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9px}
+.crow .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.crow.done .dot{background:var(--basil)} .crow.fire .dot{background:var(--amber)} .crow.hold .dot{background:var(--ink-3)}
+.crow .nm{color:var(--ink-2);flex:1}
+.crow .st{color:var(--ink-3)}
+.crow.fire .st{color:var(--amber);font-weight:600}
+.kbd{margin-top:auto;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.35);border:1px solid var(--line-2);border-radius:8px;padding:7px 9px;font-family:var(--mono);font-size:9.5px}
+.kbd .pm{color:var(--brand)} .kbd .cur{width:6px;height:12px;background:var(--brand);display:inline-block;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+/* matrix + reco */
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th,.matrix td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+.matrix th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:500}
+.matrix td:first-child{font-weight:600}
+.matrix .y{color:var(--basil)}
+.reco{padding:18px;border-radius:var(--r-sm);background:var(--violet-wash);border:1px dashed rgba(185,140,255,.55);font-size:14px}
+.reco b{color:var(--violet)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.card{grid-template-columns:1fr}h1{font-size:31px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · docked drawer</b>
+  <a href="#1">1 · Progressive</a>
+  <a href="#2">2 · Multi-check</a>
+  <a href="#3">3 · Anticipatory</a>
+  <a href="#4">4 · Split &amp; settle</a>
+  <a href="#5">5 · Course timeline</a>
+  <a href="#reco">★ Synthesis</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Design R&amp;D · the docked check drawer, taken further</div>
+  <h1>Five advanced variants of the docked check drawer</h1>
+  <p class="tag">The drawer is the right chassis — the check, in place, over the floor. These five push it from a good modal into a best-in-class service surface: it resizes to intent, holds several checks at once, reads the situation and leads, settles a split cleanly, and choreographs the meal by course. Each is a distinct capability; together they describe one adaptive drawer.</p>
+  <div class="chips">
+    <span class="chip v">One PosTab engine underneath</span>
+    <span class="chip g">Every variant is additive — they compose</span>
+    <span class="chip">Floor stays live behind</span>
+  </div>
+  <div class="callout"><b>Read this as one drawer with five modes, not five drawers.</b> They share the same summon-on-tap, the same <code style="font-family:var(--mono)">CorePos</code> core, and the same dismiss. You're choosing which capabilities to turn on first — nothing here trades against anything else.</div>
+</header>
+
+<!-- 1 -->
+<section id="1"><div class="sh"><span class="n">1</span><h2>Progressive drawer — peek · half · full</h2><span class="who">→ shows exactly as much as the moment needs</span></div>
+<p class="lead">The drawer snaps to three widths. <b>Peek</b> is a slim spine: table, total, and Pay. <b>Half</b> adds the line items and quick verbs. <b>Full</b> is the complete till with the menu grid. Drag the edge or tap a snap to escalate; it remembers the last size per role. A server glancing at a total never pays the cost of the whole till; a bartender building a big order gets it all.</p>
+<div class="glass card">
+  <div class="mock"><div class="frame">
+    <div class="floorbg"><div class="fg"><div class="ft"><span class="n">T5</span></div><div class="ft sel"><span class="n">T6</span></div><div class="ft"><span class="n">T7</span></div><div class="ft"><span class="n">T9</span></div></div></div>
+    <div class="snaps"><div class="snap">peek</div><div class="snap on">half</div><div class="snap">full</div></div>
+    <div class="dw">
+      <div class="dh"><b>Table 6 · Kowalski</b><span>2 cov · 51m</span></div>
+      <div class="line"><span><span class="q">2×</span> Margherita</span><span>72</span></div>
+      <div class="line"><span><span class="q">1×</span> Diavola</span><span>44</span></div>
+      <div class="line"><span><span class="q">2×</span> Aperol</span><span>52</span></div>
+      <div class="dtot"><span>Total</span><span>168 zł</span></div>
+      <div class="dbtns"><button>+ Add</button><button>Course</button><button class="pri">Pay</button></div>
+    </div>
+  </div></div>
+  <div class="meta">
+    <div><h3>What it is</h3><p>A snap-sized drawer. The same check at three levels of detail, chosen by drag or tap — density on demand.</p></div>
+    <div class="feat"><span class="li">Peek = totals + Pay for a fast glance</span><span class="li">Half = items + verbs for the common case</span><span class="li">Full = the whole till when building</span><span class="li">Remembers the preferred size per operator</span><span class="li">Floor gets more room at smaller snaps</span></div>
+    <div class="eff">Effort <i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="wire">Wires to: the existing <code>core-check-panel</code> with 3 CSS width snaps + a drag handle; <code>CorePos</code> renders progressively by snap.</div>
+  </div>
+</div></section>
+
+<!-- 2 -->
+<section id="2"><div class="sh"><span class="n">2</span><h2>Multi-check dock — several tables, one rail</h2><span class="who">→ juggle a section without losing a check</span></div>
+<p class="lead">Tapping a second table doesn't replace the check — it <b>stacks</b> it as a tab along the drawer's edge. A server working a five-table section keeps all their live checks in one dock, switching between them like browser tabs, each remembering its scroll and course state. A pulsing dot flags a table that needs attention (food up, bill waiting) even while another is in front.</p>
+<div class="glass card">
+  <div class="mock"><div class="frame">
+    <div class="floorbg"><div class="fg"><div class="ft sel"><span class="n">T5</span></div><div class="ft sel"><span class="n">T6</span></div><div class="ft"><span class="n">T7</span></div><div class="ft sel"><span class="n">T11</span></div></div></div>
+    <div class="dw">
+      <div class="tabs"><div class="tab on">T6</div><div class="tab">T5<span class="d"></span></div><div class="tab">T11</div></div>
+      <div class="dh"><b>Table 6 · Kowalski</b><span>2 cov</span></div>
+      <div class="line"><span><span class="q">2×</span> Margherita</span><span>72</span></div>
+      <div class="line"><span><span class="q">2×</span> Aperol</span><span>52</span></div>
+      <div class="dtot"><span>Total</span><span>124 zł</span></div>
+      <div class="dbtns"><button>+ Add</button><button>Course</button><button class="pri">Pay</button></div>
+    </div>
+  </div></div>
+  <div class="meta">
+    <div><h3>What it is</h3><p>A tabbed drawer holding every open check in the server's hands, with live attention flags on the tabs behind.</p></div>
+    <div class="feat"><span class="li">Keep-open across table switches</span><span class="li">Attention dots (food up · bill · allergy)</span><span class="li">Per-check state preserved on switch</span><span class="li">"My tables" auto-populates the rail</span><span class="li">Drag an item between two tabs to move it</span></div>
+    <div class="eff">Effort <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="wire">Wires to: <code>SelectionContext</code> extended to a small check stack; each tab is a <code>PosTab</code> id. Attention dots reuse the Floor's <code>foodUp</code>/unpaid signals.</div>
+  </div>
+</div></section>
+
+<!-- 3 -->
+<section id="3"><div class="sh"><span class="n">3</span><h2>Anticipatory drawer — it reads the check and leads</h2><span class="who">→ the next right move, one tap away</span></div>
+<p class="lead">The drawer opens with a <b>next-best-action band</b> at the top: it reads the check's live state — food's up, unpaid for 14 minutes, a course is held, an allergy is on file, the kitchen's backed up — and promotes the single most urgent verb as a big primary button, colour-coded to urgency. The full till sits below, untouched. The server is guided, never hunting.</p>
+<div class="glass card">
+  <div class="mock"><div class="frame">
+    <div class="floorbg"><div class="fg"><div class="ft"><span class="n">T5</span></div><div class="ft sel"><span class="n">T6</span></div><div class="ft"><span class="n">T7</span></div><div class="ft"><span class="n">T9</span></div></div></div>
+    <div class="dw">
+      <div class="dh"><b>Table 6 · Kowalski</b><span>2 cov</span></div>
+      <div class="actband"><span class="ic">🔔</span><span class="tx"><b style="color:var(--amber)">Mains are up at the pass</b> — 2 min ago</span><span class="go">Run food</span></div>
+      <div class="line"><span><span class="q">2×</span> Margherita</span><span>72</span></div>
+      <div class="line"><span><span class="q">2×</span> Aperol</span><span>52</span></div>
+      <div class="dtot"><span>Total</span><span>124 zł</span></div>
+      <div class="dbtns"><button>+ Add</button><button>Course</button><button class="pri">Pay</button></div>
+    </div>
+  </div></div>
+  <div class="meta">
+    <div><h3>What it is</h3><p>A drawer with a situational awareness header. It surfaces the one thing this table needs now, so a glance is a decision.</p></div>
+    <div class="feat"><span class="li">Reads food-up · unpaid age · held course · allergy</span><span class="li">One promoted action, urgency-coloured</span><span class="li">Allergy / VIP banner when relevant</span><span class="li">Kitchen-pace aware ("hold dessert, line's slammed")</span><span class="li">Falls silent when nothing's pressing</span></div>
+    <div class="eff">Effort <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="wire">Wires to: the live order stream (<code>useAdminOrdersStream</code>), the tab's unpaid age, the KDS pace engine (<code>analyzeTruck</code>), and the table's allergy note — a small rules pass picks the top verb.</div>
+  </div>
+</div></section>
+
+<!-- 4 -->
+<section id="4"><div class="sh"><span class="n">4</span><h2>Split &amp; settle drawer — the end of the meal, solved</h2><span class="who">→ the pay flow that never sends anyone to a terminal</span></div>
+<p class="lead">When a check heads to payment, the drawer becomes a settlement surface: a row of covers, items assigned by tap or drag, one-touch <b>split by cover</b> or <b>by item</b> or <b>evenly</b>, and integrated card · cash · QR with tip — each cover paid independently, the drawer tracking the remaining balance live. Nobody walks to a till to close a table.</p>
+<div class="glass card">
+  <div class="mock"><div class="frame">
+    <div class="floorbg"><div class="fg"><div class="ft"><span class="n">T5</span></div><div class="ft sel"><span class="n">T6</span></div><div class="ft"><span class="n">T7</span></div><div class="ft"><span class="n">T9</span></div></div></div>
+    <div class="dw">
+      <div class="dh"><b>Table 6 · Split</b><span>168 zł · 2 covers</span></div>
+      <div class="covers"><div class="cov a"><b>Cover 1</b><br>Margherita<br>Aperol · 84 zł</div><div class="cov"><b>Cover 2</b><br>Diavola<br>Aperol · 84 zł</div></div>
+      <div class="paybar"><span class="on">Card</span><span>Cash</span><span>QR</span><span>+ Tip</span></div>
+      <div class="dtot" style="margin-top:6px"><span>Remaining</span><span>84 zł</span></div>
+      <div class="dbtns"><button>Even</button><button>By item</button><button class="pri">Charge cover 1</button></div>
+    </div>
+  </div></div>
+  <div class="meta">
+    <div><h3>What it is</h3><p>A dedicated split + pay mode of the drawer. Covers, assignment, method, tip and remaining-balance — the whole settlement, in place.</p></div>
+    <div class="feat"><span class="li">Split by cover · by item · evenly</span><span class="li">Tap or drag items to a cover</span><span class="li">Card · cash · QR with tip, per cover</span><span class="li">Live remaining-balance as covers pay</span><span class="li">Loyalty points accrue to each phone</span></div>
+    <div class="eff">Effort <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="wire">Wires to: <code>PosTab</code> lines + <code>charge</code>; split is a view over the same lines, payments post per cover; points via the existing loyalty accrual on pay.</div>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section id="5"><div class="sh"><span class="n">5</span><h2>Course-timeline drawer — the meal as choreography</h2><span class="who">→ fire, hold and pace by course from the check</span></div>
+<p class="lead">The drawer organises the check as a vertical <b>course timeline</b> — Antipasti · Primi · Secondi · Dolci — each course a fire/hold unit synced to the KDS. Sent courses show green; the next is a one-tap fire; held courses wait until the table's ready. A pacing hint reads the kitchen and the table's dwell ("Secondi held 12m — fire now?"), so the server conducts the meal instead of reacting to it.</p>
+<div class="glass card">
+  <div class="mock"><div class="frame">
+    <div class="floorbg"><div class="fg"><div class="ft"><span class="n">T5</span></div><div class="ft sel"><span class="n">T6</span></div><div class="ft"><span class="n">T7</span></div><div class="ft"><span class="n">T9</span></div></div></div>
+    <div class="dw">
+      <div class="dh"><b>Table 6 · Kowalski</b><span>2 cov · coursed</span></div>
+      <div class="course">
+        <div class="crow done"><span class="dot"></span><span class="nm">Antipasti · Bruschetta ×2</span><span class="st">served ✓</span></div>
+        <div class="crow done"><span class="dot"></span><span class="nm">Primi · Margherita ×2</span><span class="st">at pass</span></div>
+        <div class="crow fire"><span class="dot"></span><span class="nm">Secondi · Diavola</span><span class="st">▲ fire — held 12m</span></div>
+        <div class="crow hold"><span class="dot"></span><span class="nm">Dolci · Tiramisù</span><span class="st">held</span></div>
+      </div>
+      <div class="dbtns" style="margin-top:8px"><button>+ Add</button><button class="pri">Fire Secondi</button><button>Pay</button></div>
+    </div>
+  </div></div>
+  <div class="meta">
+    <div><h3>What it is</h3><p>A course-structured drawer. The check reads as a service timeline with per-course fire/hold and live pacing guidance.</p></div>
+    <div class="feat"><span class="li">Per-course fire / hold, KDS-synced</span><span class="li">Sent · at-pass · held states at a glance</span><span class="li">Pacing hint from kitchen load + dwell</span><span class="li">Auto-suggests the next course to fire</span><span class="li">One tap sends the held course</span></div>
+    <div class="eff">Effort <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="wire">Wires to: <code>PosTab.coursed</code> / <code>firedCourses</code> (already in the model) + the KDS send path; pacing from <code>analyzeTruck</code> + the table's <code>seatedAt</code> dwell.</div>
+  </div>
+</div></section>
+
+<!-- MATRIX -->
+<section><div class="sh"><span class="n">≡</span><h2>What each adds to the drawer</h2></div>
+<div class="glass" style="padding:6px 16px;overflow-x:auto">
+  <table class="matrix">
+    <tr><th>Variant</th><th>Superpower</th><th>Shines during</th><th>Leans on</th><th>Effort</th></tr>
+    <tr><td>1 · Progressive</td><td>density on demand</td><td>every interaction</td><td>CSS snaps</td><td>low</td></tr>
+    <tr><td>2 · Multi-check</td><td>juggle a whole section</td><td>a busy rush</td><td>SelectionContext</td><td>medium</td></tr>
+    <tr><td>3 · Anticipatory</td><td>tells you the next move</td><td>mid-service</td><td>order stream + KDS pace</td><td>medium</td></tr>
+    <tr><td>4 · Split &amp; settle</td><td>close any table in place</td><td>end of meal</td><td>PosTab charge + loyalty</td><td>med-high</td></tr>
+    <tr><td>5 · Course timeline</td><td>conduct the meal</td><td>full dine-in service</td><td>coursed / firedCourses + KDS</td><td>med-high</td></tr>
+  </table>
+</div></section>
+
+<!-- RECO -->
+<section id="reco"><div class="sh"><span class="n">★</span><h2>Synthesis — one adaptive drawer</h2></div>
+<div class="reco">
+  <p><b>Build them as layers of a single drawer, in this order.</b> Start with <b>1 · Progressive</b> — it's nearly free and makes every later layer feel lighter. Add <b>3 · Anticipatory</b> next: the action band is the highest-value-per-effort move, turning the drawer from a form into a guide. Then <b>2 · Multi-check</b> for rush-hour throughput. Finally the two service specialists — <b>5 · Course timeline</b> for how dine-in actually flows, and <b>4 · Split &amp; settle</b> to own the payment moment end to end.</p>
+  <p style="margin-top:10px">Because all five share one <code style="font-family:var(--mono)">CorePos</code> core and one <code style="font-family:var(--mono)">PosTab</code> truth, the result isn't five features bolted on — it's a drawer that <em>resizes to intent, holds your whole section, reads the room, conducts the courses, and settles the bill</em>, all without a single trip to a terminal.</p>
+</div></section>
+
+<div class="foot">
+  <span>⚙ The docked check drawer, advanced · pairs with the TableSession spine &amp; Seating Intelligence Engine</span>
+  <span>Sud Italia · Service OS design R&amp;D</span>
+</div>
+
+</div>
+</body></html>

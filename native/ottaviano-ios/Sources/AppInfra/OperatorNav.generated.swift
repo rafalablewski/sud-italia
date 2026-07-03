@@ -22,7 +22,7 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
                         "Loyalty, guest profiles (CRM) and table bookings."),
         OperatorNavItem("/core/service", "Service", "fork.knife.circle.fill", .staff, .live,
                         "Floor plan, table turns and reservation slots."),
-        OperatorNavItem("/core/book", "Book", "calendar.badge.clock", .staff, .live,
+        OperatorNavItem("/core/service/book", "Book", "calendar.badge.clock", .staff, .live,
                         "Reservations & slots — book a table against the floor timeline."),
     ]),
     OperatorNavSection("overview", "Overview", [

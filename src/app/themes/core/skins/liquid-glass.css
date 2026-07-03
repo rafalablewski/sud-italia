@@ -188,9 +188,16 @@
 }
 
 /* ---------- more surfaces: Floor · Guest · Book · Slots · KPI cards ---------- */
-/* frosted cards that float */
+/* frosted cards that float — Book's three panels (timeline · new-reservation
+   rail · today's-bookings list) read as the mockup's `.glass` cards, matching
+   POS's frosted surfaces */
 .core[data-skin="liquid-glass"] .core-tbl2,
-.core[data-skin="liquid-glass"] .core-book-side,
+.core[data-skin="liquid-glass"] .core-book-tlpanel,
+.core[data-skin="liquid-glass"] .core-book-form,
+.core[data-skin="liquid-glass"] .core-bk-blist,
+.core[data-skin="liquid-glass"] .core-convs,
+.core[data-skin="liquid-glass"] .core-thread,
+.core[data-skin="liquid-glass"] .core-ctx,
 .core[data-skin="liquid-glass"] .core-slot {
   background: var(--lg-sheen), var(--lg-fill);
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);

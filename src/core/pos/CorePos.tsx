@@ -105,6 +105,9 @@ const TIP_PCTS = [0, 5, 10, 15];
  *  recorded server-side as `manager_comp` (the note carries the specific
  *  reason), so the per-shift comp cap counts them all. */
 const COMP_REASONS = ["Quality", "Wait", "Goodwill", "Error"];
+/** Why a dish already sent to the kitchen is being cancelled — captured for
+ *  accountability so a fired item is never silently wiped. */
+const VOID_REASONS = ["Wrong item", "Guest changed mind", "86 / out", "Duplicate", "Sent in error"];
 
 /** Client tender payload sent to PATCH /api/admin/pos/orders. The server
  *  re-derives the bill and clamps every figure — this is only a proposal. */
@@ -969,6 +972,23 @@ export function CorePos({
   }, [embedded, activeTabId, tabs, grandG, cartOf, select]);
 
   const active = getActive();
+
+  // Cancel-dish guard — removing the LAST unit of a dish that's already gone to
+  // the kitchen (its course fired, or a non-coursed check sent) is consequential
+  // (it may be cooking), so it confirms + captures a reason. Unfired lines just
+  // decrement instantly (smooth).
+  const [voidLine, setVoidLine] = useState<{ key: string; name: string } | null>(null);
+  const lineIsFired = useCallback(
+    (l: PosTabLine) => !!active && ((active.firedCourses ?? []).includes(courseOf(l)) || (!(active.channel === "dine-in" && (active.coursed ?? true)) && active.sentKds)),
+    [active],
+  );
+  const decLine = useCallback(
+    (l: PosTabLine, key: string) => {
+      if (l.quantity === 1 && lineIsFired(l)) { setVoidLine({ key, name: byId(l.menuItemId)?.name ?? "this dish" }); return; }
+      changeQty(key, -1);
+    },
+    [lineIsFired, byId, changeQty],
+  );
   // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
   // staff know a send/charge is saved and will land on reconnect.
   const pendingWrites = usePendingWriteCount();
@@ -1302,7 +1322,7 @@ export function CorePos({
                 to the live stepper. Touch tills always show the stepper. */}
             <span className="core-lqty mono" aria-hidden>{l.quantity}×</span>
             <div className="core-qstep">
-              <button type="button" onClick={() => changeQty(key, -1)} aria-label="Remove one">
+              <button type="button" onClick={() => decLine(l, key)} aria-label="Remove one">
                 −
               </button>
               <span className="q mono">{l.quantity}</span>
@@ -1911,6 +1931,45 @@ export function CorePos({
         />
       )}
 
+      {/* Cancel a fired dish — confirm + reason (accountability, not silent) */}
+      {voidLine && (
+        <CoreDialog
+          open
+          onClose={() => setVoidLine(null)}
+          title={`Cancel ${voidLine.name}?`}
+          footer={<button type="button" className="core-btn ghost" onClick={() => setVoidLine(null)}>Keep it</button>}
+        >
+          <p className="core-cust-sub" style={{ marginBottom: 12 }}>
+            This dish has already gone to the kitchen — it may be cooking. Pick a reason to cancel it.
+          </p>
+          <div className="core-tender-chips">
+            {VOID_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="core-tchip"
+                onClick={() => {
+                  // Tell the kitchen first — a fired dish is pulled on the KDS
+                  // (struck-through), not silently dropped. Best-effort.
+                  if (active?.orderId) {
+                    void fetch(`/api/admin/kds/void-item?location=${encodeURIComponent(pageLoc)}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderId: active.orderId, name: voidLine.name, quantity: 1, reason: r }),
+                    }).catch(() => {});
+                  }
+                  changeQty(voidLine.key, -1);
+                  toast(`Cancelled ${voidLine.name} · ${r} · kitchen notified`, "default");
+                  setVoidLine(null);
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </CoreDialog>
+      )}
+
       {/* Void confirmation — only when the check has rung items */}
       <CoreDialog
         open={voidOpen && !!active}
@@ -2284,6 +2343,10 @@ function TenderDialog({
   const [shareMethods, setShareMethods] = useState<("cash" | "card")[]>([]);
   const [cashOpen, setCashOpen] = useState(false);
   const [cashGiven, setCashGiven] = useState(""); // zł text
+  // One guest paying part cash + part card. The operator types the cash portion;
+  // the remainder auto-lands on card, so the two always sum to the total.
+  const [mixedOpen, setMixedOpen] = useState(false);
+  const [mixedCashZl, setMixedCashZl] = useState("");
 
   const zlToG = (s: string) => Math.round((parseFloat(s.replace(",", ".")) || 0) * 100);
   const comp = compOpen ? Math.min(billG, Math.max(0, zlToG(compZl) || billG)) : 0;
@@ -2343,6 +2406,22 @@ function TenderDialog({
       ...(method === "cash" && cashGivenG > 0 ? { cashTenderedGrosze: cashGivenG } : {}),
     };
     onCharge(tender, method === "cash" ? "Cash" : "Card");
+  };
+
+  // Mixed tender for a single payer — cash portion + card remainder.
+  const mixedCashG = Math.min(total, Math.max(0, zlToG(mixedCashZl)));
+  const mixedCardG = Math.max(0, total - mixedCashG);
+  const chargeMixed = () => {
+    const payments: { method: "cash" | "card"; amount: number }[] = [];
+    if (mixedCashG > 0) payments.push({ method: "cash", amount: mixedCashG });
+    if (mixedCardG > 0) payments.push({ method: "card", amount: mixedCardG });
+    const tender: TenderInput = {
+      ...(tip > 0 ? { tipGrosze: tip } : {}),
+      ...(comp > 0 ? { compGrosze: comp, compNote } : {}),
+      ...(overCap && compPin ? { compOverridePin: compPin } : {}),
+      payments,
+    };
+    onCharge(tender, "Cash + Card");
   };
 
   const chargeSplit = () => {
@@ -2516,10 +2595,31 @@ function TenderDialog({
               {cashGivenG < total ? `Need ${fmtPLN(total)}` : `Confirm cash · change ${fmtPLN(change)}`}
             </button>
           </div>
+        ) : mixedOpen ? (
+          <div className="core-cashpad">
+            <div className="core-cashpad-h">Cash + Card<button type="button" className="core-tender-toggle" onClick={() => setMixedOpen(false)}>← Back</button></div>
+            <div className="core-tender-chips">
+              {[Math.round(total / 2), Math.floor(total / 5000) * 5000 || 5000, Math.floor(total / 10000) * 10000 || 10000]
+                .filter((v) => v > 0 && v < total)
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .map((v) => (
+                  <button key={v} type="button" className="core-tchip" onClick={() => setMixedCashZl((v / 100).toFixed(2))}>{fmtPLN(v)} cash</button>
+                ))}
+              <input className="core-inp tip-inp" inputMode="decimal" value={mixedCashZl} onChange={(e) => setMixedCashZl(e.target.value)} placeholder="cash zł" autoFocus />
+            </div>
+            <div className="core-split-rows">
+              <div className="core-split-row"><span className="sr-l">💵 Cash</span><span className="sr-a mono">{fmtPLN(mixedCashG)}</span></div>
+              <div className="core-split-row"><span className="sr-l">💳 Card</span><span className="sr-a mono">{fmtPLN(mixedCardG)}</span></div>
+            </div>
+            <button type="button" className="core-charge" disabled={busy || mixedCashG <= 0 || mixedCashG >= total} onClick={chargeMixed}>
+              {mixedCashG <= 0 ? "Enter the cash part" : mixedCashG >= total ? "Use Cash instead" : `Charge ${fmtPLN(mixedCashG)} cash + ${fmtPLN(mixedCardG)} card`}
+            </button>
+          </div>
         ) : (
           <div className="core-tender-pads">
             <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("card")}>💳 Card</button>
             <button type="button" className="core-pay" disabled={busy} onClick={() => chargeSingle("cash")}>💵 Cash</button>
+            <button type="button" className="core-pay mixed" disabled={busy} onClick={() => setMixedOpen(true)}>💵﹢💳 Split</button>
           </div>
         )}
       </div>

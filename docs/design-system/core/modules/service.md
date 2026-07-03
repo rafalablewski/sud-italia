@@ -1,7 +1,7 @@
 # Core · Service
 
 The merged Floor + Slots surface. `/core/service` (redirects to Floor).
-Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor · Slots · Dispatch.
+Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Floor · Slots · Dispatch**. (Book moved here from the top-level Lens Rail / the Guest hub — it is a Service view, reached from the Floor lens, and is no longer its own lens.)
 
 ## Floor (`/core/service/floor`) — wired
 
@@ -111,7 +111,139 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
 Wired 1:1 to the same shared server engine. The booking console (slot + table
-in one move) lives in the Guest hub's **Book** view (`CoreBook`), shared.
+in one move) is the **Book** view — see below.
+
+## Book (`/core/service/book`) — wired
+
+`src/core/service/CoreBook.tsx` — a **Service** view (`serviceTabs("book")`,
+eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
+`/core/book` and `/core/guest/book` redirect here. Rendered in the
+**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
+`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
+covers · seated · upcoming · no-shows · fill** (all from the day's reservations
+— Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
+timeline a title + a status **legend** (confirmed · seated · pending · conflict).
+The **timeline-over-tables grid** (`.core-book-tlpanel`, 17:00→23:00 in 30-min
+ticks): reservation **blocks** are positioned by time/duration and **toned by
+status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
+live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
+**drags to another table row to reassign** (HTML5 drag → the reservations `POST`
+upsert with `override`). The timeline sits **left**; the **new-reservation form
+is the right rail** (`.core-book-form`, grid col 2): pick a capacity-tinted
+dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
+**brand-wash**) + party size, then a table — ranked by the **Seating
+Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
+a seating time, every table is hard-filtered (fit · free-for-the-turn ·
+availability) then scored (right-size · runway · guest · pacing · yield), so the
+✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
+reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
+`patio full this window`, `89 pts · exact fit`). Excluded tables dim. Entering a returning guest's **phone** pulls their CRM seating profile
+(`.core-bk-guestmatch`, GET `/api/admin/floor/guest-prefs` → `getGuestSeatingProfile`
+— VIP standing from spend/visits/loyalty, usual table + zone from reservation
+history) and feeds it into the engine's `guest` signal, so a regular is nudged
+toward their usual table/zone. Below the
+picker a **signals panel** (`.core-bk-signals`) lays the score open for the
+chosen (or recommended) table: the weighted contribution of each of the **six**
+signals as a labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield/**section**,
+each colour-coded), the 0–100 total, a **facts** row (`.sg-facts` — confidence %,
+expected turn ±band, and the predicted **frees-at** time), the `reasons`, and a
+**shadow** badge when shadow mode is on — so a pick is never a black box. Before a slot is picked it falls back to a plain
+capacity check. A **Guest needs** chip row (`.core-bk-needs` — accessible ·
+high-chair · step-free) hard-filters the picker to tables that offer every
+required feature (tables carry `features`, edited in the Floor table dialog's
+Accessibility toggles). When **no single table fits** the party, a **Combine
+tables** section (`.core-bk-joins`/`.core-bk-join`, from `suggestJoins`) proposes
+the fewest same-zone free tables that sum to the party; picking one seats the
+primary and holds the rest together (`Reservation.joinedTableIds` — the seat
+spine seats/frees every combined table as one, shown as "T5 + T6"). Then capture
+the guest and confirm. The engine has these
+live surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
+**Seat / No-show / Complete** actions (`.bact`) that transition the reservation
+and stamp `seatedAt`/`completedAt` (POST `/api/admin/floor/reservations`), so
+Book answers "who's at T5?" — **seating also opens a dine-in POS tab** on the
+table tagged with the guest (concept 5 phase 1; an empty one is cleared if the
+party leaves without ordering), so the check is live where the party sits; **(2) walk-in guard** — a subbar **+ Walk-in**
+button (`.core-bk-toolbtn.walk`) opens a `CoreDialog` that ranks tables at *now*
+and only seats a genuinely-free one (writes a `source:"walk-in"` seated
+reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog` with the
+preset + weight sliders + numeric **rules** (`.core-bk-rules` — reset buffer,
+pace cap, large-table seats, **section cap** per zone/15m, **reserved grace**
+[keep a booked table held N min past its slot for a late guest] and **big-table
+release** [only protect a large table while big demand is further than N min
+away]), the **Guards**
+toggles (`.core-bk-toggles`/`.core-bk-toggle` — **Protect large tables** hard-drops
+a small party from a big top when a smaller one is free, **Auto-suggest**
+pre-selects the engine pick, **Learn from overrides** logs every seat, **Shadow
+mode** makes the engine advisory-only), a **VIP hold** zone picker
+(`.core-bk-vipzones` — held zones exclude non-VIP parties), and a **Trust loop**
+readout (`.core-bk-trust` — the agreement/override rate over logged seats, the
+most common override **reason**, and a weight-tuning **nudge** `.core-bk-nudge`
+when one signal is behind ≥40% of overrides), all persisted per location (GET/PUT
+`/api/admin/seating/policy`, Rule #7); **(4) learned turn-times** — the engine
+reads a model derived live from completed reservations' `seatedAt→completedAt`,
+learned per **party × daypart × weekday-group** (weekday vs Fri/Sat) with a
+confidence band, and a **predicted-vs-actual accuracy** readout
+(`.core-bk-turnacc` — MAE, in-band %, and the bias direction, from
+`summariseTurnAccuracy`) over the location's real closes (GET
+`/api/admin/seating/turn-model` returns `{ cells, accuracy }`), cold-starting on
+defaults;
+**(5) trust loop** — every booked seat POSTs recommended-vs-chosen (+ the
+override-**reason** chips `.core-bk-orsn` shown when the pick differs from the
+recommendation, + the recommended pick's dominant signal) to
+`/api/admin/seating/decisions` when Learn-from-overrides or Shadow mode is on, so
+the override rate and the tuning nudge are measured numbers, not a guess.
+**Today's bookings** (`.core-bk-blist`) is a
+**full-width list below**, with cancel. A **lens toggle** in the section header
+(`.core-bk-lenses`) switches the surface between three views over **one shared
+occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
+`buildTableSessions`) — so they can never disagree: **Timeline** (the plan),
+**Floor** (`.core-bk-floorlens` — a live table-tile grid built from the sessions:
+`seated` tiles show the guest + elapsed with Complete **and open the table's POS
+check** on tap (or the 🧾 Check button) as a docked embedded `CorePos` drawer
+(`.core-check-overlay`/`.core-check-panel`, portaled to the `.core` root — the
+same till the standalone Floor uses; the book **page** resolves
+`menusByLocation`/`upsellByLocation` and passes them to `CoreBook`), `due`
+bookings show "due" + Seat, `held` tiles show the next booking's countdown,
+`free` tiles tap to seat a walk-in, and a table seated **off-book on the legacy
+floor** renders as a dashed **`.offbook`** "occupied · walk-in" tile that also
+opens its check), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
+· Waitlist · Seated**). The **Waitlist** column (`.core-bk-wladd` add row +
+`.apc.waitc` entries, backed by `/api/admin/floor/waitlist`) queues walk-ins with
+a **live wait quote** from `estimateWaitMin` (soonest a fitting table frees, pushed
+out by the parties ahead); an entry flips to "table ready" and **Seat** drops them
+onto the engine's pick (a `walk-in` seated reservation) and closes them out of the
+queue. `nowMin` is live client state (ticks every 30s) so Floor/Arrivals stay
+current. **The spine is bidirectional**: seating/completing a
+booking here fans out to `FloorTable.status` (via `reconcileFloorTable` in the
+reservations route), so the POS-integrated `/core/service/floor` (`floor-twin`)
+reflects it immediately; conversely a walk-in seated from that floor shows in this
+Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
+`nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
+number** (shared with Floor's `tLabel`). The **surface sub-bar**
+(`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
+use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a
+brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field). A
+**◔ Forecast** button opens a **pre-service simulation** `CoreDialog`
+(`.core-bk-sim`, from `simulateService` via GET `/api/admin/seating/simulate`):
+bookings/covers/peak-occupancy KPIs, a per-30-min table-occupancy bar chart
+(`.core-bk-simchart`), and the **at-risk bookings** list (no table · too small ·
+double-booked) so a manager sees pressure and un-seatable parties before doors
+open. The engine also runs a **look-ahead** pass live: a table a *specific* known
+later booking will need (a big party still to come that fits it tightly) is held
+back from a smaller party now, with the reason *"needed for a 8 at 20:00"*.
+Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST
+/api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
+
+**Dense-console parity** (`src/app/themes/core/parity/book.css`, imported after
+base+skin; scoped under `.core`): the three cards (timeline · new-reservation
+rail · today's-bookings list) are **frosted-glass** in the liquid-glass skin
+(sheen + backdrop-blur + floating shadow), matching the mockup's `.glass` columns
+and POS's frosted surfaces — see `../skins.md`. **Layout gutter:** `.core-book`
+owns a single `14px` horizontal padding + a `10px` `column-gap`, and the stat
+strip / divlabel / bookings list drop their own side margins inside Book — so
+every row (header rows, the timeline↔form columns, and the list) shares one
+left/right edge and the timeline/rail sit in a 10px channel (mockup `.main`
+padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 
 ## Floor — live orders, lookup & notes
 
@@ -133,7 +265,10 @@ The Floor board pairs the predictive twin with the table's **live orders**:
   `updateOrder` sets `paidAt`, fires a still-pending order to the kitchen).
 - **Table detail** (the `⋯` editor) — adds a **Service note** textarea
   (persisted on `FloorTable.notes`, threaded through `buildFloorTwin` →
-  `TwinTableRow.notes`) and an **Orders at this table** list with the same
+  `TwinTableRow.notes`), an **Accessibility** toggle row (`.core-tbl-features` —
+  accessible · high-chair · step-free, persisted on `FloorTable.features` and
+  threaded through the twin so the seating engine can match a guest's needs),
+  and an **Orders at this table** list with the same
   settle action.
 
 ## Dispatch (`/core/service/dispatch`) — wired
@@ -171,6 +306,6 @@ The Floor board pairs the predictive twin with the table's **live orders**:
 
 Parity layers: `src/app/themes/core/parity/{floor,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
-- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; Waitlist graceful 0 — no queue source yet); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
+- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; **Waitlist is live** from the host queue `/api/admin/floor/waitlist`, polled every 15s); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
 - **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

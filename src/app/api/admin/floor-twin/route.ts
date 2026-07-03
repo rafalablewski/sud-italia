@@ -40,6 +40,7 @@ export const GET = withAdmin(
         zone: t.zone,
         status: t.status,
         notes: t.notes,
+        features: t.features,
       })),
       orders: orders.map((o) => ({
         tableId: o.tableId,

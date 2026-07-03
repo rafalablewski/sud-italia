@@ -46,6 +46,9 @@ export interface KdsTicket {
   simulated?: boolean;
   /** POS coursing state (dine-in) — held courses are still in the kitchen. */
   coursing?: { fired: PosCourse[]; held: PosCourse[] };
+  /** Dishes cancelled after firing — shown struck-through so the line stops
+   *  making them (never a silent disappearance). */
+  voided?: { name: string; quantity: number; reason?: string; at: string }[];
 }
 
 /** Short, glanceable ticket id — last 6 chars, uppercased, symbols trimmed. */
@@ -91,5 +94,6 @@ export function buildKdsTicket(o: Order, prediction: TicketPrediction | undefine
     atRisk: prediction?.atRisk ?? false,
     simulated: o.simulated ?? false,
     coursing: o.coursing,
+    voided: o.voidedItems,
   };
 }

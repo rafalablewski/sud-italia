@@ -12,7 +12,25 @@
 .core .core-statstrip .val.muted { color: var(--ink-3); }
 
 /* ===== 3-pane geometry ===== */
-.core .core-inbox { grid-template-columns: 314px 1fr 320px; }
+/* Uniform 14px gutter + a 10px channel between the three panes (mockup
+   `.main` padding + `.inbox { gap:10px }`), panes stretch to equal height. */
+.core .core-inbox { grid-template-columns: 314px 1fr 320px; gap: 10px; padding: 0 14px 14px; align-items: stretch; }
+
+/* Each pane is its OWN frosted-glass card (mockup `.pane.glass`) — not flat
+   regions joined by divider borders. Reset the base border-right/left/bg and
+   give every pane a full border + radius; the sheen/blur/float come from the
+   liquid-glass skin (see skins list). Inner headers/composer go transparent so
+   the glass shows through. */
+.core .core-convs,
+.core .core-thread,
+.core .core-ctx {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.core .core-thread-h,
+.core .core-composer-wrap { background: transparent; }
 
 /* ===== deterministic avatar colour variants (mockup .av / .av.b / .av.i / .av.m) ===== */
 .core .core-av.v-brand { color: var(--on-accent); background: linear-gradient(150deg, var(--brand-bright), var(--brand)); }
