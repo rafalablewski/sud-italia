@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POS on the floor — the six moves, idiot-proof · Sud Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel:rgba(255,255,255,.04);--panel-2:rgba(255,255,255,.06);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--violet:#b98cff;--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+body{background:radial-gradient(70% 55% at 4% 0%,rgba(232,107,62,.22),transparent 60%),radial-gradient(65% 60% at 98% 100%,rgba(125,196,100,.13),transparent 62%),var(--bg);background-attachment:fixed;min-height:100vh;padding:0 0 70px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+.hero{padding:40px 0 18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--basil)}
+h1{font-family:var(--display);font-weight:800;font-size:37px;line-height:1.05;letter-spacing:-.02em;margin:9px 0 8px}
+.tag{font-size:16px;color:var(--ink-2);max-width:820px}
+.tag b{color:var(--ink)}
+/* step rail */
+.rail{display:flex;gap:7px;flex-wrap:wrap;margin:20px 0 14px;position:sticky;top:0;z-index:10;padding:12px 0;background:linear-gradient(180deg,var(--bg) 60%,transparent)}
+.step{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--pill);padding:7px 13px;cursor:pointer;transition:.12s}
+.step:hover{background:var(--panel-3)}
+.step.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.55);box-shadow:0 0 18px -8px var(--brand)}
+.step .n{width:18px;height:18px;border-radius:50%;background:var(--line-2);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px}
+.step.on .n{background:var(--brand);color:#2a160b}
+/* stage */
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.11),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(18px) saturate(155%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2)}
+.stage{display:grid;grid-template-columns:1.15fr .85fr;gap:0;overflow:hidden;min-height:520px}
+.pane{padding:20px}
+.pane.till{border-right:1px solid var(--line);background:rgba(0,0,0,.16)}
+.desc h2{font-family:var(--display);font-size:22px;margin-bottom:4px}
+.desc .sub{font-family:var(--mono);font-size:11px;color:var(--brand-bright);text-transform:uppercase;letter-spacing:.05em}
+.desc p{font-size:14px;color:var(--ink-2);margin-top:12px}
+.desc .why{margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);background:var(--basil-wash);border:1px dashed rgba(125,196,100,.5);font-size:13px}
+.desc .why b{color:var(--basil)}
+.desc .note{margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.5}
+.desc .note code{color:var(--brand-bright)}
+/* till atoms */
+.thead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:11px}
+.thead b{font-size:14px}.thead span{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.chead{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin:12px 0 6px;display:flex;align-items:center;gap:8px}
+.chead .pill{font-size:8.5px;padding:2px 7px;border-radius:99px}
+.chead .pill.away{background:var(--basil-wash);color:var(--basil)}
+.chead .pill.pass{background:var(--info-wash);color:var(--info)}
+.chead .pill.hold{background:var(--panel-3);color:var(--ink-3)}
+.chead .fire{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:600;color:#2a160b;background:linear-gradient(180deg,#f4c064,var(--amber));border:0;border-radius:99px;padding:5px 11px;cursor:pointer}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row .qs{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px}
+.row .qs button{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);cursor:pointer;font-size:13px}
+.row .qs button.danger:hover{border-color:var(--danger);color:var(--danger)}
+.row .nm{flex:1;font-size:13px}
+.row .nm .d{display:block;font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-top:1px}
+.row .pr{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.row.new{animation:pop .4s ease}
+@keyframes pop{from{opacity:0;transform:translateY(-4px)}}
+.row.dim{opacity:.4}
+.totrow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;font-weight:600;margin-top:12px;padding-top:10px;border-top:1px solid var(--line-2)}
+.actions{display:flex;gap:7px;margin-top:14px}
+.actions button{flex:1;font-family:var(--mono);font-size:11px;font-weight:600;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-3);color:var(--ink-2);cursor:pointer}
+.actions button.pri{color:#2a160b;background:linear-gradient(180deg,#93d67c,var(--basil));border-color:transparent}
+/* menu grid (add) */
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.mchip{border-radius:9px;border:1px solid var(--line);background:var(--panel-2);padding:9px;cursor:pointer;transition:.12s}
+.mchip:hover{border-color:var(--brand);background:var(--brand-wash)}
+.mchip .mn{font-size:11.5px;font-weight:600}.mchip .mp{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+/* overlay dialogs inside the till */
+.ovl{position:absolute;inset:0;background:rgba(6,4,3,.55);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;border-radius:var(--r) 0 0 var(--r)}
+.dlg{width:88%;background:linear-gradient(160deg,rgba(24,18,13,.99),rgba(15,11,8,.99));border:1px solid var(--line-2);border-radius:var(--r-sm);padding:15px;box-shadow:0 20px 50px -14px rgba(0,0,0,.7)}
+.dlg h3{font-family:var(--display);font-size:16px;margin-bottom:4px}
+.dlg p{font-size:12px;color:var(--ink-2);margin-bottom:11px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:6px 11px;cursor:pointer}
+.chips button:hover{border-color:var(--amber);color:var(--ink)}
+.chips button.keep{margin-left:auto;color:var(--ink-2)}
+.tot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:15px;font-weight:600;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:10px}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:3px;gap:2px}
+.seg button{font-family:var(--mono);font-size:10px;color:var(--ink-3);background:transparent;border:0;padding:5px 11px;border-radius:99px;cursor:pointer}
+.seg button.on{color:var(--ink);background:var(--brand-wash);box-shadow:inset 0 0 0 1px rgba(232,107,62,.5)}
+.pays{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.payrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2)}
+.payrow .m{color:var(--ink-2)}.payrow .a{color:var(--ink);font-weight:600}
+.charge{width:100%;font-family:var(--mono);font-size:12px;font-weight:700;color:#2a160b;background:linear-gradient(180deg,#93d67c,var(--basil));border:0;border-radius:10px;padding:12px;cursor:pointer;margin-top:4px}
+.pads{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pads .pay{height:52px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel-2);font-weight:700;font-size:14px;color:var(--ink);cursor:pointer}
+.pads .pay.mixed{grid-column:1/-1;height:44px;font-size:12px;color:var(--ink-2)}
+.mini{font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-top:3px}
+.cashinp{width:100%;font-family:var(--mono);font-size:13px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:9px;color:var(--ink);margin:8px 0}
+.foot{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-3);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:860px){.stage{grid-template-columns:1fr}.pane.till{border-right:0;border-bottom:1px solid var(--line)}h1{font-size:29px}}
+</style></head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">POS on the floor · the six moves, idiot-proof</div>
+  <h1>Run the check without leaving the room</h1>
+  <p class="tag">Tap through the six things a server actually does at the table — <b>add · cancel · call away · pay · split · part-cash-part-card</b>. Cheap moves are instant; anything a guest or the kitchen would feel gets a guard. This mirrors the shipped till.</p>
+</header>
+
+<div class="rail" id="rail">
+  <button class="step on" data-s="add"><span class="n">1</span> Add</button>
+  <button class="step" data-s="cancel"><span class="n">2</span> Cancel</button>
+  <button class="step" data-s="course"><span class="n">3</span> Call away</button>
+  <button class="step" data-s="pay"><span class="n">4</span> Pay</button>
+  <button class="step" data-s="split"><span class="n">5</span> Split</button>
+  <button class="step" data-s="mixed"><span class="n">6</span> Cash + Card</button>
+</div>
+
+<div class="glass stage" style="position:relative">
+  <div class="pane till" id="till" style="position:relative">
+    <div class="thead"><b>Table 6 · Kowalski</b><span id="tsub">2 covers · dine-in</span></div>
+    <div id="tillbody"></div>
+  </div>
+  <div class="pane desc" id="desc"></div>
+</div>
+
+<div class="foot">
+  <span>⚙ Mirrors the shipped CorePos / PosTab till · pairs with the docked check drawer</span>
+  <span>Sud Italia · Service OS design R&amp;D</span>
+</div>
+</div>
+
+<script>
+const zl = g => (g/100).toFixed(2).replace('.',',')+' zł';
+const BASE = [
+  {id:'brus', nm:'Bruschetta', d:'Antipasti · tomato, basil', c:'starter', q:2, p:2600},
+  {id:'marg', nm:'Margherita', d:'Primi · San Marzano, fior di latte', c:'main', q:2, p:3600},
+  {id:'diav', nm:'Diavola', d:'Secondi · spicy salami', c:'main', q:1, p:4400},
+];
+const MENU = [['Aperol Spritz',2600],['Espresso',900],['Tiramisù',2400],['Diavola',4400]];
+let items = JSON.parse(JSON.stringify(BASE));
+let state = 'add';
+
+const desc = {
+  add:{sub:'1 · Smooth adding',t:'One tap adds a dish',
+    p:'Tap a menu chip and the line drops onto the check with a live subtotal — quantity steppers, modifiers and a special-request note all sit on the line. No dialog, no confirm; adding is the cheapest move so it stays frictionless.',
+    why:'<b>Instant by design.</b> The 80% action — "another round" — is a single tap, priced server-side so the till never dictates a price.',
+    note:'Wired: menu grid → <code>addLine</code> / <code>addConfiguredLine</code> → <code>PosTab.items</code>.'},
+  cancel:{sub:'2 · Smooth removing, guarded',t:'Cancelling a dish is idiot-proof',
+    p:'An unfired line just decrements — tap − and it\'s gone. But the last unit of a dish that\'s already gone to the kitchen opens a confirm with a reason, because it may be cooking. Cheap removal stays instant; the consequential one asks.',
+    why:'<b>Friction only where it matters.</b> A fired dish is never silently wiped — the reason is captured for accountability (waste / 86 / error).',
+    note:'Wired: <code>decLine</code> gates <code>changeQty</code> on <code>firedCourses</code> / <code>sentKds</code>; reasons = <code>VOID_REASONS</code>.'},
+  course:{sub:'3 · Calling meals away',t:'Fire by course, mains held',
+    p:'A dine-in check is grouped into courses — Antipasti · Primi · Secondi · Dolci. The primary button fires the next course only (Starters first); later courses stay held until the table\'s ready. Sent courses show green, so what\'s away is never ambiguous.',
+    why:'<b>Conduct, don\'t react.</b> One clear "fire next" per course, KDS-synced — the line cooks get a paced service, not a wall of tickets.',
+    note:'Wired: <code>PosTab.coursed</code> / <code>firedCourses</code> → the KDS send path (fire course-by-course).'},
+  pay:{sub:'4 · Paying',t:'A real tender, not a bare tap',
+    p:'Charge opens the tender sheet: tip presets, an optional comp, and Card or Cash. Cash reveals a change-due pad with denomination quick-keys. The bill is re-derived server-side, so what\'s collected is always authoritative.',
+    why:'<b>One money model.</b> Tip, comp, method and change all land on the Order — receipts, Reports and cash reconciliation read the same breakdown.',
+    note:'Wired: <code>chargeTab</code> re-derives the bill; tender persists as <code>payments[]</code> / <code>tipAmount</code> / <code>cashTendered</code>.'},
+  split:{sub:'5 · Splitting the bill',t:'Even or by item, each their own method',
+    p:'Split the bill Whole · ÷2 · ÷3 · ÷4 · By seat, or by item — tap each dish to a guest. Every share gets its own Card or Cash toggle, so four people can pay four ways in one settlement. Shares always sum to the total.',
+    why:'<b>Any table closes in place.</b> No trip to a terminal, no math — the last share absorbs the rounding so the payments land exactly on the bill.',
+    note:'Wired: <code>chargeSplit</code> sends one <code>payments[]</code> entry per share; validated to cover net + tip.'},
+  mixed:{sub:'6 · Part cash, part card',t:'One guest, two methods',
+    p:'A single guest paying part cash + part card: type the cash portion and the card remainder computes automatically. Both are shown before you charge, and they always add up to the total.',
+    why:'<b>The everyday split-tender.</b> No fiddling with fake "two guests" — one payer, one charge, two methods: <code>payments:[{cash},{card}]</code>.',
+    note:'Wired: the "Cash + Card" pad → <code>chargeMixed</code>; the backend sums multi-payments and rejects a short tender.'},
+};
+
+function courseGroups(){
+  const order=[['starter','Antipasti','starter'],['main','Primi · Secondi','main'],['dessert','Dolci','dessert']];
+  return order.map(([c,label])=>({c,label,lines:items.filter(i=>i.c===c)})).filter(g=>g.lines.length);
+}
+
+function render(){
+  document.querySelectorAll('.step').forEach(s=>s.classList.toggle('on',s.dataset.s===state));
+  const d=desc[state];
+  document.getElementById('desc').innerHTML =
+    `<div class="sub">${d.sub}</div><h2>${d.t}</h2><p>${d.p}</p><div class="why">${d.why}</div><div class="note">${d.note}</div>`;
+  const body=document.getElementById('tillbody');
+  const tot=items.reduce((s,i)=>s+i.p*i.q,0);
+  // base line list (course-grouped for the 'course' view, flat otherwise)
+  const fired = state==='course' ? {} : null;
+  const flat = () => items.map((i,ix)=>lineHTML(i,ix,false)).join('');
+  const coursed = () => courseGroups().map((g,gi)=>{
+    const away = state==='course' && g.c==='starter';
+    const pass = state==='course' && g.c==='main';
+    const pill = away?'<span class="pill away">away ✓</span>':pass?'<span class="pill pass">at pass</span>':'<span class="pill hold">held</span>';
+    const fire = (!away&&!pass)?`<button class="fire">Fire ${g.label.split(' ')[0]}</button>`:'';
+    return `<div class="chead">${g.label} ${pill} ${fire}</div>`+g.lines.map((i)=>lineHTML(i,items.indexOf(i),away)).join('');
+  }).join('');
+  body.innerHTML =
+    (state==='course'?coursed():flat())
+    + `<div class="totrow"><span>Total</span><span>${zl(tot)}</span></div>`
+    + panelForState(tot)
+    + overlayForState(tot);
+  document.getElementById('tsub').textContent = state==='course' ? '2 covers · coursed' : '2 covers · dine-in';
+  bind();
+}
+
+function lineHTML(i,ix,firedFlag){
+  const canCancel = state==='cancel';
+  const minusCls = (firedFlag) ? 'danger' : '';
+  return `<div class="row" data-ix="${ix}">
+    <span class="qs"><button class="${minusCls}" data-act="dec" data-ix="${ix}">−</button><b>${i.q}</b><button data-act="inc" data-ix="${ix}">+</button></span>
+    <span class="nm">${i.nm}<span class="d">${i.d}</span></span>
+    <span class="pr">${zl(i.p*i.q)}</span>
+  </div>`;
+}
+
+function panelForState(tot){
+  if(state==='add'){
+    return `<div class="chead">Add to check</div><div class="mgrid">`+
+      MENU.map((m,ix)=>`<div class="mchip" data-add="${ix}"><div class="mn">${m[0]}</div><div class="mp">${zl(m[1])}</div></div>`).join('')+`</div>`;
+  }
+  if(state==='pay'||state==='split'||state==='mixed'){
+    return `<div class="actions"><button>+ Add</button><button>Course</button><button class="pri" data-open="tender">Pay ${zl(tot)}</button></div>`;
+  }
+  return `<div class="actions"><button>+ Add</button><button ${state==='course'?'class="pri"':''}>Fire course</button><button>Pay</button></div>`;
+}
+
+function overlayForState(tot){
+  if(state==='cancel'){
+    // show the guard pre-armed for a demo (as if − tapped on a fired dish)
+    return `<div class="ovl" id="ovl" style="display:none"><div class="dlg">
+      <h3>Cancel Margherita?</h3>
+      <p>This dish has already gone to the kitchen — it may be cooking. Pick a reason to cancel it.</p>
+      <div class="chips">
+        <button>Wrong item</button><button>Guest changed mind</button><button>86 / out</button><button>Duplicate</button><button>Sent in error</button>
+        <button class="keep" data-close="1">Keep it</button>
+      </div></div></div>`;
+  }
+  if(state==='pay'){
+    return `<div class="ovl" id="ovl" style="display:none"><div class="dlg">
+      <div class="tot"><span>Total due</span><span>${zl(tot)}</span></div>
+      <div class="chead" style="margin-top:0">Tip</div>
+      <div class="seg"><button class="on">None</button><button>10%</button><button>15%</button><button>Custom</button></div>
+      <div class="pads"><button class="pay">💳 Card</button><button class="pay">💵 Cash</button><button class="pay mixed" data-goto="mixed">💵﹢💳 Cash + Card</button></div>
+    </div></div>`;
+  }
+  if(state==='split'){
+    const g=[Math.round(tot/2),tot-Math.round(tot/2)];
+    return `<div class="ovl" id="ovl" style="display:none"><div class="dlg">
+      <div class="tot"><span>Split</span><span>${zl(tot)} · 2 covers</span></div>
+      <div class="chead" style="margin-top:0">Split <span style="margin-left:auto"></span></div>
+      <div class="seg"><button>Whole</button><button class="on">÷2</button><button>÷3</button><button>By item</button></div>
+      <div class="pays">
+        <div class="payrow"><span class="m">Guest 1</span><span class="a">${zl(g[0])}</span><span class="seg"><button class="on">Card</button><button>Cash</button></span></div>
+        <div class="payrow"><span class="m">Guest 2</span><span class="a">${zl(g[1])}</span><span class="seg"><button>Card</button><button class="on">Cash</button></span></div>
+      </div>
+      <button class="charge">Charge split · ${zl(tot)}</button>
+    </div></div>`;
+  }
+  if(state==='mixed'){
+    const cash=2000, card=tot-cash;
+    return `<div class="ovl" id="ovl" style="display:none"><div class="dlg">
+      <div class="tot"><span>Cash + Card</span><span>${zl(tot)} due</span></div>
+      <div class="mini">Cash portion</div>
+      <input class="cashinp" value="20,00" readonly>
+      <div class="pays">
+        <div class="payrow"><span class="m">💵 Cash</span><span></span><span class="a">${zl(cash)}</span></div>
+        <div class="payrow"><span class="m">💳 Card</span><span></span><span class="a">${zl(card)}</span></div>
+      </div>
+      <button class="charge">Charge ${zl(cash)} cash + ${zl(card)} card</button>
+    </div></div>`;
+  }
+  return '';
+}
+
+function bind(){
+  document.querySelectorAll('[data-add]').forEach(el=>el.onclick=()=>{
+    const m=MENU[+el.dataset.add]; const ex=items.find(i=>i.nm===m[0]);
+    if(ex) ex.q++; else items.push({id:'x'+Date.now(),nm:m[0],d:'added',c:'main',q:1,p:m[1]});
+    render(); const rows=document.querySelectorAll('.row'); rows[rows.length-1]?.classList.add('new');
+  });
+  document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>{
+    const ix=+el.dataset.ix, act=el.dataset.act, i=items[ix]; if(!i)return;
+    if(act==='inc') i.q++;
+    else { // dec
+      if(state==='cancel' && i.q===1){ showOvl(); return; } // guard demo
+      i.q--; if(i.q<=0) items.splice(ix,1);
+    }
+    render();
+  });
+  const openBtn=document.querySelector('[data-open="tender"]'); if(openBtn) openBtn.onclick=showOvl;
+  document.querySelectorAll('[data-close]').forEach(el=>el.onclick=hideOvl);
+  document.querySelectorAll('.dlg .chips button:not(.keep)').forEach(el=>el.onclick=hideOvl);
+  const goMixed=document.querySelector('[data-goto="mixed"]'); if(goMixed) goMixed.onclick=()=>{state='mixed';render();setTimeout(showOvl,60);};
+}
+function showOvl(){const o=document.getElementById('ovl'); if(o)o.style.display='flex';}
+function hideOvl(){const o=document.getElementById('ovl'); if(o)o.style.display='none';}
+
+document.getElementById('rail').addEventListener('click',e=>{
+  const b=e.target.closest('.step'); if(!b)return;
+  state=b.dataset.s; if(state!=='cancel'&&state!=='course') items=JSON.parse(JSON.stringify(BASE));
+  render();
+});
+render();
+</script>
+</body></html>
