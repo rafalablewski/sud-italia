@@ -167,11 +167,19 @@ surface toolbar.
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
   command bar they carry `.cm-tabs` for the mono/lowercase treatment.
+- **Selected = brand-ember (one rule).** Every selection/active state across
+  Core — command-bar view tabs (`.cm-tabs`), shell tabs (`.core-tabs`), and all
+  segmented controls (`.core-seg`, `.core-segs`, `.core-segchips`,
+  `.core-miniseg`, `.core-switch`, Slots' `.core-slots-viewseg`) — renders the
+  same **brand-ember** active: `background: var(--brand-wash); color:
+  var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4)`. Green
+  (basil) is reserved for **status**, not selection — a live/on signal (WhatsApp
+  live, chime-on `.core-iconbtn.on`), never a "which tab is active".
 - **`.core-seg`** — the shared **dense-console segmented control**: ONE
   canonical definition (deduped from two) used by every surface (POS scope
   tabs, KDS lane/kitchen filters, Slots view toggles, Guest filters). A
   mono-labelled **glass capsule** (`--pill` track + buttons, 11px regular) whose
-  active option is a frosted **inset-`--lg-rim`** pill; token-driven fills so it
+  active option takes the shared brand-ember fill; token-driven track fills so it
   turns to glass on liquid-glass surfaces and the KDS wall re-glazes its opaque
   tokens. A surface can tint the active option brand-ember for a primary-mode
   toggle (Slots Manage/Demand via `.core-slots-viewseg button.on.brand`, in the
