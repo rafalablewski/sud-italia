@@ -1,5 +1,18 @@
 import "../themes/core/index.css";
 import "../themes/core/skins/liquid-glass.css";
+// Per-surface dense-console 1:1 parity layers — imported AFTER the base + skin
+// so each can override; every rule is scoped under `.core`. One file per surface
+// keeps them conflict-free (see docs/design-system/core/redesign/PARITY-AUDIT.md).
+import "../themes/core/parity/crm.css";
+import "../themes/core/parity/inbox.css";
+import "../themes/core/parity/loyalty.css";
+import "../themes/core/parity/concierge.css";
+import "../themes/core/parity/floor.css";
+import "../themes/core/parity/slots.css";
+import "../themes/core/parity/dispatch.css";
+import "../themes/core/parity/orders.css";
+import "../themes/core/parity/book.css";
+import "../themes/core/parity/kds.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { kdsAppMetadata, kdsAppViewport } from "@/lib/pwa";

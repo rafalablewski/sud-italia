@@ -1,0 +1,212 @@
+/* Core parity (book) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* ── Timeline panel — glass card wrapping the tlbar + fixed-tick grid ───── */
+.core .core-book-tlpanel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* Horizontal-scroll host: real reservation blocks live on a fixed 64px/tick
+   grid (17:00→23:00 in 30-min ticks) so the day fills the grid and overflows
+   right instead of squishing. */
+.core .core-bk-tlscroll { overflow-x: auto; }
+.core .core-bk-tlcols {
+  --lblw: 48px;
+  --tick: 64px;
+  min-width: calc(var(--lblw) + var(--cols, 13) * var(--tick));
+}
+
+/* hour header — sticky, corner cell empty, full hours (`hh`) brighter */
+.core .core-bk-hours {
+  display: grid;
+  grid-template-columns: var(--lblw) repeat(var(--cols, 13), var(--tick));
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 2;
+  background: rgba(10, 8, 6, .35);
+}
+.core .core-bk-hours .hc {
+  font-family: var(--mono); font-size: 9.5px; color: var(--ink-3);
+  padding: 6px 0 6px 6px; border-left: 1px solid var(--line); text-align: left;
+}
+.core .core-bk-hours .hc:first-child { border-left: 0; }
+.core .core-bk-hours .hc.hh { color: var(--ink-2); }
+
+/* rows — bare Tn labels (sticky, no seat sub), 30-min tick gridlines */
+.core .core-bk-row {
+  display: grid;
+  grid-template-columns: var(--lblw) repeat(var(--cols, 13), var(--tick));
+  position: relative; height: 34px; border-bottom: 1px solid var(--line);
+}
+.core .core-bk-row:last-child { border-bottom: 0; }
+.core .core-bk-row .lbl {
+  font-family: var(--mono); font-size: 10px; color: var(--ink-2);
+  display: flex; align-items: center; padding-left: 8px;
+  border-right: 1px solid var(--line); background: rgba(255, 255, 255, .02);
+  position: sticky; left: 0; z-index: 1;
+}
+.core .core-bk-row .tick { border-left: 1px solid var(--line); }
+.core .core-bk-row .tick.hh { border-left-color: var(--line-2); }
+
+/* blocks — status-toned, name·party over status·context */
+.core .core-bk-blk {
+  position: absolute; top: 4px; bottom: 4px;
+  border-radius: var(--r-sm); padding: 0 8px;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  font-family: var(--mono); overflow: hidden; cursor: grab; z-index: 3;
+  box-shadow: var(--lg-rim, inset 0 0 0 1px var(--line-2));
+}
+.core .core-bk-blk:active { cursor: grabbing; }
+.core .core-bk-blk .bn { font-size: 10.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core .core-bk-blk .bm { font-size: 8.5px; color: var(--ink-3); white-space: nowrap; }
+.core .core-bk-blk.confirmed { background: var(--basil-wash); box-shadow: inset 0 0 0 1px rgba(125, 196, 100, .5); }
+.core .core-bk-blk.confirmed .bm { color: var(--basil); }
+.core .core-bk-blk.seated { background: var(--info-wash); box-shadow: inset 0 0 0 1px rgba(84, 188, 224, .5); }
+.core .core-bk-blk.seated .bm { color: var(--info); }
+.core .core-bk-blk.pending { background: var(--amber-wash); box-shadow: inset 0 0 0 1px rgba(240, 173, 70, .5); }
+.core .core-bk-blk.pending .bm { color: var(--amber); }
+
+/* overlapping bookings — stacked half-height red-hatched blocks */
+.core .core-bk-blk.conflict {
+  background: repeating-linear-gradient(45deg, rgba(255, 90, 92, .28) 0 6px, rgba(255, 90, 92, .1) 6px 12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 92, .75), 0 0 14px -4px var(--danger);
+  height: 13px; z-index: 4; justify-content: center; padding: 1px 8px 0;
+}
+.core .core-bk-blk.conflict .bn { color: #ffd7d7; font-size: 9px; }
+.core .core-bk-blk.conflict.top { top: 3px; bottom: auto; }
+.core .core-bk-blk.conflict.bot { top: auto; bottom: 3px; }
+
+/* ── New-reservation right rail ─────────────────────────────────────────── */
+.core .core-book-form {
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  position: sticky; top: 4px;
+}
+.core .core-bk-resvh { padding: 11px 12px; border-bottom: 1px solid var(--line); }
+.core .core-bk-resvh .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
+.core .core-bk-resvh .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+.core .core-bk-resvb { padding: 11px 12px; display: flex; flex-direction: column; gap: 12px; }
+.core .core-bk-field { display: flex; flex-direction: column; }
+.core .core-bk-flab {
+  font-family: var(--mono); font-size: 9px; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.core .core-bk-flab .mut { color: var(--ink-3); letter-spacing: .04em; }
+
+/* slot chips — tinted by capacity fill (green → amber → orange → red-full) */
+.core .core-bk-slotchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.core .core-bk-slotchip {
+  font-family: var(--mono); font-size: 11px; padding: 5px 9px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px;
+}
+.core .core-bk-slotchip small { font-size: 8px; color: var(--ink-3); }
+.core .core-bk-slotchip.ok { background: var(--basil-wash); color: var(--basil); box-shadow: inset 0 0 0 1px rgba(125, 196, 100, .4); border-color: transparent; }
+.core .core-bk-slotchip.ok small { color: var(--basil); }
+.core .core-bk-slotchip.mid { background: var(--amber-wash); color: var(--amber); box-shadow: inset 0 0 0 1px rgba(240, 173, 70, .4); border-color: transparent; }
+.core .core-bk-slotchip.mid small { color: var(--amber); }
+.core .core-bk-slotchip.warm { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); border-color: transparent; }
+.core .core-bk-slotchip.warm small { color: var(--brand-bright); }
+.core .core-bk-slotchip.full { color: var(--danger); box-shadow: inset 0 0 0 1px rgba(255, 90, 92, .4); border-color: transparent; opacity: .6; }
+.core .core-bk-slotchip.full small { color: var(--danger); }
+.core .core-bk-slotchip.on {
+  background: var(--brand); color: var(--on-accent); border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand), 0 0 14px -5px var(--brand);
+}
+.core .core-bk-slotchip.on small { color: rgba(255, 255, 255, .85); }
+
+/* party stepper + fit hint */
+.core .core-bk-partyrow { display: flex; align-items: center; gap: 10px; }
+.core .core-bk-partyrow .hint { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
+
+/* table — fit-tagged vertical list */
+.core .core-bk-tpicks { display: flex; flex-direction: column; gap: 4px; }
+.core .core-bk-tpick {
+  display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; text-align: left; width: 100%;
+}
+.core .core-bk-tpick:hover:not(:disabled) { background: var(--panel-3); }
+.core .core-bk-tpick .tn { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--ink); min-width: 30px; }
+.core .core-bk-tpick .tc { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); flex: 1; }
+.core .core-bk-tpick .tfit {
+  font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 99px; color: var(--basil); background: var(--basil-wash);
+}
+.core .core-bk-tpick.dim { opacity: .4; cursor: not-allowed; }
+.core .core-bk-tpick.dim .tfit { color: var(--ink-3); background: var(--panel-2); }
+.core .core-bk-tpick.rec {
+  background: var(--brand-wash);
+  box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .5), 0 0 16px -6px var(--brand);
+}
+.core .core-bk-tpick.rec .tfit { color: var(--brand-bright); background: rgba(232, 107, 62, .25); }
+.core .core-bk-tpick.on { box-shadow: inset 0 0 0 1px var(--brand); border-color: var(--brand); }
+.core .core-bk-tpick.is-focus { border-color: var(--brand); }
+
+/* guest — stacked full-width inputs */
+.core .core-bk-input { width: 100%; }
+
+/* min-spend note (real: slot.minSpendGrosze) */
+.core .core-bk-minspend {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10px; color: var(--amber);
+  background: var(--amber-wash); border: 1px solid rgba(240, 173, 70, .35);
+  border-radius: var(--r-sm); padding: 7px 9px;
+}
+.core .core-bk-minspend b { color: var(--ink); }
+
+/* full-width basil/green book button with dynamic summary label */
+.core .core-bk-bookbtn {
+  height: 44px; width: 100%; border-radius: var(--r-md); border: 0; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--on-basil);
+  background: linear-gradient(180deg, #93d67c, var(--basil));
+  box-shadow: 0 8px 24px -6px rgba(125, 196, 100, .6), var(--lg-rim, none);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.core .core-bk-bookbtn:hover:not(:disabled) { filter: brightness(1.05); }
+.core .core-bk-bookbtn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Today's bookings — full-width blist ────────────────────────────────── */
+.core .core-bk-divlabel {
+  grid-column: 1 / -1;
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--ink-3); margin: 22px 14px 8px; display: flex; align-items: center; gap: 10px;
+}
+.core .core-bk-divlabel::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.core .core-bk-blist {
+  grid-column: 1 / -1; margin: 0 14px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
+}
+.core .core-bk-blisth { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.core .core-bk-blisth .t { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.core .core-bk-blisth .badge {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3);
+}
+.core .core-bk-brow {
+  display: grid; grid-template-columns: 64px 1fr 70px 60px 96px 34px;
+  align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.core .core-bk-brow:last-child { border-bottom: 0; }
+.core .core-bk-brow:hover { background: var(--panel-2); }
+.core .core-bk-brow .btm { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 600; }
+.core .core-bk-brow .bnm { font-size: 12px; color: var(--ink-2); }
+.core .core-bk-brow .bcov { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.core .core-bk-brow .btbl { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.core .core-bk-brow .bstat {
+  font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em;
+  padding: 2px 8px; border-radius: 99px; text-align: center;
+}
+.core .core-bk-brow .bstat.confirmed { color: var(--basil); background: var(--basil-wash); }
+.core .core-bk-brow .bstat.seated { color: var(--info); background: var(--info-wash); }
+.core .core-bk-brow .bstat.pending { color: var(--amber); background: var(--amber-wash); }
+.core .core-bk-brow .bstat.noshow { color: var(--danger); background: var(--danger-wash); }
+.core .core-bk-brow .bcancel {
+  width: 26px; height: 26px; border-radius: var(--r-sm); border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--ink-3); display: grid; place-items: center; cursor: pointer;
+}
+.core .core-bk-brow .bcancel:hover { color: var(--danger); border-color: rgba(255, 90, 92, .5); background: var(--danger-wash); }

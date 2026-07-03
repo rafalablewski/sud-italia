@@ -112,3 +112,16 @@ with cancel. Engine: `GET
 /api/admin/booking`; reassign/cancel via `POST` / `DELETE /api/admin/floor/reservations`.
 
 The whole Guest hub is wired to the live engine.
+
+## Dense-console 1:1 parity pass (2026-07-02)
+
+Per-surface parity layers live in `src/app/themes/core/parity/{crm,loyalty,concierge,inbox}.css` (imported after the base theme + skin in `src/app/core/layout.tsx`; every rule scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
+
+- **CRM** — 3rd consent row (WhatsApp); roster/drawer identity reads `segment · location · guest since {firstOrderAt}`; bronze tier gets its own avatar tint; default sort `recent`; GDPR erase block demoted below Notes/Save-profile. (WhatsApp opt-in has no backend flag yet — the toggle renders but persists SMS/Email only.)
+- **Loyalty** — labeled sub-tabs with count pills; members table title bar + text tier chips (search relocated there, sort on column headers); tier = gem chip (diamond + UPPERCASE metal), reused in tier-mix; stat strip Members · Points · Redemptions · Gold+(gold) · Breakage(flagged) · Avg points; family wallet uses an SVG glyph + avatar stack + derived household subtitle + `role · Tier` subrows.
+- **Concierge** — capability rows render friendly `m.label` + per-id SVG glyph in a two-pane MCP inspector; JSON pane has a green `tools/call`/`resources/read` chip, a basil "Test" pill, and span-based JSON syntax highlighting; the EU-14 matrix now always emits all 14 FIC columns (`buildAllergenMatrix`) with text headers + brand dots / dim `·` cells + a legend footer.
+- **Inbox** — context panel gains guest card (avatar + tier + member-since), lifestats grid, itemized live-order + total, and a Next-Best-Action card; conversation list has a title + open-count badge + labeled filter chips; thread supports named-staff/Concierge-bot labels + in-bubble cards; composer has a circular send + attach; left subbar `whatsapp · live` label. (Renders empty until WhatsApp conversations are seeded — 90-min session TTL.)
+
+### Book — dense-console parity (2026-07-02)
+
+`src/app/themes/core/parity/book.css` (imported after base+skin; scoped under `.core`). Timeline axis is the **17:00→23:00 dinner window in 30-min ticks** (blocks position by time/duration across it, no longer squished); empty corner cell; bare `T{n}` row labels; reservation blocks show `status · context` with seated=info / confirmed=basil / **pending=amber** tones (overlaps render hatched). Right rail is a **New reservation** panel: **capacity-tinted** slot chips (green/amber/red by fill), a party hint, a fit-tagged **table list** (Recommend on the recommended row), stacked guest fields, and a basil **Book** button with a dynamic summary. The booking list below is a full `blist` card (header badge `N total · M upcoming`, rows: time · name · covers · table · colored status badge · cancel). Stat strip: Fill basil, Upcoming plain ink.

@@ -53,8 +53,8 @@ export const KDS_STATION_LABELS: Record<MenuCategory, string> = {
   pizza: "Forno",
   pasta: "Primi",
   antipasti: "Antipasti",
-  panini: "Panini",
-  drinks: "Bevande",
+  panini: "Griglia",
+  drinks: "Bar",
   desserts: "Dolci",
 };
 

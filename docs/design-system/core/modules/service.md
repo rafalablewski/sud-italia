@@ -84,7 +84,9 @@ Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): Floor 
   surge windows · peak fill · demand price** (all live from the slot set —
   Rule #1; a "surge window" is one filled ≥85%, peak drives the price
   multiplier). When any window is ≥85% a **`.core-surge-banner`** offers a
-  one-tap *Apply surge levers*.
+  one-tap *Apply surge levers* — its `.sb-h` title and `.sb-s` detail are
+  block-level so they stack (title over detail) like the mockup, not jammed
+  onto one line.
 - **Manage** and **Demand exchange** are shown **side by side** in
   `.core-slots-grid` (not tab-switched — both columns are live; the grid
   stacks below 1000px):
@@ -164,3 +166,11 @@ The Floor board pairs the predictive twin with the table's **live orders**:
   delivered). Both are audit-logged (`orders.assign_driver` /
   `orders.status_change`). The board polls every 8s. No parallel money/lifecycle
   state — it drives the same `Order`.
+
+## Dense-console 1:1 parity pass (2026-07-02)
+
+Parity layers: `src/app/themes/core/parity/{floor,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
+
+- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; Waitlist graceful 0 — no queue source yet); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
+- **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
+- **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

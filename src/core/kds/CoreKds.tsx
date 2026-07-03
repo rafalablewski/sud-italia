@@ -25,10 +25,11 @@ import { KDS_STATION_LABELS, type MenuCategory, type OrderStatus, type PosCourse
 
 type View = "fleet" | "floor" | "chef";
 
+// Mockup verbs: New → Start, Firing → Bump, Ready → Pass.
 const BUMP_LABEL: Partial<Record<OrderStatus, string>> = {
-  confirmed: "Start firing",
-  preparing: "Mark ready",
-  ready: "Bump to pass",
+  confirmed: "Start",
+  preparing: "Bump",
+  ready: "Pass",
 };
 
 // Canonical station order for grouping a multi-station ticket's lines.
@@ -81,6 +82,14 @@ function channelTag(t: KdsTicket): string {
   return "Takeaway";
 }
 
+// Mockup ticket meta: a lowercase channel badge (dine-in/takeaway/delivery),
+// each toned like the mockup's `.chan.dine/.take/.deliv`.
+function chanBadge(t: KdsTicket): { cls: string; label: string } {
+  if (t.fulfillmentType === "dine-in") return { cls: "dine", label: "dine-in" };
+  if (t.fulfillmentType === "delivery") return { cls: "deliv", label: "delivery" };
+  return { cls: "take", label: "takeaway" };
+}
+
 // Cook-time meter fill (0% fresh → 100% due), ported from the live KDS.
 function slaPct(t: KdsTicket, now: number): number {
   if (t.status === "ready") return 100;
@@ -97,11 +106,13 @@ function slaPct(t: KdsTicket, now: number): number {
 
 function dueLabel(t: KdsTicket, now: number): { text: string; tone: string } {
   const tone = toneForTicket(t, now);
-  if (t.status === "ready") return { text: "done", tone };
+  // Mockup due glyphs: ◉ firing · ▲ at-risk · ✓ ready · "−m:ss late" overdue.
+  const sym = tone === "firing" ? "◉ " : (tone === "warn" || tone === "risk") ? "▲ " : "";
+  if (t.status === "ready") return { text: "✓ 0:00", tone };
   const slaRem = t.promisedReadyAtMs !== null ? (t.promisedReadyAtMs - now) / 1000 : null;
-  if (slaRem !== null && slaRem < 0) return { text: `−${fmtClock(-slaRem)}`, tone };
-  if (slaRem !== null) return { text: fmtClock(slaRem), tone };
-  return { text: fmtClock(Math.max(0, (t.predictedReadyAtMs - now) / 1000)), tone };
+  if (slaRem !== null && slaRem < 0) return { text: `−${fmtClock(-slaRem)} late`, tone };
+  if (slaRem !== null) return { text: `${sym}${fmtClock(slaRem)}`, tone };
+  return { text: `${sym}${fmtClock(Math.max(0, (t.predictedReadyAtMs - now) / 1000))}`, tone };
 }
 
 /**
@@ -229,14 +240,17 @@ const TicketCard = memo(function TicketCard({
         style={{ cursor: "pointer" }}
         title="Pin to the check dock"
       >
-        <span className="id">
-          #{t.shortId}
-          <span className="chiplet">{channelTag(t)}</span>
-        </span>
+        <span className="tt">#{t.shortId}</span>
         <span className="core-tk-hend">
           {atRisk && <span className="core-tk-risk">At risk</span>}
           <span className={`due t-${due.tone}`}>{due.text}</span>
         </span>
+      </div>
+      {/* meta row (mockup): lowercase channel badge + "fired m:ss ago" */}
+      <div className="core-tk-meta">
+        <span className={`core-chan ${chanBadge(t).cls}`}>{chanBadge(t).label}</span>
+        {t.partySize ? <span className="core-tk-ago">{t.partySize}p</span> : null}
+        <span className="core-tk-ago">fired {fmtClock(Math.max(0, (now - t.paidAtMs) / 1000))} ago</span>
       </div>
       {t.simulated && <div className="core-tk-sim">Simulation — not a real order</div>}
       {held.length > 0 && (
@@ -274,7 +288,7 @@ const TicketCard = memo(function TicketCard({
         <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
       </div>
       {next && (
-        <button type="button" className="core-bump" disabled={updating} onPointerDown={stop} onClick={(e) => { stop(e); onAdvance(t); }}>
+        <button type="button" className={`core-bump bump-${t.status}`} disabled={updating} onPointerDown={stop} onClick={(e) => { stop(e); onAdvance(t); }}>
           {BUMP_LABEL[t.status]}
         </button>
       )}
@@ -551,16 +565,19 @@ export function CoreKds() {
 
   // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
   type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
-  const [ops, setOps] = useState<{ throughputLastHour: number; coversHr: number; revenueHr: number; onShift: number; stations: StationLoad[] } | null>(null);
+  const [ops, setOps] = useState<{ throughputLastHour: number; coversLastHour: number; revenueLastHourGrosze: number; onShift: number; stations: StationLoad[] } | null>(null);
   useEffect(() => {
-    if (view === "fleet" || !location) return;
+    if (view === "fleet") return;
     let cancelled = false;
     const load = async () => {
       try {
-        const r = await fetch(`/api/admin/kds/floor-ops?location=${encodeURIComponent(location)}`);
+        // At "all locations" (no slug) floor-ops aggregates every truck, so the
+        // Throughput/Covers/Revenue cells read live numbers instead of "—".
+        const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+        const r = await fetch(`/api/admin/kds/floor-ops${qs}`);
         if (!r.ok) return;
         const d = await r.json();
-        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, coversHr: d.coversHr ?? 0, revenueHr: d.revenueHr ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
+        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, coversLastHour: d.coversLastHour ?? 0, revenueLastHourGrosze: d.revenueLastHourGrosze ?? 0, onShift: d.onShift ?? 0, stations: Array.isArray(d.stations) ? d.stations : [] });
       } catch {
         /* non-fatal — manager-only endpoint; the band just shows — */
       }
@@ -956,8 +973,8 @@ export function CoreKds() {
               <div className="cell"><span className="lab">Late</span><span className="val danger">{counts.late}</span></div>
               <div className="cell"><span className="lab">Ready</span><span className="val basil">{counts.ready}</span></div>
               <div className="cell"><span className="lab">Throughput</span><span className="val">{ops?.throughputLastHour ?? "—"}<small> /hr</small></span></div>
-              <div className="cell"><span className="lab">Covers</span><span className="val">{ops?.coversHr ?? "—"}<small> /hr</small></span></div>
-              <div className="cell"><span className="lab">Revenue</span><span className="val info">{ops ? revPerHr(ops.revenueHr) : "—"}<small> zł/hr</small></span></div>
+              <div className="cell"><span className="lab">Covers</span><span className="val">{ops?.coversLastHour ?? "—"}<small> /hr</small></span></div>
+              <div className="cell"><span className="lab">Revenue</span><span className="val info">{ops ? revPerHr(ops.revenueLastHourGrosze) : "—"}<small> zł/hr</small></span></div>
             </div>
 
             {allDayRail}

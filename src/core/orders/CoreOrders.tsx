@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
+import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -15,7 +16,6 @@ const ACTIVE = new Set(["pending", "confirmed", "preparing", "ready"]);
 // channel. `takeaway` maps to the model's `takeout` fulfillment type.
 const CHANS = ["all", "dine-in", "takeaway", "delivery", "qr"] as const;
 type ChannelFilter = (typeof CHANS)[number];
-const CHANNEL_LABEL: Record<string, string> = { all: "All channels", web: "Web", whatsapp: "WhatsApp", qr: "QR", pos: "POS" };
 const FULFILLMENT_LABEL: Record<string, string> = { "dine-in": "dine-in", takeout: "takeaway", delivery: "delivery" };
 const FULFILLMENT_CLASS: Record<string, string> = { "dine-in": "dinein", takeout: "takeaway", delivery: "delivery" };
 
@@ -26,7 +26,6 @@ const STATUS_PILL: Record<string, string> = {
 const zl0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")}`;
 const zl2 = (g: number) => `${(g / 100).toFixed(2)} zł`;
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
 
 /**
  * Print the simulator's plain-text receipt through the browser (popup → print
@@ -251,7 +250,7 @@ export function CoreOrders() {
           </div>
           <div className="core-datefield" title="Today">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
-            {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+            {`${new Date().toLocaleDateString("en-GB", { weekday: "short" })} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
           </div>
           <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
         </div>
@@ -275,6 +274,8 @@ export function CoreOrders() {
                   const chanCls = isQr ? "qr" : FULFILLMENT_CLASS[o.fulfillmentType] ?? "";
                   const chanLbl = isQr ? "qr" : FULFILLMENT_LABEL[o.fulfillmentType] ?? o.fulfillmentType;
                   const items = o.items.map((i) => `${i.quantity}× ${i.menuItem.name}`).join(" · ");
+                  const pillCls = o.refund ? "refunded" : STATUS_PILL[o.status] ?? "paid";
+                  const pillLbl = o.refund ? "refunded" : o.status;
                   return (
                     <tr key={o.id} className={detail?.id === o.id ? "sel" : undefined} onClick={() => setDetail(o)}>
                       <td className="id">#{o.id}</td>
@@ -284,7 +285,7 @@ export function CoreOrders() {
                       <td className={t ? "otbl" : "otbl none"}>{t ? `T${t}` : "—"}</td>
                       <td className="items" title={items}>{items}</td>
                       <td className="total">{zl2(o.totalAmount)}</td>
-                      <td><span className={`core-stpill ${STATUS_PILL[o.status] ?? "paid"}`}>{o.status}</span></td>
+                      <td><span className={`core-stpill ${pillCls}`}>{pillLbl}</span></td>
                     </tr>
                   );
                 })}
@@ -295,26 +296,41 @@ export function CoreOrders() {
       </div>
 
       {detail && (
-        <CoreDialog open onClose={() => setDetail(null)} title={`Order ${detail.id}`} width={520}
+        <CoreDialog open onClose={() => setDetail(null)} width={520}
+          title={(() => {
+            const t = tableNo(detail);
+            const isQr = (detail.channel ?? "web") === "qr";
+            const chanLbl = isQr ? "qr" : FULFILLMENT_LABEL[detail.fulfillmentType] ?? detail.fulfillmentType;
+            // Meta row: guest · T{n} · channel(basil) · time · server. Server name
+            // isn't on the Order model yet (see DATA NEEDED) so it's omitted, not faked.
+            return (
+              <div className="core-od-dlgh">
+                <div className="core-od-idbig">#{detail.id}</div>
+                <div className="core-od-meta">
+                  <span>{detail.customerName || "Guest"}</span>
+                  {t ? (<><span className="dot">·</span><span className="mono">T{t}</span></>) : null}
+                  <span className="dot">·</span><span className="ch">{chanLbl}</span>
+                  <span className="dot">·</span><span className="mono">{fmtTime(detail.createdAt)}</span>
+                </div>
+              </div>
+            );
+          })()}
           footer={
-            <>
-              <button type="button" className="core-btn" disabled={printing === detail.id} onClick={() => void printRcpt(detail.id)}>
-                {printing === detail.id ? "…" : "Print receipt"}
-              </button>
+            <div className="core-od-actions">
               {!detail.paidAt ? (
-                <button type="button" className="core-btn primary" disabled={settling === detail.id} onClick={() => void settle(detail.id)}>
+                <button type="button" className="core-od-btn pay" disabled={settling === detail.id} onClick={() => void settle(detail.id)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden><path d="M20 6 9 17l-5-5" /></svg>
                   {settling === detail.id ? "…" : "Mark paid"}
                 </button>
-              ) : <span className="core-tpay paid" style={{ position: "static", alignSelf: "center" }}>✓ paid</span>}
-            </>
-          }>
-          <div className="core-od-head">
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{tableNo(detail) ? `Table ${tableNo(detail)}` : detail.fulfillmentType}{detail.partySize ? ` · ${detail.partySize} guests` : ""}</div>
-              <div className="core-cust-sub">{detail.customerName} · {detail.customerPhone}</div>
-              <div className="core-cust-sub">{fmtDate(detail.createdAt)} {fmtTime(detail.createdAt)} · {CHANNEL_LABEL[detail.channel ?? "web"]} · <span style={{ textTransform: "capitalize" }}>{detail.status}</span></div>
+              ) : (
+                <span className="core-od-btn paid-flag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden><path d="M20 6 9 17l-5-5" /></svg>Paid</span>
+              )}
+              <button type="button" className="core-od-btn print" disabled={printing === detail.id} onClick={() => void printRcpt(detail.id)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+                {printing === detail.id ? "…" : "Print receipt"}
+              </button>
             </div>
-          </div>
+          }>
           {/* status timeline — placed → fired → ready → paid, from live order state */}
           {(() => {
             const steps = [
@@ -337,15 +353,45 @@ export function CoreOrders() {
             );
           })()}
           <div className="core-od-lines">
-            {detail.items.map((i, idx) => (
-              <div key={idx} className="core-od-line">
-                <span className="core-od-q mono">{i.quantity}×</span>
-                <span style={{ flex: 1 }}>{i.menuItem.name}{i.notes ? <span className="core-cust-sub"> — {i.notes}</span> : null}</span>
-                <span className="mono">{zl2(i.menuItem.price * i.quantity)}</span>
-              </div>
-            ))}
+            {detail.items.map((i, idx) => {
+              const sub = [i.menuItem.description, i.notes].filter(Boolean).join(" · ");
+              return (
+                <div key={idx} className="core-od-line">
+                  <span className="core-od-q mono">{i.quantity}×</span>
+                  <div className="b">
+                    <div className="n">{i.menuItem.name}</div>
+                    {sub ? <div className="m">{sub}</div> : null}
+                  </div>
+                  <span className="lp mono">{zl2(effectiveUnitPrice(i) * i.quantity)}</span>
+                </div>
+              );
+            })}
           </div>
-          <div className="core-od-total"><span>Total</span><strong className="mono">{zl2(detail.totalAmount)}</strong></div>
+          {/* Totals — derived from the order's real amounts. There is no stored
+              discount/tax breakdown on the Order model (see DATA NEEDED), so the
+              discount line is the residual of (items + fees) − total, and VAT is
+              extracted from the gross total at the statutory PL prepared-food rate. */}
+          {(() => {
+            const itemsSubtotal = detail.items.reduce((s, i) => s + effectiveUnitPrice(i) * i.quantity, 0);
+            const deliveryFee = detail.deliveryFee ?? 0;
+            const tip = detail.tipAmount ?? 0;
+            const grand = detail.totalAmount;
+            const discount = Math.max(0, itemsSubtotal + deliveryFee + tip - grand);
+            const VAT_RATE = 0.08; // DEFAULT_VAT_BPS (jpk.ts) — PL prepared food; per-location vatRateBps not wired here
+            const vat = Math.round(grand - grand / (1 + VAT_RATE));
+            const refund = detail.refund?.amount ?? 0;
+            return (
+              <div className="core-od-totals">
+                <div className="tr"><span>Subtotal</span><span>{zl2(itemsSubtotal)}</span></div>
+                {deliveryFee > 0 && <div className="tr"><span>Delivery fee</span><span>{zl2(deliveryFee)}</span></div>}
+                {tip > 0 && <div className="tr"><span>Tip</span><span>{zl2(tip)}</span></div>}
+                {discount > 0 && <div className="tr disc"><span>Discount</span><span>−{zl2(discount)}</span></div>}
+                <div className="tr"><span>VAT {Math.round(VAT_RATE * 100)}%</span><span>{zl2(vat)}</span></div>
+                <div className="tr grand"><span>Total</span><span className="mono">{zl2(grand)}</span></div>
+                {refund > 0 && <div className="tr refund"><span>Refunded</span><span>−{zl2(refund)}</span></div>}
+              </div>
+            );
+          })()}
         </CoreDialog>
       )}
     </CoreShell>

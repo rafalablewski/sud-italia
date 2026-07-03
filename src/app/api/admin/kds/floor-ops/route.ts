@@ -29,12 +29,14 @@ export const GET = withAdmin(
     dayEnd.setHours(23, 59, 59, 999);
 
     const recent = await getOrders(locationSlug ?? undefined, hourAgoIso);
-    const recentCompleted = recent.filter((o) => o.status === "completed");
-    const throughputLastHour = recentCompleted.length;
-    // Covers + revenue per hour, from real completed orders in the window
-    // (matches the fleet feed's rate metrics — Rule #1). Frosts the Floor strip.
-    const coversHr = recentCompleted.reduce((s, o) => s + (o.partySize ?? 1), 0);
-    const revenueHr = recentCompleted.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    const completedLastHour = recent.filter((o) => o.status === "completed");
+    const throughputLastHour = completedLastHour.length;
+    // Covers + revenue served in the last hour — the mockup's KDS KPI strip
+    // reads throughput / covers / revenue per hour. Real completed orders only
+    // (Rule #1): covers = guests (partySize, min 1 for a takeaway/delivery
+    // head), revenue = summed order totals in grosze.
+    const coversLastHour = completedLastHour.reduce((s, o) => s + Math.max(1, o.partySize ?? 1), 0);
+    const revenueLastHourGrosze = completedLastHour.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
 
     // Per-station load for the KDS station strip (mockup): the same predictive
     // engine the pace/at-risk colours come from. Real active orders (Rule #1) —
@@ -67,8 +69,8 @@ export const GET = withAdmin(
       locationSlug: locationSlug ?? "",
       menuSlug: menuSlug ?? "",
       throughputLastHour,
-      coversHr,
-      revenueHr,
+      coversLastHour,
+      revenueLastHourGrosze,
       onShift: openShifts,
       stations,
       menu,

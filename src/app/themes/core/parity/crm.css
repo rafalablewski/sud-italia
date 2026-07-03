@@ -1,0 +1,21 @@
+/* Core parity (crm) — dense-console 1:1 fixes. Scope every rule under .core */
+
+/* Bronze avatar tint — the roster + drawer avatars key off the loyalty tier
+   (avClass now returns "b" for bronze). Mockup: linear-gradient(150deg,#d9915a,#8a4f27). */
+.core .core-g-av.b { background: linear-gradient(150deg, #d9915a, #8a4f27); }
+
+/* Drawer header avatar variants — the base .av is gold; mirror the roster gem
+   tints for bronze / silver / platinum so the inspector matches the row. */
+.core .core-drawer .dh .av.b { background: linear-gradient(150deg, #d9915a, #8a4f27); color: var(--on-accent); }
+.core .core-drawer .dh .av.s { background: linear-gradient(150deg, #e9edf2, #9aa4ae); color: #2a2a2a; }
+.core .core-drawer .dh .av.p { background: linear-gradient(150deg, #cfeef2, #7fb4c9); color: #123; }
+
+/* Recent-orders timeline dots — mockup base dot is hollow, the filled/glowing
+   accent belongs to the `.on` state (all recent rows read as completed). */
+.core .core-dtl .dot { background: var(--panel-3); border: 1px solid var(--line-2); box-shadow: none; }
+.core .core-dtl .dot.on { background: var(--basil); border-color: transparent; box-shadow: 0 0 8px var(--basil); }
+
+/* GDPR footer — kept for compliance (mockup omits it) but demoted so it doesn't
+   compete with the Notes/Save-profile close of the drawer. */
+.core .core-dsec.core-gdpr { opacity: .85; }
+.core .core-dsec.core-gdpr .core-gdpr-erase { color: var(--danger); border-color: rgba(255,90,92,.4); font-size: 10px; padding: 6px; }
