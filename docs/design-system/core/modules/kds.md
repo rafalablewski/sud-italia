@@ -70,10 +70,12 @@ outside `.core-body`) keeps the flat dark wall.
   + a `.core-sectionhead` (`KDS · Fleet — All kitchens`) + a `.core-kds-toolbar`.
   - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
     button per truck, labelled by `city`). Every `.core-seg` inside the KDS wall
-    (this filter, the Floor lane filter, the Chef Expo/All-day toggle) renders
-    its labels in the **monospace** `--mono` face — matching the `.core-tpill`
-    pills beside it — via `.core .core-kds .core-seg button` (POS/Orders/Guest
-    segments keep the proportional UI font). It scopes the grid **and
+    (this filter, the Floor lane filter, the Chef Expo/All-day toggle) mirrors
+    the mockup's `.seg-lane` **capsule**: the **monospace** `--mono` label face
+    (matching the `.core-tpill` pills beside it) and a fully-rounded `--pill`
+    shape on both the track and its buttons — via `.core .core-kds .core-seg`
+    (POS/Orders/Guest segments keep the proportional UI font and rounded-rect
+    corners). It scopes the grid **and
     re-aggregates the totals strip** to the selection, then the board actions the
     command bar omits: a labelled **`.core-tpill`** **`Σ fleet all-day`**, **`⟳`**
     refresh (bumps the 6s feed poll on demand), a danger **`.core-tpill`**
