@@ -189,7 +189,7 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
     const pool = w.spendablePool ?? rows.reduce((s, r) => s + r.points, 0);
     // Household name from the owner's surname (derived, not fabricated).
     const owner = rows.find((r) => r.status === "owner") ?? rows[0];
-    const surname = owner?.name?.trim().split(/\s+/).slice(-1)[0] ?? "";
+    const surname = owner?.name ? owner.name.trim().split(/\s+/).slice(-1)[0] : "";
     const household = surname && /[a-zA-Zà-żÀ-Ż]/.test(surname) ? `${surname} household` : "";
     return { id: w.id, rows, pool, household };
   }, [wallets, members]);

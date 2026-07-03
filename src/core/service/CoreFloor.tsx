@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -63,6 +64,7 @@ export function CoreFloor({
   upsellByLocation: Record<string, UpsellConfig | null>;
 }) {
   const toast = useCoreToast();
+  const router = useRouter();
   const { select, selected } = useSelection();
   const { location, activeLocations } = useLocation();
   // The table whose check is open over the floor (the docked check panel).
@@ -273,7 +275,7 @@ export function CoreFloor({
     // free or reserved — bookable/seatable
     return [
       { label: "Seat", icon: "＋", primary: true, on: () => act(t) },
-      { label: "Reserve", icon: "📅", on: () => window.location.assign("/core/guest/book") },
+      { label: "Reserve", icon: "📅", on: () => router.push("/core/guest/book") },
       { label: "Edit", icon: "⋯", on: () => setEditing(t) },
     ];
   };
@@ -603,7 +605,7 @@ export function CoreFloor({
                             ]
                           : [
                               { label: "Seat", pri: true, on: () => act(t) },
-                              { label: "Reserve", on: () => window.location.assign("/core/guest/book") },
+                              { label: "Reserve", on: () => router.push("/core/guest/book") },
                               { label: "Merge", on: () => startMove(t) },
                             ];
                     const openTile = (el: HTMLElement) => {

@@ -437,7 +437,10 @@ export function CoreCrm() {
                 <span className={`av ${avClass(cust)}`}>{initials(cust.name)}</span>
                 <div className="who">
                   <div className="n">{cust.name} <span className={`core-gem ${gemClass(cust.tier)}`} style={{ width: 11, height: 11 }} /></div>
-                  <div className="sub">{[segLabel(cust), custLoc(cust), cust.firstOrderAt ? `guest since ${new Date(cust.firstOrderAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}` : null].filter(Boolean).join(" · ")}</div>
+                  <div className="sub">{[segLabel(cust), custLoc(cust), (() => {
+                    const d = cust.firstOrderAt ? new Date(cust.firstOrderAt) : null;
+                    return d && !isNaN(d.getTime()) ? `guest since ${d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })}` : null;
+                  })()].filter(Boolean).join(" · ")}</div>
                 </div>
               </div>
 

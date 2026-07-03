@@ -193,7 +193,13 @@ export function CoreBook({ standalone = false }: { standalone?: boolean } = {}) 
     const t = tables.find((x) => x.id === r.tableId);
     if (t) select({ kind: "table", id: t.id, label: `Table ${t.number}`, sub: `${r.partySize} covers${t.zone ? ` · ${t.zone}` : ""}`, status: r.status });
   };
-  const daySub = date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase() : "today";
+  const daySub = (() => {
+    if (!date) return "today";
+    const d = new Date(`${date}T00:00:00`);
+    return !isNaN(d.getTime())
+      ? d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toLowerCase()
+      : "today";
+  })();
   const isToday = date === todayLocal();
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
 
