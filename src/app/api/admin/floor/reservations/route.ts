@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders } from "@/lib/store";
+import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders, getPosTabs, savePosTab, deletePosTab } from "@/lib/store";
 import { findReservationConflicts, timeToMinutes } from "@/lib/floor";
 import { TABLE_FEATURES, type ReservationStatus, type TableFeature } from "@/data/types";
 
@@ -52,6 +52,37 @@ async function reconcileFloorTable(locationSlug: string, tableId: string, date: 
     );
     if (!heldByCheck) await saveTable({ ...table, status: "available" });
   }
+}
+
+/**
+ * Seat → check. Seating a booking opens a dine-in POS tab on its table (tagged
+ * with the guest), so "the check is open where the party is" the moment they sit
+ * (concept 5, phase 1). Idempotent: skips if the table already has an active tab.
+ */
+async function openTableCheck(
+  locationSlug: string,
+  tableId: string,
+  res: { customerName: string; customerPhone?: string; partySize: number },
+): Promise<void> {
+  const tabs = await getPosTabs(locationSlug);
+  if (tabs.some((t) => t.tableId === tableId)) return; // a check already exists here
+  await savePosTab({
+    locationSlug,
+    name: res.customerName || "Dine-in",
+    channel: "dine-in",
+    status: "open",
+    tableId,
+    covers: res.partySize,
+    customerName: res.customerName || undefined,
+    customerPhone: res.customerPhone,
+  });
+}
+
+/** When a party leaves without ordering, don't strand the auto-opened empty tab. */
+async function clearEmptyTableCheck(locationSlug: string, tableId: string): Promise<void> {
+  const tabs = await getPosTabs(locationSlug);
+  const empty = tabs.find((t) => t.tableId === tableId && (t.items?.length ?? 0) === 0 && !t.sentKds && !t.orderId);
+  if (empty) await deletePosTab(empty.id, locationSlug);
 }
 
 export const GET = withAdmin(
@@ -115,10 +146,12 @@ export const POST = withAdmin(
       durationMin,
     };
     const sameDay = await getReservations(locationSlug, date);
-    // The table this booking sat on before this write — if a seated party is
-    // reassigned to another table, the old one must be freed too.
-    const priorTableId =
-      typeof body.id === "string" ? sameDay.find((r) => r.id === body.id)?.tableId : undefined;
+    // The prior state of this booking (if it's an update) — its table (for a
+    // reassignment that must free the old one) and status (to detect the seat/
+    // clear transition that opens/closes the check).
+    const priorRes = typeof body.id === "string" ? sameDay.find((r) => r.id === body.id) : undefined;
+    const priorTableId = priorRes?.tableId;
+    const priorStatus = priorRes?.status;
     const conflicts = findReservationConflicts(sameDay, candidate);
     if (conflicts.length > 0 && body.override !== true) {
       return NextResponse.json(
@@ -160,13 +193,27 @@ export const POST = withAdmin(
     // Joined tables (current + the ones this booking held before this write) so a
     // combined big party seats/frees every table together.
     for (const tid of joinedTableIds ?? []) toReconcile.add(tid);
-    const priorJoined = typeof body.id === "string" ? sameDay.find((r) => r.id === body.id)?.joinedTableIds : undefined;
-    for (const tid of priorJoined ?? []) toReconcile.add(tid);
+    for (const tid of priorRes?.joinedTableIds ?? []) toReconcile.add(tid);
     for (const tid of toReconcile) {
       try {
         await reconcileFloorTable(locationSlug, tid, date);
       } catch {
         /* non-fatal: the booking is saved; floor status self-heals on next write */
+      }
+    }
+
+    // Seat → check: opening a dine-in tab when the party sits, clearing an empty
+    // one when they leave without ordering. Best-effort, on the transition only.
+    if (tableId) {
+      try {
+        if (status === "seated" && priorStatus !== "seated") {
+          // one check on the primary table (a joined party shares it)
+          await openTableCheck(locationSlug, tableId, { customerName, customerPhone: reservation.customerPhone, partySize: Math.round(partySize) });
+        } else if (priorStatus === "seated" && (status === "completed" || status === "cancelled" || status === "no-show")) {
+          for (const tid of [tableId, ...(joinedTableIds ?? [])]) await clearEmptyTableCheck(locationSlug, tid);
+        }
+      } catch {
+        /* non-fatal — the booking is saved regardless of the check */
       }
     }
     return NextResponse.json({ reservation, conflicts });

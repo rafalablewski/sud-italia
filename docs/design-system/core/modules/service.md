@@ -160,7 +160,9 @@ the guest and confirm. The engine has these
 live surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
 **Seat / No-show / Complete** actions (`.bact`) that transition the reservation
 and stamp `seatedAt`/`completedAt` (POST `/api/admin/floor/reservations`), so
-Book answers "who's at T5?"; **(2) walk-in guard** — a subbar **+ Walk-in**
+Book answers "who's at T5?" — **seating also opens a dine-in POS tab** on the
+table tagged with the guest (concept 5 phase 1; an empty one is cleared if the
+party leaves without ordering), so the check is live where the party sits; **(2) walk-in guard** — a subbar **+ Walk-in**
 button (`.core-bk-toolbtn.walk`) opens a `CoreDialog` that ranks tables at *now*
 and only seats a genuinely-free one (writes a `source:"walk-in"` seated
 reservation); **(3) manager policy** — a **⚙ Policy** `CoreDialog` with the
