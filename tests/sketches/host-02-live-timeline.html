@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept 2 · Live Table Timeline — Sud Italia Service OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 6% 0%,rgba(84,188,224,.16),transparent 60%),radial-gradient(60% 60% at 98% 100%,rgba(232,107,62,.16),transparent 62%),radial-gradient(46% 40% at 82% 6%,rgba(240,173,70,.10),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.cnav a.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.5);box-shadow:0 0 16px -6px var(--brand)}
+.hero{padding:46px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-bright)}
+h1{font-family:var(--display);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:18px;color:var(--ink-2);max-width:760px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.chip.b{color:var(--brand-bright);border-color:rgba(232,107,62,.4);background:var(--brand-wash)}
+section{margin-top:26px}
+h2{font-family:var(--display);font-weight:700;font-size:23px;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .n{font-family:var(--mono);font-size:12px;color:var(--brand-bright);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--brand-wash)}
+.lead{color:var(--ink-2);max-width:820px;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+small,.sm{font-size:12.5px;color:var(--ink-3)}
+.callout{padding:14px 16px;border-radius:var(--r-sm);background:var(--brand-wash);border:1px dashed rgba(232,107,62,.5);color:var(--ink);font-size:14px}
+/* timeline mock */
+.tlwrap{padding:16px;overflow-x:auto}
+.tlhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tlhead .t{font-family:var(--display);font-weight:700;font-size:15px}
+.tl{--lbl:52px;--tick:74px;min-width:calc(var(--lbl) + 8*var(--tick));position:relative}
+.hours{display:grid;grid-template-columns:var(--lbl) repeat(8,var(--tick));border-bottom:1px solid var(--line)}
+.hours .h{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);padding:6px 0 6px 6px;border-left:1px solid var(--line)}
+.hours .h:first-child{border:0}
+.trow{display:grid;grid-template-columns:var(--lbl) repeat(8,var(--tick));height:40px;border-bottom:1px solid var(--line);position:relative}
+.trow .lbl{font-family:var(--mono);font-size:11px;color:var(--ink-2);display:flex;align-items:center;padding-left:8px;border-right:1px solid var(--line)}
+.trow .tick{border-left:1px solid var(--line)}
+.blk{position:absolute;top:5px;bottom:5px;border-radius:7px;padding:0 8px;display:flex;flex-direction:column;justify-content:center;font-family:var(--mono);overflow:hidden;z-index:3}
+.blk .bn{font-size:10px;font-weight:600;color:var(--ink);white-space:nowrap}
+.blk .bm{font-size:8px}
+.blk.seated{background:var(--info-wash);box-shadow:inset 0 0 0 1px rgba(84,188,224,.55)}
+.blk.seated .bm{color:var(--info)}
+.blk.res{background:transparent;border:1px dashed rgba(240,173,70,.6)}
+.blk.res .bn{color:var(--amber)}
+.blk.walkin{background:var(--basil-wash);box-shadow:inset 0 0 0 1px rgba(125,196,100,.55)}
+.blk.walkin .bm{color:var(--basil)}
+.blk.clash{background:repeating-linear-gradient(45deg,rgba(255,90,92,.32) 0 6px,rgba(255,90,92,.12) 6px 12px);box-shadow:inset 0 0 0 1px rgba(255,90,92,.75),0 0 14px -4px var(--danger)}
+.blk.clash .bn{color:#ffd7d7}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--brand-bright);box-shadow:0 0 12px var(--brand);z-index:5}
+.nowline::before{content:"NOW 18:58";position:absolute;top:-16px;left:-24px;font-family:var(--mono);font-size:9px;color:var(--brand-bright);white-space:nowrap}
+.past{position:absolute;top:0;bottom:0;left:var(--lbl);background:rgba(0,0,0,.28);z-index:1}
+.steps{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.step{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.step .k{font-family:var(--mono);font-size:11px;color:var(--brand-bright);font-weight:600}
+.step h4{font-family:var(--display);font-size:15px;margin:4px 0 4px}
+.step p{font-size:13.5px;color:var(--ink-2)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.list{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.list h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.list.pro h4{color:var(--basil)} .list.con h4{color:var(--amber)}
+.list li{list-style:none;font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative}
+.list.pro li::before{content:"✓";position:absolute;left:0;color:var(--basil);font-weight:700}
+.list.con li::before{content:"△";position:absolute;left:0;color:var(--amber)}
+.arch{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.arch code{font-family:var(--mono);font-size:12.5px;color:var(--brand-bright);background:rgba(232,107,62,.1);padding:1px 5px;border-radius:5px}
+.arch .row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.arch .row:last-child{border:0}
+.arch .row b{flex:0 0 130px;font-family:var(--mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.effort{display:inline-flex;gap:4px;align-items:center}
+.effort i{width:8px;height:8px;border-radius:2px;background:var(--line-2);display:inline-block}
+.effort i.on{background:var(--brand)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.cols,.steps{grid-template-columns:1fr}h1{font-size:32px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · seating problem</b>
+  <a href="host-01-unified-floor.html">1 · Unified Floor</a>
+  <a class="on" href="host-02-live-timeline.html">2 · Live Timeline</a>
+  <a href="host-03-arrivals-board.html">3 · Arrivals Board</a>
+  <a href="host-04-table-lifecycle.html">4 · Table-Session Arch</a>
+  <a href="host-05-recommendation.html">5 · Recommendation ★</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Concept 2 of 5 · Timeline-primary</div>
+  <h1>Live Table Timeline</h1>
+  <p class="tag">The reservation timeline stops being a planning tool and becomes the <em>live</em> operational spine. Reservations, seated parties and walk-ins all render as blocks on one tables×time grid, with a sweeping <b>NOW</b> line. Collisions become impossible to miss — a walk-in that would overrun the next booking literally turns red.</p>
+  <div class="chips">
+    <span class="chip b">Best for: managers watching the whole service</span>
+    <span class="chip">Book's timeline → live floor</span>
+    <span class="chip g">Reuses the existing timeline UI</span>
+  </div>
+</header>
+
+<section>
+  <div class="callout"><b>The insight.</b> The information a host needs — "is this table really free, and for how long?" — is a <em>time</em> question, not a <em>space</em> question. A floor plan hides time; a timeline makes it the axis. Seating a party is just filling the gap between now and the next block.</div>
+</section>
+
+<section>
+  <h2><span class="n">idea</span> One axis: tables down, time across, NOW moving</h2>
+  <p class="lead">Solid blue blocks are parties actually seated. Dashed amber blocks are reservations not yet arrived. Green blocks are walk-ins, drawn from NOW forward. Drag a booking's edge to NOW to seat it; drop a walk-in into a gap. If a block would overlap the next one, it renders as a red hatch — the system won't let you double-book a table by accident.</p>
+
+  <div class="glass tlwrap">
+    <div class="tlhead"><span class="t">Kraków · live service</span><span class="mono sm">drag to seat · drop walk-ins in gaps · red = collision</span></div>
+    <div class="tl">
+      <div class="hours"><div class="h"></div><div class="h">17:00</div><div class="h">18:00</div><div class="h">19:00</div><div class="h">20:00</div><div class="h">21:00</div><div class="h">22:00</div><div class="h">23:00</div><div class="h">—</div></div>
+      <!-- past shade covers 17:00→18:58 : lbl(52) + ~1.97*74 ≈ 198px -->
+      <div class="past" style="width:146px"></div>
+      <div class="nowline" style="left:calc(52px + 1.97*74px)"></div>
+
+      <div class="trow"><div class="lbl">T1</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk seated" style="left:calc(52px + 1.4*74px);width:calc(1.5*74px)"><span class="bn">Wiśniewska · 2</span><span class="bm">seated 34m</span></div></div>
+      <div class="trow"><div class="lbl">T2</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk res" style="left:calc(52px + 2*74px);width:calc(1.5*74px)"><span class="bn">◷ Kowalski · 4 · 19:00</span></div></div>
+      <div class="trow"><div class="lbl">T5</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk seated" style="left:calc(52px + 1.1*74px);width:calc(1.7*74px)"><span class="bn">Nowak · 3</span><span class="bm">seated 51m · dessert</span></div></div>
+      <div class="trow"><div class="lbl">T7</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk clash" style="left:calc(52px + 1.97*74px);width:calc(1.6*74px)"><span class="bn">⚠ Walk-in 6 → overruns Mazur 19:30</span></div>
+        <div class="blk res" style="left:calc(52px + 2.5*74px);width:calc(1.5*74px)"><span class="bn">◷ Mazur · 6 · 19:30</span></div></div>
+      <div class="trow"><div class="lbl">T9</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk res" style="left:calc(52px + 3*74px);width:calc(2*74px)"><span class="bn">◷ Michalski · 8 · 20:00</span></div></div>
+      <div class="trow"><div class="lbl">T11</div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="blk walkin" style="left:calc(52px + 1.97*74px);width:calc(1.5*74px)"><span class="bn">Walk-in · 4 ✓ safe</span><span class="bm">free until 21:30</span></div></div>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">The dark band is the past; the orange line is now. Everything to the right of NOW is a promise you're managing. T7 shows the exact mistake Concept fixes — a walk-in that eats into Mazur's 19:30. T11 shows the safe alternative the system steers you to.</p>
+</section>
+
+<section>
+  <h2><span class="n">flow</span> The two broken moments, fixed</h2>
+  <div class="steps">
+    <div class="step"><div class="k">SCENARIO A · booking arrives</div><h4>Kowalski at 19:00</h4><p>His dashed block on T2 sits right at NOW. Tap it → <b>Seat</b> (or drag its left edge onto the NOW line). It goes solid blue, a check opens, and its right edge shows the expected turn end. The block <em>is</em> the link between booking and occupancy — no second system.</p></div>
+    <div class="step"><div class="k">SCENARIO B · walk-in arrives</div><h4>Party of 6</h4><p>You start a walk-in block from NOW. As you drop it on T7, it collides with Mazur 19:30 and hatches red — blocked. Drop it on T11 and it's green: a clean 2½-hour runway. The timeline does the "will this fit?" math you'd otherwise do in your head.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">build</span> Under the hood</h2>
+  <p class="lead">Medium lift: the timeline component already exists in Book. The work is making it consume <b>live occupancy</b> as first-class blocks and adding the NOW line + overlap math.</p>
+  <div class="arch">
+    <div class="row"><b>Data</b><span>Unify what a "block" is: a reservation (future/dashed) and an occupancy (seated/solid) share one shape <code>{tableId, start, end, party, guest, kind}</code>. Occupancy end = <code>seatedAt + expectedTurnMin</code>. Small: add <code>seatedAt</code> to a seated reservation; a walk-in is a block with no reservation row (or an ad-hoc one).</span></div>
+    <div class="row"><b>Live NOW</b><span>A ticking clock line; blocks left of it are history, right of it are forecast. Auto-scroll to keep NOW centred during service.</span></div>
+    <div class="row"><b>Overlap engine</b><span><code>collides(blockA, blockB)</code> on the same table row → red hatch + block the drop. Same primitive Book already uses for double-booking; extended to walk-in placement.</span></div>
+    <div class="row"><b>UI</b><span>Promote Book's <code>core-book-tlpanel</code> into the live Service surface. Add drag-to-seat, drag-between-rows to reassign, and a floor-plan companion view for spatial lookups.</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">trade-offs</span> Honest read</h2>
+  <div class="cols">
+    <div class="list pro"><h4>Strengths</h4>
+      <li>Unbeatable for time-of-turn awareness &amp; collision prevention.</li>
+      <li>One mental model for the whole night — great for managers.</li>
+      <li>Reuses the timeline you've already built.</li>
+      <li>Reassign, seat, and forecast are the same drag gesture.</li>
+    </div>
+    <div class="list con"><h4>Limits</h4>
+      <li>Less intuitive for a server who thinks spatially (needs a floor companion).</li>
+      <li>Turn-time estimates matter — a wrong <code>expectedTurnMin</code> mis-colours collisions.</li>
+      <li>Dense on a phone; really wants a tablet/landscape.</li>
+      <li>Walk-in "waitlist when nothing fits" still needs Concept 3.</li>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <span>Effort <span class="effort"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> medium · pairs with a floor companion</span>
+  <span>Next → <a style="color:var(--brand-bright)" href="host-03-arrivals-board.html">Concept 3 · Arrivals Board</a></span>
+</div>
+
+</div>
+</body></html>

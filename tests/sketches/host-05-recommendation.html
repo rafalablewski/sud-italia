@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept 5 · The Recommendation — Sud Italia Service OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 6% 0%,rgba(232,107,62,.22),transparent 60%),radial-gradient(65% 60% at 98% 100%,rgba(125,196,100,.14),transparent 62%),radial-gradient(46% 40% at 82% 6%,rgba(84,188,224,.12),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.cnav a.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.5);box-shadow:0 0 16px -6px var(--brand)}
+.hero{padding:46px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--basil)}
+h1{font-family:var(--display);font-weight:800;font-size:42px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:18px;color:var(--ink-2);max-width:820px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.chip.b{color:var(--brand-bright);border-color:rgba(232,107,62,.4);background:var(--brand-wash)}
+section{margin-top:28px}
+h2{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .n{font-family:var(--mono);font-size:12px;color:var(--basil);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--basil-wash)}
+.lead{color:var(--ink-2);max-width:840px;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+small,.sm{font-size:12.5px;color:var(--ink-3)}
+.callout{padding:16px 18px;border-radius:var(--r-sm);background:var(--basil-wash);border:1px dashed rgba(125,196,100,.55);color:var(--ink);font-size:14.5px}
+.callout b{color:var(--basil)}
+/* the thesis */
+.thesis{padding:22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.tcard{padding:16px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+.tcard .ro{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-bright)}
+.tcard h4{font-family:var(--display);font-size:16px;margin:5px 0 5px}
+.tcard p{font-size:13px;color:var(--ink-2)}
+.tcard .who{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:8px}
+.sharedbar{margin-top:14px;padding:12px 16px;border-radius:12px;background:var(--brand-wash);border:1px solid rgba(232,107,62,.4);font-family:var(--mono);font-size:12px;color:var(--brand-bright);text-align:center}
+/* north star mock */
+.ns{padding:16px}
+.nshead{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.modeseg{display:inline-flex;gap:3px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--pill);padding:3px}
+.modeseg button{font-family:var(--mono);font-size:11px;color:var(--ink-3);background:transparent;border:0;padding:5px 13px;border-radius:var(--pill);cursor:pointer}
+.modeseg button.on{color:var(--ink);background:var(--brand-wash);box-shadow:inset 0 0 0 1px rgba(232,107,62,.5)}
+.nssp{flex:1}
+.nsmeta{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.nsbody{display:grid;grid-template-columns:1fr 300px;gap:12px}
+.floor{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:12px;border-radius:var(--r-sm);background:rgba(0,0,0,.18);border:1px solid var(--line);align-content:start}
+.tbl{border-radius:11px;border:1px solid var(--line);background:var(--panel-2);padding:9px;min-height:78px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.tbl .tn{font-family:var(--mono);font-size:11px;font-weight:600}
+.tbl .who{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl .rb{margin-top:auto;font-family:var(--mono);font-size:8.5px;padding:2px 5px;border-radius:5px}
+.tbl.seated{background:var(--info-wash);border-color:rgba(84,188,224,.45)} .tbl.seated .tn{color:var(--info)}
+.tbl.held{background:var(--amber-wash);border-color:rgba(240,173,70,.5)} .tbl.held .rb{background:rgba(240,173,70,.22);color:var(--amber)}
+.tbl.free{border-color:rgba(125,196,100,.3)} .tbl.free .tn{color:var(--basil)}
+.tbl.walk{background:var(--basil-wash);border-color:rgba(125,196,100,.45)} .tbl.walk .tn{color:var(--basil)}
+.rail{border-radius:var(--r-sm);background:rgba(0,0,0,.18);border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+.rail .rh{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);display:flex;justify-content:space-between}
+.arr{border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:var(--panel-2)}
+.arr.soon{border-color:rgba(240,173,70,.5)}
+.arr .a1{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600}
+.arr .a2{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-top:2px;display:flex;justify-content:space-between}
+.arr .sb{margin-top:6px;width:100%;font-family:var(--mono);font-size:10px;font-weight:600;color:#2a160b;background:linear-gradient(180deg,#93d67c,var(--basil));border:0;border-radius:99px;padding:5px;cursor:pointer}
+.walk2{font-family:var(--mono);font-size:10.5px;color:var(--brand-bright);background:var(--brand-wash);border:1px dashed rgba(232,107,62,.5);border-radius:9px;padding:8px;cursor:pointer;text-align:center}
+/* rollout */
+.phases{display:flex;flex-direction:column;gap:12px}
+.phase{display:grid;grid-template-columns:64px 1fr 150px;gap:14px;align-items:center;padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.phase .pn{font-family:var(--display);font-weight:800;font-size:26px;color:var(--brand-bright);text-align:center}
+.phase h4{font-family:var(--display);font-size:16px;margin-bottom:3px}
+.phase p{font-size:13px;color:var(--ink-2)}
+.phase .meta{font-family:var(--mono);font-size:10px;color:var(--ink-3);text-align:right}
+.phase.p1{border-color:rgba(125,196,100,.4)} .phase.p1 .pn{color:var(--basil)}
+.phase .val{display:inline-block;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:99px;background:var(--basil-wash);color:var(--basil);margin-top:5px}
+.effort{display:inline-flex;gap:3px;align-items:center}
+.effort i{width:7px;height:7px;border-radius:2px;background:var(--line-2);display:inline-block}
+.effort i.on{background:var(--brand)}
+/* deltas */
+.arch{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.arch code{font-family:var(--mono);font-size:12.5px;color:var(--brand-bright);background:rgba(232,107,62,.1);padding:1px 5px;border-radius:5px}
+.arch .row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.arch .row:last-child{border:0}
+.arch .row b{flex:0 0 120px;font-family:var(--mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.arch .row .add{color:var(--basil);font-weight:600}
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th,.matrix td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+.matrix th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:500}
+.matrix td:first-child{font-weight:600}
+.matrix .y{color:var(--basil)} .matrix .n{color:var(--ink-3)} .matrix .p{color:var(--amber)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.thesis{grid-template-columns:1fr}.nsbody{grid-template-columns:1fr}.floor{grid-template-columns:repeat(3,1fr)}.phase{grid-template-columns:44px 1fr}.phase .meta{grid-column:2}h1{font-size:32px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · seating problem</b>
+  <a href="host-01-unified-floor.html">1 · Unified Floor</a>
+  <a href="host-02-live-timeline.html">2 · Live Timeline</a>
+  <a href="host-03-arrivals-board.html">3 · Arrivals Board</a>
+  <a href="host-04-table-lifecycle.html">4 · Table-Session Arch</a>
+  <a class="on" href="host-05-recommendation.html">5 · Recommendation ★</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Concept 5 of 5 · The recommendation</div>
+  <h1>Three lenses, one shared truth</h1>
+  <p class="tag">Don't pick one view — the door, the manager and the server each need a different one. Instead, build <b>Concept 4's Table-Session</b> as the shared spine and render the other three as <b>lenses</b> over it. Then ship it in three phases, each valuable on its own, the first with <em>zero</em> schema change.</p>
+  <div class="chips">
+    <span class="chip g">Recommended path</span>
+    <span class="chip b">Fits the existing Lens IA</span>
+    <span class="chip">Phase 1 ships in days</span>
+  </div>
+</header>
+
+<section>
+  <div class="callout"><b>The core decision.</b> The mistake would be choosing Floor <em>vs.</em> Timeline <em>vs.</em> Arrivals. They aren't competitors — they're the same data seen by different roles. The system already speaks in <b>lenses</b> (Service = Floor · Slots · Dispatch · Book). Add a shared <b>TableSession</b> underneath and make seating one primitive; the three views become three tabs that can never disagree.</p></div>
+</section>
+
+<!-- THESIS -->
+<section>
+  <h2><span class="n">thesis</span> Same state, rendered for who's looking</h2>
+  <div class="glass thesis" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="tcard"><div class="ro">Lens · Floor</div><h4>Spatial</h4><p>The room as a map. Tables carry their party, timer, check and a "held" ribbon. Drag an arrival onto its table to seat.</p><div class="who">→ servers, running the room</div></div>
+    <div class="tcard"><div class="ro">Lens · Timeline</div><h4>Temporal</h4><p>Tables × time with a NOW line. Collisions hatch red. The whole night's shape at a glance.</p><div class="who">→ managers, watching the service</div></div>
+    <div class="tcard"><div class="ro">Lens · Arrivals</div><h4>Queue</h4><p>Expected · Waitlist · Seated. Honest walk-in quotes; late/no-show handling.</p><div class="who">→ hosts, working the door</div></div>
+  </div>
+  <div class="sharedbar">▲ all three read &amp; write ONE shared <b>TableSession</b> + assignment engine — seat once, correct everywhere ▲</div>
+</section>
+
+<!-- NORTH STAR -->
+<section>
+  <h2><span class="n">north star</span> One surface, a lens switch</h2>
+  <p class="lead">Under <b>Service</b>, "Book" grows into <b>Book &amp; Seat</b> (or a new "Host" lens) with a mode switch. Here's the Floor lens — note it now shows the two things today's Floor can't: <em>who</em> is on a seated table, and which "free" tables are actually held.</p>
+  <div class="glass ns">
+    <div class="nshead">
+      <div class="modeseg"><button>Timeline</button><button class="on">Floor</button><button>Arrivals</button></div>
+      <div class="nssp"></div>
+      <div class="nsmeta">Kraków · now 18:58 · 11 seated · 3 arriving &lt; 45m · 76% full</div>
+    </div>
+    <div class="nsbody">
+      <div class="floor">
+        <div class="tbl seated"><span class="tn">T1 · 34m</span><span class="who">Wiśniewska · 2</span><span class="rb" style="color:var(--info)">check 84 zł</span></div>
+        <div class="tbl held"><span class="tn">T2</span><span class="who" style="color:var(--ink-3)">free</span><span class="rb">◷ Kowalski 19:00 · 2m</span></div>
+        <div class="tbl free"><span class="tn">T6</span><span class="who">free</span><span class="rb" style="color:var(--basil)">open all night</span></div>
+        <div class="tbl held"><span class="tn">T7</span><span class="who" style="color:var(--ink-3)">free</span><span class="rb">◷ Mazur 19:30 · 32m</span></div>
+        <div class="tbl walk"><span class="tn">T3 · 12m</span><span class="who">Walk-in · 3</span><span class="rb" style="color:var(--basil)">check 41 zł</span></div>
+        <div class="tbl seated"><span class="tn">T5 · 51m</span><span class="who">Nowak · 3</span><span class="rb" style="color:var(--info)">dessert fired</span></div>
+        <div class="tbl held"><span class="tn">T9</span><span class="who" style="color:var(--ink-3)">free</span><span class="rb">◷ Michalski 20:00</span></div>
+        <div class="tbl free"><span class="tn">T11</span><span class="who">free</span><span class="rb" style="color:var(--basil)">open to 21:30</span></div>
+      </div>
+      <div class="rail">
+        <div class="rh"><span>Coming up</span><span style="color:var(--amber)">3</span></div>
+        <div class="arr soon"><div class="a1"><span>Kowalski · 4</span><span style="color:var(--amber);font-family:var(--mono);font-size:11px">19:00·2m</span></div><div class="a2"><span>◈ T2 window</span><span>confirmed</span></div><button class="sb">✓ Seat on T2 → check</button></div>
+        <div class="arr"><div class="a1"><span>Mazur · 6 ★</span><span class="mono" style="font-size:11px;color:var(--ink-3)">19:30</span></div><div class="a2"><span>◈ T7 window</span><span>birthday</span></div></div>
+        <div class="walk2">+ Walk-in — engine picks a safe table</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROLLOUT -->
+<section>
+  <h2><span class="n">rollout</span> Three phases, each shippable alone</h2>
+  <div class="phases">
+    <div class="phase p1">
+      <div class="pn">1</div>
+      <div><h4>Link seating to bookings — on today's data</h4><p>Overlay reservations on the existing <b>Floor</b> (held ribbons + who's-seated), and make the seat action flip <code>reservation → seated</code> + open a check tagged to it. <b>No schema change</b> — uses <code>reservation.tableId</code> / <code>status</code>. Solves "who's at T5?" and shows held tables immediately.</p><span class="val">kills 80% of the pain</span></div>
+      <div class="meta">Effort <span class="effort"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span><br>days<br>Concept 1</div>
+    </div>
+    <div class="phase">
+      <div class="pn">2</div>
+      <div><h4>Walk-in guard + free-window engine</h4><p>Add <code>freeWindowMin</code> / <code>suggestTables</code> and a <b>+ Walk-in</b> flow that only offers genuinely-free tables (reserved-soon dimmed, override required). Adds a lightweight walk-in occupancy record so the floor knows non-booked parties exist.</p><span class="val">stops the reserved-table theft</span></div>
+      <div class="meta">Effort <span class="effort"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><br>~1–2 wks<br>engine + Concept 1/3</div>
+    </div>
+    <div class="phase">
+      <div class="pn">3</div>
+      <div><h4>Unify on TableSession + add the lenses</h4><p>Migrate to the <b>TableSession</b> spine (Concept 4), derive table status, add the <b>Waitlist</b> + quotes, and expose <b>Timeline</b> &amp; <b>Arrivals</b> as lenses beside Floor. Full role coverage; accurate covers &amp; turn-time reporting.</p><span class="val">the durable platform</span></div>
+      <div class="meta">Effort <span class="effort"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><br>~3–4 wks<br>Concepts 2·3·4</div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT CHANGES -->
+<section>
+  <h2><span class="n">deltas</span> Exactly what changes</h2>
+  <div class="arch">
+    <div class="row"><b>Phase 1</b><span><span class="add">+ nothing in the DB.</span> New: <code>freeWindowMin()</code> helper, a reservation overlay on <code>CoreFloor</code>, and <code>POST /floor/seat {reservationId, tableId}</code> (sets <code>seated</code> + opens check). Book &amp; Floor already share the reservations store.</span></div>
+    <div class="row"><b>Phase 2</b><span><span class="add">+ walk-in as a lightweight hold</span> (ad-hoc reservation, <code>source:"walk-in"</code>, no name) so the floor counts it. New: <code>suggestTables()</code> + the <b>+ Walk-in</b> guard UI. Reuses Book's conflict primitive.</span></div>
+    <div class="row"><b>Phase 3</b><span><span class="add">+ TableSession entity</span> + <code>Waitlist</code>; <code>FloorTable.status</code> becomes <em>derived</em>; endpoints <code>/table-sessions</code>, <code>/floor/state</code>, <code>/suggest</code>, <code>/waitlist</code>. Add Timeline &amp; Arrivals lenses to the Service surface.</span></div>
+  </div>
+</section>
+
+<!-- MATRIX -->
+<section>
+  <h2><span class="n">recap</span> How the five compare</h2>
+  <div class="glass" style="padding:6px 16px;overflow-x:auto">
+    <table class="matrix">
+      <tr><th>Concept</th><th>Who it serves</th><th>Solves “who’s at T5?”</th><th>Walk-in guard</th><th>Waitlist</th><th>Effort</th></tr>
+      <tr><td>1 · Unified Floor</td><td>servers</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td>low</td></tr>
+      <tr><td>2 · Live Timeline</td><td>managers</td><td class="y">✓</td><td class="y">✓ (visual)</td><td class="n">—</td><td>med</td></tr>
+      <tr><td>3 · Arrivals Board</td><td>hosts / door</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td>med</td></tr>
+      <tr><td>4 · Table-Session</td><td>the platform</td><td class="y">✓✓</td><td class="y">✓✓</td><td class="p">enables</td><td>high</td></tr>
+      <tr><td><b>5 · Recommendation</b></td><td class="y"><b>all three roles</b></td><td class="y">✓✓</td><td class="y">✓✓</td><td class="y">✓</td><td>phased</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="callout"><b>Bottom line.</b> Ship <b>Phase 1</b> now — it removes most of the pain on the data you already have (bookings appear on the floor, seating links them, held tables are visible). Then layer the free-window guard and, when the volume justifies it, the TableSession spine that makes Floor, Timeline and Arrivals three faces of one honest truth.</div>
+</section>
+
+<div class="foot">
+  <span>★ Recommended · start at Phase 1</span>
+  <span>Back to → <a style="color:var(--brand-bright)" href="host-01-unified-floor.html">Concept 1</a></span>
+</div>
+
+</div>
+</body></html>

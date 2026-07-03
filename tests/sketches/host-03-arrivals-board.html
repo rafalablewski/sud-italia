@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept 3 · Arrivals &amp; Waitlist — Sud Italia Service OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.16);--info:#54bce0;--info-wash:rgba(84,188,224,.16);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.16);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.16);--mono:"JetBrains Mono",ui-monospace,monospace;--ui:"Inter",system-ui,sans-serif;--display:"Bricolage Grotesque",var(--ui);--r:16px;--r-sm:10px;--pill:999px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55}
+body{background:radial-gradient(70% 55% at 6% 0%,rgba(240,173,70,.14),transparent 60%),radial-gradient(60% 60% at 98% 100%,rgba(84,188,224,.14),transparent 62%),radial-gradient(46% 40% at 82% 6%,rgba(232,107,62,.14),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;padding-bottom:80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.glass{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%,rgba(255,255,255,.02));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.22)}
+.cnav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(10,8,6,.6));border-bottom:1px solid var(--line-2)}
+.cnav .wrap{display:flex;align-items:center;gap:8px;height:52px;flex-wrap:wrap}
+.cnav b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-right:6px}
+.cnav a{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap}
+.cnav a:hover{background:var(--panel-3);color:var(--ink)}
+.cnav a.on{color:var(--ink);background:var(--brand-wash);border-color:rgba(232,107,62,.5);box-shadow:0 0 16px -6px var(--brand)}
+.hero{padding:46px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-bright)}
+h1{font-family:var(--display);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.02em;margin:10px 0 8px}
+.tag{font-size:18px;color:var(--ink-2);max-width:760px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:var(--pill);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.chip.g{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.chip.b{color:var(--brand-bright);border-color:rgba(232,107,62,.4);background:var(--brand-wash)}
+section{margin-top:26px}
+h2{font-family:var(--display);font-weight:700;font-size:23px;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .n{font-family:var(--mono);font-size:12px;color:var(--brand-bright);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--brand-wash)}
+.lead{color:var(--ink-2);max-width:820px;margin-bottom:16px}
+.mono{font-family:var(--mono)}
+small,.sm{font-size:12.5px;color:var(--ink-3)}
+.callout{padding:14px 16px;border-radius:var(--r-sm);background:var(--brand-wash);border:1px dashed rgba(232,107,62,.5);color:var(--ink);font-size:14px}
+/* board */
+.board{padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.col{border-radius:var(--r-sm);background:rgba(0,0,0,.18);border:1px solid var(--line);display:flex;flex-direction:column;min-height:420px}
+.colh{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.colh .t{font-family:var(--display);font-weight:700;font-size:14px}
+.colh .c{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-3)}
+.colb{padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.pc{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel-2)}
+.pc .r1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pc .nm{font-weight:600;font-size:13.5px}
+.pc .tm{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.pc .r2{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.pc .tag2{padding:1px 6px;border-radius:99px;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em}
+.tag2.ok{color:var(--basil);background:var(--basil-wash)} .tag2.due{color:var(--amber);background:var(--amber-wash)} .tag2.late{color:var(--danger);background:var(--danger-wash)} .tag2.vip{color:#e0b03e;background:rgba(224,176,62,.15)}
+.pc .act{display:flex;gap:6px;margin-top:9px}
+.pc .act button{flex:1;font-family:var(--mono);font-size:10.5px;font-weight:600;border-radius:99px;padding:6px;cursor:pointer;border:1px solid var(--line);background:var(--panel-3);color:var(--ink-2)}
+.pc .act .prim{color:#2a160b;background:linear-gradient(180deg,#93d67c,var(--basil));border:0}
+.pc .act .info{color:#04202b;background:linear-gradient(180deg,#7fd0ec,var(--info));border:0}
+.pc.due{border-color:rgba(240,173,70,.5)}
+.pc.late{border-color:rgba(255,90,92,.5);box-shadow:inset 0 0 0 1px rgba(255,90,92,.2)}
+.pc.seatedc{border-color:rgba(84,188,224,.4);background:var(--info-wash)}
+.pc .timer{font-family:var(--mono);font-size:10px;color:var(--info)}
+.quote{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--amber);background:var(--amber-wash);border:1px solid rgba(240,173,70,.35);border-radius:8px;padding:5px 8px}
+.addwalk{margin:8px;font-family:var(--mono);font-size:11px;color:var(--brand-bright);background:var(--brand-wash);border:1px dashed rgba(232,107,62,.5);border-radius:10px;padding:9px;cursor:pointer}
+.steps{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.step{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.step .k{font-family:var(--mono);font-size:11px;color:var(--brand-bright);font-weight:600}
+.step h4{font-family:var(--display);font-size:15px;margin:4px 0 4px}
+.step p{font-size:13.5px;color:var(--ink-2)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.list{padding:16px;border-radius:var(--r-sm);background:var(--panel-2);border:1px solid var(--line)}
+.list h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.list.pro h4{color:var(--basil)} .list.con h4{color:var(--amber)}
+.list li{list-style:none;font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative}
+.list.pro li::before{content:"✓";position:absolute;left:0;color:var(--basil);font-weight:700}
+.list.con li::before{content:"△";position:absolute;left:0;color:var(--amber)}
+.arch{padding:18px;border-radius:var(--r-sm);background:rgba(0,0,0,.2);border:1px solid var(--line)}
+.arch code{font-family:var(--mono);font-size:12.5px;color:var(--brand-bright);background:rgba(232,107,62,.1);padding:1px 5px;border-radius:5px}
+.arch .row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.arch .row:last-child{border:0}
+.arch .row b{flex:0 0 130px;font-family:var(--mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.effort{display:inline-flex;gap:4px;align-items:center}
+.effort i{width:8px;height:8px;border-radius:2px;background:var(--line-2);display:inline-block}
+.effort i.on{background:var(--brand)}
+.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.board{grid-template-columns:1fr}.cols,.steps{grid-template-columns:1fr}h1{font-size:32px}}
+</style></head>
+<body>
+
+<nav class="cnav"><div class="wrap">
+  <b>Service OS · seating problem</b>
+  <a href="host-01-unified-floor.html">1 · Unified Floor</a>
+  <a href="host-02-live-timeline.html">2 · Live Timeline</a>
+  <a class="on" href="host-03-arrivals-board.html">3 · Arrivals Board</a>
+  <a href="host-04-table-lifecycle.html">4 · Table-Session Arch</a>
+  <a href="host-05-recommendation.html">5 · Recommendation ★</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Concept 3 of 5 · Queue-primary</div>
+  <h1>Arrivals &amp; Waitlist</h1>
+  <p class="tag">Model the way a host actually thinks: <em>who's next</em>. Three live columns — <b>Expected</b> (bookings due), <b>Waitlist</b> (walk-ins), <b>Seated</b> (on the floor now). Every walk-in gets an honest wait quote computed from when a fitting table will genuinely free, so you never promise a table that's booked.</p>
+  <div class="chips">
+    <span class="chip b">Best for: the host stand / door</span>
+    <span class="chip">Adds a real waitlist</span>
+    <span class="chip">Resy / SevenRooms-class workflow</span>
+  </div>
+</header>
+
+<section>
+  <div class="callout"><b>The insight.</b> Floor plans and timelines are <em>maps</em>; a busy door needs a <em>queue</em>. When someone walks in, the question isn't "which pixel is that table" — it's "can I seat this party, and if not, how long is the wait, and am I about to burn a table Kowalski booked?" This board answers exactly that.</div>
+</section>
+
+<section>
+  <h2><span class="n">idea</span> Expected → Waitlist → Seated, always live</h2>
+  <p class="lead">Bookings flow into <b>Expected</b> as their time nears (with late-flagging). Walk-ins land in <b>Waitlist</b> with a computed quote. Seating from either column links the party to a table and opens its check; that party then lives in <b>Seated</b> with a turn timer until it's cleared.</p>
+
+  <div class="glass board">
+    <!-- EXPECTED -->
+    <div class="col">
+      <div class="colh"><span class="t">Expected</span><span class="c">next 90 min · 4</span></div>
+      <div class="colb">
+        <div class="pc due"><div class="r1"><span class="nm">Kowalski · 4</span><span class="tm" style="color:var(--amber)">19:00 · due now</span></div><div class="r2"><span>◈ T2 · window</span><span class="tag2 ok">confirmed</span></div><div class="act"><button class="prim">✓ Seat on T2</button><button>Reassign</button></div></div>
+        <div class="pc late"><div class="r1"><span class="nm">Zieliński · 2</span><span class="tm" style="color:var(--danger)">18:45 · 13m late</span></div><div class="r2"><span>◈ T1 · window</span><span class="tag2 late">no-show risk</span></div><div class="act"><button class="prim">Seat</button><button>Call</button><button>No-show</button></div></div>
+        <div class="pc"><div class="r1"><span class="nm">Mazur · 6</span><span class="tm">19:30 · 32m</span></div><div class="r2"><span>◈ T7 · window</span><span class="tag2 vip">★ birthday</span></div></div>
+        <div class="pc"><div class="r1"><span class="nm">Michalski · 8</span><span class="tm">20:00 · 62m</span></div><div class="r2"><span>◈ T9 · booth</span><span class="tag2 ok">confirmed</span></div></div>
+      </div>
+    </div>
+    <!-- WAITLIST -->
+    <div class="col">
+      <div class="colh"><span class="t">Waitlist · walk-ins</span><span class="c">2 waiting</span></div>
+      <div class="colb">
+        <div class="pc"><div class="r1"><span class="nm">Walk-in · 2</span><span class="tm">added 18:52</span></div><div class="r2"><span>flexible · any zone</span></div><div class="quote">Quote ~10 min — T1 frees at ~19:08 (Zieliński no-show) or T6 now</div><div class="act"><button class="info">Seat on T6 now</button><button>Text ready</button></div></div>
+        <div class="pc"><div class="r1"><span class="nm">Walk-in · 6</span><span class="tm">added 18:55</span></div><div class="r2"><span>wants window</span></div><div class="quote" style="color:var(--danger);background:var(--danger-wash);border-color:rgba(255,90,92,.35)">No safe 6-top — T7 is Mazur 19:30. Quote ~45 min or offer T9 (booth) at 19:15.</div><div class="act"><button>Hold</button><button>Offer T9</button></div></div>
+      </div>
+      <button class="addwalk">+ Add walk-in — party size &amp; preferences</button>
+    </div>
+    <!-- SEATED -->
+    <div class="col">
+      <div class="colh"><span class="t">Seated · on the floor</span><span class="c">11 covers</span></div>
+      <div class="colb">
+        <div class="pc seatedc"><div class="r1"><span class="nm">Wiśniewska · 2</span><span class="timer">T1 · 34m</span></div><div class="r2"><span>check 84 zł</span><span class="tag2 ok">from booking</span></div><div class="act"><button class="info">Open check</button><button>Clear</button></div></div>
+        <div class="pc seatedc"><div class="r1"><span class="nm">Nowak · 3</span><span class="timer">T5 · 51m</span></div><div class="r2"><span>dessert fired</span><span class="tag2 ok">from booking</span></div><div class="act"><button class="info">Open check</button><button>Clear</button></div></div>
+        <div class="pc seatedc"><div class="r1"><span class="nm">Walk-in · 3</span><span class="timer">T3 · 12m</span></div><div class="r2"><span>check 41 zł</span><span class="tag2">walk-in</span></div><div class="act"><button class="info">Open check</button><button>Clear</button></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:10px">Every card is one party's whole story — booking, table, check, timer — so "who's at T5?" and "what's the wait for a 6-top?" are both answered at the door, without touching the floor plan.</p>
+</section>
+
+<section>
+  <h2><span class="n">flow</span> The two broken moments, fixed</h2>
+  <div class="steps">
+    <div class="step"><div class="k">SCENARIO A · booking arrives</div><h4>Kowalski at 19:00</h4><p>He's already at the top of <b>Expected</b>, flagged "due now." Tap <b>Seat on T2</b> → he moves to <b>Seated</b> with a live timer, T2's booking becomes occupancy, and his check opens. If T2's still finishing, tap <b>Reassign</b> and the board offers the next fitting-and-free table.</p></div>
+    <div class="step"><div class="k">SCENARIO B · walk-in arrives</div><h4>Party of 6, no booking</h4><p>Add to <b>Waitlist</b> → the quote engine sees T7 is Mazur's at 19:30 and refuses to quote it. It offers an honest "~45 min, or T9 booth at 19:15." You never verbally promise the one table that's about to be needed — the board did the protecting.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">build</span> Under the hood</h2>
+  <p class="lead">Medium lift — the columns are views over existing reservations + occupancy, but the <b>waitlist</b> and the <b>quote engine</b> are genuinely new.</p>
+  <div class="arch">
+    <div class="row"><b>New: Waitlist</b><span>A small entity <code>Waitlist {id, party, prefs, addedAt, quoteMin, status}</code>. The only net-new table in this concept.</span></div>
+    <div class="row"><b>Quote engine</b><span><code>quote(party, prefs) → {minutes, tableId?}</code>: scan tables, compute each one's next free moment (turn end of current party, or now) <em>minus</em> any reservation that would collide, return the soonest safe fit. This is the same free-window math every concept needs.</span></div>
+    <div class="row"><b>Expected feed</b><span>Reservations for today, windowed to "due soon," with late-detection (<code>now &gt; time + graceMin</code> → no-show risk). Seat action = the shared <code>reservation → seated</code> + open check.</span></div>
+    <div class="row"><b>Seated feed</b><span>Active occupancies with turn timers. Clearing frees the table and feeds the waitlist ("T1 is ready → text Walk-in · 2").</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">trade-offs</span> Honest read</h2>
+  <div class="cols">
+    <div class="list pro"><h4>Strengths</h4>
+      <li>Matches host mental model; fastest at a busy door.</li>
+      <li>Only concept with a real waitlist + honest wait quotes.</li>
+      <li>Late / no-show handling is first-class.</li>
+      <li>"Text when ready" turns a queue into revenue, not walk-outs.</li>
+    </div>
+    <div class="list con"><h4>Limits</h4>
+      <li>Abstracts away the room — no spatial sense of the floor.</li>
+      <li>Quote accuracy depends on turn-time estimates.</li>
+      <li>New waitlist entity + notify plumbing (SMS/WhatsApp).</li>
+      <li>Best <em>alongside</em> a floor or timeline, not instead of.</li>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <span>Effort <span class="effort"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> medium · strongest at the door</span>
+  <span>Next → <a style="color:var(--brand-bright)" href="host-04-table-lifecycle.html">Concept 4 · Table-Session Architecture</a></span>
+</div>
+
+</div>
+</body></html>
