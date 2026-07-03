@@ -6,6 +6,7 @@ import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { findReservationConflicts } from "@/lib/floor";
+import { suggestTables, type Suggestion } from "@/lib/seating";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
@@ -190,11 +191,34 @@ export function CoreBook() {
     else toast("Could not move booking", "danger");
   };
 
-  // Best-fit table (smallest that seats the party & is free) — the row that
-  // wears the ✨ Recommend tag in the pick list.
+  // Seating Intelligence Engine — rank every table for the party at the chosen
+  // slot (hard filter → weighted score → explainable). Only runs once a slot
+  // gives us a seating time; the recommended row wears the ✨ Recommend tag and
+  // each row's tag/tooltip comes from the engine's reasons.
+  const suggestions = useMemo<Suggestion[] | null>(() => {
+    if (!selectedSlot) return null;
+    return suggestTables({
+      party: partyN,
+      atMin: toMin(selectedSlot.time),
+      date: selectedSlot.date,
+      locationSlug: loc,
+      tables,
+      reservations,
+    });
+  }, [selectedSlot, partyN, tables, reservations, loc]);
+  const suggByTable = useMemo(() => {
+    const m = new Map<string, Suggestion>();
+    suggestions?.forEach((s) => m.set(s.tableId, s));
+    return m;
+  }, [suggestions]);
+  // The row that wears the ✨ Recommend tag: the engine's top pick when a slot
+  // is chosen, else the smallest fitting-and-free table (pre-slot fallback).
   const recTableId = useMemo(
-    () => tables.filter((t) => tableState(t).ok).sort((a, b) => a.seats - b.seats)[0]?.id ?? null,
-    [tables, tableState],
+    () =>
+      suggestions
+        ? suggestions.find((s) => s.isRecommended)?.tableId ?? null
+        : tables.filter((t) => tableState(t).ok).sort((a, b) => a.seats - b.seats)[0]?.id ?? null,
+    [suggestions, tables, tableState],
   );
   // Full-width booking list — everything but cancellations, chronological.
   const bookingList = useMemo(
@@ -418,15 +442,26 @@ export function CoreBook() {
               ) : (
                 <div className="core-bk-tpicks">
                   {sortedTables.map((t) => {
-                    const st = tableState(t);
+                    const sug = suggByTable.get(t.id);
                     const isRec = t.id === recTableId;
                     const on = tableId === t.id;
                     let tag: string;
                     let dim = false;
-                    if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
-                    else if (t.seats < partyN) { tag = "too small"; dim = true; }
-                    else if (!st.ok) { tag = selectedSlot ? `booked ${selectedSlot.time}` : "booked"; dim = true; }
-                    else tag = isRec ? "✨ Recommend" : "fits";
+                    let title: string;
+                    if (sug) {
+                      // engine-driven — a slot gives us a seating time to rank against
+                      dim = !sug.ok;
+                      tag = sug.isRecommended ? "✨ Recommend" : sug.ok ? "fits" : sug.excludedReason ?? "unavailable";
+                      title = sug.ok ? `${sug.score} pts · ${sug.reasons.join(" · ")}` : sug.excludedReason ?? "unavailable";
+                    } else {
+                      // pre-slot fallback — plain capacity/availability check
+                      const st = tableState(t);
+                      if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
+                      else if (t.seats < partyN) { tag = "too small"; dim = true; }
+                      else if (!st.ok) { tag = "booked"; dim = true; }
+                      else tag = isRec ? "✨ Recommend" : "fits";
+                      title = st.label;
+                    }
                     const focus = selected?.kind === "table" && selected.id === t.id;
                     return (
                       <button
@@ -434,7 +469,7 @@ export function CoreBook() {
                         className={`core-bk-tpick${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
                         disabled={dim && !override}
                         onClick={() => setTableId(t.id)}
-                        title={st.label}
+                        title={title}
                       >
                         <span className="tn">{tLabel(t.number)}</span>
                         <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>

@@ -102,6 +102,13 @@ export default async function CapabilitiesPage() {
             "The 2026 Service OS visual language ships as the default Core skin (src/app/themes/core/skins/liquid-glass.css, scoped .core[data-skin=\"liquid-glass\"]; DEFAULT_THEME_SKINS.core in src/lib/theme-skins.ts). It redefines the Core palette to translucent frosted glass, paints an ambient ember aurora on the root, and frosts the shared chrome + surface primitives (command bar, bottom nav, POS/Floor/Guest/Book cards, ticket, check panel, KPI bands) with backdrop-blur + specular rim + floating shadow. The KDS kitchen wall stays a dark wall by design. Fully reversible — 'Core Dark' is selectable in /admin/settings → Themes.",
         },
         {
+          name: "Seating Intelligence Engine — smart table recommendation",
+          status: "live",
+          href: "/core/service/book",
+          summary:
+            "A pure, explainable table-assignment engine (src/lib/seating.ts, suggestTables/recommendTable — 17 unit tests) behind Service · Book. Once a slot supplies a seating time, every table is hard-filtered (capacity fit · free-for-the-full-turn using a party×daypart turn-time model + reset buffer · availability) then scored 0–100 over weighted soft signals (right-size · runway comfort · guest preference/zone · pacing per 15-min bucket · yield — big tables held back from small parties). The Book table-picker's ✨ Recommend row is the engine's top pick and each row's tag + tooltip is its reason (e.g. 'held 32m', 'large table — held back for big parties', '89 pts · exact fit'); excluded tables dim. Tunable via a versioned policy (DEFAULT_POLICY + presets: balanced / maximise-covers / guest-first / slow-night). Pure & client-safe (reuses floor.ts primitives, no I/O); a learned turn-time model + walk-in guard + look-ahead optimiser are the planned next versions (see tests/sketches/host-06-engine.html). Falls back to a plain capacity check before a slot is chosen — additive, no regression.",
+        },
+        {
           name: "Context Dock — cross-lens selected check",
           status: "live",
           href: "/core/service/floor",

@@ -131,9 +131,14 @@ live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 upsert with `override`). The timeline sits **left**; the **new-reservation form
 is the right rail** (`.core-book-form`, grid col 2): pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
-**brand-wash**) + party size, then a table — live fit/conflict (booked/too-small
-tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and
-confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
+**brand-wash**) + party size, then a table — ranked by the **Seating
+Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
+a seating time, every table is hard-filtered (fit · free-for-the-turn ·
+availability) then scored (right-size · runway · guest · pacing · yield), so the
+✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
+reason (e.g. `held 32m`, `large table — held back for big parties`, `89 pts ·
+exact fit`). Excluded tables dim. Before a slot is picked it falls back to a
+plain capacity check. Then capture the guest and confirm. **Today's bookings** (`.core-bk-blist`) is a **full-width list below**,
 with cancel. Timeline rows + the table-pick list read **`T{n}`, ordered by table
 number** (shared with Floor's `tLabel`). The **surface sub-bar**
 (`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
