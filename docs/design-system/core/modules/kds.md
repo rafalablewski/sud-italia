@@ -69,7 +69,19 @@ outside `.core-body`) keeps the flat dark wall.
   a `.core-crumb` (`CORE — KDS · FLEET · liquid glass · all kitchens · one pass`)
   + a `.core-sectionhead` (`KDS · Fleet — All kitchens`) + a `.core-kds-toolbar`.
   - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
-    button per truck, labelled by `city`) that scopes the grid **and
+    button per truck, labelled by `city`). The whole KDS board toolbar (this
+    filter, the Floor lane filter, the Chef Expo/All-day toggle, the
+    `.core-tpill` action pills, and the `.core-iconbtn` tool glyphs) is tuned to
+    the dense-console mockup (`02-kds.html` — `.seg-lane` / `.pill` / `.tico`)
+    rather than the larger default core controls: **10–11px regular-weight
+    `--mono` labels**, fully-rounded `--pill` capsules, **translucent
+    white-washed fills** (the KDS wall resets `--panel-2`/`--line` to opaque
+    dark, so the glassy control fills are written as explicit
+    `rgba(255,255,255,…)` / `--t-late` washes), an **inset-`--lg-rim` active
+    tab**, a **red inset-ring `86` pill**, and **bare 28px hover-fill tool
+    icons**. All of it is scoped to `.core .core-kds` / `.core-kiosk-top`, so
+    POS / Orders / Guest keep the larger, opaque, proportional-font default
+    controls. The filter scopes the grid **and
     re-aggregates the totals strip** to the selection, then the board actions the
     command bar omits: a labelled **`.core-tpill`** **`Σ fleet all-day`**, **`⟳`**
     refresh (bumps the 6s feed poll on demand), a danger **`.core-tpill`**

@@ -64,7 +64,7 @@
 .core .cm-tabs { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .core .cm-tabs::-webkit-scrollbar { display: none; }
 .core .core-bar .cm-tabs a, .core .core-bar .cm-tabs button { font-family: var(--mono); font-size: 11px; text-transform: lowercase; height: 25px; padding: 0 8px; border-radius: 6px; }
-.core .core-bar .cm-tabs a.on, .core .core-bar .cm-tabs button.on { background: var(--basil-wash); color: var(--basil); box-shadow: inset 0 0 0 1px var(--basil); }
+.core .core-bar .cm-tabs a.on, .core .core-bar .cm-tabs button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
 
 .core .cm-sp { flex: 1 1 auto; min-width: 8px; }
 
@@ -85,17 +85,20 @@
   background: transparent; border: 0; color: var(--ink-2);
   font-family: var(--mono); font-size: 12px; }
 .core .core-surf-toolbar .core-iconbtn:not(.core-recall-btn):hover,
-.core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--basil); }
+.core .core-bar .cm-right .core-iconbtn:hover { background: var(--hover); color: var(--ink); }
 .core .core-surf-toolbar .core-iconbtn.on { background: var(--basil-wash); color: var(--basil); }
 .core .core-surf-toolbar .core-iconbtn svg,
 .core .core-bar .cm-right .core-iconbtn svg { width: 16px; height: 16px; }
 .core .core-surf-toolbar .core-chip { font-family: var(--mono); font-size: 11.5px; }
-/* primary surface action — a basil-outlined mono pill (Service "add table" /
-   "new"); lives in the body toolbar now, not the command bar. */
+/* primary surface action — the shared brand-ember mono pill (Service "add
+   table", Slots "new slot" via .core-slot-add, etc.); lives in the body
+   toolbar. One brand treatment for every primary action across Core (was a
+   basil/green outline here — now matches .core-slot-add + .core-btn.primary). */
 .core .cm-primary { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
-  font-family: var(--mono); font-size: 11.5px; text-transform: lowercase; color: var(--basil);
-  border: 1px solid var(--basil); border-radius: 7px; padding: 6px 11px; background: var(--basil-wash); cursor: pointer; }
-.core .cm-primary:hover { background: var(--basil); color: var(--on-basil); }
+  font-family: var(--mono); font-size: 11px; text-transform: lowercase; color: var(--brand-bright);
+  border: 1px solid transparent; box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4);
+  border-radius: var(--pill); padding: 4px 11px; background: var(--brand-wash); cursor: pointer; }
+.core .cm-primary:hover { background: var(--brand); color: var(--on-accent); }
 .core .cm-primary svg { width: 13px; height: 13px; }
 
 /* ⌘K launcher chip */
@@ -132,7 +135,7 @@
   font-weight: 550; font-size: 13.5px; color: var(--ink-2); transition: all var(--fast); }
 .core .core-switch a svg { width: 17px; height: 17px; opacity: .75; }
 .core .core-switch a:hover { color: var(--ink); }
-.core .core-switch a.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); font-weight: 600; }
+.core .core-switch a.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); font-weight: 600; }
 .core .core-switch a.on svg { opacity: 1; color: var(--brand); }
 
 /* ⌘K command palette — the universal jump (portaled palette; the launcher chip
@@ -161,10 +164,17 @@
 .core .core-chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill);
   background: var(--panel-2); border: 1px solid var(--line); font-weight: 550; font-size: 13px; color: var(--ink); }
 .core .core-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--basil); }
-.core .core-iconbtn { width: 34px; height: 34px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line);
-  display: grid; place-items: center; color: var(--ink-2); transition: all var(--fast); }
+/* icon-button (shared · dense-console): a bare 28px mono glyph that fills on
+   hover — the mockup's `.tico`. ONE definition for every surface (was a 34px
+   filled box on non-toolbar surfaces like Orders/CRM); the .core-surf-toolbar /
+   .cm-right / .core-kds variants below only tune spacing, not the look. `.on`
+   lights basil for a toggled-on control (chime, filters). */
+.core .core-iconbtn { display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  width: 28px; min-width: 28px; height: 28px; border-radius: var(--r-sm); background: transparent; border: 0;
+  color: var(--ink-2); font-family: var(--mono); font-size: 12px; transition: all var(--fast); }
 .core .core-iconbtn:hover { color: var(--ink); background: var(--hover); }
-.core .core-iconbtn svg { width: 17px; height: 17px; }
+.core .core-iconbtn.on { color: var(--basil); background: var(--basil-wash); }
+.core .core-iconbtn svg { width: 16px; height: 16px; }
 /* labelled icon-buttons (e.g. KDS "↩ Undo") widen to fit their text + read amber */
 .core .core-recall-btn { width: auto; padding: 0 11px; gap: 5px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--amber-wash); border-color: transparent; color: var(--amber); }
 .core .core-recall-btn:hover { background: var(--amber-wash); color: var(--amber); filter: brightness(1.08); }
@@ -233,13 +243,22 @@
 .core .core-tabs { display: flex; gap: 2px; }
 .core .core-tabs a, .core .core-tabs button { height: 30px; padding: 0 13px; border-radius: 8px; font-weight: 550; font-size: 13px; color: var(--ink-2); transition: all var(--fast); display: inline-flex; align-items: center; }
 .core .core-tabs a:hover, .core .core-tabs button:hover { background: var(--hover); color: var(--ink); }
-.core .core-tabs a.on, .core .core-tabs button.on { background: var(--brand-wash); color: var(--brand-bright); font-weight: 600; }
+.core .core-tabs a.on, .core .core-tabs button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); font-weight: 600; }
 .core .core-sp { flex: 1; }
-.core .core-seg { display: flex; background: var(--panel-3); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; }
-.core .core-seg button { height: 26px; padding: 0 11px; border-radius: 6px; font-size: 12px; font-weight: 550; color: var(--ink-2); }
-.core .core-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); font-weight: 600; }
-/* icon-only segmented (e.g. Loyalty view-switcher) — square cells, centred glyph */
-.core .core-seg.icons button { width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+/* ---------- segmented control (shared · dense-console) ----------
+   ONE canonical `.core-seg` for every Core surface (POS scope tabs, KDS
+   lane/kitchen filters, Slots view toggles, Guest view switchers …): a
+   mono-labelled glass capsule whose active option is a frosted inset-rim
+   pill. 11px regular type, --pill corners, token-driven fills so it turns to
+   glass on the liquid-glass surfaces and stays dark on the KDS wall (which
+   forces its own glass fills — see the KDS block). Sub-variants: .icons
+   (square glyph cells) · .sm/.xs (compact) · .gfilters (guest 34px bar). */
+.core .core-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); }
+.core .core-seg button { height: auto; padding: 4px 10px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-3); background: transparent; white-space: nowrap; }
+.core .core-seg button:hover { color: var(--ink-2); }
+.core .core-seg button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
+/* icon-only segmented (e.g. Loyalty view-switcher) — square glyph cells */
+.core .core-seg.icons button { width: 32px; height: 28px; padding: 0; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
 .core .core-seg.icons button:hover { color: var(--ink-2); }
 .core .core-seg.icons button.on { color: var(--ink); }
 .core .core-seg.icons button svg { width: 16px; height: 16px; }
@@ -474,9 +493,8 @@
 .core .core-miniseg button { flex: 1; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: transparent; border: 0; padding: 4px 4px; border-radius: var(--pill); cursor: pointer; }
 .core .core-miniseg button:hover { color: var(--ink-2); }
 .core .core-miniseg button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4); font-weight: 600; }
-.core .core-seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--panel-3); gap: 2px; }
-.core .core-seg button { height: 26px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; }
-.core .core-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); }
+/* (canonical `.core-seg` lives in the segmented-control section above — the
+   duplicate that used to sit here has been removed so there is one definition) */
 .core .core-covers { display: inline-flex; align-items: center; gap: 4px; background: var(--panel-3); border: 1px solid var(--line); border-radius: var(--pill); padding: 2px; }
 .core .core-covers button { width: 24px; height: 24px; border-radius: 50%; color: var(--ink-2); font-size: 15px; }
 .core .core-covers button:hover { background: var(--hover); color: var(--ink); }
@@ -825,6 +843,44 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    omits (mockup: KDS carries no bar tools). Sits at the top of the board. */
 .core .core-kds-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
+/* ---- KDS toolbar → dense-console (shared metrics, re-glazed) ----
+   The Fleet/Floor/Chef board toolbar (in-shell board + fullscreen kiosk) uses
+   the SHARED dense-console controls (`.core-seg`, `.core-tpill`, `.core-iconbtn`
+   — 11px regular mono, pill capsules, inset-rim active). The only KDS-specific
+   part is the fill: the wall resets --panel-2/--line to opaque dark (the "dark
+   wall" rule), so re-glaze the controls with explicit white/red washes so they
+   read like glass, matching every other surface. Scoped to .core-kds /
+   .core-kiosk-top. */
+
+/* segment — re-glaze the shared capsule's TRACK over the opaque wall tokens;
+   the active option keeps the shared brand-ember fill (translucent, reads fine
+   on the dark wall — no KDS-specific active override). */
+.core .core-kds .core-seg,
+.core .core-kiosk-top .core-seg {
+  background: rgba(255, 255, 255, .05); border-color: rgba(255, 247, 235, .14);
+}
+
+/* labelled pills (Σ all-day, 86) — 11px regular, compact, glass-washed */
+.core .core-kds .core-tpill,
+.core .core-kiosk-top .core-tpill {
+  height: auto; padding: 3px 9px; gap: 6px;
+  font-size: 11px; font-weight: 400;
+  background: rgba(255, 255, 255, .05); border-color: rgba(255, 247, 235, .14);
+}
+/* danger 86 pill — neutral glass fill + red text + red inset ring */
+.core .core-kds .core-tpill.danger,
+.core .core-kiosk-top .core-tpill.danger {
+  background: rgba(255, 255, 255, .05);
+  border-color: rgba(255, 247, 235, .14);
+  color: var(--t-late);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--t-late) 45%, transparent);
+}
+.core .core-kds .core-tpill.danger:hover,
+.core .core-kiosk-top .core-tpill.danger:hover {
+  background: color-mix(in oklab, var(--t-late) 14%, transparent);
+}
+
+/* (tool icons inherit the shared bare-28px `.core-iconbtn` — no KDS override) */
 /* labelled toolbar pills (mockup: "Σ fleet all-day", "86 · 2") — pill vs the
    34px icon squares; `on` washes basil, `danger` washes the late/86 red. */
 .core .core-tpill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -1236,7 +1292,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-segs { display: flex; gap: 4px; flex-wrap: wrap; }
 .core .core-segs button { height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-weight: 550; font-size: 12px; }
 .core .core-segs button:hover { color: var(--ink); }
-.core .core-segs button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); font-weight: 600; }
+.core .core-segs button.on { background: var(--brand-wash); color: var(--brand-bright); border-color: transparent; box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); font-weight: 600; }
 .core .core-crm-table-wrap { flex: 1; overflow-y: auto; }
 
 .core .core-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -1291,7 +1347,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-segchips { display: inline-flex; gap: 3px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); }
 .core .core-segchips button { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: transparent; border: 0; cursor: pointer; padding: 5px 11px; border-radius: var(--pill); display: flex; align-items: center; gap: 6px; }
 .core .core-segchips button:hover { color: var(--ink-2); }
-.core .core-segchips button.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); }
+.core .core-segchips button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
 .core .core-segchips .ct { font-size: 9px; color: var(--ink-3); background: var(--panel-2); border-radius: 99px; padding: 0 5px; }
 .core .core-gems { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .core .core-gemchip { display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: .03em; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 4px 10px 4px 8px; }
@@ -1361,7 +1417,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-dstepper { display: inline-flex; align-items: center; border-radius: var(--pill); overflow: hidden; background: var(--panel-2); border: 1px solid var(--line); }
 .core .core-dstepper button { width: 30px; height: 28px; background: transparent; border: 0; color: var(--ink-2); font-family: var(--mono); font-size: 15px; cursor: pointer; } .core .core-dstepper button:hover { background: var(--panel-3); color: var(--ink); }
 .core .core-dstepper .num { width: 52px; text-align: center; font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
-.core .core-dpoints .apply { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--on-basil); background: var(--basil); border: 0; border-radius: var(--pill); padding: 7px 14px; cursor: pointer; } .core .core-dpoints .apply:disabled { opacity: .5; cursor: default; }
+.core .core-dpoints .apply { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--on-accent); background: var(--brand); border: 0; border-radius: var(--pill); padding: 7px 14px; cursor: pointer; } .core .core-dpoints .apply:hover:not(:disabled) { background: var(--brand-bright); } .core .core-dpoints .apply:disabled { opacity: .5; cursor: default; }
 .core .core-dpoints .bal { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-left: auto; }
 .core .core-dnotes { width: 100%; min-height: 64px; resize: vertical; font-family: var(--ui); font-size: 12px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 10px; line-height: 1.4; }
 .core .core-dsave { width: 100%; margin-top: 9px; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--ink); background: var(--panel-3); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 8px; cursor: pointer; } .core .core-dsave:hover { background: var(--hover); }
@@ -1708,7 +1764,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-od-track .tm { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); }
 .core .core-switch.sm { display: inline-flex; gap: 2px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 2px; }
 .core .core-switch.sm button { appearance: none; border: none; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 13px; border-radius: var(--pill); cursor: pointer; }
-.core .core-switch.sm button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); }
+.core .core-switch.sm button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
 .core .core-orders-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 18px; }
 .core .core-order-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 13px; cursor: pointer; transition: border-color var(--fast), box-shadow var(--fast); }
 .core .core-order-row:hover { border-color: var(--line-2); box-shadow: var(--sh-1); }
