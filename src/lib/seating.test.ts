@@ -127,8 +127,37 @@ test("guest preference boosts the matching zone", () => {
 test("every suggestion is explainable (reasons + breakdown that sums to score)", () => {
   const s = suggestTables(ctx(4, at("18:58"), [table("t11", 4, "window")]))[0];
   assert.ok(s.reasons.length > 0);
-  const sum = s.breakdown.fit + s.breakdown.runway + s.breakdown.guest + s.breakdown.pacing + s.breakdown.yield;
+  const b = s.breakdown;
+  const sum = b.fit + b.runway + b.guest + b.pacing + b.yield + b.section;
   assert.ok(Math.abs(sum - s.score) < 1); // rounding tolerance
+});
+
+test("section balance steers covers toward the lighter server station", () => {
+  // window zone is already loaded with covers; main is empty. Two equal 4-tops,
+  // one per zone → the main (lighter) one should out-score on section.
+  const tables = [table("t2", 4, "window"), table("t6", 4, "main")];
+  const loaded = [resv("t8", "19:00"), resv("t9", "19:00")].map((r) => ({ ...r, tableId: r.tableId, partySize: 6 })) as Reservation[];
+  // put the load on window by giving those reservations window-zone tables
+  const winTables = [...tables, table("t8", 6, "window"), table("t9", 6, "window")];
+  const res = suggestTables(ctx(4, at("18:58"), winTables, loaded, {}));
+  const main = res.find((s) => s.zone === "main")!;
+  const win = res.find((s) => s.tableId === "t2")!;
+  assert.ok(main.breakdown.section > win.breakdown.section, `main ${main.breakdown.section} vs window ${win.breakdown.section}`);
+});
+
+test("suggestions carry confidence, a turn band, and a frees-at time", () => {
+  const s = suggestTables(ctx(2, at("19:00"), [table("t1", 2)]))[0];
+  assert.ok(s.confidence > 0 && s.confidence <= 1);
+  assert.ok(s.turnBandMin >= 6);
+  assert.equal(s.freesAtMin, at("19:00") + s.expectedTurnMin + 10); // + reset buffer
+});
+
+test("confidence rises with learned sample size", () => {
+  const thin = buildTurnModel([{ party: 2, atMin: at("19:00"), minutes: 80 }]);
+  const thick = buildTurnModel(Array.from({ length: 40 }, () => ({ party: 2, atMin: at("19:00"), minutes: 80 })));
+  const cThin = suggestTables(ctx(2, at("19:00"), [table("t1", 2)], [], { turnModel: thin }))[0].confidence;
+  const cThick = suggestTables(ctx(2, at("19:00"), [table("t1", 2)], [], { turnModel: thick }))[0].confidence;
+  assert.ok(cThick > cThin);
 });
 
 test("ok tables sort before excluded ones", () => {

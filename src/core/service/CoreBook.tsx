@@ -687,6 +687,7 @@ export function CoreBook() {
                       ["guest", shownSug.breakdown.guest],
                       ["pacing", shownSug.breakdown.pacing],
                       ["yield", shownSug.breakdown.yield],
+                      ["section", shownSug.breakdown.section],
                     ] as const).map(([k, v]) => (
                       <div key={k} className="sg-bar">
                         <span className="sg-k">{k}</span>
@@ -694,6 +695,13 @@ export function CoreBook() {
                         <span className="sg-v">{Math.round(v)}</span>
                       </div>
                     ))}
+                  </div>
+                  {/* Confidence + the learned turn travel WITH the pick, so the host
+                      knows when to trust the engine and when to use judgement. */}
+                  <div className="sg-facts">
+                    <span className="sg-fact"><span className="fk">confidence</span><span className="fv">{Math.round(shownSug.confidence * 100)}%</span></span>
+                    <span className="sg-fact"><span className="fk">expected turn</span><span className="fv">{shownSug.expectedTurnMin}<small>±{shownSug.turnBandMin}m</small></span></span>
+                    <span className="sg-fact"><span className="fk">frees at</span><span className="fv">{String(Math.floor((shownSug.freesAtMin % 1440) / 60)).padStart(2, "0")}:{String(shownSug.freesAtMin % 60).padStart(2, "0")}</span></span>
                   </div>
                   {shownSug.reasons.length > 0 && (
                     <div className="sg-reasons">{shownSug.reasons.map((r, i) => <span key={i} className="sg-reason">{r}</span>)}</div>
@@ -936,7 +944,7 @@ export function CoreBook() {
                 ))}
               </div>
               <div className="core-bk-flab" style={{ marginTop: 16 }}><span>Weights</span><span className="mut">relative · auto-normalised</span></div>
-              {(["fit", "runway", "guest", "pacing", "yield"] as (keyof SeatingWeights)[]).map((k) => (
+              {(["fit", "runway", "guest", "pacing", "yield", "section"] as (keyof SeatingWeights)[]).map((k) => (
                 <label key={k} className="core-bk-slider">
                   <span className="sl-k">{k}</span>
                   <input type="range" min={0} max={0.5} step={0.02} value={policy.weights[k]} onChange={(e) => setWeight(k, Number(e.target.value))} />

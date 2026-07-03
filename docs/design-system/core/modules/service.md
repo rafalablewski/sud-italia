@@ -139,10 +139,11 @@ availability) then scored (right-size · runway · guest · pacing · yield), so
 reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
 `patio full this window`, `89 pts · exact fit`). Excluded tables dim. Below the
 picker a **signals panel** (`.core-bk-signals`) lays the score open for the
-chosen (or recommended) table: the weighted contribution of each signal as a
-labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield, each colour-coded), the
-0–100 total, the `reasons`, and a **shadow** badge when shadow mode is on — so a
-pick is never a black box. Before a slot is picked it falls back to a plain
+chosen (or recommended) table: the weighted contribution of each of the **six**
+signals as a labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield/**section**,
+each colour-coded), the 0–100 total, a **facts** row (`.sg-facts` — confidence %,
+expected turn ±band, and the predicted **frees-at** time), the `reasons`, and a
+**shadow** badge when shadow mode is on — so a pick is never a black box. Before a slot is picked it falls back to a plain
 capacity check. Then capture the guest and confirm. The engine has these live
 surfaces here: **(1) seat lifecycle** — Today's-bookings rows carry
 **Seat / No-show / Complete** actions (`.bact`) that transition the reservation

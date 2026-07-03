@@ -311,7 +311,13 @@
 .core .core-bk-signals .sg-fill.guest { background: var(--brand); }
 .core .core-bk-signals .sg-fill.pacing { background: var(--amber); }
 .core .core-bk-signals .sg-fill.yield { background: #b58ae0; }
+.core .core-bk-signals .sg-fill.section { background: #4bd4b0; }
 .core .core-bk-signals .sg-v { font-family: var(--mono); font-size: 10px; color: var(--ink-3); text-align: right; }
+.core .core-bk-signals .sg-facts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; border-top: 1px solid var(--line); }
+.core .core-bk-signals .sg-fact { display: flex; flex-direction: column; gap: 1px; flex: 1 1 60px; }
+.core .core-bk-signals .sg-fact .fk { font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.core .core-bk-signals .sg-fact .fv { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.core .core-bk-signals .sg-fact .fv small { font-size: 9px; color: var(--ink-3); margin-left: 1px; }
 .core .core-bk-signals .sg-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
 .core .core-bk-signals .sg-reason { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); background: var(--panel-3); border-radius: 5px; padding: 2px 7px; }
 

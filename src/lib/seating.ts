@@ -102,6 +102,20 @@ export function expectedTurnMin(party: number, atMin: number, model?: TurnModel)
   return Math.round(BASE_TURN[bucket] * DAYPART_FACTOR[daypart]);
 }
 
+/** How much data backs a cell's turn-time. `confidence` ∈ (0,1] grows with the
+ *  sample count (n/(n+K)); `bandMin` is the ± minutes to show — wider when data
+ *  is thin. Cold-start (no learned cell) gives a low-confidence, wide band so a
+ *  host knows to use judgement. */
+const CONF_K = 8;
+export function turnConfidence(party: number, atMin: number, model?: TurnModel): { confidence: number; bandMin: number; n: number } {
+  const learned = model?.cells[`${turnBucket(party)}:${daypartOf(atMin)}`];
+  const n = learned?.n ?? 0;
+  const confidence = n > 0 ? n / (n + CONF_K) : 0.35; // priors give a modest floor
+  const turn = expectedTurnMin(party, atMin, model);
+  const bandMin = Math.max(6, Math.round(turn * (0.2 - 0.12 * confidence)));
+  return { confidence, bandMin, n };
+}
+
 // ─── Policy ──────────────────────────────────────────────────────────────────
 
 export interface SeatingWeights {
@@ -111,7 +125,11 @@ export interface SeatingWeights {
   pacing: number;
   /** Inventory protection — keep big tables for big parties. */
   yield: number;
+  /** Section balance — spread covers evenly across server stations (zones). */
+  section: number;
 }
+
+const WEIGHT_KEYS: (keyof SeatingWeights)[] = ["fit", "runway", "guest", "pacing", "yield", "section"];
 
 export interface SeatingPolicy {
   weights: SeatingWeights;
@@ -153,13 +171,13 @@ const ADVANCED_DEFAULTS = {
 };
 
 function normaliseWeights(w: SeatingWeights): SeatingWeights {
-  const total = w.fit + w.runway + w.guest + w.pacing + w.yield || 1;
-  return { fit: w.fit / total, runway: w.runway / total, guest: w.guest / total, pacing: w.pacing / total, yield: w.yield / total };
+  const total = WEIGHT_KEYS.reduce((s, k) => s + (w[k] || 0), 0) || 1;
+  return { fit: w.fit / total, runway: w.runway / total, guest: w.guest / total, pacing: w.pacing / total, yield: w.yield / total, section: w.section / total };
 }
 
 /** Balanced — the default. Weights auto-normalise, so these are relative. */
 export const BALANCED_POLICY: SeatingPolicy = {
-  weights: normaliseWeights({ fit: 0.28, runway: 0.22, guest: 0.2, pacing: 0.1, yield: 0.14 }),
+  weights: normaliseWeights({ fit: 0.28, runway: 0.22, guest: 0.2, pacing: 0.1, yield: 0.14, section: 0.06 }),
   resetBufferMin: 10,
   paceCapPer15: 4,
   largeTableSeats: 6,
@@ -169,21 +187,21 @@ export const BALANCED_POLICY: SeatingPolicy = {
 /** Pack the room — favour tight fit, yield protection and pacing. */
 export const MAXIMISE_COVERS_POLICY: SeatingPolicy = {
   ...BALANCED_POLICY,
-  weights: normaliseWeights({ fit: 0.34, runway: 0.16, guest: 0.1, pacing: 0.14, yield: 0.26 }),
+  weights: normaliseWeights({ fit: 0.34, runway: 0.14, guest: 0.08, pacing: 0.14, yield: 0.26, section: 0.04 }),
   paceCapPer15: 5,
 };
 
 /** Guest-experience first — favour preference match and comfortable runway. */
 export const GUEST_FIRST_POLICY: SeatingPolicy = {
   ...BALANCED_POLICY,
-  weights: normaliseWeights({ fit: 0.22, runway: 0.26, guest: 0.34, pacing: 0.06, yield: 0.12 }),
+  weights: normaliseWeights({ fit: 0.22, runway: 0.26, guest: 0.34, pacing: 0.05, yield: 0.09, section: 0.04 }),
   paceCapPer15: 3,
 };
 
 /** Slow night — comfort over yield, relax pacing. */
 export const SLOW_NIGHT_POLICY: SeatingPolicy = {
   ...BALANCED_POLICY,
-  weights: normaliseWeights({ fit: 0.24, runway: 0.3, guest: 0.28, pacing: 0.04, yield: 0.14 }),
+  weights: normaliseWeights({ fit: 0.24, runway: 0.3, guest: 0.26, pacing: 0.04, yield: 0.1, section: 0.06 }),
   paceCapPer15: 8,
 };
 
@@ -303,6 +321,7 @@ export interface SuggestionBreakdown {
   guest: number;
   pacing: number;
   yield: number;
+  section: number;
 }
 
 export interface Suggestion {
@@ -322,6 +341,12 @@ export interface Suggestion {
   excludedReason?: string;
   freeWindowMin: number;
   expectedTurnMin: number;
+  /** ± minutes on the expected turn (data-driven; wider when learning is thin). */
+  turnBandMin: number;
+  /** Trust in the turn estimate (0..1) from the learned sample size. */
+  confidence: number;
+  /** When this seat is predicted to free the table (minutes since midnight). */
+  freesAtMin: number;
   /** The single best `ok` table for this party. */
   isRecommended: boolean;
 }
@@ -381,6 +406,27 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
   const vipHold = policy.vipHoldZones.map((z) => z.toLowerCase());
   const inVipHold = (zone?: string): boolean => !!zone && vipHold.includes(zone.toLowerCase());
 
+  // section-balance context — live covers already committed to each zone today,
+  // so the engine can steer new covers toward the lighter server station.
+  const zoneCovers = new Map<string, number>();
+  for (const r of ctx.reservations) {
+    if (r.id === ctx.excludeReservationId) continue;
+    if (r.locationSlug !== ctx.locationSlug || r.date !== ctx.date) continue;
+    if (!HOLDS.includes(r.status)) continue;
+    const z = r.tableId ? zoneById.get(r.tableId) : undefined;
+    if (z == null) continue;
+    zoneCovers.set(z, (zoneCovers.get(z) ?? 0) + (r.partySize || 0));
+  }
+  const maxZoneCovers = Math.max(0, ...zoneCovers.values());
+  const multiZone = new Set(ctx.tables.map((t) => t.zone).filter(Boolean)).size > 1;
+  const sectionBalance = (zone?: string): number =>
+    zone == null || maxZoneCovers === 0 ? 1 : clamp01(1 - (zoneCovers.get(zone) ?? 0) / maxZoneCovers);
+
+  // Turn-estimate trust + the downstream free-at time — same for every table
+  // (they depend on the party & time, not the table).
+  const { confidence, bandMin } = turnConfidence(party, ctx.atMin, ctx.turnModel);
+  const freesAtMin = ctx.atMin + needFree;
+
   const out: Suggestion[] = ctx.tables.map((t) => {
     const zone = t.zone;
     const free = freeWindowMin(t.id, ctx.atMin, ctx.date, ctx.locationSlug, ctx.reservations, ctx.excludeReservationId);
@@ -391,10 +437,13 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
       zone,
       ok: false,
       score: 0,
-      breakdown: { fit: 0, runway: 0, guest: 0, pacing: 0, yield: 0 },
+      breakdown: { fit: 0, runway: 0, guest: 0, pacing: 0, yield: 0, section: 0 },
       reasons: [],
       freeWindowMin: free,
       expectedTurnMin: turn,
+      turnBandMin: bandMin,
+      confidence,
+      freesAtMin,
       isRecommended: false,
     };
 
@@ -446,6 +495,9 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     const smallParty = party <= t.seats - 2;
     const yieldS = isLarge && smallParty ? 0.35 : 1;
 
+    // section balance — reward the lighter server station (even spread of covers)
+    const sectionScore = sectionBalance(zone);
+
     const w = policy.weights;
     const breakdown: SuggestionBreakdown = {
       fit: w.fit * fit * 100,
@@ -453,8 +505,9 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
       guest: w.guest * guest * 100,
       pacing: w.pacing * pacingScore * 100,
       yield: w.yield * yieldS * 100,
+      section: w.section * sectionScore * 100,
     };
-    const score = breakdown.fit + breakdown.runway + breakdown.guest + breakdown.pacing + breakdown.yield;
+    const score = breakdown.fit + breakdown.runway + breakdown.guest + breakdown.pacing + breakdown.yield + breakdown.section;
 
     // human reasons (most salient first)
     if (over === 0) reasons.unshift("exact fit");
@@ -464,6 +517,7 @@ export function suggestTables(ctx: SuggestContext): Suggestion[] {
     if (isLarge && smallParty) reasons.push("large table — held back for big parties");
     if (bucketLoad >= policy.paceCapPer15) reasons.push("busy 15-min window");
     if (capOn && zoneLoad(zone) >= policy.sectionCapPer15 - 1 && zone) reasons.push(`${zone} filling up`);
+    else if (multiZone && zone && sectionScore >= 0.8) reasons.push(`${zone} station light`);
 
     return { ...base, ok: true, score: Math.round(score), breakdown, reasons };
   });
