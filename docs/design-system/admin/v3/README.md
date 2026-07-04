@@ -83,7 +83,11 @@ deviation: **Core sits first as a single launcher** — one `Core` item (icon
 individual POS/KDS/Guest/Service links. `/core` role-routes the operator into
 their Core home (kitchen → KDS, everyone else → Service floor), and the item is
 gated at the lowest role that could reach any Core surface (`kitchen`) so no one
-loses access. v3 still never rebuilds Core — it only links out to it.
+loses access. v3 still never rebuilds Core — it only links out to it. This
+section carries an **empty `label`**, so it renders as a bare top-of-rail row
+with **no section eyebrow** above it — `SidebarV3` only paints the
+`.av3-eyebrow` header for sections whose `label` is non-empty (the standard
+`.av3-group` margin still spaces it from Overview below).
 
 **Access gating mirrors v2's two ANDed gates** (this is the UX layer — the
 server still enforces every `/api/admin/*` call). `SidebarV3` reads

@@ -81,7 +81,9 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
       <nav className="av3-side-scroll" aria-label="Sections">
         {sections.map((section) => (
           <div key={section.id} className="av3-group">
-            <div className="av3-eyebrow">{collapsed ? "·" : section.label}</div>
+            {section.label ? (
+              <div className="av3-eyebrow">{collapsed ? "·" : section.label}</div>
+            ) : null}
             {section.items.map((item) => {
               const Icon = item.icon;
               const active = item.href === activeHref;

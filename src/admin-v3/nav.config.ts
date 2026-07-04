@@ -74,8 +74,10 @@ const P = "/admin";
 
 export const NAV_SECTIONS_V3: NavSectionV3[] = [
   {
+    // Empty label ⇒ SidebarV3 renders no eyebrow, so this single Core launcher
+    // sits as a bare row at the very top of the rail (no "Core" section header).
     id: "core",
-    label: "Core",
+    label: "",
     items: [
       // One consolidated launcher into the whole POS/KDS/Guest/Service suite —
       // `/core` role-routes the operator to their Core home (kitchen → KDS,
