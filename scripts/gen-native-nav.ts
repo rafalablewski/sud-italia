@@ -36,7 +36,7 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { NAV_SECTIONS_V3 } from "@/admin-v3/nav.config";
-import { CORE_SURFACES } from "@/core/routes";
+import { CORE_SURFACES, CORE_BASE } from "@/core/routes";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
@@ -93,17 +93,22 @@ interface Section {
 const errors: string[] = [];
 const overlay = JSON.parse(readFileSync(OVERLAY_PATH, "utf-8")) as Overlay;
 
-// ── Core section — hrefs from CORE_SURFACES; label/role from the web v3 `core`
-//    section where present, else the overlay (only /core/orders needs that). ──
+// ── Core section — hrefs from CORE_SURFACES; label/role from the overlay. ──
+//    The web v3 `core` section is now a single consolidated LAUNCHER (`/core`
+//    = CORE_BASE) rather than the individual surfaces — the web admin collapses
+//    Core to one rail entry, but the native OttavianoKDS app keeps every Core
+//    surface as its own screen. So the launcher is not itself a surface (skip
+//    it), and each native Core surface's label/role comes from the overlay
+//    (the web no longer carries them). Any other web `core` item must still be
+//    a canonical CORE_SURFACE, else we'd silently drop a surface the web shows.
 const CORE_ORDER = ["pos", "kds", "orders", "guest", "service", "book"] as const;
 const webCore = NAV_SECTIONS_V3.find((s) => s.id === "core");
 const webCoreByHref = new Map(
   (webCore?.items ?? []).map((i) => [i.href, i]),
 );
-// Every web Core href must be one of the canonical CORE_SURFACES (else the
-// generator would silently drop a surface the web shows).
 const coreHrefSet = new Set<string>(Object.values(CORE_SURFACES));
 for (const i of webCore?.items ?? []) {
+  if (i.href === CORE_BASE) continue; // the consolidated launcher, not a surface
   if (!coreHrefSet.has(i.href))
     errors.push(`web core item ${i.href} is not in CORE_SURFACES — extend the Core section mapping`);
 }
