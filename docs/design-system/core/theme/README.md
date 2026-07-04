@@ -223,6 +223,16 @@ in the surface ActionBar.
   toolbar's `overflow` clip, not z-index) and anchored under the trigger.
   Dismisses on select · scrim click · Escape · scroll/resize. Book uses it for
   Forecast + Policy (keeping Walk-in + the New-reservation primary inline).
+- **`.core-filt-*` (ActionBar filter popover)** — one funnel `.core-iconbtn`
+  trigger that collapses a surface's several inline filter capsules into a
+  single right-side control (the Guest Inbox header-tool treatment). **Rendered
+  by the shared `CoreFilterMenu` component** (`src/core/shell/CoreFilterMenu.tsx`,
+  `groups: {label, options, value, onChange, base?, clearable?, noBadge?}[]`): the
+  `.core-filt-btn` shows a `.core-filt-badge` count when any filter is active and
+  opens a portaled `.core-filt-pop` of labelled `.core-filt-group`s, each a wrap
+  of selectable `.core-filt-chip`s (with optional `.c` counts or a `.core-gem`
+  dot); a **Reset filters** row appears when anything is set. Same portal/dismiss
+  discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort.
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { CoreFilterMenu } from "@/core/shell/CoreFilterMenu";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -300,46 +301,52 @@ export function CoreCrm() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
-        {/* Unified ActionBar — identity (Guest · CRM) · filters left (search ·
-            segment chips · loyalty-tier gems) · sort + Refresh right. */}
+        {/* Unified ActionBar — context left, search left, then the Segment /
+            Tier / Sort filters collapsed into ONE right-side filter popover
+            (CoreFilterMenu) + Refresh — the same icon-button treatment as the
+            Guest Inbox header tools. */}
         <CoreSurfToolbar
           ariaLabel="Customer-book filters"
           sub={<>customer book · rfm health · consent &amp; points</>}
           left={
-            <>
-              <div className="core-crm-search">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
-              </div>
-              {/* Segment + tier read as labelled `.core-seg` capsules, exactly
-                  like every other surface's view/scope switch. */}
-              <div className="core-seg" role="group" aria-label="Segment">
-                <span className="sglab">Segment</span>
-                {([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([k, label]) => (
-                  <button key={k} type="button" className={seg === k ? "on" : undefined} onClick={() => setSeg(k)} aria-pressed={seg === k}>
-                    {label} <span className="c">{segCounts[k]}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="core-seg" role="group" aria-label="Loyalty tier">
-                <span className="sglab">Tier</span>
-                {([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([k, label]) => (
-                  <button key={k} type="button" className={tierF === k ? "on" : undefined} aria-pressed={tierF === k}
-                    onClick={() => setTierF((t) => (t === k ? null : k))}>
-                    <span className={`core-gem ${k}`} />{label}
-                  </button>
-                ))}
-              </div>
-            </>
+            <div className="core-crm-search">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
+            </div>
           }
           right={
             <>
-              <div className="core-seg" role="group" aria-label="Sort">
-                <span className="sglab">Sort</span>
-                {([["recent", "recent"], ["ltv", "spend"], ["orders", "visits"]] as const).map(([k, label]) => (
-                  <button key={k} type="button" className={sort === k ? "on" : undefined} onClick={() => setSort(k)}>{label}</button>
-                ))}
-              </div>
+              <CoreFilterMenu
+                label="Filter customers"
+                groups={[
+                  {
+                    key: "segment",
+                    label: "Segment",
+                    value: seg,
+                    base: "all",
+                    onChange: (v) => setSeg(v ?? "all"),
+                    options: ([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([value, label]) => ({ value, label, count: segCounts[value] })),
+                  },
+                  {
+                    key: "tier",
+                    label: "Loyalty tier",
+                    value: tierF,
+                    base: null,
+                    clearable: true,
+                    onChange: (v) => setTierF(v),
+                    options: ([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([value, label]) => ({ value, label, dot: `core-gem ${value}` })),
+                  },
+                  {
+                    key: "sort",
+                    label: "Sort by",
+                    value: sort,
+                    base: "recent",
+                    noBadge: true,
+                    onChange: (v) => setSort(v ?? "recent"),
+                    options: ([["recent", "Recent"], ["ltv", "Spend"], ["orders", "Visits"]] as const).map(([value, label]) => ({ value, label })),
+                  },
+                ]}
+              />
               <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
             </>
           }
