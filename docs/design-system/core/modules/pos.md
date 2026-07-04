@@ -20,9 +20,9 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 ## Layout
 
 The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
-+ an uppercase-mono `<location> · dine-in service` sub, left-aligned — the
-`TILL 1 · DINNER SERVICE` context now rides the sub-toolbar's `subLeft` label,
-like the mockup) over the **`.core-statstrip`** — the
++ an uppercase-mono `<location> · dine-in service` sub, left-aligned), then a
+row-4 **`.core-surf-toolbar`** (via `CoreSurfToolbar` — the QR-order queue +
+the fullscreen-kiosk toggle on the right), over the **`.core-statstrip`** — the
 dense-console KPI row. Then the **`.core-pos`** grid inside the shell body:
 **rail · [check-bar over menu] · ticket**.
 
@@ -383,7 +383,8 @@ and the fullscreen kiosk are all wired — feature-for-feature with today's
 
 Live code: `src/core/pos/CoreQrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
 
-A **QR pill** (`.core-qrpill`) in the POS sub-toolbar (`subRight`) surfaces the
+A **QR pill** (`.core-qrpill`) in the POS row-4 `.core-surf-toolbar` (right)
+surfaces the
 dine-in orders guests placed by scanning a table QR (`channel: "qr"`, from
 `/qr`). Like the mockup's `.pill.qr` it's a labelled info-tinted pill — a grid
 glyph + "QR orders" + a live `.core-qrpill-n` count badge — not a bare icon. It

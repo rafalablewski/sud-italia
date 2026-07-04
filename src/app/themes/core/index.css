@@ -1741,8 +1741,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tbl-orders { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .core .core-tpay.info { background: var(--info-wash); color: var(--info); }
 .core .core-tpay.muted { background: var(--panel-3); color: var(--ink-3); }
-/* Orders surface (core) — dense-console filterbar + table (mockup 03-orders) */
-.core .core-filterbar { display: flex; align-items: center; gap: 10px; margin: 0 16px 10px; flex-wrap: wrap; flex: none; }
+/* Orders surface (core) — dense-console table (mockup 03-orders). The order
+   filters (search · channel · date · refresh) render in the shared row-4
+   `.core-surf-toolbar` (via CoreSurfToolbar), so the bespoke `.core-filterbar`
+   wrapper was removed; its child controls keep their own classes below. */
 .core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
 .core .core-searchfield input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-searchfield input::placeholder { color: var(--ink-3); }

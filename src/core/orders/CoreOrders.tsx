@@ -6,6 +6,7 @@ import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -193,6 +194,33 @@ export function CoreOrders() {
           section="Orders"
           sub={<>{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</>}
         />
+        {/* Row 4 — filters left (search · channel chips · date), Refresh right.
+            The Current/Paid/All scope lives in the command bar's view tabs. */}
+        <CoreSurfToolbar
+          ariaLabel="Order filters"
+          left={
+            <>
+              <div className="core-searchfield">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="id · guest · phone · table" aria-label="Search orders" />
+              </div>
+              <div className="core-chanset" role="group" aria-label="Channel filter">
+                {CHANS.map((c) => (
+                  <span key={c} className={channel === c ? `core-chan on${c === "all" ? " brand" : ""}` : "core-chan"} role="button" tabIndex={0}
+                    onClick={() => setChannel(c)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChannel(c); } }}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+              <div className="core-datefield" title="Today">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
+                {`${new Date().toLocaleDateString("en-GB", { weekday: "short" })} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+              </div>
+            </>
+          }
+          right={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
+        />
         {/* dense-console 7-up stat strip — every figure from live order state (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Order metrics">
           <div className="cell">
@@ -230,29 +258,6 @@ export function CoreOrders() {
             <span className="val">{kpi.deliveryPct}<small>%</small></span>
             <span className="delta">{kpi.delivery} order{kpi.delivery === 1 ? "" : "s"}</span>
           </div>
-        </div>
-
-        {/* dense-console filterbar — search · channel chips · date · refresh.
-            The Current/Paid/All scope lives in the command bar's view tabs. */}
-        <div className="core-filterbar">
-          <div className="core-searchfield">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="id · guest · phone · table" aria-label="Search orders" />
-          </div>
-          <div className="core-chanset" role="group" aria-label="Channel filter">
-            {CHANS.map((c) => (
-              <span key={c} className={channel === c ? `core-chan on${c === "all" ? " brand" : ""}` : "core-chan"} role="button" tabIndex={0}
-                onClick={() => setChannel(c)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChannel(c); } }}>
-                {c}
-              </span>
-            ))}
-          </div>
-          <div className="core-datefield" title="Today">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
-            {`${new Date().toLocaleDateString("en-GB", { weekday: "short" })} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
-          </div>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
         </div>
 
         {!loaded ? (

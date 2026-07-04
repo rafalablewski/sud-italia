@@ -10,7 +10,8 @@ history — so staff aren't limited to the POS's open tickets.
 Rendered in the **dense-console** language (1:1 with
 `tests/sketches/core-pages/03-orders.html`): a `.core-crumb` breadcrumb
 (`CORE — ORDERS · liquid glass · [cross-cutting surface]`), a `.core-sectionhead`,
-then a 7-up `.core-statstrip` over a `.core-filterbar` and a `.core-otable`.
+a row-4 `.core-surf-toolbar` (the filters), a 7-up `.core-statstrip`, then a
+`.core-otable`.
 
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.
@@ -22,10 +23,11 @@ then a 7-up `.core-statstrip` over a `.core-filterbar` and a `.core-otable`.
 - **Scope** lives in the **command-bar view tabs** — **Current** (active
   statuses) · **Paid** (has `paidAt`) · **All** — so the prompt reads
   `orders:current` and the chrome matches every other surface.
-- **Filter bar** (`.core-filterbar`): a `.core-searchfield` over id / guest /
-  phone / table, a `.core-chanset` of `.core-chan` chips
-  (all / dine-in / takeaway / delivery / qr — fulfillment types + the QR
-  channel), a `.core-datefield` (today), and a refresh icon.
+- **Toolbar** (row 4, `.core-surf-toolbar` via `CoreSurfToolbar`): on the left a
+  `.core-searchfield` over id / guest / phone / table, a `.core-chanset` of
+  `.core-chan` chips (all / dine-in / takeaway / delivery / qr — fulfillment
+  types + the QR channel) and a `.core-datefield` (today); on the right a refresh
+  icon.
 - **Table** (`.core-otable`): columns **# · Time · Channel · Guest · Table ·
   Items · Total · Status**. The channel cell is a `.core-chanchip` toned by
   type (dinein basil · takeaway amber · delivery/qr info); the status cell is a
