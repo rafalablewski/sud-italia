@@ -4,6 +4,11 @@ import { Suppliers } from "./Suppliers";
 import { PurchaseOrders } from "./PurchaseOrders";
 import { Cash } from "./Cash";
 import { Customers } from "./Customers";
+import { Staff } from "./Staff";
+import { Schedule } from "./Schedule";
+import { Recipes } from "./Recipes";
+import { Menu } from "./Menu";
+import { Campaigns } from "./Campaigns";
 
 /**
  * Bespoke operator surfaces — screens hand-built to mirror their web counterpart
@@ -19,4 +24,9 @@ export const BESPOKE_SURFACES: Record<string, ComponentType> = {
   "/admin/purchase-orders": PurchaseOrders,
   "/admin/cash": Cash,
   "/admin/customers": Customers,
+  "/admin/staff": Staff,
+  "/admin/schedule": Schedule,
+  "/admin/recipes": Recipes,
+  "/admin/menu": Menu,
+  "/admin/growth": Campaigns,
 };

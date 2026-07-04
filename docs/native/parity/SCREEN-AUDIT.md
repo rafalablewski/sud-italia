@@ -568,5 +568,35 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
   ≥ 800 zł · points ≥ 500), tier filter chips (live counts) and search over name /
   phone. Every figure off the existing `GET /api/v1/admin/customers` (chain-wide
   rollups derived from real orders, highest-spend-first — Rule #1).
-- ⏭️ **Next candidates** (generic → bespoke): Staff, Schedule, Recipes, Menu,
-  Campaigns — each already live via `DataSurface`, upgraded wave by wave.
+- ✅ **Staff** (`/admin/staff`) — bespoke `Staff.tsx` mirroring web `StaffV3`: KPI
+  rail (**staff · active · inactive · avg rate**), the web role badge (manager
+  brand · kitchen warm · front info) and the active/inactive filter, search over
+  name / role / email. Off the existing role-scoped `GET /api/v1/admin/staff`. The
+  web "on shift now" KPI needs clock punches the facade doesn't expose — omitted,
+  not faked (Rule #1).
+- ✅ **Schedule** (`/admin/schedule`) — bespoke `Schedule.tsx` mirroring web
+  `ScheduleV3`: the **scheduled/in-progress/done/missed** taxonomy with the web
+  tones + a filter bar, shifts **grouped by day** (list view), KPI rail (**shifts ·
+  hours · on-rota**). Off the existing `GET /api/v1/admin/schedule` (staff name
+  resolved server-side). Labour-cost KPI omitted — the schedule facade carries no
+  hourly rate (no fabrication). Status advance stays a later write wave.
+- ✅ **Recipes** (`/admin/recipes`) — bespoke `Recipes.tsx` mirroring web
+  `RecipesV3`, **chain-wide** (Rule #10 — one recipe per dish, no location switch):
+  KPI rail (**dishes · with-recipe · no-recipe · avg items**), a with/without-recipe
+  filter, per-row ingredient-count badge + yield + prep + a truncated ingredient
+  preview. Off the existing `GET /api/v1/admin/recipes`. Food-cost KPIs omitted —
+  the recipe facade carries no per-unit cost (no fabrication).
+- ✅ **Menu** (`/admin/menu`) — bespoke `Menu.tsx` mirroring web `MenuV3`,
+  **per-location** (Rule #10 — price/availability vary per site) with a location
+  switcher scoping `GET /api/v1/admin/menu?location=`: KPI rail (**items ·
+  available · off · avg margin**), a category filter with live counts, the web
+  margin tone (≥65% ok, ≥50% warn, else thin) as a per-row GP badge, off/limited
+  tags. 86 / un-86 (the facade's `PATCH`, already in the KDS 86 sheet) stays a
+  later write wave.
+- ✅ **Campaigns** (`/admin/growth`) — bespoke `Campaigns.tsx` mirroring the web
+  WhatsApp broadcast list (the operator surface wired to `/api/v1/admin/campaigns`):
+  KPI rail (**campaigns · sent · failed · delivery rate**), the
+  sending/done/cancelled filter, per-row send-progress bar (sent / failed / pending
+  of target) + outcome counts. Every figure real off the existing endpoint (Rule #1).
+- ⏭️ **Next candidates** (generic → bespoke): Alerts, Tasks, Feedback, Events,
+  Compliance, Audit log — each already live via `DataSurface`, upgraded wave by wave.
