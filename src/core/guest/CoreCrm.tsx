@@ -5,6 +5,7 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -121,7 +122,9 @@ function initials(name: string): string {
 export function CoreCrm() {
   const toast = useCoreToast();
   const { location } = useLocation();
-  const [data, setData] = useState<CrmCustomer[]>([]);
+  // Cached by location so returning to CRM re-renders the last book instantly;
+  // the loading placeholder now only shows when there's genuinely nothing yet.
+  const [data, setData] = useCoreCache<CrmCustomer[]>(`core:crm:${location}`, []);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [seg, setSeg] = useState("all");
@@ -379,7 +382,7 @@ export function CoreCrm() {
 
         <div className={`core-crm-grid${cust ? "" : " solo"}`}>
           <div className="core-roster">
-          {loading ? (
+          {loading && data.length === 0 ? (
             <div className="core-kds-empty pad">Loading customer book…</div>
           ) : visible.length === 0 ? (
             <div className="core-kds-empty pad">No customers match.</div>

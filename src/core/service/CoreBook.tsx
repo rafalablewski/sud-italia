@@ -6,6 +6,7 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -77,11 +78,13 @@ export function CoreBook({
     setDate(todayLocal());
   }, []);
 
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached by location so returning to Book re-renders the last day's plan
+  // instantly (no loading flash); the mount/poll fetch revalidates for the date.
+  const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:book-slots:${loc}`, []);
+  const [tables, setTables] = useCoreCache<FloorTable[]>(`core:book-tables:${loc}`, []);
+  const [reservations, setReservations] = useCoreCache<Reservation[]>(`core:book-res:${loc}`, []);
+  const [waitlist, setWaitlist] = useCoreCache<WaitlistEntry[]>(`core:book-wait:${loc}`, []);
+  const [loading, setLoading] = useState(() => peekCoreCache<Reservation[]>(`core:book-res:${loc}`) === undefined);
   const [waitName, setWaitName] = useState("");
   const [waitPartyN, setWaitPartyN] = useState(2);
 

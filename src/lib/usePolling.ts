@@ -78,12 +78,25 @@ export function usePolling(
       }
     };
 
+    // Window focus complements visibilitychange: switching browser TABS fires
+    // visibilitychange, but returning from another app/window (the tab stayed
+    // "visible") only fires focus — so an operator coming back to the till/board
+    // gets an immediate refresh either way, keeping the surface always current.
+    const onFocus = () => {
+      if (document.visibilityState === "visible") {
+        clear();
+        void run();
+      }
+    };
+
     if (document.visibilityState === "visible") schedule();
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
       clear();
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
     };
   }, [ms, enabled]);
 }

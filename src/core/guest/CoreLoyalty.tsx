@@ -6,6 +6,7 @@ import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -91,10 +92,12 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
     return { name: r.name, have: Math.min(points, r.pointsCost), need: r.pointsCost };
   };
   const [tab, setTab] = useState<Tab>("members");
-  const [members, setMembers] = useState<MemberRow[]>([]);
-  const [wallets, setWallets] = useState<WalletSummary[]>([]);
-  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-  const [winback, setWinback] = useState<WinBack[] | null>(null);
+  // Chain-wide loyalty data, cached so returning to Loyalty re-renders the last
+  // roster/wallets/redemptions instantly; the mount/poll fetch revalidates.
+  const [members, setMembers] = useCoreCache<MemberRow[]>("core:loyalty:members", []);
+  const [wallets, setWallets] = useCoreCache<WalletSummary[]>("core:loyalty:wallets", []);
+  const [redemptions, setRedemptions] = useCoreCache<Redemption[]>("core:loyalty:redemptions", []);
+  const [winback, setWinback] = useCoreCache<WinBack[] | null>("core:loyalty:winback", null);
   const [busy, setBusy] = useState(false);
   // Member smart-filter chip: "all" | "goldplus" | "risk" | "loc:<slug>"
   const [mfilter, setMfilter] = useState("all");

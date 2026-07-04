@@ -7,6 +7,7 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -66,15 +67,17 @@ export function CoreOrders() {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [tableById, setTableById] = useState<Record<string, string>>({});
+  // Cached by location so returning to Orders re-renders the last list instantly
+  // (no "Loading orders…" flash); the mount/poll fetch revalidates it.
+  const [orders, setOrders] = useCoreCache<Order[]>(`core:orders:${loc}`, []);
+  const [tableById, setTableById] = useCoreCache<Record<string, string>>(`core:orders-tables:${loc}`, {});
   const [scope, setScope] = useState<Scope>("current");
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Order | null>(null);
   const [settling, setSettling] = useState<string | null>(null);
   const [printing, setPrinting] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => peekCoreCache<Order[]>(`core:orders:${loc}`) !== undefined);
 
   const load = useCallback(async () => {
     try {

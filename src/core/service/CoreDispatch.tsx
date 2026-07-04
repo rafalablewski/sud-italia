@@ -6,6 +6,7 @@ import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
+import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { serviceTabs } from "./serviceTabs";
@@ -62,9 +63,11 @@ const ClockIcon = () => (
 export function CoreDispatch() {
   const { location } = useLocation();
   const toast = useCoreToast();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached by location so returning to Dispatch re-renders the last board
+  // instantly (no loading flash); the mount/poll fetch revalidates.
+  const [orders, setOrders] = useCoreCache<Order[]>(`core:dispatch-orders:${location}`, []);
+  const [drivers, setDrivers] = useCoreCache<Driver[]>(`core:dispatch-drivers:${location}`, []);
+  const [loading, setLoading] = useState(() => peekCoreCache<Driver[]>(`core:dispatch-drivers:${location}`) === undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [clock, setClock] = useState("");

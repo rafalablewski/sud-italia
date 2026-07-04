@@ -6,6 +6,7 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -533,8 +534,9 @@ export function CoreKds() {
     return STATION_FILTERS.filter((s) => s.id === "all" || present.has(s.id as MenuCategory));
   }, [allTickets]);
 
-  // ----- Fleet -----
-  const [fleet, setFleet] = useState<FleetWire | null>(null);
+  // ----- Fleet ----- (chain-wide; cached so the Fleet view re-renders the last
+  // wall instantly on return, then revalidates)
+  const [fleet, setFleet] = useCoreCache<FleetWire | null>("core:kds-fleet", null);
   useEffect(() => {
     if (view !== "fleet") return;
     let cancelled = false;
@@ -579,7 +581,7 @@ export function CoreKds() {
 
   // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
   type StationLoad = { id: MenuCategory; util: number; tier: "calm" | "warn" | "risk"; demand: number };
-  const [ops, setOps] = useState<{ throughputLastHour: number; coversLastHour: number; revenueLastHourGrosze: number; onShift: number; stations: StationLoad[] } | null>(null);
+  const [ops, setOps] = useCoreCache<{ throughputLastHour: number; coversLastHour: number; revenueLastHourGrosze: number; onShift: number; stations: StationLoad[] } | null>(`core:kds-ops:${location}`, null);
   useEffect(() => {
     if (view === "fleet") return;
     let cancelled = false;

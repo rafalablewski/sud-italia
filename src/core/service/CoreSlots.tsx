@@ -5,6 +5,7 @@ import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -100,8 +101,10 @@ export function CoreSlots() {
   // fulfillmentTypes (Rule #1), cycles all → dine-in → takeaway → delivery.
   const [chan, setChan] = useState<FulfillmentType | "all">("all");
   const [surgeDismissed, setSurgeDismissed] = useState(false);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [board, setBoard] = useState<DemandBoard | null>(null);
+  // Cached by location so returning to Slots re-renders the last windows/board
+  // instantly (no empty flash); the mount/poll fetch revalidates.
+  const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:slots:${loc}`, []);
+  const [board, setBoard] = useCoreCache<DemandBoard | null>(`core:slots-board:${loc}`, null);
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [cMode, setCMode] = useState<"bulk" | "single">("bulk");

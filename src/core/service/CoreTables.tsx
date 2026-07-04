@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
@@ -45,7 +46,9 @@ const FEATURE_GLYPH: Record<TableFeature, string> = {
 export function CoreTables() {
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
-  const [tables, setTables] = useState<FloorTable[] | null>(null);
+  // Cached by location so switching pages/tabs re-renders the last floor plan
+  // instantly (no loading flash); the poll/mount fetch revalidates it.
+  const [tables, setTables] = useCoreCache<FloorTable[] | null>(`core:tables:${loc}`, null);
   const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<FloorTable | "new" | null>(null);
   // A load error is surfaced (with a Retry) rather than swallowed — otherwise a
@@ -66,7 +69,7 @@ export function CoreTables() {
     } catch {
       setError("Couldn't reach the server. Check your connection.");
     }
-  }, [loc]);
+  }, [loc, setTables]);
   useEffect(() => { void load(); }, [load]);
   // A gentle poll so a table added on another till appears here — the plan
   // changes rarely, so 20s is plenty (this is config, not the live floor).
@@ -86,7 +89,7 @@ export function CoreTables() {
       }
       return prev;
     });
-  }, []);
+  }, [setTables]);
 
   const zones = useMemo(() => {
     const m = new Map<string, FloorTable[]>();
