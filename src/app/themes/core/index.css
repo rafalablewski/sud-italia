@@ -2031,9 +2031,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* POS bottom-drawer affordances are desktop-hidden by default */
 .core .core-ticket-fab, .core .core-ticket-backdrop { display: none; }
 
-/* Reserved height of the bottom surface-switcher row — the POS ticket
-   drawer + its FAB are fixed-positioned and must sit ABOVE it. */
-.core { --core-navh: calc(62px + env(safe-area-inset-bottom, 0px)); }
+/* Safe-area bottom inset — the fixed POS ticket drawer + its FAB clear the
+   notch/home-indicator on a phone. (There is no bottom nav row; navigation is
+   the fixed command bar + Lens Rail.) */
+.core { --core-safeb: env(safe-area-inset-bottom, 0px); }
 
 @media (max-width: 1100px) {
   .core .core-pos { grid-template-columns: 56px 1fr 316px; }
@@ -2061,7 +2062,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
   /* POS → single column: the menu fills, categories become a horizontal
      strip, and the ticket slides up from the bottom as a drawer (toggled by
-     the .core-ticket-fab bar), sitting ABOVE the bottom nav. */
+     the .core-ticket-fab bar), clearing the safe-area inset. */
   .core .core-pos { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; grid-template-areas: none; }
   /* clear the desktop grid-area names so the cards flow in one column
      (check-bar · rail strip · menu; the ticket is a fixed drawer) */
@@ -2073,13 +2074,13 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   .core .core-cat { flex: 0 0 auto; height: 34px; white-space: nowrap; }
   .core .core-menu { padding: 14px 14px 80px; }
 
-  .core .core-ticket { position: fixed; left: 0; right: 0; bottom: var(--core-navh); top: auto; z-index: 50;
+  .core .core-ticket { position: fixed; left: 0; right: 0; bottom: var(--core-safeb); top: auto; z-index: 50;
     max-height: 80vh; border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0;
-    box-shadow: 0 -14px 36px rgba(0,0,0,.45); transform: translateY(calc(100% + var(--core-navh))); transition: transform .25s ease; }
+    box-shadow: 0 -14px 36px rgba(0,0,0,.45); transform: translateY(calc(100% + var(--core-safeb))); transition: transform .25s ease; }
   .core .core-ticket.is-open { transform: translateY(0); }
   .core .core-ticket-backdrop { display: block; position: fixed; inset: 0; z-index: 49; background: rgba(8,7,10,.5); border: 0; }
   .core .core-ticket-fab { display: flex; align-items: center; gap: 10px; position: fixed; left: 12px; right: 12px; z-index: 48;
-    bottom: calc(var(--core-navh) + 10px); height: 52px; padding: 0 16px; border: none; border-radius: 14px; background: var(--brand); color: var(--on-accent); font-weight: 600; font-size: 15px;
+    bottom: calc(var(--core-safeb) + 10px); height: 52px; padding: 0 16px; border: none; border-radius: 14px; background: var(--brand); color: var(--on-accent); font-weight: 600; font-size: 15px;
     box-shadow: 0 8px 24px rgba(0,0,0,.4); cursor: pointer; }
   .core .core-ticket-fab.is-open { display: none; }
   .core .core-ticket-fab-c { background: rgba(255,255,255,.25); border-radius: 8px; padding: 2px 9px; font-variant-numeric: tabular-nums; }
