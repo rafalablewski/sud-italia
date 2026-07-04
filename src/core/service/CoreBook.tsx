@@ -31,15 +31,11 @@ import {
 import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
+import { tLabel } from "./tableLabel";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
 
-/** Floor's shared table-label convention: prefix a bare number with "T"
- *  (matches CoreTables' `T${n}`), leave already-named tables ("Bar 3") alone. */
-function tLabel(n: string): string {
-  return /^\d+$/.test(n) ? `T${n}` : n;
-}
 /** Timeline rows + table-pick list read T1…T12 in order (mockup), so sort by
  *  numeric table number where possible, falling back to lexical. */
 function byTableNumber(a: FloorTable, b: FloorTable): number {

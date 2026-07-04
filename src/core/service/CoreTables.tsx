@@ -9,6 +9,7 @@ import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { TABLE_FEATURES, type FloorTable, type TableStatus, type TableFeature } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
+import { tLabel } from "./tableLabel";
 
 /**
  * Core · Service · Tables — the **table plan**, not the live room. This surface
@@ -44,15 +45,23 @@ export function CoreTables() {
   const [tables, setTables] = useState<FloorTable[] | null>(null);
   const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<FloorTable | "new" | null>(null);
+  // A load error is surfaced (with a Retry) rather than swallowed — otherwise a
+  // 403 (location scope) / network drop leaves the surface stuck on the loading
+  // placeholder forever, indistinguishable from a slow fetch.
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setError(res.status === 403 ? "You don't have access to this location's tables." : "Couldn't load tables.");
+        return;
+      }
       const d = await res.json();
+      setError(null);
       setTables(Array.isArray(d) ? d : (d.tables ?? []));
     } catch {
-      /* non-fatal */
+      setError("Couldn't reach the server. Check your connection.");
     }
   }, [loc]);
   useEffect(() => { void load(); }, [load]);
@@ -84,6 +93,14 @@ export function CoreTables() {
     }
     return [...m.entries()];
   }, [tables]);
+
+  // If the filtered zone stops existing (its last table was re-zoned or
+  // deleted), drop the filter — otherwise the zone-tab bar hides at ≤1 zone,
+  // the stale filter matches nothing, and the floor strands empty with no
+  // in-page way to reset.
+  useEffect(() => {
+    if (zoneFilter && tables && !zones.some(([z]) => z === zoneFilter)) setZoneFilter(null);
+  }, [zoneFilter, zones, tables]);
 
   // Every figure is derived live from the table catalogue (Rule #1): how many
   // tables, total seats, distinct zones, and how many are available / out of
@@ -182,12 +199,19 @@ export function CoreTables() {
         </div>
 
         <div className="core-floor">
-          {!tables ? (
+          {!tables && error ? (
+            <div className="core-ctx-empty pad">
+              {error}{" "}
+              <button type="button" className="core-btn ghost sm" onClick={() => void load()}>Retry</button>
+            </div>
+          ) : !tables ? (
             <div className="core-ctx-empty pad">Loading tables…</div>
           ) : zones.length === 0 ? (
             <div className="core-ctx-empty pad">No tables yet — add one to start building the floor plan.</div>
           ) : (
-            (zoneFilter ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => {
+            // Defensive: if the active filter's zone has vanished, show all
+            // zones rather than an empty list (the effect above also clears it).
+            (zoneFilter && zones.some(([z]) => z === zoneFilter) ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => {
               const zSeats = tbls.reduce((a, t) => a + t.seats, 0);
               return (
                 <div key={zone}>
@@ -198,7 +222,6 @@ export function CoreTables() {
                   <div className="core-tables">
                     {tbls.map((t) => {
                       const st = statusOf(t.status);
-                      const numLabel = /^\d+$/.test(t.number) ? `T${t.number}` : t.number;
                       const feats = t.features ?? [];
                       return (
                         <div key={t.id} className="core-tbl2-wrap">
@@ -211,7 +234,7 @@ export function CoreTables() {
                             title={`Table ${t.number} — edit`}
                           >
                             <span className="thead">
-                              <span className="tnum">{numLabel}</span>
+                              <span className="tnum">{tLabel(t.number)}</span>
                               <span className="tstat"><span className="dot" /><span className="tst">{st.label}</span></span>
                             </span>
                             <span className="tcap">{t.seats} seat{t.seats === 1 ? "" : "s"}</span>
@@ -243,7 +266,6 @@ export function CoreTables() {
       <TableDialog
         loc={loc}
         table={editing}
-        featureLabel={FEATURE_LABEL}
         onClose={() => setEditing(null)}
         onSaved={(change) => {
           setEditing(null);
@@ -258,13 +280,11 @@ export function CoreTables() {
 function TableDialog({
   loc,
   table,
-  featureLabel,
   onClose,
   onSaved,
 }: {
   loc: string;
   table: FloorTable | "new" | null;
-  featureLabel: Record<TableFeature, string>;
   onClose: () => void;
   onSaved: (change: { table?: FloorTable; deletedId?: string }) => void;
 }) {
@@ -275,6 +295,10 @@ function TableDialog({
   const [seats, setSeats] = useState("4");
   const [zone, setZone] = useState("");
   const [status, setStatus] = useState<TableStatus>("available");
+  // Did the manager deliberately change the status field this session? A `save`
+  // that doesn't touch status must NOT write the value captured at open — see
+  // the note in `save()`.
+  const [statusDirty, setStatusDirty] = useState(false);
   const [notes, setNotes] = useState("");
   const [features, setFeatures] = useState<TableFeature[]>([]);
   const [busy, setBusy] = useState(false);
@@ -287,6 +311,7 @@ function TableDialog({
       setSeats(String(row?.seats ?? 4));
       setZone(row?.zone ?? "");
       setStatus(row?.status ?? "available");
+      setStatusDirty(false);
       setNotes(rowNotes);
       setFeatures(rowFeatures ? (rowFeatures.split(",") as TableFeature[]) : []);
       setBusy(false);
@@ -304,6 +329,25 @@ function TableDialog({
     if (!number.trim() || busy) return;
     setBusy(true);
     try {
+      // `saveTable` overwrites the WHOLE row, so a config-only edit (seats,
+      // zone, notes…) would blindly re-write whatever status the form captured
+      // at open — and this surface polls only every 20s. If the party was
+      // seated/freed elsewhere in that window, writing the stale status would
+      // re-seat an empty table (or free a live one) and log a bogus floor
+      // transition. So when the manager didn't touch status, re-read the
+      // table's CURRENT status right before writing; only send the form's value
+      // when they explicitly changed it.
+      let statusToWrite: TableStatus = status;
+      if (!isNew && row && !statusDirty) {
+        try {
+          const cur = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
+          if (cur.ok) {
+            const list = (await cur.json()) as FloorTable[];
+            const fresh = (Array.isArray(list) ? list : []).find((t) => t.id === row.id);
+            if (fresh) statusToWrite = fresh.status;
+          }
+        } catch { /* fall back to the loaded status */ }
+      }
       const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -312,7 +356,7 @@ function TableDialog({
           number: number.trim(),
           seats: Math.max(1, Math.min(50, Math.round(Number(seats) || 1))),
           zone: zone.trim() || undefined,
-          status,
+          status: statusToWrite,
           notes: notes.trim() || undefined,
           features,
         }),
@@ -337,7 +381,12 @@ function TableDialog({
         `/api/admin/floor/tables?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(row.id)}`,
         { method: "DELETE" },
       );
-      if (res.ok) {
+      // The route returns HTTP 200 with `{ ok:false }` when the id no longer
+      // exists (already deleted, or wrong location) — so check the body, not
+      // just the HTTP status, to avoid a false "deleted" toast + phantom
+      // optimistic removal that the next poll snaps back.
+      const body = await res.json().catch(() => ({ ok: res.ok }));
+      if (res.ok && body?.ok !== false) {
         toast("Table deleted", "success");
         onSaved({ deletedId: row.id });
       } else toast("Could not delete", "danger");
@@ -381,7 +430,7 @@ function TableDialog({
       </label>
       <label className="core-tbl-field">
         <span>Status</span>
-        <select className="core-inp" value={status} onChange={(e) => setStatus(e.target.value as TableStatus)}>
+        <select className="core-inp" value={status} onChange={(e) => { setStatus(e.target.value as TableStatus); setStatusDirty(true); }}>
           {statusOptions.map((st) => (
             <option key={st} value={st}>{st}</option>
           ))}
@@ -398,7 +447,7 @@ function TableDialog({
               onClick={() => toggleFeature(f)}
               aria-pressed={features.includes(f)}
             >
-              {featureLabel[f]}
+              {FEATURE_LABEL[f]}
             </button>
           ))}
         </div>

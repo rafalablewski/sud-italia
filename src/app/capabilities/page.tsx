@@ -1304,11 +1304,11 @@ export default async function CapabilitiesPage() {
             "Tender is a record-only step — Cash / Card stamps the Order paidAt; Stripe-terminal / cash-drawer integration is a later pass. Tabs default to 'Tab N' names (rename inline in the ticket header). Item modifiers (crust, extra toppings) aren't selectable from the POS yet — base items only. AI offers + steering are the existing heuristic / Theory-of-Constraints engines, not yet a trained model. Coursing fires into ONE growing Order per tab (held courses are added to the same KDS ticket as they fire, not a fresh ticket per course), so a course bumped 'ready' on the KDS can gain later-fired items — separate ticket-per-course is a future pass. The fire stamps Order.coursing {fired,held}; the KDS ticket shows a 'Coursed · X held' hint while courses are still held, but does not yet add a per-course header chip or group items by course name.",
         },
         {
-          name: "Floor — tables + reservations",
+          name: "Tables + reservations — the per-location floor data",
           status: "live",
-          href: "/core/service/tables",
+          href: "/core/service/book",
           summary:
-            "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
+            "Per-location floor data, split across two Core surfaces: Tables (/core/service/tables) defines the physical tables (number, seats, zone, status, accessibility features) via /api/admin/floor/tables, and Book (/core/service/book) owns the day-by-day reservations (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
           caveats:
             "Tables + reservations persist via the JSON store (readJSON/writeJSON) like slots/suppliers — no dedicated Postgres table yet, fine at truck volumes. Reservations are independent of the time-Slots system (they don't reserve a checkout slot). No spatial floor-map / drag layout — tables are a list/grid.",
         },
