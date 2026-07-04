@@ -66,9 +66,10 @@ global cluster. Per surface: **POS** = QR + fullscreen · **KDS** = *nothing*
 (Floor "Add table", Slots "New") · **Guest** = the 3 inbox tools + WhatsApp-live.
 Anything heavier — KDS's lane filter + board actions, POS's channel/held flags,
 Slots' view filters + date, Book's date — lives **on the surface**, not the
-chrome (see `.core-kds-toolbar` / `.core-surf-toolbar` below). When you add a
-control, ask "does the mockup put this in the bar?" — if not, it goes in a
-surface toolbar.
+chrome: the view/scope switch in the `.core-sectionhead` right, the working
+controls in the row-4 `.core-surf-toolbar` (see below). When you add a
+control, ask "does the mockup put this in the bar?" — if not, it goes in the
+surface toolbar / section head.
 
 - **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
   `--panel` row with a `--line` bottom hairline.
@@ -173,9 +174,10 @@ surface toolbar.
   row. `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the
   surface, not the global chrome — this replaces the old split where controls
   lived in the shell `subLeft`/`subRight` (above the crumb) or bespoke bars.
-- **`.core-kds-toolbar`** — the KDS board's own toolbar (lane filter left,
-  board actions + fullscreen right, split by `.core-kds-tb-sp`) — because the
-  KDS command bar carries no tools.
+- **KDS board controls** — on the unified header the KDS lane/scope/mode switch
+  rides the `.core-sectionhead` right and the board actions ride the row-4
+  `.core-surf-toolbar` (like every other surface). Only the **fullscreen kiosk**
+  top strip still lays them out inline, split by `.core-kds-tb-sp`.
 
 ### Global-action primitives
 

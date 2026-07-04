@@ -5,6 +5,7 @@ import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -761,7 +762,8 @@ export function CoreKds() {
   // in-shell, and inline in the fullscreen kiosk top strip.
   const laneFilter =
     view === "fleet" ? null : (
-      <div className="core-seg">
+      <div className="core-seg" role="tablist" aria-label="Status">
+        <span className="sglab">Status</span>
         <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
           All <b>{counts.all}</b>
         </button>
@@ -812,20 +814,25 @@ export function CoreKds() {
   const fleetEightySix = (fleet?.tiles ?? [])
     .filter((t) => fleetLoc === "all" || t.slug === fleetLoc)
     .reduce((s, t) => s + t.eightySix, 0);
-  const fleetControls =
+  // Fleet SCOPE switch (the view/scope toggle → section-head right in-shell)…
+  const fleetScopeSeg =
+    view !== "fleet" ? null : (
+      <div className="core-seg" role="tablist" aria-label="Scope">
+        <span className="sglab">Scope</span>
+        <button className={fleetLoc === "all" ? "on" : ""} onClick={() => setFleetLoc("all")}>
+          All kitchens
+        </button>
+        {(fleet?.tiles ?? []).map((t) => (
+          <button key={t.slug} className={fleetLoc === t.slug ? "on" : ""} onClick={() => setFleetLoc(t.slug)}>
+            {t.city}
+          </button>
+        ))}
+      </div>
+    );
+  // …and the fleet board actions (→ row-4 toolbar in-shell).
+  const fleetActions =
     view !== "fleet" ? null : (
       <>
-        <div className="core-seg">
-          <button className={fleetLoc === "all" ? "on" : ""} onClick={() => setFleetLoc("all")}>
-            All kitchens
-          </button>
-          {(fleet?.tiles ?? []).map((t) => (
-            <button key={t.slug} className={fleetLoc === t.slug ? "on" : ""} onClick={() => setFleetLoc(t.slug)}>
-              {t.city}
-            </button>
-          ))}
-        </div>
-        <div className="core-kds-tb-sp" />
         <button
           type="button"
           className={showAllDay ? "core-tpill on" : "core-tpill"}
@@ -843,6 +850,16 @@ export function CoreKds() {
         <button type="button" className={soundOn ? "core-iconbtn on" : "core-iconbtn"} title={soundOn ? "Mute" : "Chime on new ticket"} aria-label={soundOn ? "Mute chime" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
           <SoundIcon muted={!soundOn} />
         </button>
+      </>
+    );
+  // Kiosk top strip keeps scope + actions inline (fullscreen mode, not the
+  // unified header), so compose them back for `controls`.
+  const fleetControls =
+    view !== "fleet" ? null : (
+      <>
+        {fleetScopeSeg}
+        <div className="core-kds-tb-sp" />
+        {fleetActions}
       </>
     );
 
@@ -917,12 +934,17 @@ export function CoreKds() {
     <div className={`core-kds${view !== "fleet" && pressureTier === "risk" ? " dense" : ""}`}>
         {view === "fleet" ? (
           <>
-            <div className="core-kds-toolbar">
-              {fleetControls}
-              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
-            </div>
             <CoreCrumb section="KDS" page="FLEET" mode="all kitchens · one pass" />
-            <CoreSectionHead section="KDS" page="Fleet" sub={<>kraków + warszawa · live pass health</>} />
+            <CoreSectionHead section="KDS" page="Fleet" sub={<>kraków + warszawa · live pass health</>} actions={fleetScopeSeg} />
+            <CoreSurfToolbar
+              ariaLabel="Fleet controls"
+              right={
+                <>
+                  {fleetActions}
+                  <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+                </>
+              }
+            />
             {showAllDay && (
               <div className="core-allday" role="list" aria-label="Fleet all-day batch counts">
                 <span className="core-allday-lbl">All-day</span>
@@ -956,16 +978,19 @@ export function CoreKds() {
           />
         ) : (
           <>
-            {/* Board toolbar first (mockup: command row on top, divider under it),
-                then the breadcrumb + section title. */}
-            <div className="core-kds-toolbar">
-              {laneFilter}
-              <div className="core-kds-tb-sp" />
-              {boardActions}
-              <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
-            </div>
+            {/* Unified header rows: crumb → head + the STATUS lane switch →
+                toolbar (board actions + fullscreen) → stat strip. */}
             <CoreCrumb section="KDS" page="FLOOR" mode="kitchen wall" />
-            <CoreSectionHead section="KDS" page="Floor" sub={<>sla-toned tickets · start / bump / pass</>} />
+            <CoreSectionHead section="KDS" page="Floor" sub={<>sla-toned tickets · start / bump / pass</>} actions={laneFilter} />
+            <CoreSurfToolbar
+              ariaLabel="Floor controls"
+              right={
+                <>
+                  {boardActions}
+                  <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
+                </>
+              }
+            />
 
             {/* frosted 7-cell strip — Active · At risk · Late · Ready ·
                 Throughput · Covers · Revenue (Rule #1: throughput/covers/revenue
@@ -1358,17 +1383,28 @@ function ChefView({
   const totalItems = allDayGroups.reduce((s, g) => s + g.items.reduce((n, i) => n + i.qty, 0), 0);
   return (
     <>
-      <div className="core-kds-toolbar">
-        <div className="core-seg">
-          <button className={chefFocus === "expo" ? "on" : ""} onClick={() => onFocus("expo")}>Expo</button>
-          <button className={chefFocus === "allday" ? "on" : ""} onClick={() => onFocus("allday")}>All-day</button>
-        </div>
-        <div className="core-kds-tb-sp" />
-        {controls}
-        <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
-      </div>
       <CoreCrumb section="KDS" page="CHEF" mode="expo pass · all-day prep" />
-      <CoreSectionHead section="KDS" page="Chef" sub={<>coursing · expedite · all-day prep counts</>} />
+      <CoreSectionHead
+        section="KDS"
+        page="Chef"
+        sub={<>coursing · expedite · all-day prep counts</>}
+        actions={
+          <div className="core-seg" role="tablist" aria-label="Mode">
+            <span className="sglab">Mode</span>
+            <button type="button" role="tab" aria-selected={chefFocus === "expo"} className={chefFocus === "expo" ? "on" : undefined} onClick={() => onFocus("expo")}>Expo</button>
+            <button type="button" role="tab" aria-selected={chefFocus === "allday"} className={chefFocus === "allday" ? "on" : undefined} onClick={() => onFocus("allday")}>All-day</button>
+          </div>
+        }
+      />
+      <CoreSurfToolbar
+        ariaLabel="Chef controls"
+        right={
+          <>
+            {controls}
+            <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
+          </>
+        }
+      />
       <div className="core-statstrip core-kds-strip">
         <div className="cell"><span className="lab">On the pass</span><span className="val basil">{stats.onPass}</span></div>
         <div className="cell"><span className="lab">Awaiting course</span><span className="val amber">{stats.awaiting}</span></div>

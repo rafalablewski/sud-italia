@@ -858,9 +858,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-kds-empty { color: var(--ink-3); font-size: 12.5px; text-align: center; padding: 14px; }
 .core .core-kds-empty.pad { padding: 60px; }
 
-/* board toolbar — the lane filter + board actions the command bar deliberately
-   omits (mockup: KDS carries no bar tools). Sits at the top of the board. */
-.core .core-kds-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+/* KDS lane/scope/mode switch now lives in the section-head right and the board
+   actions in the row-4 `.core-surf-toolbar` (unified header), so the bespoke
+   `.core-kds-toolbar` was removed. `.core-kds-tb-sp` is kept — the fullscreen
+   kiosk top strip still lays scope + actions out inline with it. */
 .core .core-kds-tb-sp { flex: 1 1 auto; min-width: 8px; }
 /* ---- KDS toolbar → dense-console (shared metrics, re-glazed) ----
    The Fleet/Floor/Chef board toolbar (in-shell board + fullscreen kiosk) uses

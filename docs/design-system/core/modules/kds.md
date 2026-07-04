@@ -19,12 +19,16 @@ A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
 All three views (Fleet · Floor · Chef) render in the **liquid-glass** language
-1:1 with the Core-suite mockup: the in-shell board (`.core-body .core-kds`) sits
-on the warm KDS radial-gradient, and each view opens with the **`.core-kds-toolbar`
-command row on top** (divider under it) followed by the `.core-crumb` breadcrumb +
-`.core-sectionhead`, then the frosted `.core-statstrip` KPI band (shared
-`.core-kds .core-statstrip` glass). The **fullscreen kiosk** (`.core-kiosk`,
-outside `.core-body`) keeps the flat dark wall.
+1:1 with the Core-suite mockup, on the unified header: the in-shell board
+(`.core-body .core-kds`) sits on the warm KDS radial-gradient, and each view
+opens with the `.core-crumb` breadcrumb + `.core-sectionhead` (whose right slot
+carries the view/scope switch — Floor **STATUS** lane · Fleet **SCOPE** kitchen ·
+Chef **MODE** expo/all-day, each a `.core-seg`), then the row-4
+`.core-surf-toolbar` (the board actions — Σ all-day · refresh · 86 · chime ·
+pause · fullscreen — right, via `CoreSurfToolbar`), then the frosted
+`.core-statstrip` KPI band (shared `.core-kds .core-statstrip` glass). The
+**fullscreen kiosk** (`.core-kiosk`, outside `.core-body`) keeps the flat dark
+wall, laying scope + actions out inline in its top strip.
 
 - **Floor** (default) — the expo board. A frosted 7-cell `.core-statstrip.core-kds-strip`
   (**Active · At risk · Late · Ready · Throughput · Covers · Revenue** — counts
@@ -67,10 +71,12 @@ outside `.core-body`) keeps the flat dark wall.
   Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
   `.core-fleet` container carries the warm KDS radial-gradient wash, opening with
   a `.core-crumb` (`CORE — KDS · FLEET · liquid glass · all kitchens · one pass`)
-  + a `.core-sectionhead` (`KDS · Fleet`) + a `.core-kds-toolbar`.
-  - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
-    button per truck, labelled by `city`). The whole KDS board toolbar (this
-    filter, the Floor lane filter, the Chef Expo/All-day toggle, the
+  + a `.core-sectionhead` (`KDS · Fleet`) whose right slot carries the SCOPE
+    switch + a row-4 `.core-surf-toolbar` with the fleet actions.
+  - **Fleet SCOPE switch** — a `.core-seg` kitchen filter (**All kitchens** + one
+    button per truck, labelled by `city`), pinned to the section-head right. The
+    KDS switches + board actions (this filter, the Floor lane filter, the Chef
+    Expo/All-day toggle, the
     `.core-tpill` action pills, and the `.core-iconbtn` tool glyphs) is tuned to
     the dense-console mockup (`02-kds.html` — `.seg-lane` / `.pill` / `.tico`)
     rather than the larger default core controls: **10–11px regular-weight
