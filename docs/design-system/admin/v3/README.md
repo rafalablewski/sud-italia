@@ -77,7 +77,22 @@ hex in a v3 component — use the token.
 a **232px sidebar that collapses to a 60px icon rail** (state persisted), a
 **44px topbar** with breadcrumb + the single shell-level scope switcher +
 theme toggle + notification bell, and a content well on a tight grid. Nav
-taxonomy mirrors v2 (`v3/nav.config.ts`, same sections).
+taxonomy mirrors v2 (`v3/nav.config.ts`, same sections), with one deliberate
+deviation: **Core sits first as a single launcher** — one `Core` item (icon
+`Store`, href `/core`) at the very top of the rail instead of the four
+individual POS/KDS/Guest/Service links. `/core` role-routes the operator into
+their Core home (kitchen → KDS, everyone else → Service floor), and the item is
+gated at the lowest role that could reach any Core surface (`kitchen`) so no one
+loses access. Because `/core` maps to no single permission, the item carries an
+**`anyPermissions`** list (`pos.view` / `kds.view` / `guest.view` /
+`service.view`) — `filterNavForRoleV3` shows a launcher to a permission-gated
+viewer only when they hold **at least one** of its destinations' keys, so a
+forbidden suite can never sit in the rail (parity with the old four separately
+gated links). v3 still never rebuilds Core — it only links out to it. This
+section carries an **empty `label`**, so it renders as a bare top-of-rail row
+with **no section eyebrow** above it — `SidebarV3` only paints the
+`.av3-eyebrow` header for sections whose `label` is non-empty (the standard
+`.av3-group` margin still spaces it from Overview below).
 
 **Access gating mirrors v2's two ANDed gates** (this is the UX layer — the
 server still enforces every `/api/admin/*` call). `SidebarV3` reads

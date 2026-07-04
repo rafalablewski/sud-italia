@@ -2,9 +2,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   ListTodo,
-  Receipt,
-  ChefHat,
-  Contact,
+  Store,
   CalendarCheck2,
   UtensilsCrossed,
   FlaskConical,
@@ -47,13 +45,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
-import { permissionForAdminPage } from "@/lib/permissions";
+import { permissionForAdminPage, type PermissionKey } from "@/lib/permissions";
 
 // v3 nav — owned by the v3 tree (the implementation behind the canonical
 // `/admin` HQ). Hrefs are rooted at `/admin`; the shell re-roots them onto
 // `/manager` / `/franchisee` per the URL the role navigates under. Core
-// (POS/KDS/Guest/Service) stays on its own /core routes and is intentionally
-// absent here — v3 never rebuilds Core.
+// (POS/KDS/Guest/Service) stays on its own /core routes — v3 never rebuilds
+// Core — but the rail carries a single top-of-nav launcher into the suite
+// (`/core`, which role-routes the operator to their Core home) rather than
+// listing every Core surface individually.
 
 export interface NavItemV3 {
   href: string;
@@ -62,6 +62,14 @@ export interface NavItemV3 {
   requiredRole?: AdminRole;
   /** When true, route isn't migrated to v3 yet (renders muted, kept for map). */
   pending?: boolean;
+  /**
+   * For a launcher that fans out to several permission-gated destinations
+   * (e.g. the Core suite), the item is shown when a permission-gated viewer
+   * holds **at least one** of these keys. Overrides the single-key
+   * `permissionForAdminPage(href)` gate — needed because a launcher's own href
+   * (`/core`) maps to no permission, so it would otherwise always show.
+   */
+  anyPermissions?: readonly PermissionKey[];
 }
 
 export interface NavSectionV3 {
@@ -74,6 +82,29 @@ const P = "/admin";
 
 export const NAV_SECTIONS_V3: NavSectionV3[] = [
   {
+    // Empty label ⇒ SidebarV3 renders no eyebrow, so this single Core launcher
+    // sits as a bare row at the very top of the rail (no "Core" section header).
+    id: "core",
+    label: "",
+    items: [
+      // One consolidated launcher into the whole POS/KDS/Guest/Service suite —
+      // `/core` role-routes the operator to their Core home (kitchen → KDS,
+      // everyone else → Service floor). requiredRole is the lowest that could
+      // reach any Core surface (kitchen) so no one who had access loses it.
+      // `/core` maps to no single permission, so `anyPermissions` gates it: a
+      // custom-permission viewer sees the launcher only if they hold at least
+      // one of the underlying Core-surface permissions (parity with the old
+      // four separate links, each gated by its own key).
+      {
+        href: "/core",
+        label: "Core",
+        icon: Store,
+        requiredRole: "kitchen",
+        anyPermissions: ["pos.view", "kds.view", "guest.view", "service.view"],
+      },
+    ],
+  },
+  {
     id: "overview",
     label: "Overview",
     items: [
@@ -83,16 +114,6 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
       { href: `${P}/comms/tasks`, label: "Tasks", icon: ListTodo, requiredRole: "manager" },
       { href: `${P}/comms/announcements`, label: "Announcements", icon: Megaphone, requiredRole: "manager" },
-    ],
-  },
-  {
-    id: "core",
-    label: "Core",
-    items: [
-      { href: "/core/pos", label: "POS", icon: Receipt, requiredRole: "staff" },
-      { href: "/core/kds", label: "Kitchen Display", icon: ChefHat, requiredRole: "kitchen" },
-      { href: "/core/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
-      { href: "/core/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
     ],
   },
   {
@@ -229,6 +250,10 @@ export function filterNavForRoleV3(
     items: section.items.filter((item) => {
       if (item.requiredRole && ROLE_RANK[item.requiredRole] > rank) return false;
       if (!permissionGated) return true;
+      // A launcher fanning out to several destinations is shown when the viewer
+      // holds any one of them — a forbidden suite can never sit in the rail.
+      if (item.anyPermissions)
+        return item.anyPermissions.some((k) => granted.has(k));
       const need = permissionForAdminPage(item.href);
       return !need || granted.has(need);
     }),
