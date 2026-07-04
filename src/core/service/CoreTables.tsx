@@ -136,7 +136,7 @@ export function CoreTables() {
       tabs={serviceTabs("tables")}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="SERVICE" page="TABLES" mode={<>{location} · dine-in</>} />
+        <CoreCrumb section="SERVICE" page="TABLES" mode={location ? <>{location} · dine-in</> : "dine-in"} />
         <CoreSectionHead
           section="Service"
           page="Tables"
