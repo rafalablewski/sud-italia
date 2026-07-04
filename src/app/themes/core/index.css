@@ -302,6 +302,17 @@
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 /* explicit empty state — the row stays, so placement is identical everywhere */
 .core .core-surf-empty { color: var(--ink-3); opacity: .5; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+/* Normalise every labelled action pill in the toolbar to ONE size/shape/casing
+   so a surface's "New reservation" / "New slot" / "Add table" / "Forecast" /
+   "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
+   pill vs rounded-rect, some lowercase). Each keeps its own fill (brand vs
+   neutral) — only the geometry is unified. */
+.core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-ghostbtn, .core-btn) {
+  height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1;
+}
+.core .core-surf-toolbar :is(.core-bk-newpill, .core-bk-toolbtn) span { font-size: 12px; }
+/* icon-glyph buttons share the same 30px box so nothing looks off-height */
+.core .core-surf-toolbar .core-iconbtn { height: 30px; min-width: 30px; }
 /* QR-orders pill — a labelled info-tinted pill (mockup `.pill.qr`), not a bare
    icon button: glyph + "QR orders" + a live count, info ring, brighter when
    there are orders waiting to pay. */
@@ -336,7 +347,9 @@
    See docs → theme "Stat strip". */
 .core .core-statstrip { display: flex; align-items: stretch; margin: 10px 14px; flex: none; overflow: hidden;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1); }
-.core .core-statstrip .cell { flex: 1; min-width: 0; padding: 9px 15px; display: flex; flex-direction: column; gap: 3px; position: relative; }
+/* min-height + centred content so every strip is the SAME height on every tab,
+   whether or not its cells carry a delta line (KDS floor / Tables omit it). */
+.core .core-statstrip .cell { flex: 1; min-width: 0; min-height: 72px; padding: 9px 15px; display: flex; flex-direction: column; justify-content: center; gap: 3px; position: relative; }
 /* hairline divider between cells (mockup: .statstrip .cell + .cell::before) */
 .core .core-statstrip .cell + .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
 .core .core-statstrip .lab { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1609,6 +1622,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-side { grid-column: 1 / -1; }
 /* dense-console header rows span the full width above the form/side row */
 .core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
+/* Book renders its header inside the padded timeline GRID (0 14px). Pull the
+   shared header rows back to full-bleed so the crumb/title/toolbar land on the
+   SAME pixel as every other surface (whose wrapper has no side padding) — the
+   stat strip already sits inset, matching the others. */
+.core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-surf-toolbar { margin-left: -14px; margin-right: -14px; }
 .core .core-book-form { padding: 18px; }
 /* timeline title + status legend (mockup) */
 .core .core-book-tlbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }

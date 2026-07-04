@@ -183,8 +183,9 @@ recommendation, + the recommended pick's dominant signal) to
 `/api/admin/seating/decisions` when Learn-from-overrides or Shadow mode is on, so
 the override rate and the tuning nudge are measured numbers, not a guess.
 **Today's bookings** (`.core-bk-blist`) is a
-**full-width list below**, with cancel. A **lens toggle** in the section header
-(`.core-bk-lenses`) switches the surface between three views over **one shared
+**full-width list below**, with cancel. A **lens toggle** in the section-head
+right (the unified-header `.core-seg` view switch — `View` · timeline / floor /
+arrivals) switches the surface between three views over **one shared
 occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
 `buildTableSessions`) — so they can never disagree: **Timeline** (the plan),
 **Floor** (`.core-bk-floorlens` — a live table-tile grid built from the sessions:
