@@ -1765,13 +1765,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    filters (search · channel · date · refresh) render in the shared row-4
    `.core-surf-toolbar` (via CoreSurfToolbar), so the bespoke `.core-filterbar`
    wrapper was removed; its child controls keep their own classes below. */
-.core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
+.core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 180px; max-width: 360px; padding: 6px 12px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
 .core .core-searchfield input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-searchfield input::placeholder { color: var(--ink-3); }
-.core .core-chanset { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); cursor: pointer; }
-.core .core-chan:hover { color: var(--ink-2); }
-.core .core-chan.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); }
+/* `.core-chan` is the KDS ticket channel BADGE (per-channel tint via `chanBadge`);
+   Orders' channel FILTER now uses the shared labelled `.core-seg` capsule instead
+   of loose `.core-chan` chips, so the filter-only `.core-chanset` / `.core-chan.on`
+   are gone. Keep the base badge style below. */
+.core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); }
 .core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
 .core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: var(--panel); }
 .core .core-otable table { width: 100%; border-collapse: collapse; }

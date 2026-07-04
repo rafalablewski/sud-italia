@@ -8,9 +8,9 @@ One surface for **every order at the location** — live (current) and paid
 history — so staff aren't limited to the POS's open tickets.
 
 Rendered in the **dense-console** language: the unified **`.core-surf-toolbar`**
-ActionBar — the `.core-surf-id` context anchor left, the filters (search · channel
-chips · date) as its `left`, Refresh as its `right` — then a 7-up
-`.core-statstrip`, then a `.core-otable`.
+ActionBar — the `.core-surf-id` context anchor left, the filters (search · a
+labelled `Channel` `.core-seg` · date) as its `left`, Refresh as its `right` —
+then a 7-up `.core-statstrip`, then a `.core-otable`.
 
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.
@@ -22,11 +22,11 @@ chips · date) as its `left`, Refresh as its `right` — then a 7-up
 - **Scope** lives in the **command-bar view tabs** — **Current** (active
   statuses) · **Paid** (has `paidAt`) · **All** — so the prompt reads
   `orders:current` and the chrome matches every other surface.
-- **Toolbar** (row 4, `.core-surf-toolbar` via `CoreSurfToolbar`): on the left a
-  `.core-searchfield` over id / guest / phone / table, a `.core-chanset` of
-  `.core-chan` chips (all / dine-in / takeaway / delivery / qr — fulfillment
-  types + the QR channel) and a `.core-datefield` (today); on the right a refresh
-  icon.
+- **ActionBar** (`.core-surf-toolbar` via `CoreSurfToolbar`): on the left a
+  `.core-searchfield` over id / guest / phone / table, a labelled **`Channel`**
+  `.core-seg` (all / dine-in / takeaway / delivery / qr — fulfillment types + the
+  QR channel, shared brand-ember active) and a `.core-datefield` (today); on the
+  right a refresh icon.
 - **Table** (`.core-otable`): columns **# · Time · Channel · Guest · Table ·
   Items · Total · Status**. The channel cell is a `.core-chanchip` toned by
   type (dinein basil · takeaway amber · delivery/qr info); the status cell is a

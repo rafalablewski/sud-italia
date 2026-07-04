@@ -202,13 +202,14 @@ export function CoreOrders() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="id · guest · phone · table" aria-label="Search orders" />
               </div>
-              <div className="core-chanset" role="group" aria-label="Channel filter">
+              {/* Channel filter as a labelled `.core-seg` capsule — the shared
+                  view/scope vocabulary, with the one-rule brand-ember active. */}
+              <div className="core-seg" role="group" aria-label="Channel">
+                <span className="sglab">Channel</span>
                 {CHANS.map((c) => (
-                  <span key={c} className={channel === c ? `core-chan on${c === "all" ? " brand" : ""}` : "core-chan"} role="button" tabIndex={0}
-                    onClick={() => setChannel(c)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChannel(c); } }}>
+                  <button key={c} type="button" className={channel === c ? "on" : undefined} aria-pressed={channel === c} onClick={() => setChannel(c)}>
                     {c}
-                  </span>
+                  </button>
                 ))}
               </div>
               <div className="core-datefield" title="Today">
