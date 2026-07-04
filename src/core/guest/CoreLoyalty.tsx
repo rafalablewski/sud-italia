@@ -97,7 +97,10 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   const [members, setMembers] = useCoreCache<MemberRow[]>("core:loyalty:members", []);
   const [wallets, setWallets] = useCoreCache<WalletSummary[]>("core:loyalty:wallets", []);
   const [redemptions, setRedemptions] = useCoreCache<Redemption[]>("core:loyalty:redemptions", []);
-  const [winback, setWinback] = useCoreCache<WinBack[] | null>("core:loyalty:winback", null);
+  // NOT cached: winback is lazily fetched by an effect gated on `winback === null`
+  // (it refetches on remount). Caching it across the remount would pin it non-null
+  // and it would never revalidate for the session — so it stays plain useState.
+  const [winback, setWinback] = useState<WinBack[] | null>(null);
   const [busy, setBusy] = useState(false);
   // Member smart-filter chip: "all" | "goldplus" | "risk" | "loc:<slug>"
   const [mfilter, setMfilter] = useState("all");

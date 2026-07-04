@@ -757,7 +757,7 @@ export function CoreBook({
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Slot</span><span className="mut">tinted by capacity</span></div>
-              {loading ? (
+              {loading && slots.length === 0 ? (
                 <div className="core-ctx-empty">Loading slots…</div>
               ) : dineInSlots.length === 0 ? (
                 <div className="core-ctx-empty">No dine-in slots for this day.</div>

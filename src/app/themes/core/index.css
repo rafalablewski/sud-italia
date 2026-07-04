@@ -332,7 +332,8 @@
 /* Row 3 of the unified header — LOCKED height, title left, view/scope switch
    pinned right (via `.core-sp`). align-items:center + nowrap so the row lands
    on the same pixel on every surface and never bounces between tabs. */
-.core .core-sectionhead { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; flex-wrap: nowrap; flex: none; }
+.core .core-sectionhead { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; }
+.core .core-sectionhead::-webkit-scrollbar { height: 0; }
 .core .core-sectionhead h1, .core .core-sectionhead h2 { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
 .core .core-sectionhead h1 .mid { color: var(--brand-bright); margin: 0 4px; }
 .core .core-sectionhead .sub { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
