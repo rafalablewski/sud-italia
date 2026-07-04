@@ -81,10 +81,10 @@ global cluster. Per surface: **POS** = QR + fullscreen · **KDS** = *nothing*
 (Floor "Add table", Slots "New") · **Guest** = the 3 inbox tools + WhatsApp-live.
 Anything heavier — KDS's lane filter + board actions, POS's channel/held flags,
 Slots' view filters + date, Book's date — lives **on the surface**, not the
-chrome: the view/scope switch in the `.core-sectionhead` right, the working
-controls in the row-4 `.core-surf-toolbar` (see below). When you add a
-control, ask "does the mockup put this in the bar?" — if not, it goes in the
-surface toolbar / section head.
+chrome: the view/scope switch + working controls in the surface ActionBar's
+`left`, the actions in its `right` (the `.core-surf-toolbar`, see below). When
+you add a control, ask "does the mockup put this in the bar?" — if not, it goes
+in the surface ActionBar.
 
 - **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
   `--panel` row with a `--line` bottom hairline.
@@ -174,48 +174,34 @@ surface toolbar / section head.
     The cells carry **no divider** — the panel border frames them and the cell
     padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
     Matches the mockup's `.statstrip`.
-- **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
-  uppercase mono `CORE — {SECTION} · {PAGE} · liquid glass · [mode]`, with `b`
-  basil and a `.fix` ember pill for the mode/context tag. It is a flex row with
-  an 8px `gap`, so **each segment is its own element** and every separator is a
-  muted `.d` dot (`opacity: .5`) — never a plain-text "·" baked into one node
-  (that would tightly space the left half and gap-space the right, and lose the
-  dimmed dot). Sits directly above the `.core-sectionhead`. **Rendered by the
-  shared `CoreCrumb` component** (`src/core/shell/CoreCrumb.tsx`): every surface
-  passes only `section` / `page` / `mode`, and the green `b` theme slot is
-  ALWAYS "liquid glass" — so the
-  grammar can't drift per surface again (before this, `slots`/`crm`/`inbox`/
-  `concierge` had put mode text in the theme slot and `slots`/`book`/`kds:floor`
-  mis-ordered section·page; the toolbar-audit fix centralised the line here).
-- **`.core-sectionhead`** — **row 3** of the unified header: a grotesk
-  `<h1>`/`<h2>` title (the `·` separator is a brand-toned `.mid` span) beside an
-  uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned view/scope
-  switch. **Locked height** (56px, `align-items:center`, `nowrap`) so it lands
-  on the same pixel on every surface. Sits directly under the `.core-crumb`,
-  over the toolbar. **Rendered by the shared `CoreSectionHead` component**
-  (`src/core/shell/CoreSectionHead.tsx`): every surface passes only `section` /
-  optional `page` (the title reads `{Section}·{Page}`, or just `{Section}` for
-  single-page surfaces like Orders), the `sub`, and any right-aligned `actions`
-  (a view/scope switch, pinned via `.core-sp`). Same discipline as `CoreCrumb`
-  one row down — centralising the title row keeps the separator, the `<h1>`
-  element and the `.sub` styling from drifting per surface, and gives the
-  view/scope switch a single fixed home.
-- **`.core-surf-toolbar`** — **row 4** of the unified header: the surface's
-  working control strip, directly under the section head and over the stat
-  strip. **Locked height** (50px, `nowrap`, overflow scrolls inside the row) so
-  the stat strip never shifts between a surface with controls and one without.
-  Fixed element homes: **filters / date / search on the LEFT**, **utilities +
-  the primary action on the RIGHT** (split by `.core-sp`). **Rendered by the
-  shared `CoreSurfToolbar` component** (`src/core/shell/CoreSurfToolbar.tsx`,
-  `left` / `right` slots); when a surface has no controls it renders the
-  `.core-surf-empty` "— no page controls —" state rather than collapsing the
-  row. `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the
-  surface, not the global chrome — this replaces the old split where controls
-  lived in the shell `subLeft`/`subRight` (above the crumb) or bespoke bars.
-- **KDS board controls** — on the unified header the KDS lane/scope/mode switch
-  rides the `.core-sectionhead` right and the board actions ride the row-4
-  `.core-surf-toolbar` (like every other surface). Only the **fullscreen kiosk**
-  top strip still lays them out inline, split by `.core-kds-tb-sp`.
+- **`.core-surf-toolbar`** — the **unified ActionBar**: the ONE header row every
+  surface renders under the command bar, over the stat strip. It **collapses the
+  old three-row header** (a `.core-crumb` breadcrumb + a `.core-sectionhead`
+  title + this toolbar) into a single row — the breadcrumb duplicated the command
+  bar's own `core ❯ surface:tab` prompt and the oversized section head repeated
+  it, so both were dropped. **Locked height** (56px, `nowrap`, overflow scrolls
+  inside the row) so the stat strip never shifts between a surface with controls
+  and one without. Three fixed element homes:
+  - **`.core-surf-id`** (identity, far left) — the slim page anchor that replaces
+    the dropped crumb + section head: a display-grotesk `.t` title
+    (`{Section}·{Page}`, brand-toned `.mid` dot, or just `{Section}` for
+    single-page surfaces like Orders) stacked over an uppercase-mono context `.s`.
+    `flex:none`, so the controls flow after it.
+  - **`left`** (controls) — the **view/scope switch** that used to ride the
+    section-head right (Book's timeline/floor/arrivals, Slots' Manage/Demand,
+    Tables' Zone, KDS's Scope/Status/Mode, Loyalty's view tabs — always the
+    FIRST control), plus filters / date / search.
+  - **`right`** (actions) — utilities + the primary action, pinned right via
+    `.core-sp`.
+  **Rendered by the shared `CoreSurfToolbar` component**
+  (`src/core/shell/CoreSurfToolbar.tsx`, `section` / `page` / `sub` / `left` /
+  `right` props). `.core-surf-tb-lbl` = a small uppercase field label. Belongs to
+  the surface, not the global chrome — the same one row on every surface, so the
+  identity, controls and actions never move between tabs.
+- **KDS board controls** — on the ActionBar the KDS lane/scope/mode switch rides
+  the toolbar `left` (the view/scope home) and the board actions ride `right`
+  (like every other surface). Only the **fullscreen kiosk** top strip still lays
+  them out inline, split by `.core-kds-tb-sp`.
 
 ### Global-action primitives
 

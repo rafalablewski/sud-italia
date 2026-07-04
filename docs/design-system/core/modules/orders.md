@@ -7,11 +7,10 @@ Live code: `src/core/orders/CoreOrders.tsx` · route `src/app/core/orders/page.t
 One surface for **every order at the location** — live (current) and paid
 history — so staff aren't limited to the POS's open tickets.
 
-Rendered in the **dense-console** language (1:1 with
-`tests/sketches/core-pages/03-orders.html`): a `.core-crumb` breadcrumb
-(`CORE — ORDERS · liquid glass · [cross-cutting surface]`), a `.core-sectionhead`,
-a row-4 `.core-surf-toolbar` (the filters), a 7-up `.core-statstrip`, then a
-`.core-otable`.
+Rendered in the **dense-console** language: the unified **`.core-surf-toolbar`**
+ActionBar — identity (`Orders` + context sub) left, the filters (search · channel
+chips · date) as its `left`, Refresh as its `right` — then a 7-up
+`.core-statstrip`, then a `.core-otable`.
 
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.

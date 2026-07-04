@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
@@ -192,15 +190,13 @@ export function CoreOrders() {
       }))}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="ORDERS" mode="cross-cutting surface" />
-        <CoreSectionHead
-          section="Orders"
-          sub={<>{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</>}
-        />
-        {/* Row 4 — filters left (search · channel chips · date), Refresh right.
-            The Current/Paid/All scope lives in the command bar's view tabs. */}
+        {/* Unified ActionBar — identity (Orders) · filters left (search · channel
+            chips · date) · Refresh right. The Current/Paid/All scope lives in the
+            command bar's view tabs. */}
         <CoreSurfToolbar
           ariaLabel="Order filters"
+          section="Orders"
+          sub={<>{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</>}
           left={
             <>
               <div className="core-searchfield">

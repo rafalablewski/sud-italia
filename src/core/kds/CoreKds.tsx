@@ -3,8 +3,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
@@ -936,10 +934,14 @@ export function CoreKds() {
     <div className={`core-kds${view !== "fleet" && pressureTier === "risk" ? " dense" : ""}`}>
         {view === "fleet" ? (
           <>
-            <CoreCrumb section="KDS" page="FLEET" mode="all kitchens · one pass" />
-            <CoreSectionHead section="KDS" page="Fleet" sub={<>kraków + warszawa · live pass health</>} actions={fleetScopeSeg} />
+            {/* Unified ActionBar — identity (KDS · Fleet) · the SCOPE switch on
+                the left · actions (board actions + fullscreen kiosk) right. */}
             <CoreSurfToolbar
               ariaLabel="Fleet controls"
+              section="KDS"
+              page="Fleet"
+              sub={<>kraków + warszawa · live pass health</>}
+              left={fleetScopeSeg}
               right={
                 <>
                   {fleetActions}
@@ -980,12 +982,14 @@ export function CoreKds() {
           />
         ) : (
           <>
-            {/* Unified header rows: crumb → head + the STATUS lane switch →
-                toolbar (board actions + fullscreen) → stat strip. */}
-            <CoreCrumb section="KDS" page="FLOOR" mode="kitchen wall" />
-            <CoreSectionHead section="KDS" page="Floor" sub={<>sla-toned tickets · start / bump / pass</>} actions={laneFilter} />
+            {/* Unified ActionBar — identity (KDS · Floor) · the STATUS lane
+                switch on the left · actions (board actions + fullscreen) right. */}
             <CoreSurfToolbar
               ariaLabel="Floor controls"
+              section="KDS"
+              page="Floor"
+              sub={<>sla-toned tickets · start / bump / pass</>}
+              left={laneFilter}
               right={
                 <>
                   {boardActions}
@@ -1385,21 +1389,20 @@ function ChefView({
   const totalItems = allDayGroups.reduce((s, g) => s + g.items.reduce((n, i) => n + i.qty, 0), 0);
   return (
     <>
-      <CoreCrumb section="KDS" page="CHEF" mode="expo pass · all-day prep" />
-      <CoreSectionHead
+      {/* Unified ActionBar — identity (KDS · Chef) · the Expo|All-day mode
+          switch on the left · actions (chef controls + fullscreen) right. */}
+      <CoreSurfToolbar
+        ariaLabel="Chef controls"
         section="KDS"
         page="Chef"
         sub={<>coursing · expedite · all-day prep counts</>}
-        actions={
+        left={
           <div className="core-seg" role="tablist" aria-label="Mode">
             <span className="sglab">Mode</span>
             <button type="button" role="tab" aria-selected={chefFocus === "expo"} className={chefFocus === "expo" ? "on" : undefined} onClick={() => onFocus("expo")}>Expo</button>
             <button type="button" role="tab" aria-selected={chefFocus === "allday"} className={chefFocus === "allday" ? "on" : undefined} onClick={() => onFocus("allday")}>All-day</button>
           </div>
         }
-      />
-      <CoreSurfToolbar
-        ariaLabel="Chef controls"
         right={
           <>
             {controls}

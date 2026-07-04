@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { PlusIcon } from "@/core/shell/toolIcons";
@@ -340,25 +338,22 @@ export function CoreSlots() {
   return (
     <CoreShell eyebrow="Service · Tables & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
-        <CoreCrumb section="SERVICE" page="SLOTS" mode="demand exchange" />
-        <CoreSectionHead
+        {/* Unified ActionBar — identity (Service · Slots) · controls on the left
+            (the Manage|Demand mode switch, then range · date · channel) · actions
+            on the right (New slot · Refresh). */}
+        <CoreSurfToolbar
+          ariaLabel="Slot controls"
           section="Service"
           page="Slots"
           sub={<>{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</>}
-          actions={
-            /* Manage|Demand mode switch — the view/scope toggle, pinned title-row right. */
-            <div className="core-seg" role="tablist" aria-label="Mode">
-              <span className="sglab">Mode</span>
-              <button type="button" role="tab" aria-selected={panel === "manage"} className={panel === "manage" ? "on" : undefined} onClick={() => setPanel("manage")}>Manage</button>
-              <button type="button" role="tab" aria-selected={panel === "demand"} className={panel === "demand" ? "on" : undefined} onClick={() => setPanel("demand")}>Demand</button>
-            </div>
-          }
-        />
-        {/* Row 4 — filters left (range · date · channel), actions right (New slot · Refresh). */}
-        <CoreSurfToolbar
-          ariaLabel="Slot controls"
           left={
             <>
+              {/* Manage|Demand mode switch — the view/scope toggle. */}
+              <div className="core-seg" role="tablist" aria-label="Mode">
+                <span className="sglab">Mode</span>
+                <button type="button" role="tab" aria-selected={panel === "manage"} className={panel === "manage" ? "on" : undefined} onClick={() => setPanel("manage")}>Manage</button>
+                <button type="button" role="tab" aria-selected={panel === "demand"} className={panel === "demand" ? "on" : undefined} onClick={() => setPanel("demand")}>Demand</button>
+              </div>
               <div className="core-seg">
                 <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
                 <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>

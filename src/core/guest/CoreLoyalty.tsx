@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreCache } from "@/lib/useCoreCache";
@@ -297,13 +295,15 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="core-guest-inbox">
-        <CoreCrumb section="GUEST" page="LOYALTY" mode="rewards" />
-        <CoreSectionHead
+        {/* Unified ActionBar — identity (Guest · Loyalty) · the Members|Wallets|
+            Redemptions|Win-back view switch on the left · Refresh right. */}
+        <CoreSurfToolbar
+          ariaLabel="Loyalty controls"
           section="Guest"
           page="Loyalty"
           sub={<>members · wallets · redemptions · win-back</>}
-          actions={
-            /* Members|Wallets|Redemptions|Win-back — the view switch, title-row right. */
+          left={
+            /* Members|Wallets|Redemptions|Win-back — the view switch. */
             <div className="core-seg" role="tablist" aria-label="Loyalty views">
               <span className="sglab">View</span>
               {TABS.map((t) => {
@@ -324,10 +324,6 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
               })}
             </div>
           }
-        />
-        {/* Row 4 — no filters (per-tab controls live in the panels); Refresh right. */}
-        <CoreSurfToolbar
-          ariaLabel="Loyalty controls"
           right={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
         />
 

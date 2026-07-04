@@ -7,8 +7,6 @@ import type { PosKpis } from "@/lib/store"; // type-only (erased) — no server 
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { ExpandIcon } from "@/core/shell/toolIcons";
@@ -1405,18 +1403,14 @@ export function CorePos({
 
   const posBody = (
     <>
-      {/* dense-console breadcrumb — matches the mockup's `.cap` line, shared with
-          every other Core surface (Rule: one chrome across the suite). */}
-      {!embedded && (
-        <CoreCrumb section="POS" page="ORDER" mode="dine-in" />
-      )}
-      {/* surface section header — dense-console page title + context sub. */}
-      <CoreSectionHead section="POS" page="Order" sub={<>{pageLoc} · dine-in service</>} />
-
-      {/* Row 4 — no filters; actions right (QR-order queue · fullscreen). */}
+      {/* Unified ActionBar — identity (POS · Order) + actions (QR-order queue ·
+          fullscreen). Hidden when embedded as a docked check drawer. */}
       {!embedded && (
         <CoreSurfToolbar
           ariaLabel="Till controls"
+          section="POS"
+          page="Order"
+          sub={<>{pageLoc} · dine-in service</>}
           right={
             <>
               <CoreQrQueue location={pageLoc} />

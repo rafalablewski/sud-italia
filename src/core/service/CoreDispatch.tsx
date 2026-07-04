@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
@@ -193,15 +191,13 @@ export function CoreDispatch() {
       tabs={serviceTabs("dispatch")}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
-        <CoreSectionHead
+        {/* Unified ActionBar — identity (Service · Dispatch) · actions right
+            (auto-assign · Refresh). */}
+        <CoreSurfToolbar
+          ariaLabel="Dispatch controls"
           section="Service"
           page="Dispatch"
           sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
-        />
-        {/* Row 4 — no filters; actions right (auto-assign · Refresh). */}
-        <CoreSurfToolbar
-          ariaLabel="Dispatch controls"
           right={
             <>
               <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">

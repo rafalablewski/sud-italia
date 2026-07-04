@@ -6,8 +6,8 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 ## Tables (`/core/service/tables`) — wired
 
 - **Live code:** `src/core/service/CoreTables.tsx`.
-- **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead`
-  (with the **`Zone` scope switch** as a `.core-seg` pinned title-row right) ·
+- **Theme:** `.core-surf-toolbar` ActionBar (with the **`Zone` scope switch** as
+  a `.core-seg` in its `left`) ·
   `.core-surf-toolbar` (Refresh · Add table, right) · `.core-statstrip` ·
   `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2` (+
   `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-tbl-field` /
@@ -18,9 +18,9 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   manage the physical layout — **zones, tables, seats**. There is deliberately
   **no seating, no order lookup, no live occupancy** here; that operational
   flow lives in **Book** (`/core/service/book`, whose Floor lens seats parties
-  and opens checks) and **POS**. Rendered in the **dense-console** language: a
-  `.core-crumb` breadcrumb (`CORE — SERVICE · TABLES · liquid glass · [loc ·
-  dine-in]`), a `.core-sectionhead` whose right slot carries the optional
+  and opens checks) and **POS**. Rendered in the **dense-console** language: the
+  `.core-surf-toolbar` ActionBar (identity `Service · Tables`), whose `left`
+  carries the optional
   **`Zone` scope switch** (a `.core-seg` — `Zone · All zones · <zone>×N`, shown
   when there is more than one zone) that filters the zoned groups, a
   `.core-surf-toolbar` (Refresh · Add table), then a **6-up `.core-statstrip`**
@@ -58,17 +58,16 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 ## Slots (`/core/service/slots`) — wired
 
 - **Live code:** `src/core/service/CoreSlots.tsx`.
-- **Theme:** `.core-crumb` · `.core-sectionhead` · `.core-statstrip` ·
+- **Theme:** `.core-surf-toolbar` (ActionBar) · `.core-statstrip` ·
   `.core-surge-banner` · `.core-slots-grid` (two-column) · `.core-frame` /
   `.core-frame-h` / `.core-frame-b` · Manage rows `.core-mslot` (`.barwrap` /
   `.mbar` fill + `.meta` + `.core-tchip` tier chip + `.mcap`) ·
   `.core-slot-week` / `.core-slot-day-h` (week grouping) · Demand rows
   `.core-exch-head` / `.core-applyall` / `.core-exrow` / `.core-tier` /
   `.core-lever` (`.lv` + `.why`) / `.core-apply`.
-- Rendered in the **dense-console** language (1:1 with
-  `tests/sketches/core-pages/05-service-slots.html`): a `.core-crumb`
-  breadcrumb, a `.core-sectionhead` whose right slot carries the **`Mode`
-  switch** (Manage | Demand, a `.core-seg`), a `.core-surf-toolbar` (Day / Week
+- Rendered in the **dense-console** language: the `.core-surf-toolbar` ActionBar
+  (identity `Service · Slots`), whose `left` leads with the **`Mode`
+  switch** (Manage | Demand, a `.core-seg`), then Day / Week
   + date + channel filter left; New slot · Refresh right), then a **6-up
   `.core-statstrip`** — **booked · capacity · fill ·
   surge windows · peak fill · demand price** (all live from the slot set —
@@ -108,8 +107,9 @@ in one move) is the **Book** view — see below.
 `src/core/service/CoreBook.tsx` — a **Service** view (`serviceTabs("book")`,
 eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
 `/core/book` and `/core/guest/book` redirect here. Rendered in the
-**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
-`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
+**dense-console** language (mockup 11-book): the `.core-surf-toolbar` ActionBar
+(identity `Service · Book`, the View switch — timeline/floor/arrivals — leading
+its `left`), then a **6-up `.core-statstrip`** — **bookings today ·
 covers · seated · upcoming · no-shows · fill** (all from the day's reservations
 — Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
@@ -253,8 +253,8 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 - **Live code:** `src/core/service/CoreDispatch.tsx`; API
   `src/app/api/admin/dispatch/route.ts`; store helper `assignOrderDriver`
   (`src/lib/store.ts`).
-- **Theme:** dense-console (mockup 06-service-dispatch): `.core-crumb` +
-  `.core-sectionhead` + `.core-statstrip`, then a `.core-disp-grid` (queue +
+- **Theme:** dense-console (mockup 06-service-dispatch): `.core-surf-toolbar`
+  ActionBar (identity `Service · Dispatch`) + `.core-statstrip`, then a `.core-disp-grid` (queue +
   drivers). The order cards stay token-styled inline; `.core-disp-drivers` /
   `.core-disp-driver` / `.core-disp-dstat` style the drivers panel.
 - The delivery driver board. `GET /api/admin/dispatch?location=` returns the

@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
@@ -578,32 +576,26 @@ export function CoreBook({
       tabs={serviceTabs("book")}
     >
       <div className="core-book">
-        {/* Unified header rows in the fixed mockup order: breadcrumb (2) →
-            section head + view switch (3) → surface toolbar (4) → stat strip (5). */}
-        <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
-        <CoreSectionHead
-          section="Service"
-          page="Book"
-          sub={<>{daySub} · dinner service · {loc}</>}
-          actions={
-            <div className="core-seg" role="tablist" aria-label="View">
-              <span className="sglab">View</span>
-              {(["timeline", "floor", "arrivals"] as const).map((m) => (
-                <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          }
-        />
-        {/* Row 4 — filters left (weekday label + day picker), actions right
-            (Forecast · Policy · Walk-in · the primary New-reservation pill that
-            jumps focus to the always-open form). */}
+        {/* Unified ActionBar — identity (Service · Book) · controls (the View
+            switch + day picker) on the left · actions (Forecast · Policy ·
+            Walk-in · the primary New-reservation pill that jumps focus to the
+            always-open form) on the right. */}
         <CoreSurfToolbar
           ariaLabel="Booking controls"
           className="core-bk-subbar"
+          section="Service"
+          page="Book"
+          sub={<>{daySub} · dinner service · {loc}</>}
           left={
             <>
+              <div className="core-seg" role="tablist" aria-label="View">
+                <span className="sglab">View</span>
+                {(["timeline", "floor", "arrivals"] as const).map((m) => (
+                  <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
+                    {m}
+                  </button>
+                ))}
+              </div>
               <span className="core-surf-tb-lbl">{daySub}</span>
               <input
                 className="core-inp core-bk-datefield"

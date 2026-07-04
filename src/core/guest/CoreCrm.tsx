@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
@@ -302,12 +300,13 @@ export function CoreCrm() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
-        <CoreCrumb section="GUEST" page="CRM" mode={<>{stat.guests} guests</>} />
-        <CoreSectionHead section="Guest" page="CRM" sub={<>customer book · rfm health · consent &amp; points</>} />
-        {/* Row 4 — filters left (search · segment chips · loyalty-tier gems),
-            sort + Refresh right (mockup 08-guest-crm). */}
+        {/* Unified ActionBar — identity (Guest · CRM) · filters left (search ·
+            segment chips · loyalty-tier gems) · sort + Refresh right. */}
         <CoreSurfToolbar
           ariaLabel="Customer-book filters"
+          section="Guest"
+          page="CRM"
+          sub={<>customer book · rfm health · consent &amp; points</>}
           left={
             <>
               <div className="core-crm-search">

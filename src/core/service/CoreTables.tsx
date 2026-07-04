@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -136,8 +134,10 @@ export function CoreTables() {
       tabs={serviceTabs("tables")}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="SERVICE" page="TABLES" mode={location ? <>{location} · dine-in</> : "dine-in"} />
-        <CoreSectionHead
+        {/* Unified ActionBar — identity (Service · Tables) · the Zone scope
+            switch (when >1 zone) on the left · actions (Refresh · Add table). */}
+        <CoreSurfToolbar
+          ariaLabel="Table controls"
           section="Service"
           page="Tables"
           sub={
@@ -146,9 +146,9 @@ export function CoreTables() {
               {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
             </>
           }
-          actions={
+          left={
             zones.length > 1 ? (
-              /* Zone scope switch — the view/scope toggle, pinned to the title row right. */
+              /* Zone scope switch — the view/scope toggle. */
               <div className="core-seg" role="tablist" aria-label="Zone">
                 <span className="sglab">Zone</span>
                 <button type="button" role="tab" aria-selected={!zoneFilter} className={!zoneFilter ? "on" : undefined} onClick={() => setZoneFilter(null)}>
@@ -162,10 +162,6 @@ export function CoreTables() {
               </div>
             ) : undefined
           }
-        />
-        {/* Row 4 — no filters; actions right (Refresh · Add table). */}
-        <CoreSurfToolbar
-          ariaLabel="Table controls"
           right={
             <>
               <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>

@@ -1,32 +1,43 @@
 import type { ReactNode } from "react";
 
 /**
- * Row 4 of the unified Core header — the surface control strip that sits
- * directly under the {@link CoreSectionHead}, over the stat strip, with FIXED
+ * The unified Core surface **ActionBar** — the ONE control row every Core surface
+ * renders directly under the command bar, over the stat strip, with FIXED
  * element homes (the unified-header contract):
  *
- *   [ filters · date · search ]   ·····spacer·····   [ utilities · primary action ]
- *          ↑ left                                              ↑ right
+ *   {SECTION · PAGE}     [ view/scope · filters · date ]  ·····  [ utilities · primary ]
+ *      ↑ identity                ↑ left (controls)                     ↑ right (actions)
  *
- * Same discipline as `CoreCrumb` / `CoreSectionHead`: every surface renders this
- * one row in the same place, so the working controls never move between tabs.
- * `left` holds the things you filter/scope the view WITH (search, date, channel
- * chips); `right` holds the things you DO (refresh, primary create, kiosk).
- * Passing neither renders the explicit empty state rather than collapsing the
- * row — the row height is locked in the theme so the stat strip below never
- * shifts between a surface that has controls and one that doesn't.
+ * This single row **replaces the old three-row stack** (`CoreCrumb` breadcrumb +
+ * `CoreSectionHead` title + this toolbar): the breadcrumb duplicated the command
+ * bar's own `core ❯ surface:tab` prompt, and the oversized section head repeated
+ * it a second time — so both were dropped. What was worth keeping — a slim
+ * identity, the working controls, and the actions — collapses here.
  *
- * Replaces the old split where a surface's controls lived three different ways
- * (shell `subLeft`/`subRight` above the crumb, bespoke in-body bars, or the
- * command bar): the toolbar now has ONE home, row 4, on every surface.
+ * `left` holds what you scope the view WITH (the view/scope switch that used to
+ * ride the section-head right, plus search / date / channel chips); `right` holds
+ * what you DO (refresh, the primary create). Same discipline as before: every
+ * surface renders this in the same place so the controls never move between tabs,
+ * and the row height is locked in the theme so the stat strip never shifts.
+ *
+ * See `docs/design-system/core/theme/README.md` → `.core-surf-toolbar`.
  */
 export function CoreSurfToolbar({
+  section,
+  page,
+  sub,
   left,
   right,
   className,
   ariaLabel,
 }: {
-  /** Filters / date / search — what you scope the view with. */
+  /** Title-case surface family, e.g. `Service`, `Guest`, `POS`, `Orders`. */
+  section: string;
+  /** Title-case page within the surface, e.g. `Tables`. Omit for single-page surfaces (Orders). */
+  page?: string;
+  /** The uppercase-mono context line under the title. */
+  sub?: ReactNode;
+  /** The view/scope switch + filters / date / search — what you scope the view with. */
   left?: ReactNode;
   /** Utilities + the primary action — what you DO on this surface. */
   right?: ReactNode;
@@ -34,22 +45,29 @@ export function CoreSurfToolbar({
   className?: string;
   ariaLabel?: string;
 }) {
-  const empty = left == null && right == null;
   return (
     <div
       className={className ? `core-surf-toolbar ${className}` : "core-surf-toolbar"}
       role="toolbar"
       aria-label={ariaLabel ?? "Surface controls"}
     >
-      {empty ? (
-        <span className="core-surf-empty">— no page controls —</span>
-      ) : (
-        <>
-          {left}
-          <div className="core-sp" />
-          {right}
-        </>
-      )}
+      {/* Identity — the slim page anchor that replaces the dropped breadcrumb +
+          oversized section head: {Section·Page} over an uppercase-mono context. */}
+      <div className="core-surf-id">
+        <span className="t">
+          {section}
+          {page ? (
+            <>
+              <span className="mid">·</span>
+              {page}
+            </>
+          ) : null}
+        </span>
+        {sub != null && <span className="s">{sub}</span>}
+      </div>
+      {left}
+      <div className="core-sp" />
+      {right}
     </div>
   );
 }

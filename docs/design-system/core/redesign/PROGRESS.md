@@ -4,7 +4,7 @@
 > Legend: ☐ not started · ◐ in progress · ☑ done · ⏸ blocked/awaiting decision.
 > Companion: [`README.md`](./README.md) (the design spec).
 
-Last updated: **2026-07-02** — full live 1:1 audit of all 11 suite pages against the dense-console mockup; suite confirmed implemented and functional, CRM inspector defaulted-open to match the mockup's populated state.
+Last updated: **2026-07-04** — unified header collapsed from four rows to a single `.core-surf-toolbar` **ActionBar** (identity · controls · actions); `CoreCrumb` + `CoreSectionHead` deleted; all 11 surfaces + theme/module docs synced. See the latest decision-log entry.
 
 ---
 
@@ -220,3 +220,19 @@ _(append dated entries as choices are made)_
   `.core-surge-banner` when a window is ≥85% full. Manage rows are `.core-mslot` (fill bar + tier chip toggle + N/max);
   Demand rows are `.core-exrow` (tier + lever + Apply / Apply-all). All slot/demand mutations preserved. 343 tests green;
   both verified live (screenshotted).
+- **2026-07-04** — **Unified header collapsed to a single ActionBar.** The
+  four-row header stack (command bar → `.core-crumb` breadcrumb →
+  `.core-sectionhead` title → `.core-surf-toolbar`) was reduced to **two rows**:
+  the global command bar, then ONE `.core-surf-toolbar` **ActionBar**. Rationale:
+  the breadcrumb only ever restated the command bar's own `core ❯ surface:tab`
+  prompt, and the oversized section head restated it a second time — pure
+  duplication above every surface. Both `CoreCrumb` and `CoreSectionHead` (and
+  their `.core-crumb` / `.core-sectionhead` CSS) were **deleted**; the identity
+  they carried folds into a slim **`.core-surf-id`** slot at the ActionBar's far
+  left (`{Section·Page}` over the mono context sub), the view/scope switch that
+  used to ride the section-head right moves to the toolbar `left` (leading the
+  controls), and the actions stay in `right`. `CoreSurfToolbar` gained
+  `section` / `page` / `sub` props; all 11 surfaces (POS · Book · Tables · Slots ·
+  Dispatch · KDS fleet/floor/chef · Orders · CRM · Inbox · Loyalty · Concierge)
+  were converted. Theme README + every module doc synced (Rule #11); the
+  historical entries above are left as-dated. Typecheck green.

@@ -306,19 +306,26 @@
 .core .core-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column;
   overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-/* surface sub-toolbar — a thin control strip at the TOP of a surface body, for
-   the working controls the "Command" bar deliberately omits (Slots' view
-   filters + date, Book's date). Distinct from the command bar: it belongs to
-   the surface, not the global chrome. */
-/* Row 4 of the unified header — LOCKED height so the stat strip below never
-   shifts between a surface with controls and one without. Controls that
-   overflow scroll INSIDE the row (never wrap it taller / push rows down). */
-.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 50px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; font-family: var(--mono); font-size: 11.5px; }
+/* surface ActionBar — the ONE control strip at the TOP of a surface body. It
+   carries the slim page identity (left), the working controls the "Command" bar
+   deliberately omits (Slots' view filters + date, Book's date), and the surface
+   actions (right). Belongs to the surface, not the global chrome. */
+/* The unified header, collapsed to a SINGLE row (was crumb + section head +
+   toolbar): LOCKED height so the stat strip below never shifts between a surface
+   with controls and one without. Controls that overflow scroll INSIDE the row
+   (never wrap it taller / push rows down). */
+.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 56px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; font-family: var(--mono); font-size: 11.5px; }
 .core .core-surf-toolbar::-webkit-scrollbar { height: 0; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-/* explicit empty state — the row stays, so placement is identical everywhere */
-.core .core-surf-empty { color: var(--ink-3); opacity: .5; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+/* Identity slot — the slim page anchor that replaces the dropped `.core-crumb`
+   breadcrumb + oversized `.core-sectionhead`: a display-grotesk {Section·Page}
+   title (brand-toned `.mid` dot) stacked over the uppercase-mono context `.s`.
+   `flex:none` so it holds its width; the controls/actions flow after it. */
+.core .core-surf-id { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; flex: 0 1 auto; margin-right: 4px; }
+.core .core-surf-id .t { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: -.015em; line-height: 1.1; color: var(--ink); white-space: nowrap; }
+.core .core-surf-id .t .mid { color: var(--brand-bright); margin: 0 4px; }
+.core .core-surf-id .s { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* Normalise every labelled action pill in the toolbar to ONE size/shape/casing
    so a surface's "New reservation" / "New slot" / "Add table" / "Forecast" /
    "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
@@ -341,20 +348,6 @@
 .core .core-qrpill-n { font-weight: 700; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 99px; display: inline-grid; place-items: center;
   background: var(--info); color: var(--on-info, #06222c); font-size: 10px; }
 .core .core-qrpill.on { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info) 55%, transparent), 0 0 14px -5px var(--info); }
-
-/* ---- surface section header (title + sub) — the dense-console page head ----
-   A big grotesk surface title beside an uppercase mono sub, matching the
-   mockup's `.sectionhead`. Sits at the top of a surface body, under the
-   sub-toolbar, over the stat strip. */
-/* Row 3 of the unified header — LOCKED height, title left, view/scope switch
-   pinned right (via `.core-sp`). align-items:center + nowrap so the row lands
-   on the same pixel on every surface and never bounces between tabs. */
-.core .core-sectionhead { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; }
-.core .core-sectionhead::-webkit-scrollbar { height: 0; }
-.core .core-sectionhead h1, .core .core-sectionhead h2 { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
-.core .core-sectionhead h1 .mid { color: var(--brand-bright); margin: 0 4px; }
-.core .core-sectionhead .sub { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.core .core-sectionhead .core-sp { flex: 1; }
 
 /* ---- unified surface stat strip — the dense-console KPI row -----------------
    Undivided cells over one clean glass panel (no inter-cell hairlines — the
@@ -1399,7 +1392,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* CRM filters now render in the shared row-4 `.core-surf-toolbar` (via
    CoreSurfToolbar), so the bespoke `.core-crm-filterbar` wrapper was removed;
    its child controls keep their own classes below. */
-.core .core-crm-search { display: flex; align-items: center; gap: 8px; min-width: 220px; flex: 0 0 auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 6px 12px; color: var(--ink-3); }
+.core .core-crm-search { display: flex; align-items: center; gap: 8px; min-width: 170px; flex: 0 1 auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 6px 12px; color: var(--ink-3); }
 .core .core-crm-search svg { flex: none; }
 .core .core-crm-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-crm-search input::placeholder { color: var(--ink-3); }
@@ -1409,7 +1402,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-segchips button:hover { color: var(--ink-2); }
 .core .core-segchips button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
 .core .core-segchips .ct { font-size: 9px; color: var(--ink-3); background: var(--panel-2); border-radius: 99px; padding: 0 5px; }
-.core .core-gems { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.core .core-gems { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex: none; }
 .core .core-gemchip { display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: .03em; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 4px 10px 4px 8px; }
 .core .core-gemchip.on { box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); color: var(--ink); border-color: var(--line-2); }
 .core .core-gem { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 8px -2px currentColor; flex: none; }
@@ -1639,12 +1632,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-form { grid-column: 2; }
 .core .core-book-side { grid-column: 1 / -1; }
 /* dense-console header rows span the full width above the form/side row */
-.core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
+.core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 /* Book renders its header inside the padded timeline GRID (0 14px). Pull the
-   shared header rows back to full-bleed so the crumb/title/toolbar land on the
-   SAME pixel as every other surface (whose wrapper has no side padding) — the
-   stat strip already sits inset, matching the others. */
-.core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-surf-toolbar { margin-left: -14px; margin-right: -14px; }
+   shared ActionBar back to full-bleed so it lands on the SAME pixel as every
+   other surface (whose wrapper has no side padding) — the stat strip already
+   sits inset, matching the others. */
+.core .core-book > .core-surf-toolbar { margin-left: -14px; margin-right: -14px; }
 .core .core-book-form { padding: 18px; }
 /* timeline title + status legend (mockup) */
 .core .core-book-tlbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
@@ -1729,12 +1722,6 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-bottleneck .bn-act { font-family: var(--mono); font-size: 10px; color: var(--on-accent); border: 0; border-radius: var(--pill); padding: 5px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .core .core-bottleneck.warn .bn-act { background: var(--amber); } .core .core-bottleneck.risk .bn-act { background: var(--danger); color: #fff; }
 .core .core-bottleneck .bn-act:hover { filter: brightness(1.06); }
-/* Dense-console breadcrumb line (mockup `.cap`) — sits above the section head. */
-/* Row 2 of the unified header — LOCKED height (breadcrumb grammar via CoreCrumb). */
-.core .core-crumb { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--ink-3); text-transform: uppercase; padding: 0 16px; height: 34px; display: flex; gap: 8px; align-items: center; flex: none; }
-.core .core-crumb b { color: var(--basil); font-weight: 600; }
-.core .core-crumb .d { opacity: .5; }
-.core .core-crumb .fix { color: var(--brand-bright); border: 1px solid var(--line-2); padding: 1px 7px; border-radius: var(--pill); font-size: 9px; background: var(--brand-wash); }
 
 .core .core-floor { flex: 1; overflow-y: auto; padding: 18px; }
 /* Tables' zone scope switch now renders as the canonical `.core-seg` pinned to
