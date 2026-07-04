@@ -1394,15 +1394,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-crm-search svg { flex: none; }
 .core .core-crm-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-crm-search input::placeholder { color: var(--ink-3); }
-.core .core-fsep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
-.core .core-segchips { display: inline-flex; gap: 3px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); }
-.core .core-segchips button { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: transparent; border: 0; cursor: pointer; padding: 5px 11px; border-radius: var(--pill); display: flex; align-items: center; gap: 6px; }
-.core .core-segchips button:hover { color: var(--ink-2); }
-.core .core-segchips button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
-.core .core-segchips .ct { font-size: 9px; color: var(--ink-3); background: var(--panel-2); border-radius: 99px; padding: 0 5px; }
-.core .core-gems { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex: none; }
-.core .core-gemchip { display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: .03em; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 4px 10px 4px 8px; }
-.core .core-gemchip.on { box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); color: var(--ink); border-color: var(--line-2); }
+/* CRM's segment + tier + sort filters use the shared `.core-seg` capsule (with a
+   `.sglab` label) like every other surface — no bespoke `.core-segchips` /
+   `.core-gems` / `.core-fsep`. The tier metal `.core-gem` dot is reused inside
+   the tier `.core-seg` buttons (and in the roster table). */
 .core .core-gem { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 8px -2px currentColor; flex: none; }
 .core .core-gem.bronze { background: linear-gradient(135deg, #d9915a, #8a4f27); color: #d9915a; }
 .core .core-gem.silver { background: linear-gradient(135deg, #e9edf2, #9aa4ae); color: #c9d1da; }

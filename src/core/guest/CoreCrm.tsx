@@ -311,32 +311,33 @@ export function CoreCrm() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
               </div>
-              <div className="core-fsep" />
-              <div className="core-segchips" role="group" aria-label="Segment">
+              {/* Segment + tier read as labelled `.core-seg` capsules, exactly
+                  like every other surface's view/scope switch. */}
+              <div className="core-seg" role="group" aria-label="Segment">
+                <span className="sglab">Segment</span>
                 {([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([k, label]) => (
-                  <button key={k} className={seg === k ? `on${k === "all" ? " brand" : ""}` : ""} onClick={() => setSeg(k)} aria-pressed={seg === k}>
-                    {label} <span className="ct">{segCounts[k]}</span>
+                  <button key={k} type="button" className={seg === k ? "on" : undefined} onClick={() => setSeg(k)} aria-pressed={seg === k}>
+                    {label} <span className="c">{segCounts[k]}</span>
                   </button>
                 ))}
               </div>
-              <div className="core-fsep" />
-              <div className="core-gems" role="group" aria-label="Loyalty tier">
+              <div className="core-seg" role="group" aria-label="Loyalty tier">
+                <span className="sglab">Tier</span>
                 {([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([k, label]) => (
-                  <span key={k} className={tierF === k ? "core-gemchip on" : "core-gemchip"} role="button" tabIndex={0}
-                    onClick={() => setTierF((t) => (t === k ? null : k))}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTierF((t) => (t === k ? null : k)); } }}>
+                  <button key={k} type="button" className={tierF === k ? "on" : undefined} aria-pressed={tierF === k}
+                    onClick={() => setTierF((t) => (t === k ? null : k))}>
                     <span className={`core-gem ${k}`} />{label}
-                  </span>
+                  </button>
                 ))}
               </div>
             </>
           }
           right={
             <>
-              <span className="core-crm-sortlbl">sort</span>
-              <div className="core-seg" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
+              <div className="core-seg" role="group" aria-label="Sort">
+                <span className="sglab">Sort</span>
                 {([["recent", "recent"], ["ltv", "spend"], ["orders", "visits"]] as const).map(([k, label]) => (
-                  <button key={k} className={sort === k ? "on" : ""} onClick={() => setSort(k)}>{label}</button>
+                  <button key={k} type="button" className={sort === k ? "on" : undefined} onClick={() => setSort(k)}>{label}</button>
                 ))}
               </div>
               <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>

@@ -229,8 +229,8 @@ in the surface ActionBar.
   command bar they carry `.cm-tabs` for the mono/lowercase treatment.
 - **Selected = brand-ember (one rule).** Every selection/active state across
   Core — command-bar view tabs (`.cm-tabs`), shell tabs (`.core-tabs`), and all
-  segmented controls (`.core-seg`, `.core-segs`, `.core-segchips`,
-  `.core-miniseg`, `.core-switch`) — renders the
+  segmented controls (`.core-seg`, `.core-segs`, `.core-miniseg`,
+  `.core-switch`) — renders the
   same **brand-ember** active: `background: var(--brand-wash); color:
   var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4)`. Green
   (basil) is reserved for **status**, not selection — a live/on signal (WhatsApp
