@@ -52,7 +52,22 @@ decisions in [`../README.md`](../README.md).
 The shell + shared primitives, all `core-` prefixed. Anatomy of each
 surface lives in [`../modules/`](../modules/).
 
-### Shell (`CoreShell` · `src/core/shell/`)
+### Shell (`CoreShellFrame` + `CoreShell` · `src/core/shell/`)
+
+**The chrome is rendered ONCE and never unmounts.** `CoreShellFrame`
+(`src/core/shell/CoreShellFrame.tsx`) — the command bar + Lens Rail + Context
+Dock + palette — is mounted by the `/core` layout (via `CoreProviders`) and
+wraps every page as a stable ancestor. Navigating between pages/tabs only swaps
+the Canvas (`{children}`); the top bar and left rail stay put, with no remount
+and no black flash. Each surface still writes `<CoreShell eyebrow tabs subLeft
+subRight bleed>` exactly as before, but `CoreShell` is now a thin **registrar**:
+it publishes that surface's *slice* of chrome (eyebrow · view tabs · body
+sub-toolbar · bleed) into the frame through `CoreShellContext`
+(`useRegisterChrome`) and renders its children into the persistent Canvas. The
+frame lives *below* the context provider and the page is passed to it as a
+stable `children` element, so a surface re-rendering the bar can never re-render
+the surface — it can't loop. Everything global (⌘K, telemetry, bell, theme,
+dock, palette, handover) renders in the frame, once.
 
 The command bar is the **"Command"** terminal chrome — one all-monospace row,
 left→right: traffic lights · shell prompt · view-tab chips · spacer · the
@@ -293,9 +308,10 @@ its whole surface.
 
 ## Chrome — command bar + left Lens Rail
 
-`CoreShell` renders the **"Command"** terminal command bar on top and the
-**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — no brand
-wordmark, no second subbar row, no bottom switcher:
+`CoreShellFrame` renders the **"Command"** terminal command bar on top and the
+**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — once, in the layout,
+persistent across navigation (see the Shell section) — with no brand wordmark,
+no second subbar row, no bottom switcher:
 
 - **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
   lights) · `.cm-div` · `.cm-prompt` (the live `core ❯ surface:tab` prompt +

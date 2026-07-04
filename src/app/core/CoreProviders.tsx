@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { LocationProvider } from "@/shared/LocationContext";
 import { CoreToastProvider } from "@/core/ui/Toast";
 import { SelectionProvider } from "@/core/shell/SelectionContext";
+import { CoreShellProvider } from "@/core/shell/CoreShellContext";
+import { CoreShellFrame } from "@/core/shell/CoreShellFrame";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**
@@ -59,7 +61,16 @@ export function CoreProviders({ children }: { children: ReactNode }) {
   return (
     <LocationProvider>
       <CoreToastProvider>
-        <SelectionProvider>{children}</SelectionProvider>
+        <SelectionProvider>
+          {/* The persistent shell frame (command bar + Lens Rail + dock) is
+              rendered ONCE here and wraps every page, so it never unmounts as you
+              navigate — the page is passed in as `children` and only the Canvas
+              swaps. `CoreShellProvider` carries the active surface's chrome slice
+              (eyebrow · tabs · toolbar) up to the frame. */}
+          <CoreShellProvider>
+            <CoreShellFrame>{children}</CoreShellFrame>
+          </CoreShellProvider>
+        </SelectionProvider>
       </CoreToastProvider>
     </LocationProvider>
   );
