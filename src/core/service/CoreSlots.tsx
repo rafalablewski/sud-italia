@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -97,8 +101,10 @@ export function CoreSlots() {
   // fulfillmentTypes (Rule #1), cycles all → dine-in → takeaway → delivery.
   const [chan, setChan] = useState<FulfillmentType | "all">("all");
   const [surgeDismissed, setSurgeDismissed] = useState(false);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [board, setBoard] = useState<DemandBoard | null>(null);
+  // Cached by location so returning to Slots re-renders the last windows/board
+  // instantly (no empty flash); the mount/poll fetch revalidates.
+  const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:slots:${loc}`, []);
+  const [board, setBoard] = useCoreCache<DemandBoard | null>(`core:slots-board:${loc}`, null);
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [cMode, setCMode] = useState<"bulk" | "single">("bulk");
@@ -334,38 +340,49 @@ export function CoreSlots() {
   return (
     <CoreShell eyebrow="Service · Tables & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — DENSE GLASS CONSOLE · <b>service · slots</b> · <span className="fix">demand exchange</span>
-        </div>
-        <div className="core-sectionhead">
-          <h1>Service · Slots</h1>
-          <span className="sub">{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</span>
-        </div>
-        {/* Slots controls — Manage|Demand · range · date · Filters · New · Refresh. */}
-        <div className="core-surf-toolbar">
-          <div className="core-seg core-slots-viewseg">
-            <button className={panel === "manage" ? "on brand" : ""} onClick={() => setPanel("manage")}>Manage</button>
-            <button className={panel === "demand" ? "on brand" : ""} onClick={() => setPanel("demand")}>Demand</button>
-          </div>
-          <div className="core-seg">
-            <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
-            <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
-          </div>
-          <label className="core-datefield core-slots-date" title="Change date">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
-            <span className="dv">{dateDisplay}</span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* not supported */ } }} aria-label="Date" />
-          </label>
-          <button type="button" className={`core-ghostbtn ${chan !== "all" ? "on" : ""}`} onClick={cycleChan}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M7 12h10M10 18h4" /></svg>{chanLabel}
-          </button>
-          <div className="core-sp" />
-          <button type="button" className="core-slot-add" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
-          <button type="button" className="core-ghostbtn" onClick={refresh}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" /></svg>Refresh
-          </button>
-        </div>
+        <CoreCrumb section="SERVICE" page="SLOTS" mode="demand exchange" />
+        <CoreSectionHead
+          section="Service"
+          page="Slots"
+          sub={<>{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</>}
+          actions={
+            /* Manage|Demand mode switch — the view/scope toggle, pinned title-row right. */
+            <div className="core-seg" role="tablist" aria-label="Mode">
+              <span className="sglab">Mode</span>
+              <button type="button" role="tab" aria-selected={panel === "manage"} className={panel === "manage" ? "on" : undefined} onClick={() => setPanel("manage")}>Manage</button>
+              <button type="button" role="tab" aria-selected={panel === "demand"} className={panel === "demand" ? "on" : undefined} onClick={() => setPanel("demand")}>Demand</button>
+            </div>
+          }
+        />
+        {/* Row 4 — filters left (range · date · channel), actions right (New slot · Refresh). */}
+        <CoreSurfToolbar
+          ariaLabel="Slot controls"
+          left={
+            <>
+              <div className="core-seg">
+                <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
+                <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
+              </div>
+              <label className="core-datefield core-slots-date" title="Change date">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
+                <span className="dv">{dateDisplay}</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* not supported */ } }} aria-label="Date" />
+              </label>
+              <button type="button" className={`core-ghostbtn ${chan !== "all" ? "on" : ""}`} onClick={cycleChan}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M7 12h10M10 18h4" /></svg>{chanLabel}
+              </button>
+            </>
+          }
+          right={
+            <>
+              <button type="button" className="core-slot-add" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
+              <button type="button" className="core-ghostbtn" onClick={refresh}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" /></svg>Refresh
+              </button>
+            </>
+          }
+        />
 
         {/* dense-console 6-up stat strip — every figure from live slot data (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Slot metrics">

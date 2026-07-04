@@ -2,11 +2,10 @@
    Imported after themes/core/index.css, so same-specificity rules here win.
    Mirrors the golden mockup (coredenseconsolesuite #pg-g-inbox). */
 
-@keyframes core-inbox-blink { 50% { opacity: 0; } }
-
-/* ===== subbar left label — "whatsapp · live" dotted ===== */
-.core .core-inbox-sublbl { display: flex; align-items: center; gap: 7px; color: var(--basil); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
-.core .core-inbox-sublbl .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--basil); box-shadow: 0 0 8px var(--basil); animation: core-inbox-blink 1.6s steps(1) infinite; }
+/* The Inbox controls (funnel · broadcast · settings · WhatsApp-live chip) now
+   render in the shared row-4 `.core-surf-toolbar`; the "whatsapp · live" subbar
+   label was dropped (redundant with the breadcrumb mode), so its
+   `.core-inbox-sublbl` rules + blink keyframe were removed. */
 
 /* ===== stat strip — value size unit + muted (no-data) value ===== */
 .core .core-statstrip .val.muted { color: var(--ink-3); }

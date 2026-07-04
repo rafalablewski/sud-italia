@@ -6,8 +6,9 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 ## Tables (`/core/service/tables`) — wired
 
 - **Live code:** `src/core/service/CoreTables.tsx`.
-- **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead` ·
-  `.core-zonetabs` / `.core-ztab` (zone filter) · `.core-statstrip` ·
+- **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead`
+  (with the **`Zone` scope switch** as a `.core-seg` pinned title-row right) ·
+  `.core-surf-toolbar` (Refresh · Add table, right) · `.core-statstrip` ·
   `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2` (+
   `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-tbl-field` /
   `.core-tbl-features` / `.core-tbl-feat` in `themes/core/index.css`; the
@@ -19,9 +20,11 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   flow lives in **Book** (`/core/service/book`, whose Floor lens seats parties
   and opens checks) and **POS**. Rendered in the **dense-console** language: a
   `.core-crumb` breadcrumb (`CORE — SERVICE · TABLES · liquid glass · [loc ·
-  dine-in]`), a `.core-sectionhead`, an optional **`Zone` subbar**
-  (`.core-zonetabs` — `Zone · All zones · <zone>×N`) that filters the zoned
-  groups, then a **6-up `.core-statstrip`** — **tables · seats · zones ·
+  dine-in]`), a `.core-sectionhead` whose right slot carries the optional
+  **`Zone` scope switch** (a `.core-seg` — `Zone · All zones · <zone>×N`, shown
+  when there is more than one zone) that filters the zoned groups, a
+  `.core-surf-toolbar` (Refresh · Add table), then a **6-up `.core-statstrip`**
+  — **tables · seats · zones ·
   available · out-of-service · accessible** — every figure derived live from
   the table catalogue (Rule #1; value colours read info/basil/amber/brand,
   each cell carries a mono delta).
@@ -64,8 +67,10 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   `.core-lever` (`.lv` + `.why`) / `.core-apply`.
 - Rendered in the **dense-console** language (1:1 with
   `tests/sketches/core-pages/05-service-slots.html`): a `.core-crumb`
-  breadcrumb, a `.core-sectionhead`, a **Day / Week** + date + New-slot
-  sub-toolbar, then a **6-up `.core-statstrip`** — **booked · capacity · fill ·
+  breadcrumb, a `.core-sectionhead` whose right slot carries the **`Mode`
+  switch** (Manage | Demand, a `.core-seg`), a `.core-surf-toolbar` (Day / Week
+  + date + channel filter left; New slot · Refresh right), then a **6-up
+  `.core-statstrip`** — **booked · capacity · fill ·
   surge windows · peak fill · demand price** (all live from the slot set —
   Rule #1; a "surge window" is one filled ≥85%, peak drives the price
   multiplier). When any window is ≥85% a **`.core-surge-banner`** offers a
@@ -178,8 +183,9 @@ recommendation, + the recommended pick's dominant signal) to
 `/api/admin/seating/decisions` when Learn-from-overrides or Shadow mode is on, so
 the override rate and the tuning nudge are measured numbers, not a guess.
 **Today's bookings** (`.core-bk-blist`) is a
-**full-width list below**, with cancel. A **lens toggle** in the section header
-(`.core-bk-lenses`) switches the surface between three views over **one shared
+**full-width list below**, with cancel. A **lens toggle** in the section-head
+right (the unified-header `.core-seg` view switch — `View` · timeline / floor /
+arrivals) switches the surface between three views over **one shared
 occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
 `buildTableSessions`) — so they can never disagree: **Timeline** (the plan),
 **Floor** (`.core-bk-floorlens` — a live table-tile grid built from the sessions:
@@ -204,10 +210,13 @@ reservations route), so the `floor-twin` (shift handover + the POS table picker)
 reflects it immediately; conversely a walk-in seated from POS shows in this
 Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 `nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
-number** (shared with the Tables `tLabel`). The **surface sub-bar**
-(`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
-use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a
-brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field). A
+number** (shared with the Tables `tLabel`). The **surface toolbar**
+(`.core-surf-toolbar.core-bk-subbar`, row 4 — under the section head, over the
+stat strip, via the shared `CoreSurfToolbar`) carries the weekday label + a
+compact date chip (`.core-bk-datefield`) on the left, and on the right the
+Forecast · Policy · Walk-in buttons + the brand **New reservation** pill
+(`.core-bk-newpill`, focuses the guest field). The **timeline / floor /
+arrivals** lenses render as the view switch in the section-head right. A
 **◔ Forecast** button opens a **pre-service simulation** `CoreDialog`
 (`.core-bk-sim`, from `simulateService` via GET `/api/admin/seating/simulate`):
 bookings/covers/peak-occupancy KPIs, a per-30-min table-occupancy bar chart

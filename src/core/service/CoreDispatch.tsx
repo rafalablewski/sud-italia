@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
+import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { serviceTabs } from "./serviceTabs";
@@ -59,9 +63,11 @@ const ClockIcon = () => (
 export function CoreDispatch() {
   const { location } = useLocation();
   const toast = useCoreToast();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached by location so returning to Dispatch re-renders the last board
+  // instantly (no loading flash); the mount/poll fetch revalidates.
+  const [orders, setOrders] = useCoreCache<Order[]>(`core:dispatch-orders:${location}`, []);
+  const [drivers, setDrivers] = useCoreCache<Driver[]>(`core:dispatch-drivers:${location}`, []);
+  const [loading, setLoading] = useState(() => peekCoreCache<Driver[]>(`core:dispatch-drivers:${location}`) === undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [clock, setClock] = useState("");
@@ -185,26 +191,28 @@ export function CoreDispatch() {
     <CoreShell
       eyebrow="Service · Dispatch"
       tabs={serviceTabs("dispatch")}
-      subLeft="delivery dispatch"
-      subRight={
-        <>
-          <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">
-            <ClockIcon /> auto-assign nearest
-          </button>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
-            <RefreshIcon />
-          </button>
-        </>
-      }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — SERVICE · DISPATCH · <b>liquid glass</b> · <span className="fix">pass → road</span>
-        </div>
-        <div className="core-sectionhead">
-          <h1>Service · Dispatch</h1>
-          <span className="sub">pass → road · {location}{clock ? ` · ${clock}` : ""}</span>
-        </div>
+        <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
+        <CoreSectionHead
+          section="Service"
+          page="Dispatch"
+          sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
+        />
+        {/* Row 4 — no filters; actions right (auto-assign · Refresh). */}
+        <CoreSurfToolbar
+          ariaLabel="Dispatch controls"
+          right={
+            <>
+              <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">
+                <ClockIcon /> auto-assign nearest
+              </button>
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
+                <RefreshIcon />
+              </button>
+            </>
+          }
+        />
         {/* dense-console 6-up stat strip — every figure from the live board (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Dispatch metrics">
           <div className="cell"><span className="lab">In kitchen</span><span className="val info">{kpis.kitchen}</span><span className="delta">{kpis.preparing} firing now</span></div>

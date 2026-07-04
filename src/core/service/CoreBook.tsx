@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -74,11 +78,13 @@ export function CoreBook({
     setDate(todayLocal());
   }, []);
 
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached by location so returning to Book re-renders the last day's plan
+  // instantly (no loading flash); the mount/poll fetch revalidates for the date.
+  const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:book-slots:${loc}`, []);
+  const [tables, setTables] = useCoreCache<FloorTable[]>(`core:book-tables:${loc}`, []);
+  const [reservations, setReservations] = useCoreCache<Reservation[]>(`core:book-res:${loc}`, []);
+  const [waitlist, setWaitlist] = useCoreCache<WaitlistEntry[]>(`core:book-wait:${loc}`, []);
+  const [loading, setLoading] = useState(() => peekCoreCache<Reservation[]>(`core:book-res:${loc}`) === undefined);
   const [waitName, setWaitName] = useState("");
   const [waitPartyN, setWaitPartyN] = useState(2);
 
@@ -572,55 +578,66 @@ export function CoreBook({
       tabs={serviceTabs("book")}
     >
       <div className="core-book">
-        {/* Surface sub-bar (mockup subbar): weekday label + a date chip on the
-            left, a brand New-reservation pill on the right that jumps focus to
-            the always-open form. Uses the shared `.core-surf-toolbar` bar so it
-            reads identically to POS/KDS surface controls. */}
-        <div className="core-surf-toolbar core-bk-subbar">
-          <span className="core-surf-tb-lbl">{daySub}</span>
-          <input
-            className="core-inp core-bk-datefield"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-label="Booking day"
-          />
-          <div className="core-sp" />
-          <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
-            <span aria-hidden>◔</span> Forecast
-          </button>
-          <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
-            <span aria-hidden>⚙</span> Policy
-          </button>
-          <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
-            <span aria-hidden>+</span> Walk-in
-          </button>
-          <button
-            type="button"
-            className="core-bk-newpill"
-            onClick={() => {
-              nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-              nameRef.current?.focus({ preventScroll: true });
-            }}
-          >
-            <span aria-hidden>+</span> New reservation
-          </button>
-        </div>
-        <div className="core-crumb">
-          CORE — BOOK · RESERVATIONS · <b>liquid glass</b> · <span className="fix">timeline view</span>
-        </div>
-        <div className="core-sectionhead">
-          <h1>Book &amp; Seat</h1>
-          <span className="sub">{daySub} · dinner service · {loc}</span>
-          <div className="core-sp" />
-          <div className="core-bk-lenses" role="tablist" aria-label="View">
-            {(["timeline", "floor", "arrivals"] as const).map((m) => (
-              <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
-                {m}
+        {/* Unified header rows in the fixed mockup order: breadcrumb (2) →
+            section head + view switch (3) → surface toolbar (4) → stat strip (5). */}
+        <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
+        <CoreSectionHead
+          section="Service"
+          page="Book"
+          sub={<>{daySub} · dinner service · {loc}</>}
+          actions={
+            <div className="core-seg" role="tablist" aria-label="View">
+              <span className="sglab">View</span>
+              {(["timeline", "floor", "arrivals"] as const).map((m) => (
+                <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          }
+        />
+        {/* Row 4 — filters left (weekday label + day picker), actions right
+            (Forecast · Policy · Walk-in · the primary New-reservation pill that
+            jumps focus to the always-open form). */}
+        <CoreSurfToolbar
+          ariaLabel="Booking controls"
+          className="core-bk-subbar"
+          left={
+            <>
+              <span className="core-surf-tb-lbl">{daySub}</span>
+              <input
+                className="core-inp core-bk-datefield"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-label="Booking day"
+              />
+            </>
+          }
+          right={
+            <>
+              <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
+                <span aria-hidden>◔</span> Forecast
               </button>
-            ))}
-          </div>
-        </div>
+              <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
+                <span aria-hidden>⚙</span> Policy
+              </button>
+              <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
+                <span aria-hidden>+</span> Walk-in
+              </button>
+              <button
+                type="button"
+                className="core-bk-newpill"
+                onClick={() => {
+                  nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+                  nameRef.current?.focus({ preventScroll: true });
+                }}
+              >
+                <span aria-hidden>+</span> New reservation
+              </button>
+            </>
+          }
+        />
         {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Booking metrics">
           <div className="cell">
@@ -740,7 +757,7 @@ export function CoreBook({
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Slot</span><span className="mut">tinted by capacity</span></div>
-              {loading ? (
+              {loading && slots.length === 0 ? (
                 <div className="core-ctx-empty">Loading slots…</div>
               ) : dineInSlots.length === 0 ? (
                 <div className="core-ctx-empty">No dine-in slots for this day.</div>

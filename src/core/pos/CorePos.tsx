@@ -7,6 +7,9 @@ import type { PosKpis } from "@/lib/store"; // type-only (erased) — no server 
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { ExpandIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -1405,17 +1408,25 @@ export function CorePos({
       {/* dense-console breadcrumb — matches the mockup's `.cap` line, shared with
           every other Core surface (Rule: one chrome across the suite). */}
       {!embedded && (
-        <div className="core-crumb">
-          CORE — POS · ORDER · <b>liquid glass</b> · <span className="fix">dense console</span>
-        </div>
+        <CoreCrumb section="POS" page="ORDER" mode="dine-in" />
       )}
-      {/* surface section header — dense-console page title + context sub. The
-          till/service context moved to the body sub-toolbar's left label
-          (mockup: "TILL 1 · DINNER SERVICE"), so the head stays left-aligned. */}
-      <div className="core-sectionhead">
-        <h1>POS · Order</h1>
-        <span className="sub">{pageLoc} · dine-in service</span>
-      </div>
+      {/* surface section header — dense-console page title + context sub. */}
+      <CoreSectionHead section="POS" page="Order" sub={<>{pageLoc} · dine-in service</>} />
+
+      {/* Row 4 — no filters; actions right (QR-order queue · fullscreen). */}
+      {!embedded && (
+        <CoreSurfToolbar
+          ariaLabel="Till controls"
+          right={
+            <>
+              <CoreQrQueue location={pageLoc} />
+              <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} aria-label={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
+                <ExpandIcon />
+              </button>
+            </>
+          }
+        />
+      )}
 
       {/* live stat strip — the mockup's KPI row, every figure REAL (Rule #1):
           open checks · covers seated (+floor%) · avg check · prep queue · table
@@ -2111,15 +2122,6 @@ export function CorePos({
           onClick: () => (active && active.items.length > 0 ? setTenderOpen(true) : toast("Add items first")),
         },
       ]}
-      subLeft="Till 1 · dinner service"
-      subRight={
-        <>
-          <CoreQrQueue location={pageLoc} />
-          <button type="button" className="core-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} aria-label={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
-            <ExpandIcon />
-          </button>
-        </>
-      }
     >
       {posBody}
     </CoreShell>

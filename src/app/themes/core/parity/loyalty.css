@@ -3,16 +3,9 @@
 /* Gold accent used by the Gold+ stat + gold gem chips (not in the base tokens). */
 .core { --gold: #e8b24a; }
 
-/* ---- Labeled sub-tab segmented control (Members · Wallets · Redemptions · Win-back) ---- */
-.core .core-loy-seg { display: inline-flex; gap: 2px; padding: 3px; margin: 0 16px 10px; border-radius: var(--pill);
-  background: var(--panel-2); border: 1px solid var(--line); }
-.core .core-loy-seg button { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px;
-  border-radius: var(--pill); font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; cursor: pointer; }
-.core .core-loy-seg button:hover { color: var(--ink-2); }
-.core .core-loy-seg button.on { color: var(--ink); }
-.core .core-loy-seg button.on.brand { background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
-.core .core-loy-seg .ct { font-family: var(--mono); font-size: 9px; color: var(--ink-3); background: var(--panel); border-radius: 99px; padding: 1px 6px; }
-.core .core-loy-seg button.on.brand .ct { color: var(--brand-bright); }
+/* The Members · Wallets · Redemptions · Win-back sub-tabs now render as the
+   canonical `.core-seg` view switch pinned to the section-head right (unified
+   header), so the bespoke `.core-loy-seg` rules were removed. */
 
 /* ---- Stat strip: gold Gold+ cell + flagged (no-data) Breakage cell ---- */
 .core .core-statstrip .val.gold { color: var(--gold); }

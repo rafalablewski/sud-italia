@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -42,7 +46,9 @@ const FEATURE_GLYPH: Record<TableFeature, string> = {
 export function CoreTables() {
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
-  const [tables, setTables] = useState<FloorTable[] | null>(null);
+  // Cached by location so switching pages/tabs re-renders the last floor plan
+  // instantly (no loading flash); the poll/mount fetch revalidates it.
+  const [tables, setTables] = useCoreCache<FloorTable[] | null>(`core:tables:${loc}`, null);
   const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<FloorTable | "new" | null>(null);
   // A load error is surfaced (with a Retry) rather than swallowed — otherwise a
@@ -63,7 +69,7 @@ export function CoreTables() {
     } catch {
       setError("Couldn't reach the server. Check your connection.");
     }
-  }, [loc]);
+  }, [loc, setTables]);
   useEffect(() => { void load(); }, [load]);
   // A gentle poll so a table added on another till appears here — the plan
   // changes rarely, so 20s is plenty (this is config, not the live floor).
@@ -83,7 +89,7 @@ export function CoreTables() {
       }
       return prev;
     });
-  }, []);
+  }, [setTables]);
 
   const zones = useMemo(() => {
     const m = new Map<string, FloorTable[]>();
@@ -128,39 +134,45 @@ export function CoreTables() {
     <CoreShell
       eyebrow="Service · Tables"
       tabs={serviceTabs("tables")}
-      subRight={
-        <>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
-          <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
-        </>
-      }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — SERVICE · TABLES · <b>liquid glass</b> · <span className="fix">{location} · dine-in</span>
-        </div>
-        <div className="core-sectionhead">
-          <h1>Service · Tables</h1>
-          <span className="sub">
-            {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}
-            {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
-          </span>
-        </div>
-
-        {/* Zone selector — filters the zoned tile groups. */}
-        {zones.length > 1 && (
-          <div className="core-zonetabs">
-            <span className="core-zone-lbl">Zone</span>
-            <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
-              All zones<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
-            </button>
-            {zones.map(([z, ts]) => (
-              <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
-                {z}<span className="n">{ts.length}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <CoreCrumb section="SERVICE" page="TABLES" mode={location ? <>{location} · dine-in</> : "dine-in"} />
+        <CoreSectionHead
+          section="Service"
+          page="Tables"
+          sub={
+            <>
+              {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}
+              {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
+            </>
+          }
+          actions={
+            zones.length > 1 ? (
+              /* Zone scope switch — the view/scope toggle, pinned to the title row right. */
+              <div className="core-seg" role="tablist" aria-label="Zone">
+                <span className="sglab">Zone</span>
+                <button type="button" role="tab" aria-selected={!zoneFilter} className={!zoneFilter ? "on" : undefined} onClick={() => setZoneFilter(null)}>
+                  All zones<span className="c">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+                </button>
+                {zones.map(([z, ts]) => (
+                  <button key={z} type="button" role="tab" aria-selected={zoneFilter === z} className={zoneFilter === z ? "on" : undefined} onClick={() => setZoneFilter(z)}>
+                    {z}<span className="c">{ts.length}</span>
+                  </button>
+                ))}
+              </div>
+            ) : undefined
+          }
+        />
+        {/* Row 4 — no filters; actions right (Refresh · Add table). */}
+        <CoreSurfToolbar
+          ariaLabel="Table controls"
+          right={
+            <>
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+              <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
+            </>
+          }
+        />
 
         {/* dense-console stat strip — every figure from the table catalogue
             (Rule #1): Tables · Seats · Zones · Available · Out of service ·

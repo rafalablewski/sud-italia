@@ -3,6 +3,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -744,7 +748,9 @@ function WaBroadcastDialog({ open, onClose }: { open: boolean; onClose: () => vo
  */
 export function CoreInbox() {
   const toast = useCoreToast();
-  const [sessions, setSessions] = useState<WaSessionRow[]>([]);
+  // Cached so returning to the Inbox re-renders the last conversation list
+  // instantly (chain-wide WhatsApp); the mount/poll fetch revalidates.
+  const [sessions, setSessions] = useCoreCache<WaSessionRow[]>("core:inbox:sessions", []);
   const [heads, setHeads] = useState<TranscriptHead[]>([]);
   const [flags, setFlags] = useState<{ archived: string[]; pinned: string[] }>({ archived: [], pinned: [] });
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -989,30 +995,28 @@ export function CoreInbox() {
     <CoreShell
       eyebrow="Guest Engagement"
       tabs={guestTabs("inbox")}
-      subLeft={<span className="core-inbox-sublbl"><span className="dot" />whatsapp · live</span>}
-      subRight={
-        <>
-          <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
-            <GuestGlyph name="funnel" />
-          </button>
-          <button type="button" className="core-iconbtn" title="Broadcast campaign" aria-label="Broadcast campaign" onClick={() => setBroadcastOpen(true)}>
-            <GuestGlyph name="broadcast" />
-          </button>
-          <button type="button" className="core-iconbtn" title="WhatsApp settings" aria-label="WhatsApp settings" onClick={() => setSettingsOpen(true)}>
-            <GuestGlyph name="settings" />
-          </button>
-          <span className="core-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
-        </>
-      }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — GUEST · INBOX · <b>whatsapp live</b> · <span className="fix">reached via ⌘K</span>
-        </div>
-        <div className="core-sectionhead">
-          <h1>Guest · Inbox</h1>
-          <span className="sub">whatsapp · 3-pane over unified stat strip</span>
-        </div>
+        <CoreCrumb section="GUEST" page="INBOX" mode="whatsapp live" />
+        <CoreSectionHead section="Guest" page="Inbox" sub={<>whatsapp · 3-pane over unified stat strip</>} />
+        {/* Row 4 — no filters; actions right (funnel · broadcast · settings · live). */}
+        <CoreSurfToolbar
+          ariaLabel="Inbox controls"
+          right={
+            <>
+              <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
+                <GuestGlyph name="funnel" />
+              </button>
+              <button type="button" className="core-iconbtn" title="Broadcast campaign" aria-label="Broadcast campaign" onClick={() => setBroadcastOpen(true)}>
+                <GuestGlyph name="broadcast" />
+              </button>
+              <button type="button" className="core-iconbtn" title="WhatsApp settings" aria-label="WhatsApp settings" onClick={() => setSettingsOpen(true)}>
+                <GuestGlyph name="settings" />
+              </button>
+              <span className="core-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
+            </>
+          }
+        />
         {kpis.length > 0 && (
           <div className="core-statstrip" role="group" aria-label="Inbox metrics">
             {kpis.map((k) => (

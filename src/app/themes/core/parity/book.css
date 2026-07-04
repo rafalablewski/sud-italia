@@ -378,12 +378,10 @@
 .core .core-bk-signals .sg-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
 .core .core-bk-signals .sg-reason { font-family: var(--mono); font-size: 9.5px; color: var(--ink-2); background: var(--panel-3); border-radius: 5px; padding: 2px 7px; }
 
-/* ── Book & Seat lenses — Timeline · Floor · Arrivals over shared reservations ─ */
-/* lens toggle in the section header */
-.core .core-bk-lenses { display: inline-flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
-.core .core-bk-lenses button { font-family: var(--mono); font-size: 11px; text-transform: capitalize; color: var(--ink-3); background: transparent; border: 0; padding: 5px 13px; border-radius: 999px; cursor: pointer; }
-.core .core-bk-lenses button:hover { color: var(--ink-2); }
-.core .core-bk-lenses button.on { color: var(--ink); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .5); }
+/* Book's Timeline · Floor · Arrivals lenses now render as the canonical
+   `.core-seg` view switch (with a `View` label) pinned to the section-head
+   right — identical to every other surface's switch — so the bespoke
+   `.core-bk-lenses` rules were removed (unified header). */
 
 /* FLOOR lens — a card of table tiles (full width in the book grid) */
 .core .core-bk-floorlens { grid-column: 1 / -1; margin: 0 0 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
