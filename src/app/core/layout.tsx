@@ -7,7 +7,7 @@ import "../themes/core/parity/crm.css";
 import "../themes/core/parity/inbox.css";
 import "../themes/core/parity/loyalty.css";
 import "../themes/core/parity/concierge.css";
-import "../themes/core/parity/floor.css";
+import "../themes/core/parity/tables.css";
 import "../themes/core/parity/slots.css";
 import "../themes/core/parity/dispatch.css";
 import "../themes/core/parity/orders.css";

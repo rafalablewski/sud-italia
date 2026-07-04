@@ -107,7 +107,13 @@ stored discount-reason/VAT-override. Tracked here for a future backend pass.
 - **MED** Left pane header `Capabilities` + `6/6 live` badge; row icons; drop RESOURCE/TOOL chip + desc line.
 - **MED** Deflection value should be brand/orange; add matrix legend footer + dim `·` absence markers.
 
-## Service · Floor — `/core/service/floor`
+## Service · Floor — `/core/service/floor` (RETIRED → `service:tables`)
+
+> **2026-07:** this operational Floor board was retired. `service:floor` was
+> renamed to **`service:tables`** (`/core/service/tables`) and scoped down to a
+> management-only zones/tables/seats surface; the seating, order-lookup and
+> check-over-floor flow moved to **Book's Floor lens** + **POS**. The gaps below
+> were logged against the old board and are no longer actionable.
 
 - **HIGH** No persistent **Context Dock** (check + course spine + Fire/Pay) at bottom.
 - **MED** Stat strip missing **Waitlist** cell; has extra `Spend/hr`; Occupancy not last.

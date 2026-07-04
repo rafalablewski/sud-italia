@@ -1,0 +1,20 @@
+/* Core parity (tables) — dense-console 1:1 fixes for the Service · Tables plan.
+   Scope every rule under .core. This surface manages zones / tables / seats;
+   there is no seating, order lookup or live-floor tooling here (that lives in
+   Book / POS), so the quick-action + floor-tools overlays are gone. */
+
+/* ── Tile is a div (role=button) that opens the table editor on tap. Restore
+   the pointer affordance + a keyboard focus ring a <button> would have given. */
+.core .core-tbl2 { cursor: pointer; }
+.core .core-tbl2:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ── Zone header hairline — a thin rule runs off the end of the
+   `Zone  N tables · X seats` label. Scoped to the plan so the shared
+   `.core-zone-h` (dialogs) is untouched. */
+.core .core-floor .core-zone-h { align-items: center; }
+.core .core-floor .core-zone-h::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}

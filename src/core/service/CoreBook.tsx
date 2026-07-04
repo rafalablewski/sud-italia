@@ -36,7 +36,7 @@ const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
 
 /** Floor's shared table-label convention: prefix a bare number with "T"
- *  (matches CoreFloor's `T${n}`), leave already-named tables ("Bar 3") alone. */
+ *  (matches CoreTables' `T${n}`), leave already-named tables ("Bar 3") alone. */
 function tLabel(n: string): string {
   return /^\d+$/.test(n) ? `T${n}` : n;
 }
@@ -506,10 +506,10 @@ export function CoreBook({
     } catch { /* telemetry is best-effort */ }
   };
 
-  // ── Lens-derived state — the Floor lens reads the SAME session spine the
-  // legacy /core/service/floor does (buildTableSessions), so a walk-in seated
-  // off-book on the floor shows here too, and a booking seated here flips the
-  // floor. One truth, every lens.
+  // ── Lens-derived state — the Floor lens reads the SAME session spine POS and
+  // the floor-twin do (buildTableSessions), so a walk-in seated off-book on the
+  // floor shows here too, and a booking seated here flips the floor. One truth,
+  // every lens.
   const nowHM = `${String(Math.floor(nowMin / 60)).padStart(2, "0")}:${String(nowMin % 60).padStart(2, "0")}`;
   const sessions = useMemo(
     () => buildTableSessions({ tables: sortedTables, reservations, nowMin, date, locationSlug: loc }),

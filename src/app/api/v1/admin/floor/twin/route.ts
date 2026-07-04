@@ -24,7 +24,8 @@ function resolveLocation(req: NextRequest, scope: string): string | { error: Ret
 /**
  * `GET /api/v1/admin/floor/twin?location=` — the live room: per-table occupancy,
  * realized dwell + spend velocity, predicted free-in, plus the kitchen-bottleneck
- * signal. Mirrors web `/core/service/floor` (`/api/admin/floor-twin`). Staff+,
+ * signal. Mirrors web `/api/admin/floor-twin` (used by the Book Floor lens +
+ * shift handover). Staff+,
  * location-scoped. Reuses the shared `buildFloorTwin` engine (no duplicated logic).
  */
 export async function GET(req: NextRequest) {

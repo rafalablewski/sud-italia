@@ -17,8 +17,8 @@ const ORDER_HOLDS_TABLE = new Set(["confirmed", "preparing", "ready"]);
 
 /**
  * TableSession spine — mirror a reservation's live occupancy onto the shared
- * FloorTable.status so Book & Seat and the legacy /core/service/floor read ONE
- * truth. Seating a booking here now flips its table to `seated`; completing /
+ * FloorTable.status so Book & Seat and the POS table picker read ONE truth.
+ * Seating a booking here now flips its table to `seated`; completing /
  * no-showing / cancelling frees it — but only when nothing else holds it (no
  * other seated booking on that table, no open dine-in check). Called after the
  * reservation is saved, scoped to the reservation's own date so a future edit

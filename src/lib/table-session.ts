@@ -8,7 +8,7 @@ import { freeWindowMin } from "./seating";
  *   1. Reservations (`Reservation.status` + tableId + time window) — who is
  *      booked, seated, or due here, from Book & Seat.
  *   2. The physical floor (`FloorTable.status`) — a walk-in seated straight
- *      from the legacy /core/service/floor has no reservation, only a seated
+ *      from POS / the Book Floor lens has no reservation, only a seated
  *      table.
  *
  * Feeding both surfaces the SAME derivation is what makes "who's sitting where"

@@ -8,10 +8,10 @@ import { CORE_SURFACES } from "@/core/routes";
 /**
  * The Lens Rail — the left, icon-only rail (60px) that switches how you view the
  * room, not which app you're in. The three Service OS lenses, in spec order:
- * Floor (the map) · POS (the till / ordering) · KDS (the pass). We keep the
+ * Tables (the plan) · POS (the till / ordering) · KDS (the pass). We keep the
  * **old, plain names** (POS / KDS) rather than "Line"/"Pass" — operators know
  * them. Book (slots / reservations) is a **Service** view (a tab under the
- * Floor lens, alongside Slots · Dispatch), not its own lens.
+ * Tables lens, alongside Slots · Dispatch), not its own lens.
  *
  * The rail is collapsed to icons by default and expands to reveal labels only
  * when the operator **pins** it (a click on the pin toggle) — never on hover, so
@@ -30,7 +30,7 @@ import { CORE_SURFACES } from "@/core/routes";
  */
 
 // Icons trace the dense-console mockup's lens rail 1:1 (tests/sketches/
-// core-pages/*.html → `.lens`): Floor = 2×2 grid, POS = register with legs,
+// core-pages/*.html → `.lens`): Tables = 2×2 grid, POS = register with legs,
 // KDS = split pass panel, Guest = two people, Reports = line chart,
 // Settings = gear.
 const ICON: Record<string, ReactNode> = {
@@ -66,10 +66,10 @@ const ICON: Record<string, ReactNode> = {
 };
 
 // The room lenses, in rail order. Labels are the plain names. Book is not a lens
-// (it's a Service view, reached from the Floor lens tabs); Guest IS a lens —
+// (it's a Service view, reached from the Tables lens tabs); Guest IS a lens —
 // its own hub of Inbox · CRM · Loyalty · Concierge.
 const LENSES: { key: keyof typeof ICON; href: string; label: string; sub: string }[] = [
-  { key: "service", href: CORE_SURFACES.service, label: "Floor", sub: "tables · covers" },
+  { key: "service", href: CORE_SURFACES.service, label: "Tables", sub: "zones · seats" },
   { key: "pos", href: CORE_SURFACES.pos, label: "POS", sub: "order & charge" },
   { key: "kds", href: CORE_SURFACES.kds, label: "KDS", sub: "kitchen wall" },
   { key: "guest", href: CORE_SURFACES.guest, label: "Guest", sub: "inbox · crm" },
