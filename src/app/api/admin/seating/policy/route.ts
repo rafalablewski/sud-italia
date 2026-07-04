@@ -41,7 +41,7 @@ export const PUT = withAdmin(
         const clean: NonNullable<StoredSeatingPolicy["overrides"]> = {};
         if (o.weights && typeof o.weights === "object") {
           const w: Partial<SeatingWeights> = {};
-          for (const k of ["fit", "runway", "guest", "pacing", "yield"] as const) {
+          for (const k of ["fit", "runway", "guest", "pacing", "yield", "section"] as const) {
             if (Number.isFinite(Number(o.weights[k]))) w[k] = Math.max(0, Number(o.weights[k]));
           }
           if (Object.keys(w).length) clean.weights = w;
