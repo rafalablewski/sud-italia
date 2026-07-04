@@ -332,7 +332,7 @@ export function CoreSlots() {
   };
 
   return (
-    <CoreShell eyebrow="Service · Floor & Slots" tabs={serviceTabs("slots")}>
+    <CoreShell eyebrow="Service · Tables & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
         <div className="core-crumb">
           CORE — DENSE GLASS CONSOLE · <b>service · slots</b> · <span className="fix">demand exchange</span>

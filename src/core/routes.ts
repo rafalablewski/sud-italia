@@ -14,11 +14,11 @@ export const CORE_BASE = "/core";
 export const coreHref = (path = ""): string => `${CORE_BASE}${path}`;
 
 /**
- * The primary Core surfaces. The Lens Rail (`CoreNav`) carries service → Floor,
+ * The primary Core surfaces. The Lens Rail (`CoreNav`) carries service → Tables,
  * pos → Line, kds → Pass, and `guest` (its own hub: Inbox · CRM · Loyalty ·
  * Concierge). `orders` stays a cross-cutting surface reached from the Command
  * Bar's ⌘K (not a room lens). `book` is a **Service** view
- * (`/core/service/book`, alongside Floor · Slots · Dispatch), not a lens.
+ * (`/core/service/book`, alongside Tables · Slots · Dispatch), not a lens.
  */
 export const CORE_SURFACES = {
   pos: coreHref("/pos"),

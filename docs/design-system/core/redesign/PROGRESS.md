@@ -89,17 +89,27 @@ the new IA. `carried` = mapped to a redesign home; `ported` = actually re-implem
 | Kitchen utilization tier | `floor-twin.ts` | pressure-adaptive density | carried |
 | Kiosk full-screen dark wall | `.core-kiosk` | Pass kiosk mode | carried |
 
-### Floor / Service
+### Tables / Service
+> **2026-07 update:** `service:floor` was renamed to **`service:tables`**
+> (`/core/service/tables`, `src/core/service/CoreTables.tsx`) and scoped down to
+> a **management-only** surface — zones, tables, seats. The operational Floor
+> board (seat/clear/move, order lookup, unpaid glance-facts, the check-over-floor
+> panel, the predictive-seating recommender, the bottleneck banner) was
+> **removed** from this surface; that flow now lives in **Book's Floor lens** +
+> **POS**. The `floor-twin` engine still powers Book + shift handover. Rows
+> below are the original migration record; the Status column reflects where each
+> capability lives today.
+
 | Capability | Current home | Redesign home | Status |
 |---|---|---|---|
-| Zoned table tiles | `CoreFloor.tsx` | Floor lens zones | carried |
-| Seat / clear / out-of-service | `CoreFloor` | radial actions | carried |
-| Table CRUD (number/seats/zone/notes) | `/api/admin/floor/tables` | long-press admin | carried |
-| Party size / covers | model | tile + seat stepper | carried |
-| Service notes + allergy flag | `CoreFloor` | tile flag + dock | carried |
-| Unpaid count badge | `CoreFloor` | tile glance-fact | carried |
-| Table lookup (id/name/number) | `CoreFloor` | `⌘K` search | carried |
-| Floor Twin (occupancy, velocity, bottleneck) | `floor-twin.ts` | tile urgency + pressure | carried |
+| Zoned table tiles | `CoreTables.tsx` | Tables lens zones | carried |
+| Seat / clear / out-of-service | `CoreBook` Floor lens / POS | radial actions | moved off Tables |
+| Table CRUD (number/seats/zone/notes) | `/api/admin/floor/tables` | Tables editor | carried |
+| Party size / covers | model | Book tile + seat stepper | moved off Tables |
+| Service notes + allergy flag | `CoreTables` editor | tile flag + dock | carried |
+| Unpaid count badge | `CoreBook` Floor lens / POS | tile glance-fact | moved off Tables |
+| Table lookup (id/name/number) | `⌘K` / Book | `⌘K` search | moved off Tables |
+| Floor Twin (occupancy, velocity, bottleneck) | `floor-twin.ts` | Book tile urgency + pressure | carried |
 | Predictive seating recommender | `floor-twin.ts` | Book/Floor recommend | carried |
 | Live orders per table (settlement) | `/api/admin/floor/orders` | Context Dock | carried |
 

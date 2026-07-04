@@ -19,7 +19,7 @@ interface PromptTab {
  */
 export function CorePrompt({ tabs, title }: { tabs?: PromptTab[]; title?: string }) {
   const pathname = usePathname() ?? "";
-  // /core/pos → "pos", /core/service/floor → "service", /core → "core".
+  // /core/pos → "pos", /core/service/tables → "service", /core → "core".
   const surface = pathname.split("/").filter(Boolean)[1] ?? "core";
   const active = tabs?.find((t) => t.active) ?? tabs?.[0];
   const tab = active?.label.toLowerCase();

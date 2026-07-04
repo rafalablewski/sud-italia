@@ -1,71 +1,56 @@
 # Core · Service
 
-The merged Floor + Slots surface. `/core/service` (redirects to Floor).
-Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Floor · Slots · Dispatch**. (Book moved here from the top-level Lens Rail / the Guest hub — it is a Service view, reached from the Floor lens, and is no longer its own lens.)
+The merged Tables + Slots surface. `/core/service` (redirects to Tables).
+Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Tables · Slots · Dispatch**. (Book moved here from the top-level Lens Rail / the Guest hub — it is a Service view, reached from the Tables lens, and is no longer its own lens.)
 
-## Floor (`/core/service/floor`) — wired
+## Tables (`/core/service/tables`) — wired
 
-- **Live code:** `src/core/service/CoreFloor.tsx`.
+- **Live code:** `src/core/service/CoreTables.tsx`.
 - **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead` ·
-  `.core-statstrip` · `.core-floor` / `.core-zone-h` / `.core-tables` /
-  `.core-tbl2` (+ `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-floor-bar` /
-  `.core-fchip` · `.core-tbl-field` · `.core-bottleneck` in
-  `themes/core/index.css`.
-- The live room, in the **dense-console** language (1:1 with
-  `tests/sketches/core-pages/04-service-floor.html`): a `.core-crumb`
-  breadcrumb (`CORE — SERVICE · FLOOR · liquid glass · [loc · dine-in]`), a
-  `.core-sectionhead`, then a **6-up `.core-statstrip`** — **seated · free · on
-  bill · covers · occupancy · spend / hr** — every figure from live floor +
-  order state (Rule #1; the value colours read info/basil/amber/brand and each
-  cell carries a mono delta). Tiles are **landscape `.core-tbl2` cards** with a
-  state-tinted left accent rail (`--accent`): **free** = basil · **seated** =
-  info · **billing** (a table carrying an unpaid order) = amber · **freeing**
-  (predicted ≤15m) = amber · **reserved** muted · **out-of-service** faded.
-  Each tile reads a big table number + a lowercase status dot on the top row,
-  then a covers line (`N covers` / `N-top`), a dwell line (`N min` / `open` /
-  `reserved`), an optional check line (`zł` + `open`/`on bill`), and a **single
-  most-urgent chip** chosen by priority (food-up → guest-ordered → allergy →
-  unpaid → note → paid) rather than stacking them all. Hover reveals a `⋯`
-  **edit** affordance. The tile of the **cross-lens selected
-  table** rings + ember-pulses via `.core-tbl2.is-focus` (shared
-  `@keyframes core-focus-pulse`, reduced-motion-guarded) — so the entity in
-  focus is visible on the Floor even after it was picked on another lens.
-- **Tap a table → a state-aware RadialActions bloom** (`.core-radial`,
-  portaled to the `.core` root per Rule #4) offers 3-4 verbs for that table's
-  state (seated → Open check · Move · Free · Edit; free/reserved → Seat · Reserve ·
-  Edit; out-of-service → Restore · Edit). The tap also feeds the Context Dock.
-  Zones are filterable via the mockup's **`Zone` subbar** (`.core-zonetabs`
-  with a `.core-zone-lbl` label — `Zone · All zones · <zone>×N`).
-- **Open check → the check opens as a panel over the floor** — the core IA
-  move. The radial's **Open check** verb mounts the **embedded till** (`<CorePos embedded>`)
-  in a docked `.core-check-panel` inside a `.core-check-overlay` scrim, portaled
-  into the **`.core` theme root** (not `document.body`, so it keeps core tokens —
-  same rule as `CoreDialog`). The panel opens (or focuses) that table's dine-in
-  check with the party as covers and is where build / modify / course / split /
-  pay all happen — **no navigation to a separate till**. The panel header is
-  table-forward (back-arrow · **Table N** · party + item count + running total ·
-  QR · Done); **Esc** or the back-arrow closes it, the scrim-click dismisses, and
-  body scroll is locked while it's open. Closing reloads the
-  floor so pay-status / occupancy refresh. An occupied tile also carries a small
-  secondary **Free** button (`.core-tbl2-clear`) to clear the table without
-  opening the check. Floor is Core's **home** (`/core` and `/core/service`
-  both land here; the bottom switcher leads with **Floor**).
-- **Predictive-seating recommender** (`.core-floor-bar`): type a party size
-  and `recommendSeating(twin, n)` ranks best-fit tables as `.core-fchip`
-  chips — *seat* now or *~Nm* until free; click to seat directly.
-- **Table CRUD**: *+ Add table* (subbar) / the per-tile `⋯` opens the
-  `TableDialog` (core `CoreDialog`, portaled) — number · seats · zone
-  · status, with delete.
-- The **kitchen-bottleneck banner** (`.core-bottleneck`, dense-console card:
-  `.bn-ic` icon chip · `.bn-msg` with a seating recommendation · `.bn-tag` ·
-  `.bn-act` route action) fires when the KDS engine reports a strained
-  station — amber at `warn`, danger-red at `risk`.
-- **Engine:** `GET /api/admin/floor-twin?location=` → `{ twin, kitchen }`
-  (visibility-aware 15s `usePolling`; create/edit/delete merge optimistically
-  into the twin so a tile never blanks until the refetch lands); seat/clear =
-  `POST /api/admin/floor-twin { action, tableId }`;
-  table create/update = `POST /api/admin/floor/tables?location=`, delete =
-  `DELETE /api/admin/floor/tables?location=&id=`.
+  `.core-zonetabs` / `.core-ztab` (zone filter) · `.core-statstrip` ·
+  `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2` (+
+  `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-tbl-field` /
+  `.core-tbl-features` / `.core-tbl-feat` in `themes/core/index.css`; the
+  tile cursor/focus ring + zone-header hairline live in
+  `themes/core/parity/tables.css`.
+- **The table PLAN, not the live room.** This surface does exactly one job:
+  manage the physical layout — **zones, tables, seats**. There is deliberately
+  **no seating, no order lookup, no live occupancy** here; that operational
+  flow lives in **Book** (`/core/service/book`, whose Floor lens seats parties
+  and opens checks) and **POS**. Rendered in the **dense-console** language: a
+  `.core-crumb` breadcrumb (`CORE — SERVICE · TABLES · liquid glass · [loc ·
+  dine-in]`), a `.core-sectionhead`, an optional **`Zone` subbar**
+  (`.core-zonetabs` — `Zone · All zones · <zone>×N`) that filters the zoned
+  groups, then a **6-up `.core-statstrip`** — **tables · seats · zones ·
+  available · out-of-service · accessible** — every figure derived live from
+  the table catalogue (Rule #1; value colours read info/basil/amber/brand,
+  each cell carries a mono delta).
+- Tables are grouped by **zone** (`.core-zone-h` header with a `N tables · N
+  seats` sub and a hairline rule). Tiles are **`.core-tbl2` cards** with a
+  status-tinted left accent rail: **available** = basil (`free`) · **reserved**
+  muted (`booked`) · **out-of-service** faded (`oos`) · a table already
+  **seated** by ops shows info-toned. Each tile reads a big `T`-prefixed table
+  number + a lowercase status dot, a seats line (`N seats`), and a feature
+  line (the accessibility glyphs `♿ · 🍼 · ▭`, or `N-top` when none), plus an
+  optional `📝` service-note chip.
+- **Tap a tile (or its `⋯`) → the table editor.** Both open the `TableDialog`
+  (core `CoreDialog`, portaled per Rule #4) — **number/label · seats · zone ·
+  status · Accessibility features · Service note**, with **Delete**. The status
+  select offers the three **management** statuses (available · reserved ·
+  out-of-service); a table currently `seated` keeps that value as an option so
+  editing its seats/zone can't silently free the party (seating is a Book/POS
+  act, never done here). Accessibility toggles (`.core-tbl-features` /
+  `.core-tbl-feat` — accessible · high-chair · step-free) persist on
+  `FloorTable.features` (matched by the seating engine against a party's
+  needs); the note persists on `FloorTable.notes` and surfaces on the Book
+  Floor-lens tiles. *+ Add table* sits in the subbar.
+- **Engine:** `GET /api/admin/floor/tables?location=` returns the location's
+  `FloorTable[]` (gentle 20s `usePolling` — this is config, not the live floor;
+  create/edit/delete merge optimistically so a tile never blanks until the
+  refetch lands); create/update = `POST /api/admin/floor/tables?location=`,
+  delete = `DELETE /api/admin/floor/tables?location=&id=`. The same catalogue
+  every surface shares — a table added here shows up in the POS picker and Book
+  instantly.
 
 ## Slots (`/core/service/slots`) — wired
 
@@ -150,7 +135,7 @@ expected turn ±band, and the predicted **frees-at** time), the `reasons`, and a
 **shadow** badge when shadow mode is on — so a pick is never a black box. Before a slot is picked it falls back to a plain
 capacity check. A **Guest needs** chip row (`.core-bk-needs` — accessible ·
 high-chair · step-free) hard-filters the picker to tables that offer every
-required feature (tables carry `features`, edited in the Floor table dialog's
+required feature (tables carry `features`, edited in the Tables table dialog's
 Accessibility toggles). When **no single table fits** the party, a **Combine
 tables** section (`.core-bk-joins`/`.core-bk-join`, from `suggestJoins`) proposes
 the fewest same-zone free tables that sum to the party; picking one seats the
@@ -201,11 +186,11 @@ occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,
 `seated` tiles show the guest + elapsed with Complete **and open the table's POS
 check** on tap (or the 🧾 Check button) as a docked embedded `CorePos` drawer
 (`.core-check-overlay`/`.core-check-panel`, portaled to the `.core` root — the
-same till the standalone Floor uses; the book **page** resolves
+same embedded till POS uses; the book **page** resolves
 `menusByLocation`/`upsellByLocation` and passes them to `CoreBook`), `due`
 bookings show "due" + Seat, `held` tiles show the next booking's countdown,
-`free` tiles tap to seat a walk-in, and a table seated **off-book on the legacy
-floor** renders as a dashed **`.offbook`** "occupied · walk-in" tile that also
+`free` tiles tap to seat a walk-in, and a table seated **off-book from POS**
+renders as a dashed **`.offbook`** "occupied · walk-in" tile that also
 opens its check), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
 · Waitlist · Seated**). The **Waitlist** column (`.core-bk-wladd` add row +
 `.apc.waitc` entries, backed by `/api/admin/floor/waitlist`) queues walk-ins with
@@ -215,11 +200,11 @@ onto the engine's pick (a `walk-in` seated reservation) and closes them out of t
 queue. `nowMin` is live client state (ticks every 30s) so Floor/Arrivals stay
 current. **The spine is bidirectional**: seating/completing a
 booking here fans out to `FloorTable.status` (via `reconcileFloorTable` in the
-reservations route), so the POS-integrated `/core/service/floor` (`floor-twin`)
-reflects it immediately; conversely a walk-in seated from that floor shows in this
+reservations route), so the `floor-twin` (shift handover + the POS table picker)
+reflects it immediately; conversely a walk-in seated from POS shows in this
 Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 `nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
-number** (shared with Floor's `tLabel`). The **surface sub-bar**
+number** (shared with the Tables `tLabel`). The **surface sub-bar**
 (`.core-surf-toolbar.core-bk-subbar`, above the crumb — same shared bar POS/KDS
 use) carries the weekday label + a compact date chip (`.core-bk-datefield`) and a
 brand **New reservation** pill (`.core-bk-newpill`, focuses the guest field). A
@@ -245,31 +230,14 @@ every row (header rows, the timeline↔form columns, and the list) shares one
 left/right edge and the timeline/rail sit in a 10px channel (mockup `.main`
 padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 
-## Floor — live orders, lookup & notes
-
-Live code: `src/core/service/CoreFloor.tsx` · API `src/app/api/admin/floor/orders/route.ts` (orders) + `/api/admin/floor/tables` (CRUD, now incl. `notes`) + `/api/admin/floor-twin`.
-
-The Floor board pairs the predictive twin with the table's **live orders**:
-
-- **Per-table status chip** — each tile shows what the table owes, driven by
-  `GET /api/admin/floor/orders` (today's active orders, grouped by `tableId`,
-  tagged with channel + paid/unpaid). Unpaid → a brand `… to pay` chip
-  (prefixed `QR ·` for QR-channel orders); fully paid → a basil `✓ paid` chip.
-  A glanceable service-note chip (`.core-tnote-chip`) sits on the tile; a note
-  naming an allergy/dietary risk goes amber (`.alrg`, `⚠`) so it reads across
-  the room, not on hover. Polls every 10s.
-- **To pay KPI** — count of unpaid active orders across the floor.
-- **Order lookup** — a `⌕ Find order` box filters active orders by id, guest
-  name or table number; each result shows channel + paid status with a
-  **Mark paid** action (`POST /api/admin/floor/orders {action:"settle"}` →
-  `updateOrder` sets `paidAt`, fires a still-pending order to the kitchen).
-- **Table detail** (the `⋯` editor) — adds a **Service note** textarea
-  (persisted on `FloorTable.notes`, threaded through `buildFloorTwin` →
-  `TwinTableRow.notes`), an **Accessibility** toggle row (`.core-tbl-features` —
-  accessible · high-chair · step-free, persisted on `FloorTable.features` and
-  threaded through the twin so the seating engine can match a guest's needs),
-  and an **Orders at this table** list with the same
-  settle action.
+> **Retired (2026-07):** the old standalone Floor board — its predictive
+> floor-twin view, per-tile live-order chips, the `⌕ Find order` lookup + Mark
+> paid, the seat/clear/move verbs and the check-over-floor panel — was removed
+> when `service:floor` became the management-only **Tables** surface above.
+> Seeing what a table owes and settling a check now live in **Book's Floor
+> lens** and **POS**; the `floor-twin` engine (`/api/admin/floor-twin`) still
+> powers shift handover + the POS table picker. The table **Service note** and
+> **Accessibility** features moved into the Tables editor (documented above).
 
 ## Dispatch (`/core/service/dispatch`) — wired
 
@@ -304,8 +272,8 @@ The Floor board pairs the predictive twin with the table's **live orders**:
 
 ## Dense-console 1:1 parity pass (2026-07-02)
 
-Parity layers: `src/app/themes/core/parity/{floor,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
+Parity layers: `src/app/themes/core/parity/{tables,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
-- **Floor** — stat strip Seated · Free · On bill · Covers · Waitlist · Occupancy (Occupancy last; **Waitlist is live** from the host queue `/api/admin/floor/waitlist`, polled every 15s); bottleneck banner above the strip; zone pills under the section head; tiles are `div[role=button]` with an inline `.core-tqa` quick-action row (Seat/Reserve/Merge · Bill/Move/Clear) on select/hover; `T`-prefixed numbers; order-lookup + seating recommender collapsed into a `.core-floor-tools` disclosure.
+- **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); zone pills under the section head; tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
 - **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.
