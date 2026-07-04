@@ -1,0 +1,511 @@
+<title>Core Console — Unified Header System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ============================================================
+     CORE CONSOLE — UNIFIED HEADER SYSTEM
+     A single fixed header template applied to all 12 screens.
+     Every row has a locked height + fixed alignment, so moving
+     between tabs never shifts brand / breadcrumb / title / KPI
+     positions. Dark-only by deliberate design (matches product).
+     ============================================================ */
+
+  :root{
+    /* fixed row heights — the contract that stops "bouncing" */
+    --h-topbar: 56px;
+    --h-utility: 48px;
+    --h-bread: 38px;
+    --h-title: 70px;
+    --h-toolbar: 56px;
+    --h-kpi: 96px;
+
+    /* surface */
+    --bg-0:#130b06;
+    --panel:rgba(38,23,14,.55);
+    --panel-2:rgba(52,31,18,.42);
+    --line:rgba(255,183,122,.13);
+    --line-strong:rgba(255,183,122,.22);
+    --glass:rgba(255,232,210,.05);
+
+    /* ink */
+    --ink:#f6ede3;
+    --muted:#c1a794;
+    --dim:#96796640;
+    --dim-txt:#977d69;
+
+    /* semantic (status-only color rule) */
+    --orange:#ff8a4c;
+    --orange-soft:rgba(255,138,76,.16);
+    --green:#7fd6a0;
+    --amber:#f2b65f;
+    --red:#ff7a63;
+    --blue:#77b9f2;         /* assistive / automation tier only */
+    --blue-soft:rgba(119,185,242,.14);
+
+    --radius:14px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 520px at 8% -8%, rgba(255,132,66,.20), transparent 60%),
+      radial-gradient(900px 600px at 105% 120%, rgba(120,70,30,.22), transparent 55%),
+      var(--bg-0);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+    padding:34px 22px 90px;
+  }
+  .wrap{max-width:1200px;margin:0 auto}
+
+  /* ---------- deliverable header / legend ---------- */
+  .doc-head{margin:0 4px 26px}
+  .doc-head h1{font-size:22px;font-weight:750;letter-spacing:-.01em;margin:0 0 6px}
+  .doc-head p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;max-width:820px}
+  .legend{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;
+    margin:18px 0 30px;
+  }
+  .legend .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;backdrop-filter:blur(10px);
+  }
+  .legend .card h4{margin:0 0 7px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim-txt);font-weight:700}
+  .legend .row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:5px 0}
+  .legend .mono{font-family:var(--mono);color:var(--ink);font-size:11.5px}
+  .sw{width:12px;height:12px;border-radius:4px;flex:none}
+  .chip-demo{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted)}
+
+  /* ---------- per-screen frame ---------- */
+  .screen-block{margin:0 0 30px}
+  .screen-tag{
+    display:flex;align-items:center;gap:10px;margin:0 4px 9px;
+    font-family:var(--mono);font-size:11px;color:var(--dim-txt);letter-spacing:.04em;
+  }
+  .screen-tag b{color:var(--muted);font-weight:600}
+  .screen-tag .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;background:var(--orange-soft);
+    color:var(--orange);font-weight:700;font-size:11px;
+  }
+
+  .screen{
+    background:linear-gradient(180deg, rgba(46,27,16,.5), rgba(24,14,8,.5));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    backdrop-filter:blur(12px);
+    box-shadow:0 20px 50px -30px rgba(0,0,0,.8);
+  }
+
+  /* ===== ROW: topbar ===== */
+  .topbar{
+    height:var(--h-topbar);display:flex;align-items:center;gap:18px;
+    padding:0 20px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,150,80,.06), transparent);
+  }
+  .brand{font-family:var(--mono);font-size:14px;display:flex;align-items:center;gap:9px;white-space:nowrap}
+  .brand .c{color:var(--green)}
+  .brand .sep{color:var(--dim-txt)}
+  .brand .path{color:var(--ink);font-weight:600}
+  .tabs{display:flex;align-items:center;gap:3px;padding-left:6px;border-left:1px solid var(--line);margin-left:2px}
+  .tab{
+    font-family:var(--mono);font-size:13px;color:var(--dim-txt);
+    padding:5px 11px;border-radius:8px;cursor:default;letter-spacing:.01em;
+  }
+  .tab.active{color:var(--orange);background:var(--orange-soft)}
+  .topbar .spacer{flex:1}
+  .topbar-right{display:flex;align-items:center;gap:14px;white-space:nowrap}
+  .searchbox{
+    display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--dim-txt);
+    border:1px solid var(--line);border-radius:9px;padding:6px 10px;background:var(--glass);
+  }
+  .searchbox .kbd{border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:10px;color:var(--muted)}
+  .stat-mini{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .stat-mini .risk{color:var(--muted)}
+  .ic{width:16px;height:16px;color:var(--muted);flex:none}
+  .ic-btn{width:16px;height:16px;color:var(--dim-txt)}
+
+  /* ===== ROW: utility strip ===== */
+  .utility{
+    height:var(--h-utility);display:flex;align-items:center;
+    padding:0 20px;border-bottom:1px solid var(--line);gap:12px;
+  }
+  .context{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim-txt);display:flex;align-items:center;gap:8px;
+  }
+  .context .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .utility .spacer{flex:1}
+  .util-right{display:flex;align-items:center;gap:10px}
+  .pill{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;
+    padding:6px 12px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted);
+    background:var(--glass);white-space:nowrap;
+  }
+  .pill .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .badge-count{
+    display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;padding:0 7px;
+    border-radius:999px;border:1px solid rgba(255,138,76,.4);color:var(--orange);
+    font-family:var(--mono);font-size:12px;
+  }
+  .uicon{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;background:var(--glass)}
+  .uicon svg{width:15px;height:15px;color:var(--muted)}
+
+  /* ===== ROW: breadcrumb ===== */
+  .bread{
+    height:var(--h-bread);display:flex;align-items:center;gap:9px;padding:0 20px;
+    border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+  }
+  .bread .b-core{color:var(--dim-txt)}
+  .bread .b-seg{color:var(--dim-txt)}
+  .bread .b-theme{color:var(--green);font-weight:700}   /* THEME slot — always LIQUID GLASS */
+  .bread .b-sep{color:var(--dim);opacity:.6}
+  .bread .b-mode{
+    color:var(--orange);border:1px solid rgba(255,138,76,.35);border-radius:999px;
+    padding:2px 10px;font-weight:600;
+  }
+
+  /* ===== ROW: title ===== */
+  .titlerow{
+    height:var(--h-title);display:flex;align-items:center;gap:16px;padding:0 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .titlerow .t-left{display:flex;align-items:baseline;gap:14px;min-width:0}
+  .t-h1{font-size:22px;font-weight:750;letter-spacing:-.015em;white-space:nowrap}
+  .t-h1 .midt{color:var(--orange);margin:0 2px;font-weight:600}
+  .t-sub{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .titlerow .spacer{flex:1}
+  /* segmented control — ONE active style everywhere: solid orange fill */
+  .seg{display:inline-flex;align-items:center;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim-txt);padding:0 8px 0 5px;text-transform:uppercase}
+  .seg button{
+    font-family:var(--mono);font-size:12px;color:var(--muted);background:none;border:0;cursor:default;
+    padding:5px 11px;border-radius:7px;display:inline-flex;align-items:center;gap:6px;
+  }
+  .seg button .cnt{font-size:10px;color:var(--dim-txt)}
+  .seg button.active{background:var(--orange);color:#241206;font-weight:600}
+  .seg button.active .cnt{color:#241206;opacity:.7}
+
+  /* ===== ROW: toolbar ===== */
+  .toolbar{
+    height:var(--h-toolbar);display:flex;align-items:center;gap:12px;padding:0 20px;
+    border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;
+  }
+  .toolbar::-webkit-scrollbar{height:0}
+  .toolbar .spacer{flex:1;min-width:12px}
+  .tb-search{
+    display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;
+    padding:7px 11px;background:var(--glass);font-family:var(--mono);font-size:12px;color:var(--dim-txt);
+    min-width:210px;white-space:nowrap;
+  }
+  .tb-date{
+    display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;
+    padding:7px 11px;background:var(--glass);font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;
+  }
+  .tier{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted);white-space:nowrap;background:var(--glass)}
+  .tier .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  /* button tiers — ONE rule each */
+  .btn{
+    font-family:var(--mono);font-size:12.5px;border-radius:9px;padding:8px 14px;cursor:default;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;
+  }
+  .btn.primary{background:var(--orange);color:#241206;font-weight:650;border-color:var(--orange)}
+  .btn.secondary{background:var(--glass);color:var(--ink);border-color:var(--line-strong)}
+  .btn.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+  .btn.assistive{background:var(--blue-soft);color:var(--blue);border-color:rgba(119,185,242,.4)}  /* automation/AI tier */
+  .btn svg{width:14px;height:14px}
+  .tb-empty{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.1em}
+
+  /* ===== ROW: KPI strip (always 6 cells, always same position) ===== */
+  .kpis{
+    height:var(--h-kpi);display:grid;grid-template-columns:repeat(6,1fr);
+  }
+  .kpi{padding:16px 18px;display:flex;flex-direction:column;justify-content:center;gap:5px;border-left:1px solid var(--line)}
+  .kpi:first-child{border-left:0}
+  .kpi .k-label{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim-txt)}
+  .kpi .k-val{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--ink);line-height:1;display:flex;align-items:baseline;gap:4px}
+  .kpi .k-val .u{font-size:13px;color:var(--muted);font-weight:400}
+  .kpi .k-val.dash{color:var(--dim-txt)}
+  .kpi .k-cap{font-family:var(--mono);font-size:11px;color:var(--dim-txt)}
+  .kpi .k-cap.g{color:var(--green)}
+  .kpi .k-cap.a{color:var(--amber)}
+  .kpi .k-cap.r{color:var(--red)}
+
+  @media (max-width:900px){
+    .screen{overflow-x:auto}
+    .topbar,.utility,.bread,.titlerow,.toolbar,.kpis{min-width:1080px}
+  }
+</style>
+
+<div class="wrap">
+  <div class="doc-head">
+    <h1>Core Console — Unified Header System</h1>
+    <p>All 12 screens rebuilt on <b>one fixed template</b>. Every row (top bar · utility · breadcrumb · title · toolbar · KPI strip) has a locked height and fixed alignment, so switching tabs never moves the brand, breadcrumb, title, or metric strip. The audit inconsistencies are resolved into the rules below.</p>
+    <div class="legend">
+      <div class="card">
+        <h4>Breadcrumb grammar (fixed)</h4>
+        <div class="row"><span class="mono">CORE — SECTION · PAGE · <span style="color:var(--green)">LIQUID GLASS</span> · [MODE]</span></div>
+        <div class="row">Theme name is always <b style="color:var(--green)">LIQUID GLASS</b> · order never flips · MODE is a separate bracketed field.</div>
+      </div>
+      <div class="card">
+        <h4>Color = status only</h4>
+        <div class="row"><span class="sw" style="background:var(--green)"></span> good / healthy</div>
+        <div class="row"><span class="sw" style="background:var(--amber)"></span> watch</div>
+        <div class="row"><span class="sw" style="background:var(--red)"></span> breach</div>
+        <div class="row"><span class="sw" style="background:var(--ink)"></span> counts &amp; money = neutral</div>
+      </div>
+      <div class="card">
+        <h4>Button tiers</h4>
+        <div class="row"><span class="btn primary" style="padding:4px 10px;font-size:11px">primary</span> commit / create</div>
+        <div class="row"><span class="btn secondary" style="padding:4px 10px;font-size:11px">secondary</span> supporting</div>
+        <div class="row"><span class="btn assistive" style="padding:4px 10px;font-size:11px">assistive</span> automation / AI</div>
+      </div>
+      <div class="card">
+        <h4>Conventions</h4>
+        <div class="row"><span class="chip-demo">— = no source</span> <span class="chip-demo">0 = measured</span></div>
+        <div class="row">Segmented active = solid orange · one style.</div>
+        <div class="row">Locale: <b>Kraków</b>, <b>WhatsApp</b>, <span class="mono">0,00&nbsp;zł</span> · <span class="mono">0,0×</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="stack"></div>
+</div>
+
+<script>
+/* ---------- inline monochrome icons ---------- */
+const I = {
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 5v14M15 5v14"/></svg>',
+  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  filter:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg>',
+  sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  volume:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="m17 9 4 6M21 9l-4 6"/></svg>',
+  qr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3M20 14v6M14 20h3"/></svg>',
+  sparkle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v6M12 15v6M3 12h6M15 12h6" opacity=".5"/><path d="M12 7c1 3 2 4 5 5-3 1-4 2-5 5-1-3-2-4-5-5 3-1 4-2 5-5z"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m6 9 6 6 6-6"/></svg>',
+  sort:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l3 3M17 20l-3-3" opacity=".9"/></svg>',
+};
+const uiIcon = k => `<div class="uicon" title="${k}">${I[k]||''}</div>`;
+
+/* ---------- the 12 screens (data only — one template renders all) ---------- */
+const TOP_TABS = {
+  service:['book','tables','slots','dispatch'],
+  pos:['order','tender'],
+  kds:['fleet','floor','chef'],
+  guest:['inbox','crm','loyalty','concierge'],
+};
+
+const S = [
+ {n:'01',sec:'service',page:'book',bcPage:'BOOK',mode:'TIMELINE',
+  ctx:'KRAKÓW · DINNER SERVICE', util:['refresh'],
+  title:['Service','Book'], sub:'RESERVATIONS · SEATING · WALK-INS',
+  seg:{lab:'VIEW',items:[['Timeline',1],['Floor'],['Arrivals']]},
+  tbLeft:[], actions:[['Forecast','ghost'],['Policy','ghost'],['+ Walk-in','secondary'],['+ New reservation','primary']],
+  kpi:[['BOOKINGS','0','','0 slots'],['COVERS','0','','booked'],['SEATED','0','','on the floor'],
+       ['UPCOMING','0','','none pending'],['NO-SHOWS','0','','clean','g'],['FILL','0','%','of seats']]},
+
+ {n:'02',sec:'service',page:'tables',bcPage:'TABLES',mode:'FLOOR + ZONE 1',
+  ctx:'KRAKÓW · DINE-IN', util:['refresh'],
+  title:['Service','Tables'], sub:'FLOOR PLAN · ZONES · COVERS',
+  seg:{lab:'ZONE',items:[['All zones',1,2],['Floor',0,1],['Zone 1',0,1]]},
+  tbLeft:[], actions:[['+ Add table','primary']],
+  kpi:[['TABLES','2','','6 seats'],['SEATS','6','','3 avg / table'],['ZONES','2','','floor · zone 1'],
+       ['AVAILABLE','2','','ready to seat','g'],['OUT OF SERVICE','0','','all in service','g'],['ACCESSIBLE','0','','with features']]},
+
+ {n:'03',sec:'service',page:'slots',bcPage:'SLOTS',mode:'DEMAND EXCHANGE',
+  ctx:'KRAKÓW · SAT 4 JUL', util:['refresh'],
+  title:['Service','Slots'], sub:'WINDOWS · CAPACITY · SURGE',
+  seg:{lab:'MODE',items:[['Manage',1],['Demand']]},
+  tbLeft:[{type:'seg',items:[['Day',1],['Week']]},{type:'date',v:'04/07/2026'},{type:'btn',t:'Filters',tier:'ghost',ic:'filter'}],
+  actions:[['+ New slot','primary']],
+  kpi:[['BOOKED','0','','0 windows'],['CAPACITY','0','','0 active'],['FILL','0','%','peak 0%'],
+       ['SURGE','0','','on pace','g'],['COVERS','0','','0 forecast'],['NO-SHOW RISK','—','','unconfirmed','a']]},
+
+ {n:'04',sec:'service',page:'dispatch',bcPage:'DISPATCH',mode:'PASS → ROAD',
+  ctx:'KRAKÓW · PASS → ROAD', util:['refresh'],
+  title:['Service','Dispatch'], sub:'KITCHEN · DRIVERS · SLA',
+  seg:null, tbLeft:[], actions:[['auto-assign nearest','assistive','sparkle']],
+  kpi:[['IN KITCHEN','0','','0 firing now'],['READY','0','','awaiting driver'],['ON ROAD','0','','0 assigned'],
+       ['DELIVERED','0','','completed today'],['AVG DELIVERY','—','','no timing data'],['LATE','0','','SLA 30 min']]},
+
+ {n:'05',sec:'pos',page:'order',bcPage:'ORDER',mode:'DINE-IN',
+  ctx:'KRAKÓW · TILL 1 · DINNER SERVICE', util:['expand'],
+  title:['POS','Order'], sub:'CHECKS · COVERS · TENDER',
+  seg:null, tbLeft:[], actions:[['QR orders','assistive','qr']],
+  kpi:[['OPEN CHECKS','6','','all active','g'],['COVERS','10','','167% floor','a'],['AVG CHECK','0,00','zł','per check'],
+       ['PREP QUEUE','0','','on time','g'],['TABLE TURNS','0,0','×','per table'],['SALES /HR','0,00','zł','this hour']]},
+
+ {n:'06',sec:'kds',page:'fleet',bcPage:'FLEET',mode:'ALL KITCHENS',
+  ctx:'KRAKÓW + WARSZAWA', util:['sigma','refresh','badge86','volume','pause','expand'],
+  title:['KDS','Fleet'], sub:'2 KITCHENS · LIVE PASS HEALTH',
+  seg:{lab:'SCOPE',items:[['All kitchens',1],['Kraków'],['Warszawa']]},
+  tbLeft:[], actions:[],
+  kpi:[['ACTIVE','0','','tickets live'],['AT RISK','0','','within SLA'],['LATE','0','','none breached','g'],
+       ['READY','0','','to pass'],['THROUGHPUT','0','/hr','fleet rate'],['REVENUE','0,00','zł/hr','fleet']]},
+
+ {n:'07',sec:'kds',page:'floor',bcPage:'FLOOR',mode:'KITCHEN WALL',
+  ctx:'KRAKÓW · KITCHEN WALL', util:['sigma','refresh','badge86','volume','pause','expand'],
+  title:['KDS','Floor'], sub:'START · BUMP · PASS',
+  seg:{lab:'STATUS',items:[['All',1,0],['New',0,0],['Firing',0,0],['Ready',0,0]]},
+  tbLeft:[], actions:[],
+  kpi:[['ACTIVE','0','','on the wall'],['AT RISK','0','','within SLA'],['LATE','0','','none breached','g'],
+       ['READY','0','','to pass'],['THROUGHPUT','0','/hr','this hour'],['REVENUE','0,00','zł/hr','this hour']]},
+
+ {n:'08',sec:'kds',page:'chef',bcPage:'CHEF',mode:'EXPO PASS',
+  ctx:'KRAKÓW · EXPO', util:['sigma','refresh','badge86','volume','pause','expand'],
+  title:['KDS','Chef'], sub:'COURSING · EXPEDITE · ALL-DAY PREP',
+  seg:{lab:'MODE',items:[['Expo',1],['All-day']]},
+  tbLeft:[], actions:[],
+  kpi:[['ON COURSE','0','','coursing'],['AT RISK','0','','within SLA'],['LATE','0','','none breached','g'],
+       ['READY','0','','to expo'],['ALL-DAY','0','','prep items'],['REVENUE','0,00','zł/hr','this hour']]},
+
+ {n:'09',sec:'guest',page:'inbox',bcPage:'INBOX',mode:'WHATSAPP LIVE',
+  ctx:'KRAKÓW · WHATSAPP LIVE', ctxLive:true, util:['filter','sliders','volume'],
+  title:['Guest','Inbox'], sub:'CONVERSATIONS · REPLIES · OPT-INS',
+  seg:null, tbLeft:[], actions:[],
+  kpi:[['OPEN CONVOS','0','','0 all-time'],['AWAITING REPLY','0','','all answered','g'],['LIVE ORDERS','0','','with items'],
+       ['RESPONSE TIME','—','','no source yet'],['RESOLVED','0','','today'],['OPT-INS','—','','no source yet']]},
+
+ {n:'10',sec:'guest',page:'crm',bcPage:'CRM',mode:'CUSTOMER BOOK',
+  ctx:'KRAKÓW · CUSTOMER BOOK', util:['refresh'],
+  title:['Guest','CRM'], sub:'CUSTOMER BOOK · RFM HEALTH · CONSENT',
+  seg:null,
+  tbLeft:[{type:'search',v:'Search name, phone or email'},
+          {type:'seg',items:[['All',1,0],['VIP',0,0],['Regular',0,0],['New',0,0],['At-risk',0,0]]},
+          {type:'tier',t:'Bronze',c:'#c08457'},{type:'tier',t:'Silver',c:'#c9cdd4'},
+          {type:'tier',t:'Gold',c:'#e6b64c'},{type:'tier',t:'Platinum',c:'#77b9f2'},
+          {type:'btn',t:'Sort',tier:'ghost',ic:'sort'}],
+  actions:[],
+  kpi:[['GUESTS','0','','0 members'],['VIPS','0','','0% of book'],['NEW','0','','first-time'],
+       ['AT-RISK','0','','book healthy','g'],['AVG SPEND','0,00','zł','per guest'],['REPEAT RATE','0','%','2+ orders']]},
+
+ {n:'11',sec:'guest',page:'loyalty',bcPage:'LOYALTY',mode:'REWARDS',
+  ctx:'KRAKÓW · REWARDS', util:['refresh'],
+  title:['Guest','Loyalty'], sub:'MEMBERS · WALLETS · REDEMPTIONS · WIN-BACK',
+  seg:{lab:'VIEW',items:[['Members',1,0],['Wallets',0,0],['Redemptions',0,0],['Win-back',0,0]]},
+  tbLeft:[], actions:[],
+  kpi:[['MEMBERS','0','','0 wallets'],['POINTS OUT','0','','≈ 0,00 zł liability'],['REDEMPTIONS','0','','to date'],
+       ['GOLD+','0','','0% of members'],['BREAKAGE','—','','no issuance data'],['AVG POINTS','0','','per member']]},
+
+ {n:'12',sec:'guest',page:'concierge',bcPage:'CONCIERGE',mode:'6/6 LIVE',
+  ctx:'KRAKÓW · MCP INSPECTOR', util:['livepill'],
+  title:['Guest','Concierge'], sub:'AI CAPABILITY SERVER · MCP INSPECTOR',
+  seg:null, tbLeft:[], actions:[],
+  kpi:[['CAPABILITIES','6','','registered'],['LIVE','6','','6/6 exposed','g'],['REQUESTS','0','','agent hits'],
+       ['AVG LATENCY','0','ms','per call'],['DEFLECTION','0','%','served OK','g'],['ERRORS','0','','0% rate','g']]},
+];
+
+/* ---------- utility-cluster renderer ---------- */
+function utilItem(k){
+  if(k==='sigma')   return '<span class="pill" style="font-size:12px">Σ&nbsp; all-day</span>';
+  if(k==='badge86') return '<span class="badge-count" title="86 open tickets">86</span>';
+  if(k==='livepill')return '<span class="pill"><span class="live-dot"></span>6/6 live</span>';
+  return uiIcon(k);
+}
+
+/* ---------- segmented renderer ---------- */
+function segHTML(seg){
+  if(!seg) return '';
+  const btns = seg.items.map(it=>{
+    const active = it[1]?' active':'';
+    const cnt = (it.length>2)?`<span class="cnt">${it[2]}</span>`:'';
+    return `<button class="${active.trim()}">${it[0]}${cnt}</button>`;
+  }).join('');
+  return `<div class="seg"><span class="lab">${seg.lab}</span>${btns}</div>`;
+}
+
+/* ---------- toolbar-left renderer ---------- */
+function tbLeftHTML(items){
+  return items.map(it=>{
+    if(it.type==='seg')   return segHTML({lab:'',items:it.items}).replace('<span class="lab"></span>','');
+    if(it.type==='date')  return `<span class="tb-date">${I.calendar}${it.v} ${I.chev}</span>`;
+    if(it.type==='search')return `<span class="tb-search">${I.search}${it.v}</span>`;
+    if(it.type==='tier')  return `<span class="tier"><span class="dot" style="background:${it.c}"></span>${it.t}</span>`;
+    if(it.type==='btn')   return `<span class="btn ${it.tier}">${it.ic?I[it.ic]:''}${it.t}</span>`;
+    return '';
+  }).join('');
+}
+
+/* ---------- one template for every screen ---------- */
+function renderScreen(s){
+  const tabs = TOP_TABS[s.sec].map(t=>`<span class="tab${t===s.page?' active':''}">${t}</span>`).join('');
+  const util = (s.util||[]).map(utilItem).join('');
+  const actions = (s.actions||[]).map(a=>`<span class="btn ${a[1]}">${a[2]?I[a[2]]:''}${a[0]}</span>`).join('');
+  const kpis = s.kpi.map(k=>{
+    const dash = k[1]==='—'?' dash':'';
+    const unit = k[2]?`<span class="u">${k[2]}</span>`:'';
+    const tone = k[4]?' '+k[4]:'';
+    return `<div class="kpi">
+      <div class="k-label">${k[0]}</div>
+      <div class="k-val${dash}">${k[1]}${unit}</div>
+      <div class="k-cap${tone}">${k[3]}</div>
+    </div>`;
+  }).join('');
+  const toolbarBody = (s.tbLeft.length||actions)
+     ? `${tbLeftHTML(s.tbLeft)}<span class="spacer"></span>${actions}`
+     : `<span class="tb-empty">— no page actions —</span>`;
+
+  return `
+  <div class="screen-block">
+    <div class="screen-tag"><span class="n">${s.n}</span> <b>${s.sec}:${s.page}</b></div>
+    <div class="screen">
+
+      <div class="topbar">
+        <span class="brand"><span class="c">core</span><span class="sep">›</span><span class="path">${s.sec}:${s.page}</span></span>
+        <span class="tabs">${tabs}</span>
+        <span class="spacer"></span>
+        <span class="topbar-right">
+          <span class="searchbox">${I.search}search <span class="kbd">⌘K</span></span>
+          <span class="stat-mini"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4 3 20h18z"/></svg>risk 0</span>
+          <span class="stat-mini">◆ loc kraków</span>
+          <span class="stat-mini">12:30</span>
+          <span class="ic">${I.bell}</span>
+          <span class="ic">${I.sun}</span>
+        </span>
+      </div>
+
+      <div class="utility">
+        <span class="context">${s.ctxLive?'<span class="live-dot"></span>':''}${s.ctx}</span>
+        <span class="spacer"></span>
+        <span class="util-right">${util}</span>
+      </div>
+
+      <div class="bread">
+        <span class="b-core">CORE —</span>
+        <span class="b-seg">${s.sec.toUpperCase()}</span><span class="b-sep">·</span>
+        <span class="b-seg">${s.bcPage}</span><span class="b-sep">·</span>
+        <span class="b-theme">LIQUID GLASS</span><span class="b-sep">·</span>
+        <span class="b-mode">${s.mode}</span>
+      </div>
+
+      <div class="titlerow">
+        <span class="t-left">
+          <span class="t-h1">${s.title[0]}<span class="midt">·</span>${s.title[1]}</span>
+          <span class="t-sub">${s.sub}</span>
+        </span>
+        <span class="spacer"></span>
+        ${segHTML(s.seg)}
+      </div>
+
+      <div class="toolbar">${toolbarBody}</div>
+
+      <div class="kpis">${kpis}</div>
+
+    </div>
+  </div>`;
+}
+
+document.getElementById('stack').innerHTML = S.map(renderScreen).join('');
+</script>
