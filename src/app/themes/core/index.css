@@ -1364,7 +1364,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 /* ===== dense-console CRM (mockup 08-guest-crm): labelled filter chips + tier
    gems, a roster table with RFM-health bars, and a persistent profile panel. */
-.core .core-crm-filterbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 16px 10px; padding: 9px 11px; flex: none; }
+/* CRM filters now render in the shared row-4 `.core-surf-toolbar` (via
+   CoreSurfToolbar), so the bespoke `.core-crm-filterbar` wrapper was removed;
+   its child controls keep their own classes below. */
 .core .core-crm-search { display: flex; align-items: center; gap: 8px; min-width: 220px; flex: 0 0 auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 6px 12px; color: var(--ink-3); }
 .core .core-crm-search svg { flex: none; }
 .core .core-crm-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }

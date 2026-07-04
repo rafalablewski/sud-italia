@@ -5,6 +5,7 @@ import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -991,25 +992,28 @@ export function CoreInbox() {
     <CoreShell
       eyebrow="Guest Engagement"
       tabs={guestTabs("inbox")}
-      subLeft={<span className="core-inbox-sublbl"><span className="dot" />whatsapp · live</span>}
-      subRight={
-        <>
-          <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
-            <GuestGlyph name="funnel" />
-          </button>
-          <button type="button" className="core-iconbtn" title="Broadcast campaign" aria-label="Broadcast campaign" onClick={() => setBroadcastOpen(true)}>
-            <GuestGlyph name="broadcast" />
-          </button>
-          <button type="button" className="core-iconbtn" title="WhatsApp settings" aria-label="WhatsApp settings" onClick={() => setSettingsOpen(true)}>
-            <GuestGlyph name="settings" />
-          </button>
-          <span className="core-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
-        </>
-      }
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="INBOX" mode="whatsapp live" />
         <CoreSectionHead section="Guest" page="Inbox" sub={<>whatsapp · 3-pane over unified stat strip</>} />
+        {/* Row 4 — no filters; actions right (funnel · broadcast · settings · live). */}
+        <CoreSurfToolbar
+          ariaLabel="Inbox controls"
+          right={
+            <>
+              <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
+                <GuestGlyph name="funnel" />
+              </button>
+              <button type="button" className="core-iconbtn" title="Broadcast campaign" aria-label="Broadcast campaign" onClick={() => setBroadcastOpen(true)}>
+                <GuestGlyph name="broadcast" />
+              </button>
+              <button type="button" className="core-iconbtn" title="WhatsApp settings" aria-label="WhatsApp settings" onClick={() => setSettingsOpen(true)}>
+                <GuestGlyph name="settings" />
+              </button>
+              <span className="core-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
+            </>
+          }
+        />
         {kpis.length > 0 && (
           <div className="core-statstrip" role="group" aria-label="Inbox metrics">
             {kpis.map((k) => (

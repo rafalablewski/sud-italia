@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -300,6 +301,48 @@ export function CoreCrm() {
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="CRM" mode={<>{stat.guests} guests</>} />
         <CoreSectionHead section="Guest" page="CRM" sub={<>customer book · rfm health · consent &amp; points</>} />
+        {/* Row 4 — filters left (search · segment chips · loyalty-tier gems),
+            sort + Refresh right (mockup 08-guest-crm). */}
+        <CoreSurfToolbar
+          ariaLabel="Customer-book filters"
+          left={
+            <>
+              <div className="core-crm-search">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
+              </div>
+              <div className="core-fsep" />
+              <div className="core-segchips" role="group" aria-label="Segment">
+                {([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([k, label]) => (
+                  <button key={k} className={seg === k ? `on${k === "all" ? " brand" : ""}` : ""} onClick={() => setSeg(k)} aria-pressed={seg === k}>
+                    {label} <span className="ct">{segCounts[k]}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="core-fsep" />
+              <div className="core-gems" role="group" aria-label="Loyalty tier">
+                {([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([k, label]) => (
+                  <span key={k} className={tierF === k ? "core-gemchip on" : "core-gemchip"} role="button" tabIndex={0}
+                    onClick={() => setTierF((t) => (t === k ? null : k))}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTierF((t) => (t === k ? null : k)); } }}>
+                    <span className={`core-gem ${k}`} />{label}
+                  </span>
+                ))}
+              </div>
+            </>
+          }
+          right={
+            <>
+              <span className="core-crm-sortlbl">sort</span>
+              <div className="core-seg" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
+                {([["recent", "recent"], ["ltv", "spend"], ["orders", "visits"]] as const).map(([k, label]) => (
+                  <button key={k} className={sort === k ? "on" : ""} onClick={() => setSort(k)}>{label}</button>
+                ))}
+              </div>
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+            </>
+          }
+        />
         {/* dense-console 6-up stat strip — every figure from the live book (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Customer-book metrics">
           <div className="cell">
@@ -332,41 +375,6 @@ export function CoreCrm() {
             <span className="val amber">{stat.repeatPct}<small>%</small></span>
             <span className="delta">2+ orders</span>
           </div>
-        </div>
-
-        {/* dense-console filter bar — search · labelled segment chips (counts) ·
-            loyalty-tier gems · sort · refresh (mockup 08-guest-crm). */}
-        <div className="core-crm-filterbar glass">
-          <div className="core-crm-search">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or email…" aria-label="Search customers" />
-          </div>
-          <div className="core-fsep" />
-          <div className="core-segchips" role="group" aria-label="Segment">
-            {([["all", "All"], ["vip", "VIP"], ["regular", "Regular"], ["new", "New"], ["atrisk", "At-risk"]] as const).map(([k, label]) => (
-              <button key={k} className={seg === k ? `on${k === "all" ? " brand" : ""}` : ""} onClick={() => setSeg(k)} aria-pressed={seg === k}>
-                {label} <span className="ct">{segCounts[k]}</span>
-              </button>
-            ))}
-          </div>
-          <div className="core-fsep" />
-          <div className="core-gems" role="group" aria-label="Loyalty tier">
-            {([["bronze", "Bronze"], ["silver", "Silver"], ["gold", "Gold"], ["plat", "Platinum"]] as const).map(([k, label]) => (
-              <span key={k} className={tierF === k ? "core-gemchip on" : "core-gemchip"} role="button" tabIndex={0}
-                onClick={() => setTierF((t) => (t === k ? null : k))}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTierF((t) => (t === k ? null : k)); } }}>
-                <span className={`core-gem ${k}`} />{label}
-              </span>
-            ))}
-          </div>
-          <div className="core-sp" />
-          <span className="core-crm-sortlbl">sort</span>
-          <div className="core-seg" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
-            {([["recent", "recent"], ["ltv", "spend"], ["orders", "visits"]] as const).map(([k, label]) => (
-              <button key={k} className={sort === k ? "on" : ""} onClick={() => setSort(k)}>{label}</button>
-            ))}
-          </div>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
         </div>
 
         <div className={`core-crm-grid${cust ? "" : " solo"}`}>

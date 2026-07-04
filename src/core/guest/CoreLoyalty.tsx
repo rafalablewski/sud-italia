@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -290,26 +292,38 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="LOYALTY" mode="rewards" />
-        <CoreSectionHead section="Guest" page="Loyalty" sub={<>members · wallets · redemptions · win-back</>} />
-
-        {/* labeled sub-tab segmented control with live count pills */}
-        <div className="core-loy-seg" role="tablist" aria-label="Loyalty views">
-          {TABS.map((t) => {
-            const c = tabCount[t.key];
-            return (
-              <button
-                key={t.key}
-                role="tab"
-                aria-selected={tab === t.key}
-                className={tab === t.key ? "on brand" : ""}
-                onClick={() => setTab(t.key)}
-              >
-                {t.label}
-                {c != null && <span className="ct">{c.toLocaleString("pl-PL")}</span>}
-              </button>
-            );
-          })}
-        </div>
+        <CoreSectionHead
+          section="Guest"
+          page="Loyalty"
+          sub={<>members · wallets · redemptions · win-back</>}
+          actions={
+            /* Members|Wallets|Redemptions|Win-back — the view switch, title-row right. */
+            <div className="core-seg" role="tablist" aria-label="Loyalty views">
+              <span className="sglab">View</span>
+              {TABS.map((t) => {
+                const c = tabCount[t.key];
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === t.key}
+                    className={tab === t.key ? "on" : undefined}
+                    onClick={() => setTab(t.key)}
+                  >
+                    {t.label}
+                    {c != null && <span className="c">{c.toLocaleString("pl-PL")}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          }
+        />
+        {/* Row 4 — no filters (per-tab controls live in the panels); Refresh right. */}
+        <CoreSurfToolbar
+          ariaLabel="Loyalty controls"
+          right={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
+        />
 
         {/* dense-console 6-up stat strip — every figure from live loyalty data (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Loyalty metrics">

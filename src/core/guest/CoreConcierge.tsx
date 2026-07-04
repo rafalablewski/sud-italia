@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useLocation } from "@/shared/LocationContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -163,10 +164,14 @@ export function CoreConcierge({ meta, settings, byLocation, stats }: Props) {
     <CoreShell
       eyebrow="Guest Engagement"
       tabs={guestTabs("concierge")}
-      subRight={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
     >
       <CoreCrumb section="GUEST" page="CONCIERGE" mode={<>{liveCount}/{meta.length} live</>} />
       <CoreSectionHead section="Guest" page="Concierge" sub={<>ai capability server · model-context inspector</>} />
+      {/* Row 4 — no filters; live capability count on the right. */}
+      <CoreSurfToolbar
+        ariaLabel="Concierge status"
+        right={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
+      />
       {/* dense-console 6-up stat strip — capabilities/live are config; the rest
           are REAL agent-endpoint telemetry from getAgentCallStats (Rule #1). */}
       <div className="core-statstrip" role="group" aria-label="Concierge metrics">
