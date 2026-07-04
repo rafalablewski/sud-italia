@@ -82,7 +82,7 @@ Long-press any item in `MoreDrawer` → "Pin to bottom nav" → replaces the rol
 
 A bottom sheet ⅔ height. Search field at top, then sections (same groupings as `NAV_SECTIONS` in `nav.config.ts`), each section collapsible.
 
-Order matches `nav.config.ts`. Section labels: Overview / Operations / Inventory / People / Customers / Finance / Growth / Intelligence / System.
+Order matches `nav.config.ts`. Section labels: Core / Overview / Operations / Inventory / People / Customers / Finance / Growth / Intelligence / System. **Core** is a single top-of-nav launcher (one item → `/core`, which role-routes into the POS/KDS/Guest/Service suite), not the four individual Core surfaces.
 
 A pinned star icon on each row toggles `Pin to bottom nav`. The currently-pinned tab is grayed out (can't pin twice).
 

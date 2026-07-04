@@ -2,9 +2,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   ListTodo,
-  Receipt,
-  ChefHat,
-  Contact,
+  Store,
   CalendarCheck2,
   UtensilsCrossed,
   FlaskConical,
@@ -52,8 +50,10 @@ import { permissionForAdminPage } from "@/lib/permissions";
 // v3 nav — owned by the v3 tree (the implementation behind the canonical
 // `/admin` HQ). Hrefs are rooted at `/admin`; the shell re-roots them onto
 // `/manager` / `/franchisee` per the URL the role navigates under. Core
-// (POS/KDS/Guest/Service) stays on its own /core routes and is intentionally
-// absent here — v3 never rebuilds Core.
+// (POS/KDS/Guest/Service) stays on its own /core routes — v3 never rebuilds
+// Core — but the rail carries a single top-of-nav launcher into the suite
+// (`/core`, which role-routes the operator to their Core home) rather than
+// listing every Core surface individually.
 
 export interface NavItemV3 {
   href: string;
@@ -74,6 +74,17 @@ const P = "/admin";
 
 export const NAV_SECTIONS_V3: NavSectionV3[] = [
   {
+    id: "core",
+    label: "Core",
+    items: [
+      // One consolidated launcher into the whole POS/KDS/Guest/Service suite —
+      // `/core` role-routes the operator to their Core home (kitchen → KDS,
+      // everyone else → Service floor). requiredRole is the lowest that could
+      // reach any Core surface (kitchen) so no one who had access loses it.
+      { href: "/core", label: "Core", icon: Store, requiredRole: "kitchen" },
+    ],
+  },
+  {
     id: "overview",
     label: "Overview",
     items: [
@@ -83,16 +94,6 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
       { href: `${P}/comms/tasks`, label: "Tasks", icon: ListTodo, requiredRole: "manager" },
       { href: `${P}/comms/announcements`, label: "Announcements", icon: Megaphone, requiredRole: "manager" },
-    ],
-  },
-  {
-    id: "core",
-    label: "Core",
-    items: [
-      { href: "/core/pos", label: "POS", icon: Receipt, requiredRole: "staff" },
-      { href: "/core/kds", label: "Kitchen Display", icon: ChefHat, requiredRole: "kitchen" },
-      { href: "/core/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
-      { href: "/core/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
     ],
   },
   {

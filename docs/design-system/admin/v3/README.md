@@ -77,7 +77,13 @@ hex in a v3 component — use the token.
 a **232px sidebar that collapses to a 60px icon rail** (state persisted), a
 **44px topbar** with breadcrumb + the single shell-level scope switcher +
 theme toggle + notification bell, and a content well on a tight grid. Nav
-taxonomy mirrors v2 (`v3/nav.config.ts`, same sections).
+taxonomy mirrors v2 (`v3/nav.config.ts`, same sections), with one deliberate
+deviation: **Core sits first as a single launcher** — one `Core` item (icon
+`Store`, href `/core`) at the very top of the rail instead of the four
+individual POS/KDS/Guest/Service links. `/core` role-routes the operator into
+their Core home (kitchen → KDS, everyone else → Service floor), and the item is
+gated at the lowest role that could reach any Core surface (`kitchen`) so no one
+loses access. v3 still never rebuilds Core — it only links out to it.
 
 **Access gating mirrors v2's two ANDed gates** (this is the UX layer — the
 server still enforces every `/api/admin/*` call). `SidebarV3` reads
