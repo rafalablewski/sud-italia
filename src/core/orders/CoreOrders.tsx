@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -186,9 +187,7 @@ export function CoreOrders() {
       }))}
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — ORDERS · <b>liquid glass</b> · <span className="fix">cross-cutting surface</span>
-        </div>
+        <CoreCrumb section="ORDERS" mode="cross-cutting surface" />
         <div className="core-sectionhead">
           <h1>Orders</h1>
           <span className="sub">{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</span>

@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -919,11 +920,9 @@ export function CoreKds() {
               {fleetControls}
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
-            <div className="core-crumb">
-              CORE — KDS · FLEET · <b>liquid glass</b> · <span className="fix">all kitchens · one pass</span>
-            </div>
+            <CoreCrumb section="KDS" page="FLEET" mode="all kitchens · one pass" />
             <div className="core-sectionhead">
-              <h1>KDS · Fleet — All kitchens</h1>
+              <h1>KDS · Fleet</h1>
               <span className="sub">kraków + warszawa · live pass health</span>
             </div>
             {showAllDay && (
@@ -967,11 +966,9 @@ export function CoreKds() {
               {boardActions}
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
-            <div className="core-crumb">
-              CORE — KDS · KITCHEN WALL · <b>liquid glass</b> · <span className="fix">dark board · frosted kpis</span>
-            </div>
+            <CoreCrumb section="KDS" page="FLOOR" mode="kitchen wall" />
             <div className="core-sectionhead">
-              <h1>KDS · Pass — Floor</h1>
+              <h1>KDS · Floor</h1>
               <span className="sub">sla-toned tickets · start / bump / pass</span>
             </div>
 
@@ -1375,11 +1372,9 @@ function ChefView({
         {controls}
         <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
       </div>
-      <div className="core-crumb">
-        CORE — KDS · CHEF · <b>liquid glass</b> · <span className="fix">expo pass · all-day prep</span>
-      </div>
+      <CoreCrumb section="KDS" page="CHEF" mode="expo pass · all-day prep" />
       <div className="core-sectionhead">
-        <h1>KDS · Chef — Expo &amp; all-day</h1>
+        <h1>KDS · Chef</h1>
         <span className="sub">coursing · expedite · all-day prep counts</span>
       </div>
       <div className="core-statstrip core-kds-strip">

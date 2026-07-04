@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -198,9 +199,7 @@ export function CoreDispatch() {
       }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — SERVICE · DISPATCH · <b>liquid glass</b> · <span className="fix">pass → road</span>
-        </div>
+        <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
         <div className="core-sectionhead">
           <h1>Service · Dispatch</h1>
           <span className="sub">pass → road · {location}{clock ? ` · ${clock}` : ""}</span>

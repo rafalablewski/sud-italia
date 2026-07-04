@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -606,11 +607,9 @@ export function CoreBook({
             <span aria-hidden>+</span> New reservation
           </button>
         </div>
-        <div className="core-crumb">
-          CORE — BOOK · RESERVATIONS · <b>liquid glass</b> · <span className="fix">timeline view</span>
-        </div>
+        <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
         <div className="core-sectionhead">
-          <h1>Book &amp; Seat</h1>
+          <h1>Service · Book</h1>
           <span className="sub">{daySub} · dinner service · {loc}</span>
           <div className="core-sp" />
           <div className="core-bk-lenses" role="tablist" aria-label="View">

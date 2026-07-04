@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -296,9 +297,7 @@ export function CoreCrm() {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — GUEST · CRM · <b>customer book</b> · <span className="fix">{stat.guests} guests</span>
-        </div>
+        <CoreCrumb section="GUEST" page="CRM" mode={<>{stat.guests} guests</>} />
         <div className="core-sectionhead">
           <h1>Guest · CRM</h1>
           <span className="sub">customer book · rfm health · consent &amp; points</span>

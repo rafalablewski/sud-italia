@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { useLocation } from "@/shared/LocationContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -163,9 +164,7 @@ export function CoreConcierge({ meta, settings, byLocation, stats }: Props) {
       tabs={guestTabs("concierge")}
       subRight={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
     >
-      <div className="core-crumb">
-        CORE — GUEST · CONCIERGE · <b>mcp inspector</b> · <span className="fix">{liveCount}/{meta.length} live</span>
-      </div>
+      <CoreCrumb section="GUEST" page="CONCIERGE" mode={<>{liveCount}/{meta.length} live</>} />
       <div className="core-sectionhead">
         <h1>Guest · Concierge</h1>
         <span className="sub">ai capability server · model-context inspector</span>

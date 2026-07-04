@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -1006,9 +1007,7 @@ export function CoreInbox() {
       }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — GUEST · INBOX · <b>whatsapp live</b> · <span className="fix">reached via ⌘K</span>
-        </div>
+        <CoreCrumb section="GUEST" page="INBOX" mode="whatsapp live" />
         <div className="core-sectionhead">
           <h1>Guest · Inbox</h1>
           <span className="sub">whatsapp · 3-pane over unified stat strip</span>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -136,9 +137,7 @@ export function CoreTables() {
       }
     >
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — SERVICE · TABLES · <b>liquid glass</b> · <span className="fix">{location} · dine-in</span>
-        </div>
+        <CoreCrumb section="SERVICE" page="TABLES" mode={<>{location} · dine-in</>} />
         <div className="core-sectionhead">
           <h1>Service · Tables</h1>
           <span className="sub">

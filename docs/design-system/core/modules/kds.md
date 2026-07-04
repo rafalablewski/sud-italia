@@ -67,7 +67,7 @@ outside `.core-body`) keeps the flat dark wall.
   Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
   `.core-fleet` container carries the warm KDS radial-gradient wash, opening with
   a `.core-crumb` (`CORE — KDS · FLEET · liquid glass · all kitchens · one pass`)
-  + a `.core-sectionhead` (`KDS · Fleet — All kitchens`) + a `.core-kds-toolbar`.
+  + a `.core-sectionhead` (`KDS · Fleet`) + a `.core-kds-toolbar`.
   - **Fleet toolbar** — a `.core-seg` kitchen filter (**All kitchens** + one
     button per truck, labelled by `city`). The whole KDS board toolbar (this
     filter, the Floor lane filter, the Chef Expo/All-day toggle, the

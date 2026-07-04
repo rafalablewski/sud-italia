@@ -140,9 +140,14 @@ surface toolbar.
     padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
     Matches the mockup's `.statstrip`.
 - **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
-  uppercase mono `CORE — SURFACE · … · liquid glass · [context]`, with `b`
-  basil and a `.fix` ember pill for the location/mode tag. Sits directly above
-  the `.core-sectionhead` (Floor).
+  uppercase mono `CORE — {SECTION} · {PAGE} · liquid glass · [mode]`, with `b`
+  basil and a `.fix` ember pill for the mode/context tag. Sits directly above
+  the `.core-sectionhead`. **Rendered by the shared `CoreCrumb` component**
+  (`src/core/shell/CoreCrumb.tsx`): every surface passes only `section` / `page`
+  / `mode`, and the green `b` theme slot is ALWAYS "liquid glass" — so the
+  grammar can't drift per surface again (before this, `slots`/`crm`/`inbox`/
+  `concierge` had put mode text in the theme slot and `slots`/`book`/`kds:floor`
+  mis-ordered section·page; the toolbar-audit fix centralised the line here).
 - **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
   beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
   context tag. Sits under the sub-toolbar, over the stat strip.

@@ -7,6 +7,7 @@ import type { PosKpis } from "@/lib/store"; // type-only (erased) — no server 
 import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { ExpandIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -1405,9 +1406,7 @@ export function CorePos({
       {/* dense-console breadcrumb — matches the mockup's `.cap` line, shared with
           every other Core surface (Rule: one chrome across the suite). */}
       {!embedded && (
-        <div className="core-crumb">
-          CORE — POS · ORDER · <b>liquid glass</b> · <span className="fix">dense console</span>
-        </div>
+        <CoreCrumb section="POS" page="ORDER" mode="dine-in" />
       )}
       {/* surface section header — dense-console page title + context sub. The
           till/service context moved to the body sub-toolbar's left label

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -287,9 +288,7 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
   return (
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="core-guest-inbox">
-        <div className="core-crumb">
-          CORE — GUEST · LOYALTY · <b>liquid glass</b> · <span className="fix">dense console</span>
-        </div>
+        <CoreCrumb section="GUEST" page="LOYALTY" mode="rewards" />
         <div className="core-sectionhead">
           <h1>Guest · Loyalty</h1>
           <span className="sub">members · wallets · redemptions · win-back</span>
