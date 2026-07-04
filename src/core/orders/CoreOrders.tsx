@@ -5,6 +5,7 @@ import { usePolling } from "@/lib/usePolling";
 import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -188,10 +189,10 @@ export function CoreOrders() {
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="ORDERS" mode="cross-cutting surface" />
-        <div className="core-sectionhead">
-          <h1>Orders</h1>
-          <span className="sub">{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</span>
-        </div>
+        <CoreSectionHead
+          section="Orders"
+          sub={<>{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</>}
+        />
         {/* dense-console 7-up stat strip — every figure from live order state (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Order metrics">
           <div className="cell">

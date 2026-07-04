@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { guestTabs } from "./guestTabs";
@@ -1008,10 +1009,7 @@ export function CoreInbox() {
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="INBOX" mode="whatsapp live" />
-        <div className="core-sectionhead">
-          <h1>Guest · Inbox</h1>
-          <span className="sub">whatsapp · 3-pane over unified stat strip</span>
-        </div>
+        <CoreSectionHead section="Guest" page="Inbox" sub={<>whatsapp · 3-pane over unified stat strip</>} />
         {kpis.length > 0 && (
           <div className="core-statstrip" role="group" aria-label="Inbox metrics">
             {kpis.map((k) => (

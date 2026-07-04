@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -200,10 +201,11 @@ export function CoreDispatch() {
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
-        <div className="core-sectionhead">
-          <h1>Service · Dispatch</h1>
-          <span className="sub">pass → road · {location}{clock ? ` · ${clock}` : ""}</span>
-        </div>
+        <CoreSectionHead
+          section="Service"
+          page="Dispatch"
+          sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
+        />
         {/* dense-console 6-up stat strip — every figure from the live board (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Dispatch metrics">
           <div className="cell"><span className="lab">In kitchen</span><span className="val info">{kpis.kitchen}</span><span className="delta">{kpis.preparing} firing now</span></div>

@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExterna
 import { useLocation } from "@/shared/LocationContext";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { RefreshIcon, ExpandIcon, SoundIcon, PauseIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -921,10 +922,7 @@ export function CoreKds() {
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
             <CoreCrumb section="KDS" page="FLEET" mode="all kitchens · one pass" />
-            <div className="core-sectionhead">
-              <h1>KDS · Fleet</h1>
-              <span className="sub">kraków + warszawa · live pass health</span>
-            </div>
+            <CoreSectionHead section="KDS" page="Fleet" sub={<>kraków + warszawa · live pass health</>} />
             {showAllDay && (
               <div className="core-allday" role="list" aria-label="Fleet all-day batch counts">
                 <span className="core-allday-lbl">All-day</span>
@@ -967,10 +965,7 @@ export function CoreKds() {
               <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={toggleKiosk}><ExpandIcon /></button>
             </div>
             <CoreCrumb section="KDS" page="FLOOR" mode="kitchen wall" />
-            <div className="core-sectionhead">
-              <h1>KDS · Floor</h1>
-              <span className="sub">sla-toned tickets · start / bump / pass</span>
-            </div>
+            <CoreSectionHead section="KDS" page="Floor" sub={<>sla-toned tickets · start / bump / pass</>} />
 
             {/* frosted 7-cell strip — Active · At risk · Late · Ready ·
                 Throughput · Covers · Revenue (Rule #1: throughput/covers/revenue
@@ -1373,10 +1368,7 @@ function ChefView({
         <button type="button" className="core-iconbtn" title="Fullscreen kiosk" aria-label="Fullscreen kiosk" onClick={onFullscreen}><ExpandIcon /></button>
       </div>
       <CoreCrumb section="KDS" page="CHEF" mode="expo pass · all-day prep" />
-      <div className="core-sectionhead">
-        <h1>KDS · Chef</h1>
-        <span className="sub">coursing · expedite · all-day prep counts</span>
-      </div>
+      <CoreSectionHead section="KDS" page="Chef" sub={<>coursing · expedite · all-day prep counts</>} />
       <div className="core-statstrip core-kds-strip">
         <div className="cell"><span className="lab">On the pass</span><span className="val basil">{stats.onPass}</span></div>
         <div className="cell"><span className="lab">Awaiting course</span><span className="val amber">{stats.awaiting}</span></div>

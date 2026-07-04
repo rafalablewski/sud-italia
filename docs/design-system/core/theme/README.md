@@ -150,7 +150,15 @@ surface toolbar.
   mis-ordered section·page; the toolbar-audit fix centralised the line here).
 - **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
   beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
-  context tag. Sits under the sub-toolbar, over the stat strip.
+  view/scope switch. Sits directly under the `.core-crumb`, over the stat strip.
+  **Rendered by the shared `CoreSectionHead` component**
+  (`src/core/shell/CoreSectionHead.tsx`): every surface passes only `section` /
+  optional `page` (the title reads `{Section} · {Page}`, or just `{Section}` for
+  single-page surfaces like Orders), the `sub`, and any right-aligned `actions`
+  (a view/scope switch, pinned via `.core-sp`). Same discipline as `CoreCrumb`
+  one row down — centralising the title row keeps the `·` separator, the `<h1>`
+  element and the `.sub` styling from drifting per surface, and gives the
+  view/scope switch a single fixed home.
 - **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
   for the working controls the bar omits (Slots' view filters + date, Book's
   date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -608,18 +609,20 @@ export function CoreBook({
           </button>
         </div>
         <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
-        <div className="core-sectionhead">
-          <h1>Service · Book</h1>
-          <span className="sub">{daySub} · dinner service · {loc}</span>
-          <div className="core-sp" />
-          <div className="core-bk-lenses" role="tablist" aria-label="View">
-            {(["timeline", "floor", "arrivals"] as const).map((m) => (
-              <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CoreSectionHead
+          section="Service"
+          page="Book"
+          sub={<>{daySub} · dinner service · {loc}</>}
+          actions={
+            <div className="core-bk-lenses" role="tablist" aria-label="View">
+              {(["timeline", "floor", "arrivals"] as const).map((m) => (
+                <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          }
+        />
         {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Booking metrics">
           <div className="cell">

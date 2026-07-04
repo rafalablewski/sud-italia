@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -336,10 +337,11 @@ export function CoreSlots() {
     <CoreShell eyebrow="Service · Tables & Slots" tabs={serviceTabs("slots")}>
       <div className="core-guest-inbox">
         <CoreCrumb section="SERVICE" page="SLOTS" mode="demand exchange" />
-        <div className="core-sectionhead">
-          <h1>Service · Slots</h1>
-          <span className="sub">{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</span>
-        </div>
+        <CoreSectionHead
+          section="Service"
+          page="Slots"
+          sub={<>{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</>}
+        />
         {/* Slots controls — Manage|Demand · range · date · Filters · New · Refresh. */}
         <div className="core-surf-toolbar">
           <div className="core-seg core-slots-viewseg">

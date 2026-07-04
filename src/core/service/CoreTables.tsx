@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -138,13 +139,16 @@ export function CoreTables() {
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="SERVICE" page="TABLES" mode={<>{location} · dine-in</>} />
-        <div className="core-sectionhead">
-          <h1>Service · Tables</h1>
-          <span className="sub">
-            {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}
-            {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
-          </span>
-        </div>
+        <CoreSectionHead
+          section="Service"
+          page="Tables"
+          sub={
+            <>
+              {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}
+              {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
+            </>
+          }
+        />
 
         {/* Zone selector — filters the zoned tile groups. */}
         {zones.length > 1 && (

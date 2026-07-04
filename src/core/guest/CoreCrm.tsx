@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -298,10 +299,7 @@ export function CoreCrm() {
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("guests")}>
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="CRM" mode={<>{stat.guests} guests</>} />
-        <div className="core-sectionhead">
-          <h1>Guest · CRM</h1>
-          <span className="sub">customer book · rfm health · consent &amp; points</span>
-        </div>
+        <CoreSectionHead section="Guest" page="CRM" sub={<>customer book · rfm health · consent &amp; points</>} />
         {/* dense-console 6-up stat strip — every figure from the live book (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Customer-book metrics">
           <div className="cell">

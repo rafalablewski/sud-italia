@@ -8,6 +8,7 @@ import { idempotentFetch } from "@/lib/idempotentFetch";
 import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { ExpandIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -1411,10 +1412,7 @@ export function CorePos({
       {/* surface section header — dense-console page title + context sub. The
           till/service context moved to the body sub-toolbar's left label
           (mockup: "TILL 1 · DINNER SERVICE"), so the head stays left-aligned. */}
-      <div className="core-sectionhead">
-        <h1>POS · Order</h1>
-        <span className="sub">{pageLoc} · dine-in service</span>
-      </div>
+      <CoreSectionHead section="POS" page="Order" sub={<>{pageLoc} · dine-in service</>} />
 
       {/* live stat strip — the mockup's KPI row, every figure REAL (Rule #1):
           open checks · covers seated (+floor%) · avg check · prep queue · table

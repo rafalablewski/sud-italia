@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
+import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -289,10 +290,7 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
     <CoreShell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="core-guest-inbox">
         <CoreCrumb section="GUEST" page="LOYALTY" mode="rewards" />
-        <div className="core-sectionhead">
-          <h1>Guest · Loyalty</h1>
-          <span className="sub">members · wallets · redemptions · win-back</span>
-        </div>
+        <CoreSectionHead section="Guest" page="Loyalty" sub={<>members · wallets · redemptions · win-back</>} />
 
         {/* labeled sub-tab segmented control with live count pills */}
         <div className="core-loy-seg" role="tablist" aria-label="Loyalty views">
