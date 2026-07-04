@@ -177,27 +177,28 @@ in the surface ActionBar.
 - **`.core-surf-toolbar`** — the **unified ActionBar**: the ONE header row every
   surface renders under the command bar, over the stat strip. It **collapses the
   old three-row header** (a `.core-crumb` breadcrumb + a `.core-sectionhead`
-  title + this toolbar) into a single row — the breadcrumb duplicated the command
-  bar's own `core ❯ surface:tab` prompt and the oversized section head repeated
-  it, so both were dropped. **Locked height** (56px, `nowrap`, overflow scrolls
-  inside the row) so the stat strip never shifts between a surface with controls
-  and one without. Three fixed element homes:
-  - **`.core-surf-id`** (identity, far left) — the slim page anchor that replaces
-    the dropped crumb + section head: a display-grotesk `.t` title
-    (`{Section}·{Page}`, brand-toned `.mid` dot, or just `{Section}` for
-    single-page surfaces like Orders) stacked over an uppercase-mono context `.s`.
-    `flex:none`, so the controls flow after it.
+  title + this toolbar) into a single row — the breadcrumb AND the section-head
+  title both restated the command bar's own `core ❯ surface:tab` prompt, so both
+  were dropped. **Locked height** (56px, `nowrap`, overflow scrolls inside the
+  row) so the stat strip never shifts between a surface with controls and one
+  without. Three fixed element homes:
+  - **`.core-surf-id`** (context anchor, far left) — the surface's uppercase-mono
+    **context line** (`sub` — date · service · location). NOT a title: the command
+    bar already names the surface (`core ❯ surface:tab`), so this is the context
+    it does NOT carry. `flex: 0 1 auto` — it shrinks (ellipsis) before the
+    controls under pressure, and drops entirely below 900px.
   - **`left`** (controls) — the **view/scope switch** that used to ride the
     section-head right (Book's timeline/floor/arrivals, Slots' Manage/Demand,
     Tables' Zone, KDS's Scope/Status/Mode, Loyalty's view tabs — always the
     FIRST control), plus filters / date / search.
   - **`right`** (actions) — utilities + the primary action, pinned right via
-    `.core-sp`.
+    `.core-sp`. Occasional actions collapse behind a `⋯` `CoreActionMenu` (see
+    the overflow primitive below).
   **Rendered by the shared `CoreSurfToolbar` component**
-  (`src/core/shell/CoreSurfToolbar.tsx`, `section` / `page` / `sub` / `left` /
-  `right` props). `.core-surf-tb-lbl` = a small uppercase field label. Belongs to
-  the surface, not the global chrome — the same one row on every surface, so the
-  identity, controls and actions never move between tabs.
+  (`src/core/shell/CoreSurfToolbar.tsx`, `sub` / `left` / `right` props).
+  `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the surface,
+  not the global chrome — the same one row on every surface, so the context,
+  controls and actions never move between tabs.
 - **KDS board controls** — on the ActionBar the KDS lane/scope/mode switch rides
   the toolbar `left` (the view/scope home) and the board actions ride `right`
   (like every other surface). Only the **fullscreen kiosk** top strip still lays

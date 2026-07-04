@@ -167,8 +167,6 @@ export function CoreConcierge({ meta, settings, byLocation, stats }: Props) {
           count on the right. */}
       <CoreSurfToolbar
         ariaLabel="Concierge status"
-        section="Guest"
-        page="Concierge"
         sub={<>ai capability server · model-context inspector</>}
         right={<span className="core-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
       />

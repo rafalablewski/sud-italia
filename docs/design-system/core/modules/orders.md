@@ -8,7 +8,7 @@ One surface for **every order at the location** — live (current) and paid
 history — so staff aren't limited to the POS's open tickets.
 
 Rendered in the **dense-console** language: the unified **`.core-surf-toolbar`**
-ActionBar — identity (`Orders` + context sub) left, the filters (search · channel
+ActionBar — the `.core-surf-id` context anchor left, the filters (search · channel
 chips · date) as its `left`, Refresh as its `right` — then a 7-up
 `.core-statstrip`, then a `.core-otable`.
 

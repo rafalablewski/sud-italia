@@ -227,12 +227,15 @@ _(append dated entries as choices are made)_
   the breadcrumb only ever restated the command bar's own `core ❯ surface:tab`
   prompt, and the oversized section head restated it a second time — pure
   duplication above every surface. Both `CoreCrumb` and `CoreSectionHead` (and
-  their `.core-crumb` / `.core-sectionhead` CSS) were **deleted**; the identity
-  they carried folds into a slim **`.core-surf-id`** slot at the ActionBar's far
-  left (`{Section·Page}` over the mono context sub), the view/scope switch that
-  used to ride the section-head right moves to the toolbar `left` (leading the
-  controls), and the actions stay in `right`. `CoreSurfToolbar` gained
-  `section` / `page` / `sub` props; all 11 surfaces (POS · Book · Tables · Slots ·
-  Dispatch · KDS fleet/floor/chef · Orders · CRM · Inbox · Loyalty · Concierge)
-  were converted. Theme README + every module doc synced (Rule #11); the
-  historical entries above are left as-dated. Typecheck green.
+  their `.core-crumb` / `.core-sectionhead` CSS) were **deleted**. The
+  section-head TITLE went too — it only restated the command-bar prompt — so the
+  ActionBar's far-left anchor is just the surface's uppercase-mono **context
+  line** (`.core-surf-id`: date · service · location — the one thing the command
+  bar does NOT carry). The view/scope switch that used to ride the section-head
+  right moves to the toolbar `left` (leading the controls), and the actions stay
+  in `right`. `CoreSurfToolbar`'s only identity prop is `sub`; all 11 surfaces
+  (POS · Book · Tables · Slots · Dispatch · KDS fleet/floor/chef · Orders · CRM ·
+  Inbox · Loyalty · Concierge) were converted. A shared `⋯` `CoreActionMenu`
+  collapses occasional actions (Book: Forecast/Policy) into a portaled popover so
+  the bar keeps one primary + never clips. Theme README + every module doc synced
+  (Rule #11); the historical entries above are left as-dated. Typecheck green.

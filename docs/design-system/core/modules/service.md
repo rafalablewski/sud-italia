@@ -19,7 +19,7 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   **no seating, no order lookup, no live occupancy** here; that operational
   flow lives in **Book** (`/core/service/book`, whose Floor lens seats parties
   and opens checks) and **POS**. Rendered in the **dense-console** language: the
-  `.core-surf-toolbar` ActionBar (identity `Service · Tables`), whose `left`
+  `.core-surf-toolbar` ActionBar (`.core-surf-id` context anchor left), whose `left`
   carries the optional
   **`Zone` scope switch** (a `.core-seg` — `Zone · All zones · <zone>×N`, shown
   when there is more than one zone) that filters the zoned groups, a
@@ -66,7 +66,7 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   `.core-exch-head` / `.core-applyall` / `.core-exrow` / `.core-tier` /
   `.core-lever` (`.lv` + `.why`) / `.core-apply`.
 - Rendered in the **dense-console** language: the `.core-surf-toolbar` ActionBar
-  (identity `Service · Slots`), whose `left` leads with the **`Mode`
+  (`.core-surf-id` context anchor left), whose `left` leads with the **`Mode`
   switch** (Manage | Demand, a `.core-seg`), then Day / Week
   + date + channel filter left; New slot · Refresh right), then a **6-up
   `.core-statstrip`** — **booked · capacity · fill ·
@@ -108,8 +108,8 @@ in one move) is the **Book** view — see below.
 eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
 `/core/book` and `/core/guest/book` redirect here. Rendered in the
 **dense-console** language (mockup 11-book): the `.core-surf-toolbar` ActionBar
-(identity `Service · Book`, the View switch — timeline/floor/arrivals — leading
-its `left`), then a **6-up `.core-statstrip`** — **bookings today ·
+(`.core-surf-id` context anchor left, the View switch — timeline/floor/arrivals —
+leading its `left`), then a **6-up `.core-statstrip`** — **bookings today ·
 covers · seated · upcoming · no-shows · fill** (all from the day's reservations
 — Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
@@ -255,7 +255,7 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
   `src/app/api/admin/dispatch/route.ts`; store helper `assignOrderDriver`
   (`src/lib/store.ts`).
 - **Theme:** dense-console (mockup 06-service-dispatch): `.core-surf-toolbar`
-  ActionBar (identity `Service · Dispatch`) + `.core-statstrip`, then a `.core-disp-grid` (queue +
+  ActionBar (`.core-surf-id` context anchor) + `.core-statstrip`, then a `.core-disp-grid` (queue +
   drivers). The order cards stay token-styled inline; `.core-disp-drivers` /
   `.core-disp-driver` / `.core-disp-dstat` style the drivers panel.
 - The delivery driver board. `GET /api/admin/dispatch?location=` returns the

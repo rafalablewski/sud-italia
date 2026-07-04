@@ -343,8 +343,6 @@ export function CoreSlots() {
             on the right (New slot · Refresh). */}
         <CoreSurfToolbar
           ariaLabel="Slot controls"
-          section="Service"
-          page="Slots"
           sub={<>{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</>}
           left={
             <>

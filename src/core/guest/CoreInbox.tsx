@@ -999,8 +999,6 @@ export function CoreInbox() {
             broadcast · settings · WhatsApp-live). */}
         <CoreSurfToolbar
           ariaLabel="Inbox controls"
-          section="Guest"
-          page="Inbox"
           sub={<>whatsapp · 3-pane over unified stat strip</>}
           right={
             <>

@@ -299,8 +299,6 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
             Redemptions|Win-back view switch on the left · Refresh right. */}
         <CoreSurfToolbar
           ariaLabel="Loyalty controls"
-          section="Guest"
-          page="Loyalty"
           sub={<>members · wallets · redemptions · win-back</>}
           left={
             /* Members|Wallets|Redemptions|Win-back — the view switch. */

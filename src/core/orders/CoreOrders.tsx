@@ -195,7 +195,6 @@ export function CoreOrders() {
             command bar's view tabs. */}
         <CoreSurfToolbar
           ariaLabel="Order filters"
-          section="Orders"
           sub={<>{location} · {scope === "current" ? "live" : scope === "paid" ? "paid history" : "all orders"}</>}
           left={
             <>

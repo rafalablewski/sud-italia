@@ -9,10 +9,10 @@ import type { ReactNode } from "react";
  *      ↑ identity                ↑ left (controls)                     ↑ right (actions)
  *
  * This single row **replaces the old three-row stack** (`CoreCrumb` breadcrumb +
- * `CoreSectionHead` title + this toolbar): the breadcrumb duplicated the command
- * bar's own `core ❯ surface:tab` prompt, and the oversized section head repeated
- * it a second time — so both were dropped. What was worth keeping — a slim
- * identity, the working controls, and the actions — collapses here.
+ * `CoreSectionHead` title + this toolbar): the breadcrumb AND the section-head
+ * title both duplicated the command bar's own `core ❯ surface:tab` prompt, so
+ * both were dropped. The bar's far-left anchor is now just the **context** line
+ * (`sub` — date · service · location), which the command bar does NOT carry.
  *
  * `left` holds what you scope the view WITH (the view/scope switch that used to
  * ride the section-head right, plus search / date / channel chips); `right` holds
@@ -23,19 +23,13 @@ import type { ReactNode } from "react";
  * See `docs/design-system/core/theme/README.md` → `.core-surf-toolbar`.
  */
 export function CoreSurfToolbar({
-  section,
-  page,
   sub,
   left,
   right,
   className,
   ariaLabel,
 }: {
-  /** Title-case surface family, e.g. `Service`, `Guest`, `POS`, `Orders`. */
-  section: string;
-  /** Title-case page within the surface, e.g. `Tables`. Omit for single-page surfaces (Orders). */
-  page?: string;
-  /** The uppercase-mono context line under the title. */
+  /** The uppercase-mono context line anchoring the bar's left (date · service · location). */
   sub?: ReactNode;
   /** The view/scope switch + filters / date / search — what you scope the view with. */
   left?: ReactNode;
@@ -51,20 +45,9 @@ export function CoreSurfToolbar({
       role="toolbar"
       aria-label={ariaLabel ?? "Surface controls"}
     >
-      {/* Identity — the slim page anchor that replaces the dropped breadcrumb +
-          oversized section head: {Section·Page} over an uppercase-mono context. */}
-      <div className="core-surf-id">
-        <span className="t">
-          {section}
-          {page ? (
-            <>
-              <span className="mid">·</span>
-              {page}
-            </>
-          ) : null}
-        </span>
-        {sub != null && <span className="s">{sub}</span>}
-      </div>
+      {/* Context anchor — the surface's uppercase-mono context line (the command
+          bar already carries the `core ❯ surface:tab` identity, so no title). */}
+      {sub != null && <div className="core-surf-id">{sub}</div>}
       {left}
       <div className="core-sp" />
       {right}

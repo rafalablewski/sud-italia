@@ -195,8 +195,6 @@ export function CoreDispatch() {
             (auto-assign · Refresh). */}
         <CoreSurfToolbar
           ariaLabel="Dispatch controls"
-          section="Service"
-          page="Dispatch"
           sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
           right={
             <>

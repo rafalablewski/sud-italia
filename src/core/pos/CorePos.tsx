@@ -1408,8 +1408,6 @@ export function CorePos({
       {!embedded && (
         <CoreSurfToolbar
           ariaLabel="Till controls"
-          section="POS"
-          page="Order"
           sub={<>{pageLoc} · dine-in service</>}
           right={
             <>

@@ -318,14 +318,12 @@
 .core .core-surf-toolbar::-webkit-scrollbar { height: 0; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-/* Identity slot — the slim page anchor that replaces the dropped `.core-crumb`
-   breadcrumb + oversized `.core-sectionhead`: a display-grotesk {Section·Page}
-   title (brand-toned `.mid` dot) stacked over the uppercase-mono context `.s`.
-   `flex:none` so it holds its width; the controls/actions flow after it. */
-.core .core-surf-id { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; flex: 0 1 auto; margin-right: 4px; }
-.core .core-surf-id .t { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: -.015em; line-height: 1.1; color: var(--ink); white-space: nowrap; }
-.core .core-surf-id .t .mid { color: var(--brand-bright); margin: 0 4px; }
-.core .core-surf-id .s { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Context anchor — the bar's far-left uppercase-mono context line (date ·
+   service · location). Replaces the dropped `.core-crumb` breadcrumb +
+   `.core-sectionhead` title, both of which only restated the command bar's
+   `core ❯ surface:tab` prompt; the command bar does NOT carry this context, so
+   it is what remains. Shrinks (ellipsis) before the controls under pressure. */
+.core .core-surf-id { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; margin-right: 4px; align-self: center; }
 /* Normalise every labelled action pill in the toolbar to ONE size/shape/casing
    so a surface's "New reservation" / "New slot" / "Add table" / "Forecast" /
    "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
@@ -2054,9 +2052,9 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   .core .cm-k .cm-k-label { display: none; }
   .core .cm-k { padding: 6px 8px; }
   .core .core-pos { grid-template-columns: 56px 1fr 292px; }
-  /* ActionBar reclaims width: the identity keeps the {Section·Page} title but
-     sheds its mono context sub, so the controls + actions stay in one row. */
-  .core .core-surf-id .s { display: none; }
+  /* ActionBar reclaims width: the mono context anchor drops so the controls +
+     actions stay in one row (the command bar still names the surface). */
+  .core .core-surf-id { display: none; }
 }
 
 @media (max-width: 820px) {

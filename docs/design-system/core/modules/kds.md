@@ -21,7 +21,7 @@ for owners (role from `/api/admin/me`).
 All three views (Fleet · Floor · Chef) render in the **liquid-glass** language
 1:1 with the Core-suite mockup, on the unified ActionBar: the in-shell board
 (`.core-body .core-kds`) sits on the warm KDS radial-gradient, and each view
-opens with the `.core-surf-toolbar` — its `.core-surf-id` identity left, the
+opens with the `.core-surf-toolbar` — its `.core-surf-id` context anchor left, the
 view/scope switch as its `left` (Floor **STATUS** lane · Fleet **SCOPE** kitchen ·
 Chef **MODE** expo/all-day, each a `.core-seg`), and the board actions as its
 `right` (Σ all-day · refresh · 86 · chime ·
@@ -70,8 +70,8 @@ wall, laying scope + actions out inline in its top strip.
   owners** (the role from `/api/admin/me` flips the board to Fleet on load).
   Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
   `.core-fleet` container carries the warm KDS radial-gradient wash, opening with
-  the `.core-surf-toolbar` ActionBar — the `.core-surf-id` identity (`KDS · Fleet`)
-  left, the SCOPE switch as its `left`, and the fleet actions as its `right`.
+  the `.core-surf-toolbar` ActionBar — the `.core-surf-id` context anchor left,
+  the SCOPE switch as its `left`, and the fleet actions as its `right`.
   - **Fleet SCOPE switch** — a `.core-seg` kitchen filter (**All kitchens** + one
     button per truck, labelled by `city`), first control in the ActionBar `left`. The
     KDS switches + board actions (this filter, the Floor lane filter, the Chef

@@ -138,8 +138,6 @@ export function CoreTables() {
             switch (when >1 zone) on the left · actions (Refresh · Add table). */}
         <CoreSurfToolbar
           ariaLabel="Table controls"
-          section="Service"
-          page="Tables"
           sub={
             <>
               {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}

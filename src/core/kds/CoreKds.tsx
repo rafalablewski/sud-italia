@@ -938,8 +938,6 @@ export function CoreKds() {
                 the left · actions (board actions + fullscreen kiosk) right. */}
             <CoreSurfToolbar
               ariaLabel="Fleet controls"
-              section="KDS"
-              page="Fleet"
               sub={<>kraków + warszawa · live pass health</>}
               left={fleetScopeSeg}
               right={
@@ -986,8 +984,6 @@ export function CoreKds() {
                 switch on the left · actions (board actions + fullscreen) right. */}
             <CoreSurfToolbar
               ariaLabel="Floor controls"
-              section="KDS"
-              page="Floor"
               sub={<>sla-toned tickets · start / bump / pass</>}
               left={laneFilter}
               right={
@@ -1393,8 +1389,6 @@ function ChefView({
           switch on the left · actions (chef controls + fullscreen) right. */}
       <CoreSurfToolbar
         ariaLabel="Chef controls"
-        section="KDS"
-        page="Chef"
         sub={<>coursing · expedite · all-day prep counts</>}
         left={
           <div className="core-seg" role="tablist" aria-label="Mode">

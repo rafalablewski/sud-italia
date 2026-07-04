@@ -304,8 +304,6 @@ export function CoreCrm() {
             segment chips · loyalty-tier gems) · sort + Refresh right. */}
         <CoreSurfToolbar
           ariaLabel="Customer-book filters"
-          section="Guest"
-          page="CRM"
           sub={<>customer book · rfm health · consent &amp; points</>}
           left={
             <>
