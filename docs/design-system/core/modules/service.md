@@ -211,12 +211,13 @@ reflects it immediately; conversely a walk-in seated from POS shows in this
 Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 `nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
 number** (shared with the Tables `tLabel`). The **surface toolbar**
-(`.core-surf-toolbar.core-bk-subbar`, row 4 — under the section head, over the
-stat strip, via the shared `CoreSurfToolbar`) carries the weekday label + a
-compact date chip (`.core-bk-datefield`) on the left, and on the right the
-Forecast · Policy · Walk-in buttons + the brand **New reservation** pill
-(`.core-bk-newpill`, focuses the guest field). The **timeline / floor /
-arrivals** lenses render as the view switch in the section-head right. A
+(`.core-surf-toolbar.core-bk-subbar`, the ActionBar — under the command bar,
+over the stat strip, via the shared `CoreSurfToolbar`) carries, in its `left`,
+the **timeline / floor / arrivals** view switch, then the weekday label + a
+compact date chip (`.core-bk-datefield`); on the right the occasional
+**Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, keeping
+the frequent **Walk-in** button + the brand **New reservation** pill
+(`.core-bk-newpill`, focuses the guest field) inline. A
 **◔ Forecast** button opens a **pre-service simulation** `CoreDialog`
 (`.core-bk-sim`, from `simulateService` via GET `/api/admin/seating/simulate`):
 bookings/covers/peak-occupancy KPIs, a per-30-min table-occupancy bar chart

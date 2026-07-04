@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { CoreActionMenu } from "@/core/shell/CoreActionMenu";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
@@ -608,12 +609,15 @@ export function CoreBook({
           }
           right={
             <>
-              <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
-                <span aria-hidden>◔</span> Forecast
-              </button>
-              <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
-                <span aria-hidden>⚙</span> Policy
-              </button>
+              {/* Occasional actions collapse behind ⋯ so the bar keeps one
+                  primary + the frequent Walk-in inline (and never clips). */}
+              <CoreActionMenu
+                label="More booking actions"
+                items={[
+                  { label: "Forecast", icon: <span aria-hidden>◔</span>, onClick: () => void openForecast() },
+                  { label: "Policy", icon: <span aria-hidden>⚙</span>, onClick: () => setPolicyOpen(true) },
+                ]}
+              />
               <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
                 <span aria-hidden>+</span> Walk-in
               </button>

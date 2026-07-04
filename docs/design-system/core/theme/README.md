@@ -212,6 +212,16 @@ in the surface ActionBar.
   control (chime, filters). ONE definition for every surface — the
   `.core-surf-toolbar` / `.cm-right` / `.core-kds` variants only tune spacing,
   not the look. `.core-recall-btn` widens it for a text label (KDS "↩ Undo").
+- **`.core-ovf-*` (ActionBar overflow)** — the `⋯` menu that collapses a
+  surface's **occasional** actions so the ActionBar keeps one inline primary (+
+  the frequent action) and never clips on a narrow screen. **Rendered by the
+  shared `CoreActionMenu` component** (`src/core/shell/CoreActionMenu.tsx`,
+  `items: {label, onClick, icon?, tone?}[]`): a `.core-ovf-btn` (a `.core-iconbtn`
+  three-dot trigger, ember `.on` while open) blooms a `.core-ovf-pop` popover of
+  `.core-ovf-item` rows, **portaled to the `.core` root** (Rule #4 — escapes the
+  toolbar's `overflow` clip, not z-index) and anchored under the trigger.
+  Dismisses on select · scrim click · Escape · scroll/resize. Book uses it for
+  Forecast + Policy (keeping Walk-in + the New-reservation primary inline).
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
