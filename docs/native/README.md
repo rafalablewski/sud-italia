@@ -85,7 +85,8 @@ leaving Vercel — designed for from day one).
   Live today: the whole customer path, and the operator Dashboard, Orders board,
   KDS, plus the breadth of admin surfaces — each off a bearer-authed, role-gated
   `/api/v1/admin/*` endpoint (`src/app/api/v1/admin/`), rendered either as a
-  **bespoke faithful screen** (KDS, Orders, Dashboard, **Inventory**) or via the
+  **bespoke faithful screen** (KDS, Orders, Dashboard, **Inventory**, **Suppliers**,
+  **Purchase orders**, **Cash**, **Customers**) or via the
   generic live `DataSurface`. Remaining surfaces upgrade from generic list →
   bespoke screen wave by wave; the two content pages (SOC 2, Capabilities) stay
   honest scaffolds (never fake data — Rule #1).

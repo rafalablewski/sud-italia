@@ -1,5 +1,9 @@
 import type { ComponentType } from "react";
 import { Inventory } from "./Inventory";
+import { Suppliers } from "./Suppliers";
+import { PurchaseOrders } from "./PurchaseOrders";
+import { Cash } from "./Cash";
+import { Customers } from "./Customers";
 
 /**
  * Bespoke operator surfaces — screens hand-built to mirror their web counterpart
@@ -11,4 +15,8 @@ import { Inventory } from "./Inventory";
  */
 export const BESPOKE_SURFACES: Record<string, ComponentType> = {
   "/admin/inventory": Inventory,
+  "/admin/suppliers": Suppliers,
+  "/admin/purchase-orders": PurchaseOrders,
+  "/admin/cash": Cash,
+  "/admin/customers": Customers,
 };

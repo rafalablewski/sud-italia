@@ -543,5 +543,30 @@ data source; mirroring them would duplicate a Rule #9/#11 source of truth. Leave
   an **extended** `GET /api/v1/admin/inventory` (added `costPerUnit` + `valueGrosze`
   per row, and `meta.outCount`/`meta.totalValueGrosze`) so the value KPI is real
   (Rule #1). Waste·7d KPI omitted — not in this facade yet (no fabrication).
-- ⏭️ **Next candidates** (generic → bespoke): Suppliers, Purchase orders, Cash,
-  Customers — each already live via `DataSurface`, upgraded wave by wave.
+- ✅ **Suppliers** (`/admin/suppliers`) — bespoke `Suppliers.tsx` mirroring web
+  `SuppliersV3`: KPI rail (**suppliers · avg lead · fastest · with-contact**), the
+  web lead-time tone (≤2d fast, ≤5d ok, slower neutral) as a per-row badge, and
+  search over name / contact / email / phone. Every field off the existing
+  `GET /api/v1/admin/suppliers` (chain-wide — no location switch, Rule #1).
+- ✅ **Purchase orders** (`/admin/purchase-orders`) — bespoke `PurchaseOrders.tsx`
+  mirroring web `PurchaseOrdersV3`: KPI rail (**on-order value · awaiting ·
+  received**), the **draft/sent/received/cancelled** status taxonomy with a
+  filter-chip bar (live counts) and the web badge tones, per-row supplier / line
+  count / total / date. Off the existing role-scoped `GET /api/v1/admin/purchase-
+  orders` (supplier name + line count already resolved server-side). Status advance
+  (the facade's `PATCH`) stays a later write wave — this is the read/parity upgrade.
+- ✅ **Cash** (`/admin/cash`) — bespoke `Cash.tsx` mirroring web `CashV3`: the open
+  till as a highlight card (**opening float · expected-in-drawer · entries**, the
+  same three the web surfaces), a KPI rail (**sessions · open · abs variance**), and
+  the closed-session history with the web variance tone (|Δ|<2 zł ok, <10 zł warn,
+  else short/over). Off the existing `GET /api/v1/admin/cash` (per-session float,
+  drops total, closing count, variance — role-scoped, newest-first). Opening a till
+  (the facade's `POST`) stays a later write wave — this is the read/parity upgrade.
+- ✅ **Customers** (`/admin/customers`) — bespoke `Customers.tsx` mirroring web
+  `CustomersV3`: KPI rail (**customers · repeat · lifetime revenue**), the web
+  Repeat/New tag plus a **VIP** tag on the store's own gate (orderCount ≥ 6 · spend
+  ≥ 800 zł · points ≥ 500), tier filter chips (live counts) and search over name /
+  phone. Every figure off the existing `GET /api/v1/admin/customers` (chain-wide
+  rollups derived from real orders, highest-spend-first — Rule #1).
+- ⏭️ **Next candidates** (generic → bespoke): Staff, Schedule, Recipes, Menu,
+  Campaigns — each already live via `DataSurface`, upgraded wave by wave.
