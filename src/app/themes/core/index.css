@@ -1716,6 +1716,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* Row 2 of the unified header — LOCKED height (breadcrumb grammar via CoreCrumb). */
 .core .core-crumb { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--ink-3); text-transform: uppercase; padding: 0 16px; height: 34px; display: flex; gap: 8px; align-items: center; flex: none; }
 .core .core-crumb b { color: var(--basil); font-weight: 600; }
+.core .core-crumb .d { opacity: .5; }
 .core .core-crumb .fix { color: var(--brand-bright); border: 1px solid var(--line-2); padding: 1px 7px; border-radius: var(--pill); font-size: 9px; background: var(--brand-wash); }
 
 .core .core-floor { flex: 1; overflow-y: auto; padding: 18px; }

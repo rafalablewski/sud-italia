@@ -142,10 +142,14 @@ surface toolbar / section head.
     Matches the mockup's `.statstrip`.
 - **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
   uppercase mono `CORE — {SECTION} · {PAGE} · liquid glass · [mode]`, with `b`
-  basil and a `.fix` ember pill for the mode/context tag. Sits directly above
-  the `.core-sectionhead`. **Rendered by the shared `CoreCrumb` component**
-  (`src/core/shell/CoreCrumb.tsx`): every surface passes only `section` / `page`
-  / `mode`, and the green `b` theme slot is ALWAYS "liquid glass" — so the
+  basil and a `.fix` ember pill for the mode/context tag. It is a flex row with
+  an 8px `gap`, so **each segment is its own element** and every separator is a
+  muted `.d` dot (`opacity: .5`) — never a plain-text "·" baked into one node
+  (that would tightly space the left half and gap-space the right, and lose the
+  dimmed dot). Sits directly above the `.core-sectionhead`. **Rendered by the
+  shared `CoreCrumb` component** (`src/core/shell/CoreCrumb.tsx`): every surface
+  passes only `section` / `page` / `mode`, and the green `b` theme slot is
+  ALWAYS "liquid glass" — so the
   grammar can't drift per surface again (before this, `slots`/`crm`/`inbox`/
   `concierge` had put mode text in the theme slot and `slots`/`book`/`kds:floor`
   mis-ordered section·page; the toolbar-audit fix centralised the line here).

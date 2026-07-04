@@ -27,11 +27,23 @@ export function CoreCrumb({
   /** The bracketed context/mode pill (`.fix`) — the only free-form slot. */
   mode: ReactNode;
 }) {
+  // Each segment is its own element so the `.core-crumb` flex `gap` spaces them
+  // EVENLY across the whole line, and every separator is a muted `.d` dot — not
+  // a plain-text "·" baked into one node (which would leave the left half tightly
+  // spaced and the right half gap-spaced, and lose the dimmed-dot treatment).
   return (
     <div className="core-crumb">
-      {`CORE — ${section}${page ? ` · ${page}` : ""} · `}
+      <span>CORE —</span>
+      <span>{section}</span>
+      {page ? (
+        <>
+          <span className="d">·</span>
+          <span>{page}</span>
+        </>
+      ) : null}
+      <span className="d">·</span>
       <b>liquid glass</b>
-      {" · "}
+      <span className="d">·</span>
       <span className="fix">{mode}</span>
     </div>
   );
