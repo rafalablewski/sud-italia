@@ -126,7 +126,7 @@
 /* ---------- let the aurora through ----------
    The base theme fills its scroll/content containers with an OPAQUE
    `var(--bg)` (POS menu grid, embedded POS, guest thread, capability
-   inspector, the bottom-nav band). Painted on top of the root aurora,
+   inspector). Painted on top of the root aurora,
    they bury it — so the frosted panels above have only flat black to
    refract and the whole skin collapses to the dark base look. Drop those
    fills to transparent so the aurora reaches the glass. The KDS wall

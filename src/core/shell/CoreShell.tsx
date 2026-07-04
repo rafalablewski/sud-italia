@@ -1,30 +1,22 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
-import { CoreNav } from "./CoreNav";
-import { CoreClock, CoreThemeToggle, CoreLocationChip, CorePrompt, CmdkLauncher } from "./CoreChrome";
-import { PressureBadge } from "./PressureBadge";
-import { CommandPalette } from "./CommandPalette";
-import { CoreHandover } from "./CoreHandover";
-import { CoreNotificationsBell } from "./CoreNotificationsBell";
-import { CoreDock } from "./CoreDock";
+"use client";
 
-export interface CoreTab {
-  label: string;
-  href?: string;
-  active?: boolean;
-  onClick?: () => void;
-}
+import type { ReactNode } from "react";
+import { useRegisterChrome, type CoreTab } from "./CoreShellContext";
+
+export type { CoreTab } from "./CoreShellContext";
 
 /**
- * The one chrome every Core surface shares — the Service OS three-region IA:
- * a thin Command Bar (top), the Lens Rail (left, `CoreNav`), the surface Canvas
- * (right), and the persistent Context Dock (`CoreDock`, docked bottom). The
- * Command Bar holds global state (location · ⌘K · pressure · clock · user); the
- * Lens Rail switches how you view the room; the selected entity persists across
- * lenses and its check stays docked.
+ * A surface's handle on the shared chrome. The command bar + Lens Rail are NOT
+ * rendered here — they live once in `CoreShellFrame`, mounted by the `/core`
+ * layout, and never unmount across navigation. `CoreShell` simply **publishes**
+ * this surface's slice of chrome (eyebrow · view tabs · body sub-toolbar ·
+ * bleed) into that frame and renders its `children` into the persistent Canvas.
  *
- * Core is a SEPARATE entity from /admin: this renders none of the admin
- * shell. It loads only the core theme (see src/app/core/layout.tsx).
+ * Surfaces keep the exact same `<CoreShell eyebrow tabs subLeft subRight bleed>`
+ * API they always had — moving the chrome into the layout is invisible to them.
+ * That's what keeps both bars present at all times and makes page/tab switching
+ * a no-remount, no-flash transition. See CoreShellFrame + CoreShellContext and
+ * docs/design-system/core/theme/README.md → Shell.
  */
 export function CoreShell({
   eyebrow,
@@ -43,76 +35,6 @@ export function CoreShell({
   bleed?: boolean;
   children: ReactNode;
 }) {
-  return (
-    <>
-      {/* "Command" — ONE standard bar on every surface: traffic-light chrome · a
-          live shell prompt (core ❯ surface:tab) + blinking caret · mono view-tab
-          chips · a ⌘K launcher · a risk·loc·clock telemetry cluster · the global
-          bell + theme tools. NO surface-specific tools live here — a surface's
-          own controls (`subRight`) render in a body sub-toolbar below, so the
-          chrome reads identically across POS/KDS/Orders/Service/Guest/Book. The
-          primary surface switcher is the left Lens Rail (CoreNav, below). */}
-      <header className="core-bar">
-        <div className="cm-lights" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className="cm-div" aria-hidden />
-        <CorePrompt tabs={tabs} title={eyebrow} />
-        <div className="cm-div" aria-hidden />
-        {tabs && tabs.length > 0 && (
-          <div className="core-tabs cm-tabs">
-            {tabs.map((t) =>
-              t.href ? (
-                <Link key={t.label} href={t.href} className={t.active ? "on" : undefined}>
-                  {t.label}
-                </Link>
-              ) : (
-                <button key={t.label} type="button" className={t.active ? "on" : undefined} onClick={t.onClick}>
-                  {t.label}
-                </button>
-              ),
-            )}
-          </div>
-        )}
-        <div className="cm-sp" />
-        <CmdkLauncher />
-        <div className="cm-tel">
-          <PressureBadge />
-          <CoreLocationChip />
-          <CoreClock />
-        </div>
-        <div className="cm-right">
-          <CoreNotificationsBell />
-          <CoreThemeToggle />
-        </div>
-      </header>
-
-      {/* The Canvas region: the Lens Rail (left) beside the surface body. The
-          surface's own controls (`subRight`) sit in a body sub-toolbar at the
-          top of the Canvas (right-aligned), not in the command bar. Surfaces
-          that build their own richer toolbar (Slots) pass no `subRight`. */}
-      <div className="core-main">
-        <CoreNav />
-        <div className={bleed ? "core-body bleed" : "core-body"}>
-          {(subLeft || subRight) && (
-            <div className="core-surf-toolbar">
-              {subLeft && <div className="core-surf-tb-lbl">{subLeft}</div>}
-              <div className="core-sp" />
-              {subRight}
-            </div>
-          )}
-          {children}
-        </div>
-      </div>
-
-      {/* Persistent Context Dock — the selected entity's check, following the
-          operator across every lens. Renders null until something is selected
-          (additive; see SelectionContext / CoreDock). */}
-      <CoreDock />
-      <CommandPalette />
-      <CoreHandover />
-    </>
-  );
+  useRegisterChrome({ eyebrow, tabs, subLeft, subRight, bleed });
+  return <>{children}</>;
 }

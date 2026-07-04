@@ -52,7 +52,22 @@ decisions in [`../README.md`](../README.md).
 The shell + shared primitives, all `core-` prefixed. Anatomy of each
 surface lives in [`../modules/`](../modules/).
 
-### Shell (`CoreShell` · `src/core/shell/`)
+### Shell (`CoreShellFrame` + `CoreShell` · `src/core/shell/`)
+
+**The chrome is rendered ONCE and never unmounts.** `CoreShellFrame`
+(`src/core/shell/CoreShellFrame.tsx`) — the command bar + Lens Rail + Context
+Dock + palette — is mounted by the `/core` layout (via `CoreProviders`) and
+wraps every page as a stable ancestor. Navigating between pages/tabs only swaps
+the Canvas (`{children}`); the top bar and left rail stay put, with no remount
+and no black flash. Each surface still writes `<CoreShell eyebrow tabs subLeft
+subRight bleed>` exactly as before, but `CoreShell` is now a thin **registrar**:
+it publishes that surface's *slice* of chrome (eyebrow · view tabs · body
+sub-toolbar · bleed) into the frame through `CoreShellContext`
+(`useRegisterChrome`) and renders its children into the persistent Canvas. The
+frame lives *below* the context provider and the page is passed to it as a
+stable `children` element, so a surface re-rendering the bar can never re-render
+the surface — it can't loop. Everything global (⌘K, telemetry, bell, theme,
+dock, palette, handover) renders in the frame, once.
 
 The command bar is the **"Command"** terminal chrome — one all-monospace row,
 left→right: traffic lights · shell prompt · view-tab chips · spacer · the
@@ -119,8 +134,27 @@ surface toolbar / section head.
   **`.cm-tel-clock`** the basil mono HH:MM clock.
 - **`.cm-right`** — the global tools (notifications bell · theme toggle) as
   flush 32px terminal icon buttons (hover → `--basil`).
-- **`.core-body`** — the surface body; `.bleed` lets a surface paint its
-  own full-bleed background (KDS).
+- **`.core` (shell root)** — the app shell is **bound to the viewport**:
+  `flex: none; height: 100dvh` (with a `100vh` fallback) + `overflow: hidden`.
+  That bound is what keeps the chrome fixed — the command bar and the left Lens
+  Rail live *inside* `.core`, so if the shell were allowed to grow past the
+  screen (which it does the moment a surface reflows to one column on a phone,
+  or POS/Tables overflow even on desktop) the whole document scrolls and the
+  chrome scrolls off with it — you lose all navigation as soon as you reach the
+  content. `flex: none` (not `flex: 1`) is deliberate: the shell's parent
+  `<body>` is auto-height, so a `flex: 1` basis-0 child grows to its content
+  instead of honouring the height — pinning `height: 100dvh` is what actually
+  holds it to the viewport. Content stays reachable because `.core-body` scrolls.
+- **`.core-body`** — the surface body and the shell's **one scroll region**:
+  `overflow-x: hidden; overflow-y: auto`. Any surface taller than the screen
+  scrolls here, under the fixed chrome — never the document. Surfaces that
+  constrain their own body (KDS/Orders/Guest run a `flex:1; overflow:auto`
+  child, POS/Floor scroll `.core-menu`/`.core-lines`/`.core-floor`) never
+  overflow this, so it's a no-op for them; it only catches the reflowed
+  single-column bodies on a phone. `overflow-x` is pinned hidden so a wide inner
+  row (which scrolls inside its own `overflow-x:auto`) can't spill into a
+  horizontal page shift. `.bleed` lets a surface paint its own full-bleed
+  background (KDS).
 - **Stat strip** — ONE look across every surface: the
   Guest `.core-kpi-strip` and POS's / KDS's / Orders' / Slots' `.core-statstrip` are
   **undivided** columns (no inter-cell hairlines — the cells read as one open,
@@ -274,9 +308,10 @@ its whole surface.
 
 ## Chrome — command bar + left Lens Rail
 
-`CoreShell` renders the **"Command"** terminal command bar on top and the
-**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — no brand
-wordmark, no second subbar row, no bottom switcher:
+`CoreShellFrame` renders the **"Command"** terminal command bar on top and the
+**left Lens Rail** (`CoreNav`, `.core-lens`) down the side — once, in the layout,
+persistent across navigation (see the Shell section) — with no brand wordmark,
+no second subbar row, no bottom switcher:
 
 - **`.core-bar`** — the mono terminal row, tail-to-tail: `.cm-lights` (traffic
   lights) · `.cm-div` · `.cm-prompt` (the live `core ❯ surface:tab` prompt +
@@ -311,15 +346,21 @@ wordmark, no second subbar row, no bottom switcher:
 
 ## Responsive — tablet & phone
 
-Core runs on iPads and phones, not only desktop. Breakpoints at the end of
-`index.css`:
+Core runs on iPads and phones, not only desktop. The shell itself is
+**viewport-bound at every width** (`.core { height: 100dvh; overflow: hidden }`
+— see the Shell section) so the command bar + Lens Rail never scroll away: when
+a body reflows taller than the screen it scrolls **inside `.core-body`**, under
+the fixed chrome, not as a document scroll. Without that bound the chrome (both
+inside `.core`) scrolls off with the page and navigation becomes unreachable —
+the failure the phone breakpoints below would otherwise never fully fix.
+Breakpoints at the end of `index.css`:
 
 | Width | What changes |
 | ----- | ------------ |
 | **≤1100** (tablet landscape) | Command bar sheds the low-priority `loc` telemetry (`.cm-tel-loc`); POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
 | **≤900** (tablet portrait) | Command bar drops the decorative traffic lights + dividers (`.cm-lights` / `.cm-div`) and collapses the ⌘K launcher to just its chip (`.cm-k-label` hidden); POS panes `148 · 1fr · 296`. |
 | **≤1040 / ≤1000** | The dense **two-column bodies collapse to one column** — CRM (`.core-crm-grid`), Loyalty (`.core-loy-grid`), Dispatch (`.core-disp-grid`), Slots (`.core-slots-grid`), Book (`.core-book`, incl. resetting the form rail's `grid-column`), Concierge (`.core-concierge`) all stack their side panel/rail below the main column. Wide data tables (`.core-roster`, `.core-otable`, the Loyalty roster) **scroll horizontally** (`overflow-x: auto`) rather than clip, so every column stays reachable on a phone. |
-| **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), offset above the bottom nav via `--core-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
+| **≤820** (phone / iPad portrait) | The telemetry clock (`.cm-tel-clock`) hides from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.core-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CorePos` `mobileTicket` state + `.core-ticket.is-open`), clearing the safe-area inset via `--core-safeb` (there is no bottom nav row — navigation stays the fixed command bar + Lens Rail). Dialogs become bottom sheets; KPI strips → 2-col. |
 | **≤560** (phone) | The Lens Rail stays a narrow icon-only 52px rail; the pin toggle still expands it (to a slimmer 176px). |
 | **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
 
