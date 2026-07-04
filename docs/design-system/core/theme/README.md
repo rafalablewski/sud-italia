@@ -148,21 +148,31 @@ surface toolbar.
   grammar can't drift per surface again (before this, `slots`/`crm`/`inbox`/
   `concierge` had put mode text in the theme slot and `slots`/`book`/`kds:floor`
   mis-ordered section·page; the toolbar-audit fix centralised the line here).
-- **`.core-sectionhead`** — the surface page head: a grotesk `<h1>`/`<h2>` title
-  beside an uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned
-  view/scope switch. Sits directly under the `.core-crumb`, over the stat strip.
-  **Rendered by the shared `CoreSectionHead` component**
+- **`.core-sectionhead`** — **row 3** of the unified header: a grotesk
+  `<h1>`/`<h2>` title (the `·` separator is a brand-toned `.mid` span) beside an
+  uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned view/scope
+  switch. **Locked height** (56px, `align-items:center`, `nowrap`) so it lands
+  on the same pixel on every surface. Sits directly under the `.core-crumb`,
+  over the toolbar. **Rendered by the shared `CoreSectionHead` component**
   (`src/core/shell/CoreSectionHead.tsx`): every surface passes only `section` /
-  optional `page` (the title reads `{Section} · {Page}`, or just `{Section}` for
+  optional `page` (the title reads `{Section}·{Page}`, or just `{Section}` for
   single-page surfaces like Orders), the `sub`, and any right-aligned `actions`
   (a view/scope switch, pinned via `.core-sp`). Same discipline as `CoreCrumb`
-  one row down — centralising the title row keeps the `·` separator, the `<h1>`
+  one row down — centralising the title row keeps the separator, the `<h1>`
   element and the `.sub` styling from drifting per surface, and gives the
   view/scope switch a single fixed home.
-- **`.core-surf-toolbar`** — a thin control strip at the TOP of a surface body
-  for the working controls the bar omits (Slots' view filters + date, Book's
-  date). `.core-surf-tb-lbl` = its small uppercase field label. Belongs to the
-  surface, not the global chrome.
+- **`.core-surf-toolbar`** — **row 4** of the unified header: the surface's
+  working control strip, directly under the section head and over the stat
+  strip. **Locked height** (50px, `nowrap`, overflow scrolls inside the row) so
+  the stat strip never shifts between a surface with controls and one without.
+  Fixed element homes: **filters / date / search on the LEFT**, **utilities +
+  the primary action on the RIGHT** (split by `.core-sp`). **Rendered by the
+  shared `CoreSurfToolbar` component** (`src/core/shell/CoreSurfToolbar.tsx`,
+  `left` / `right` slots); when a surface has no controls it renders the
+  `.core-surf-empty` "— no page controls —" state rather than collapsing the
+  row. `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the
+  surface, not the global chrome — this replaces the old split where controls
+  lived in the shell `subLeft`/`subRight` (above the crumb) or bespoke bars.
 - **`.core-kds-toolbar`** — the KDS board's own toolbar (lane filter left,
   board actions + fullscreen right, split by `.core-kds-tb-sp`) — because the
   KDS command bar carries no tools.
@@ -183,7 +193,7 @@ surface toolbar.
 - **Selected = brand-ember (one rule).** Every selection/active state across
   Core — command-bar view tabs (`.cm-tabs`), shell tabs (`.core-tabs`), and all
   segmented controls (`.core-seg`, `.core-segs`, `.core-segchips`,
-  `.core-miniseg`, `.core-switch`, Slots' `.core-slots-viewseg`) — renders the
+  `.core-miniseg`, `.core-switch`) — renders the
   same **brand-ember** active: `background: var(--brand-wash); color:
   var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4)`. Green
   (basil) is reserved for **status**, not selection — a live/on signal (WhatsApp
@@ -194,10 +204,12 @@ surface toolbar.
   mono-labelled **glass capsule** (`--pill` track + buttons, 11px regular) whose
   active option takes the shared brand-ember fill; token-driven track fills so it
   turns to glass on liquid-glass surfaces and the KDS wall re-glazes its opaque
-  tokens. A surface can tint the active option brand-ember for a primary-mode
-  toggle (Slots Manage/Demand via `.core-slots-viewseg button.on.brand`, in the
-  slots parity sheet). `.core-seg.icons` = square glyph cells for an
-  icon-only switcher / filter pod; pair each button with a `title` /
+  tokens. When it is a surface's **view/scope switch** (pinned to the section-head
+  right), it leads with a `.sglab` mono label naming the axis (`VIEW` / `SCOPE` /
+  `MODE` / `ZONE` / `STATUS`) and each option may carry a `.c` count pill — so
+  every surface's switch reads identically (Tables `Zone`, Slots `Mode`, Book
+  timeline/floor/arrivals, Loyalty views). `.core-seg.icons` = square glyph cells
+  for an icon-only switcher / filter pod; pair each button with a `title` /
   `aria-label` so the dropped text stays accessible.
 - **`.core-gfilters`** — the shared **glyph-only filter bar** for the guest
   surfaces (Inbox / Loyalty / CRM): one flex-wrap row where every control is a

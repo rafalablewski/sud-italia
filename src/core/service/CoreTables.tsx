@@ -5,6 +5,7 @@ import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon, PlusIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -130,12 +131,6 @@ export function CoreTables() {
     <CoreShell
       eyebrow="Service · Tables"
       tabs={serviceTabs("tables")}
-      subRight={
-        <>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
-          <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
-        </>
-      }
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="SERVICE" page="TABLES" mode={<>{location} · dine-in</>} />
@@ -148,22 +143,33 @@ export function CoreTables() {
               {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
             </>
           }
+          actions={
+            zones.length > 1 ? (
+              /* Zone scope switch — the view/scope toggle, pinned to the title row right. */
+              <div className="core-seg" role="tablist" aria-label="Zone">
+                <span className="sglab">Zone</span>
+                <button type="button" role="tab" aria-selected={!zoneFilter} className={!zoneFilter ? "on" : undefined} onClick={() => setZoneFilter(null)}>
+                  All zones<span className="c">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+                </button>
+                {zones.map(([z, ts]) => (
+                  <button key={z} type="button" role="tab" aria-selected={zoneFilter === z} className={zoneFilter === z ? "on" : undefined} onClick={() => setZoneFilter(z)}>
+                    {z}<span className="c">{ts.length}</span>
+                  </button>
+                ))}
+              </div>
+            ) : undefined
+          }
         />
-
-        {/* Zone selector — filters the zoned tile groups. */}
-        {zones.length > 1 && (
-          <div className="core-zonetabs">
-            <span className="core-zone-lbl">Zone</span>
-            <button type="button" className={!zoneFilter ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(null)}>
-              All zones<span className="n">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
-            </button>
-            {zones.map(([z, ts]) => (
-              <button key={z} type="button" className={zoneFilter === z ? "core-ztab on" : "core-ztab"} onClick={() => setZoneFilter(z)}>
-                {z}<span className="n">{ts.length}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Row 4 — no filters; actions right (Refresh · Add table). */}
+        <CoreSurfToolbar
+          ariaLabel="Table controls"
+          right={
+            <>
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+              <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
+            </>
+          }
+        />
 
         {/* dense-console stat strip — every figure from the table catalogue
             (Rule #1): Tables · Seats · Zones · Available · Out of service ·

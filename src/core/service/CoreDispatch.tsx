@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -187,17 +188,6 @@ export function CoreDispatch() {
     <CoreShell
       eyebrow="Service · Dispatch"
       tabs={serviceTabs("dispatch")}
-      subLeft="delivery dispatch"
-      subRight={
-        <>
-          <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">
-            <ClockIcon /> auto-assign nearest
-          </button>
-          <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
-            <RefreshIcon />
-          </button>
-        </>
-      }
     >
       <div className="core-guest-inbox">
         <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
@@ -205,6 +195,20 @@ export function CoreDispatch() {
           section="Service"
           page="Dispatch"
           sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
+        />
+        {/* Row 4 — no filters; actions right (auto-assign · Refresh). */}
+        <CoreSurfToolbar
+          ariaLabel="Dispatch controls"
+          right={
+            <>
+              <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">
+                <ClockIcon /> auto-assign nearest
+              </button>
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}>
+                <RefreshIcon />
+              </button>
+            </>
+          }
         />
         {/* dense-console 6-up stat strip — every figure from the live board (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Dispatch metrics">

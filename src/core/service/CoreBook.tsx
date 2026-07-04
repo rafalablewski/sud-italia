@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreCrumb } from "@/core/shell/CoreCrumb";
 import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
+import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
@@ -574,40 +575,8 @@ export function CoreBook({
       tabs={serviceTabs("book")}
     >
       <div className="core-book">
-        {/* Surface sub-bar (mockup subbar): weekday label + a date chip on the
-            left, a brand New-reservation pill on the right that jumps focus to
-            the always-open form. Uses the shared `.core-surf-toolbar` bar so it
-            reads identically to POS/KDS surface controls. */}
-        <div className="core-surf-toolbar core-bk-subbar">
-          <span className="core-surf-tb-lbl">{daySub}</span>
-          <input
-            className="core-inp core-bk-datefield"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-label="Booking day"
-          />
-          <div className="core-sp" />
-          <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
-            <span aria-hidden>◔</span> Forecast
-          </button>
-          <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
-            <span aria-hidden>⚙</span> Policy
-          </button>
-          <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
-            <span aria-hidden>+</span> Walk-in
-          </button>
-          <button
-            type="button"
-            className="core-bk-newpill"
-            onClick={() => {
-              nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-              nameRef.current?.focus({ preventScroll: true });
-            }}
-          >
-            <span aria-hidden>+</span> New reservation
-          </button>
-        </div>
+        {/* Unified header rows in the fixed mockup order: breadcrumb (2) →
+            section head + view switch (3) → surface toolbar (4) → stat strip (5). */}
         <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
         <CoreSectionHead
           section="Service"
@@ -621,6 +590,48 @@ export function CoreBook({
                 </button>
               ))}
             </div>
+          }
+        />
+        {/* Row 4 — filters left (weekday label + day picker), actions right
+            (Forecast · Policy · Walk-in · the primary New-reservation pill that
+            jumps focus to the always-open form). */}
+        <CoreSurfToolbar
+          ariaLabel="Booking controls"
+          className="core-bk-subbar"
+          left={
+            <>
+              <span className="core-surf-tb-lbl">{daySub}</span>
+              <input
+                className="core-inp core-bk-datefield"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-label="Booking day"
+              />
+            </>
+          }
+          right={
+            <>
+              <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
+                <span aria-hidden>◔</span> Forecast
+              </button>
+              <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
+                <span aria-hidden>⚙</span> Policy
+              </button>
+              <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
+                <span aria-hidden>+</span> Walk-in
+              </button>
+              <button
+                type="button"
+                className="core-bk-newpill"
+                onClick={() => {
+                  nameRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+                  nameRef.current?.focus({ preventScroll: true });
+                }}
+              >
+                <span aria-hidden>+</span> New reservation
+              </button>
+            </>
           }
         />
         {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}

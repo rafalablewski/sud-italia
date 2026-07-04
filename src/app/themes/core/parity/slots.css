@@ -1,12 +1,9 @@
 /* Core parity (slots) — dense-console 1:1 fixes. Scope every rule under .core */
 
-/* Leading Manage|Demand segment — active button takes the brand wash/text
-   (mockup `.seg button.on.brand`), unlike the neutral Day/Week segment. */
-.core .core-slots-viewseg button.on.brand {
-  color: var(--brand-bright);
-  background: var(--brand-wash);
-  box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4);
-}
+/* The Manage|Demand switch now renders as the canonical `.core-seg` pinned to
+   the section-head right (unified header) — its active state comes from the
+   shared `.core-seg button.on` rule, so the bespoke `.core-slots-viewseg`
+   override was removed. */
 
 /* Date control — styled datefield (icon · date · chevron) sitting LEFT of the
    spacer, with a full-bleed transparent native <input type=date> driving it so

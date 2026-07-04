@@ -36,7 +36,15 @@ export function CoreSectionHead({
 }) {
   return (
     <div className="core-sectionhead">
-      <Title>{page ? `${section} · ${page}` : section}</Title>
+      <Title>
+        {section}
+        {page ? (
+          <>
+            <span className="mid">·</span>
+            {page}
+          </>
+        ) : null}
+      </Title>
       {sub != null && <span className="sub">{sub}</span>}
       {actions != null && (
         <>
