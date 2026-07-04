@@ -119,8 +119,27 @@ surface toolbar / section head.
   **`.cm-tel-clock`** the basil mono HH:MM clock.
 - **`.cm-right`** — the global tools (notifications bell · theme toggle) as
   flush 32px terminal icon buttons (hover → `--basil`).
-- **`.core-body`** — the surface body; `.bleed` lets a surface paint its
-  own full-bleed background (KDS).
+- **`.core` (shell root)** — the app shell is **bound to the viewport**:
+  `flex: none; height: 100dvh` (with a `100vh` fallback) + `overflow: hidden`.
+  That bound is what keeps the chrome fixed — the command bar and the left Lens
+  Rail live *inside* `.core`, so if the shell were allowed to grow past the
+  screen (which it does the moment a surface reflows to one column on a phone,
+  or POS/Tables overflow even on desktop) the whole document scrolls and the
+  chrome scrolls off with it — you lose all navigation as soon as you reach the
+  content. `flex: none` (not `flex: 1`) is deliberate: the shell's parent
+  `<body>` is auto-height, so a `flex: 1` basis-0 child grows to its content
+  instead of honouring the height — pinning `height: 100dvh` is what actually
+  holds it to the viewport. Content stays reachable because `.core-body` scrolls.
+- **`.core-body`** — the surface body and the shell's **one scroll region**:
+  `overflow-x: hidden; overflow-y: auto`. Any surface taller than the screen
+  scrolls here, under the fixed chrome — never the document. Surfaces that
+  constrain their own body (KDS/Orders/Guest run a `flex:1; overflow:auto`
+  child, POS/Floor scroll `.core-menu`/`.core-lines`/`.core-floor`) never
+  overflow this, so it's a no-op for them; it only catches the reflowed
+  single-column bodies on a phone. `overflow-x` is pinned hidden so a wide inner
+  row (which scrolls inside its own `overflow-x:auto`) can't spill into a
+  horizontal page shift. `.bleed` lets a surface paint its own full-bleed
+  background (KDS).
 - **Stat strip** — ONE look across every surface: the
   Guest `.core-kpi-strip` and POS's / KDS's / Orders' / Slots' `.core-statstrip` are
   **undivided** columns (no inter-cell hairlines — the cells read as one open,
@@ -311,8 +330,14 @@ wordmark, no second subbar row, no bottom switcher:
 
 ## Responsive — tablet & phone
 
-Core runs on iPads and phones, not only desktop. Breakpoints at the end of
-`index.css`:
+Core runs on iPads and phones, not only desktop. The shell itself is
+**viewport-bound at every width** (`.core { height: 100dvh; overflow: hidden }`
+— see the Shell section) so the command bar + Lens Rail never scroll away: when
+a body reflows taller than the screen it scrolls **inside `.core-body`**, under
+the fixed chrome, not as a document scroll. Without that bound the chrome (both
+inside `.core`) scrolls off with the page and navigation becomes unreachable —
+the failure the phone breakpoints below would otherwise never fully fix.
+Breakpoints at the end of `index.css`:
 
 | Width | What changes |
 | ----- | ------------ |
