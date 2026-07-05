@@ -14,6 +14,17 @@ const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   pizzaiolo: "Pizzaiolo", chef: "Chef", "sous-chef": "Sous-chef", "kitchen-porter": "Kitchen porter", waiter: "Waiter",
   barista: "Barista", driver: "Driver", manager: "Manager", cleaner: "Cleaner", other: "Other",
 };
+// Full label map for every business-cost category (the detailed P&L itemises
+// fixedCosts by key, including tax + maintenance which aren't editable in the
+// Fixed-costs card but carry premises property costs).
+const FIXED_COST_LABELS: Record<string, string> = {
+  rent: "Rent", utilities: "Utilities", fuel: "Fuel", vehicle: "Vehicle",
+  insurance: "Insurance", licenses: "Licenses", marketing: "Marketing",
+  software: "Software", professional: "Professional", other: "Other",
+  tax: "Property / other tax", maintenance: "Maintenance", payroll: "Payroll",
+  ingredients: "Ingredients", equipment: "Equipment",
+};
+
 // Rent is not here — the Premises card owns the occupancy line (rent or
 // mortgage) and folds it into fixedCosts.rent via applyPremises.
 const FIXED_KEYS: { key: string; label: string }[] = [
@@ -164,6 +175,7 @@ export function CalculatorV3() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [pnlDetailed, setPnlDetailed] = useState(false);
 
   const load = useCallback(async () => {
     const [d, act] = await Promise.all([
@@ -391,19 +403,34 @@ export function CalculatorV3() {
   };
 
   if (loading) return <SkeletonPage />;
-  if (!scn || !c) return <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No scenario</div><div className="av3-empty-text">The simulation scenario could not be loaded.</div></div></div>;
+  if (!scn || !scnEff || !c) return <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No scenario</div><div className="av3-empty-text">The simulation scenario could not be loaded.</div></div></div>;
 
-  const pnl: { label: string; v: number; sign?: 1 | -1; strong?: boolean }[] = [
+  // Detailed breakdowns — every child sums to its parent, all from real engine
+  // output (per-role labour, per-category fixed costs, the three leakage lines,
+  // and the depreciation/interest split incl. the premises components).
+  const useMarketingAsCac = scnEff.marketingAsCac !== false;
+  const fixedChildren = Object.entries(scnEff.fixedCosts)
+    .filter(([k, v]) => (v ?? 0) !== 0 && !(useMarketingAsCac && k === "marketing"))
+    .map(([k, v]) => ({ label: FIXED_COST_LABELS[k] ?? k, v: -(v as number) }));
+  const isBuy = scn.premises?.mode === "buy";
+  const depIntChildren = [
+    { label: "Fit-out depreciation", v: -(scn.depreciationMonthlyGrosze ?? 0) },
+    ...(isBuy && prem ? [{ label: "Building depreciation", v: -prem.buildingDepreciationMonthlyGrosze }] : []),
+    ...(isBuy && prem ? [{ label: "Mortgage interest", v: -prem.mortgageInterestMonthlyGrosze }] : []),
+    { label: "Other interest", v: -(scn.interestMonthlyGrosze ?? 0) },
+  ].filter((r) => r.v !== 0);
+
+  const pnl: { label: string; v: number; strong?: boolean; children?: { label: string; v: number }[] }[] = [
     { label: "Monthly revenue", v: c.monthlyRevenue, strong: true },
     { label: "Food cost (COGS)", v: -c.monthlyCogs },
-    { label: "Labour", v: -c.laborMonthly },
-    { label: "Fixed costs", v: -c.fixedTotal },
+    { label: "Labour", v: -c.laborMonthly, children: c.laborByRole.filter((r) => r.grosze !== 0).map((r) => ({ label: ROLE_LABEL[r.role], v: -r.grosze })) },
+    { label: "Fixed costs", v: -c.fixedTotal, children: fixedChildren },
     { label: "Payment fees", v: -c.paymentFees },
-    { label: "Waste + refunds + loyalty", v: -(c.wasteCost + c.refundLoss + c.loyaltyCost) },
+    { label: "Waste + refunds + loyalty", v: -(c.wasteCost + c.refundLoss + c.loyaltyCost), children: [{ label: "Waste", v: -c.wasteCost }, { label: "Refunds / voids", v: -c.refundLoss }, { label: "Loyalty burn", v: -c.loyaltyCost }].filter((r) => r.v !== 0) },
     { label: "Packaging", v: -c.packagingCost },
     { label: "Marketing (CAC)", v: -c.marketingCac },
     { label: "EBITDA", v: c.ebitda, strong: true },
-    { label: "Depreciation + interest", v: -(c.depreciation + c.interest) },
+    { label: "Depreciation + interest", v: -(c.depreciation + c.interest), children: depIntChildren },
     { label: "CIT (tax)", v: -c.citAmount },
     { label: "Net profit / month", v: c.netProfit, strong: true },
   ];
@@ -766,13 +793,26 @@ export function CalculatorV3() {
         {/* OUTPUTS */}
         <div className="av3-col">
           <Card>
-            <CardHead title="Monthly P&L" />
+            <CardHead title="Monthly P&L" actions={
+              <label className="av3-leverrow" style={{ gap: 7, padding: 0 }}>
+                <Switch aria-label="Detailed P&L breakdown" checked={pnlDetailed} onChange={setPnlDetailed} />
+                <span className="av3-lever-name" style={{ fontSize: 12 }}>Detailed</span>
+              </label>
+            } />
             <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
               {pnl.map((r) => (
-                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--av3-line)", fontWeight: r.strong ? 700 : 400 }}>
-                  <span style={{ fontSize: 12.5 }}>{r.label}</span>
-                  <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : r.strong ? "var(--av3-fg)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{money(Math.abs(r.v))}</span>
-                </div>
+                <Fragment key={r.label}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--av3-line)", fontWeight: r.strong ? 700 : 400 }}>
+                    <span style={{ fontSize: 12.5 }}>{r.label}</span>
+                    <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{money(Math.abs(r.v))}</span>
+                  </div>
+                  {pnlDetailed && r.children && r.children.map((ch) => (
+                    <div key={ch.label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0 3px 16px", borderBottom: "1px solid var(--av3-line)" }}>
+                      <span style={{ fontSize: 11.5, color: "var(--av3-muted)" }}>{ch.label}</span>
+                      <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5, color: "var(--av3-subtle)" }}>{ch.v < 0 ? "−" : ""}{money(Math.abs(ch.v))}</span>
+                    </div>
+                  ))}
+                </Fragment>
               ))}
             </CardBody>
           </Card>

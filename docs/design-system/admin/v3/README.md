@@ -1254,6 +1254,16 @@ auth canvas's signature lighting and the sign-in lockup:
   `DEFAULT_RATES` ≈ 0.92/PLN, the `/admin/currency` Zod schema + CurrencyV3 board),
   so it's also selectable for the customer storefront once enabled. The choice
   persists as `SimulationScenario.displayCurrency`.
+  **Part 3m shipped — detailed P&L breakdown:** the **Monthly P&L** card gained a
+  **Detailed** toggle in its head. Off = the twelve summary lines; on = each
+  bundled line expands into indented, muted child rows that sum exactly to their
+  parent — **Labour** by role (`c.laborByRole`), **Fixed costs** by category
+  (`scnEff.fixedCosts`, so it reflects the premises-folded rent / property tax /
+  upkeep and drops the marketing line when it's reclassified as CAC),
+  **Waste + refunds + loyalty** into its three leakage lines, and
+  **Depreciation + interest** into fit-out depreciation + (buy mode) building
+  depreciation + mortgage interest + other interest. All values come from the
+  engine `Computed` output + `computePremises`, no re-derivation.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the
