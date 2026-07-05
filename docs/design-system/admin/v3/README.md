@@ -1331,8 +1331,10 @@ auth canvas's signature lighting and the sign-in lockup:
   open all 7 days; each person works the 5–6 they're rostered. **Weekly hours (and
   pay) = Σ each on-day's shift length** (`laborHoursPerWeek`/`weekOf`), so Labour's
   Hrs/wk + salary and the coverage grid both derive from the rota, live. The Shift
-  plan card is now a **weekly rota grid** (person × Mon–Sun; two-number cells with
-  an *off* toggle; per-worker h/wk on the right) over a **per-day coverage grid**
+  plan card is now a **weekly rota grid** (person × Mon–Sun; each cell a clean
+  readable shift *chip* — `11–19` or `off` — that opens a portal **popover editor**
+  with shift presets, Start/End, *Day off* + *All week*; per-worker h/wk on the
+  right) over a **per-day coverage grid**
   with Mon–Sun day tabs (staffing varies by day as days-off thin the floor). A hard
   **≥12 h rest** rule (`restViolationDays`, incl. the Sun→Mon wrap: rest between an
   end `e` and next-day start `s` = (24−e)+s +24/skipped-day) red-outlines any

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, Fragment, useCallback, useContext, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { CURRENCY_META, convertFromGrosze, convertToGrosze, formatPriceInCurrency, type Currency } from "@/lib/currency";
@@ -253,6 +254,7 @@ export function CalculatorV3() {
   const [dirty, setDirty] = useState(false);
   const [pnlDetailed, setPnlDetailed] = useState(false);
   const [coverageDay, setCoverageDay] = useState(4); // which weekday the coverage grid shows (default Fri)
+  const [editCell, setEditCell] = useState<{ i: number; d: number; x: number; y: number } | null>(null); // rota cell being edited (popover)
   const [roleToAdd, setRoleToAdd] = useState<BusinessCostPayrollRole>("waiter");
 
   const load = useCallback(async () => {
@@ -276,6 +278,12 @@ export function CalculatorV3() {
     setScn(scenario); setLoading(false); setDirty(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!editCell) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setEditCell(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editCell]);
 
   const patch = (over: Partial<SimulationScenario>) => { setScn((s) => (s ? { ...s, ...over } : s)); setDirty(true); };
   const patchFixed = (key: string, g: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fixedCosts: { ...s.fixedCosts, [key]: g } }; });
@@ -817,7 +825,6 @@ export function CalculatorV3() {
                 let restBad = 0;
                 scn.labor.forEach((l) => { restBad += restViolationDays(weekOf(l, openH, closeH)).size; });
                 const dayHdr: CSSProperties = { fontSize: 10, fontWeight: 600, textAlign: "center", border: "none", cursor: "pointer", borderRadius: 4, padding: "3px 0" };
-                const cellInput: CSSProperties = { width: 24, padding: "1px 2px", textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)" };
                 return (
                   <>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
@@ -842,26 +849,25 @@ export function CalculatorV3() {
                           {byRoleR.get(role)!.map(({ l, i }, wi) => {
                             const wkArr = weekOf(l, openH, closeH);
                             const viol = restViolationDays(wkArr);
-                            const rep = wkArr.find(Boolean) ?? { start: openH, end: closeH };
                             const hrs = laborHoursPerWeek(l, openH, closeH);
                             return (
                               <Fragment key={l.id}>
                                 <span style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 2 }}>{ROLE_LABEL[role]} {wi + 1}</span>
-                                {wkArr.map((sh, d) => (
-                                  <div key={d} title={viol.has(d) ? "Less than 12 h rest after the previous shift" : undefined} style={{ background: d === coverageDay ? "color-mix(in oklab, var(--av3-c3) 8%, transparent)" : "transparent", borderRadius: 5, padding: 2, outline: viol.has(d) ? "1.5px solid var(--av3-bad)" : "none", outlineOffset: -1 }}>
-                                    {sh ? (
-                                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                                        <div style={{ display: "flex", gap: 1 }}>
-                                          <input className="av3-input" style={cellInput} type="number" value={sh.start} onChange={(e) => setDay(i, d, { start: Number(e.target.value) || 0, end: sh.end })} title="start" />
-                                          <input className="av3-input" style={cellInput} type="number" value={sh.end} onChange={(e) => setDay(i, d, { start: sh.start, end: Number(e.target.value) || 0 })} title="end" />
-                                        </div>
-                                        <button type="button" onClick={() => setDay(i, d, null)} style={{ background: "none", border: "none", color: "var(--av3-subtle)", fontSize: 9, cursor: "pointer", padding: 0, lineHeight: 1 }}>off</button>
-                                      </div>
-                                    ) : (
-                                      <button type="button" onClick={() => setDay(i, d, { ...rep })} title="Add this day" style={{ width: "100%", background: "var(--av3-s2)", border: "none", borderRadius: 4, color: "var(--av3-subtle)", fontSize: 10, padding: "8px 0", cursor: "pointer" }}>off</button>
-                                    )}
-                                  </div>
-                                ))}
+                                {wkArr.map((sh, d) => {
+                                  const bad = viol.has(d);
+                                  const sel = editCell?.i === i && editCell?.d === d;
+                                  return (
+                                    <div key={d} style={{ background: d === coverageDay ? "color-mix(in oklab, var(--av3-c3) 9%, transparent)" : "transparent", borderRadius: 6, padding: 2 }}>
+                                      <button type="button" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setEditCell({ i, d, x: r.left, y: r.bottom + 4 }); }} title={bad ? "Less than 12 h rest after the previous shift — click to fix" : "Click to edit"}
+                                        style={{ width: "100%", cursor: "pointer", fontFamily: "var(--av3-mono)", fontSize: 11.5, padding: "6px 4px", borderRadius: 5, lineHeight: 1,
+                                          border: sel ? "1px solid var(--av3-c3)" : bad ? "1px solid var(--av3-bad)" : "1px solid transparent",
+                                          background: sh ? "color-mix(in oklab, var(--av3-c3) 18%, var(--av3-s1))" : "var(--av3-s1)",
+                                          color: sh ? "var(--av3-fg)" : "var(--av3-subtle)" }}>
+                                        {sh ? `${sh.start}–${sh.end}` : "off"}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
                                 <span style={{ fontSize: 11, fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-fg)" }}>{hrs}</span>
                               </Fragment>
                             );
@@ -1381,6 +1387,55 @@ export function CalculatorV3() {
       <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>
         Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The sandboxes below read <b>real orders</b>; the model above is hypothetical. Five-section ⓘ explainers (Rule #12) land next.
       </div>
+      {editCell && scn.labor[editCell.i] && (() => {
+        const worker = scn.labor[editCell.i];
+        const O = Math.floor(scn.openingHours?.openHour ?? 11);
+        const C = Math.ceil(scn.openingHours?.closeHour ?? 22);
+        const wi = scn.labor.slice(0, editCell.i).filter((x) => x.role === worker.role).length + 1;
+        const cur = weekOf(worker, O, C)[editCell.d] ?? { start: O, end: Math.min(C, O + 8) };
+        const len = Math.min(C - O, 8);
+        const presets: { label: string; s: number; e: number }[] = [
+          { label: "Open", s: O, e: Math.min(C, O + len) },
+          { label: "Mid", s: Math.min(C - len, O + 2), e: Math.min(C, O + 2 + len) },
+          { label: "Close", s: Math.max(O, C - len), e: C },
+          { label: "Full", s: O, e: C },
+        ];
+        const isPreset = (p: { s: number; e: number }) => weekOf(worker, O, C)[editCell.d]?.start === p.s && weekOf(worker, O, C)[editCell.d]?.end === p.e;
+        const num: CSSProperties = { width: 56, textAlign: "center", fontFamily: "var(--av3-mono)" };
+        const left = Math.max(8, Math.min(editCell.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 252));
+        return createPortal(
+          <div onClick={() => setEditCell(null)} style={{ position: "fixed", inset: 0, zIndex: 300 }}>
+            <div className="av3-root" onClick={(e) => e.stopPropagation()} style={{ position: "fixed", left, top: editCell.y, width: 244, background: "var(--av3-s2)", border: "1px solid var(--av3-line-strong)", borderRadius: 11, boxShadow: "var(--av3-sh-2)", padding: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700 }}>{ROLE_LABEL[worker.role]} {wi} · {DAYS[editCell.d]}</span>
+                <button type="button" onClick={() => setEditCell(null)} aria-label="Close" style={{ background: "none", border: "none", color: "var(--av3-subtle)", cursor: "pointer", padding: 0, display: "flex" }}><X /></button>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {presets.map((p) => (
+                  <button key={p.label} type="button" onClick={() => setDay(editCell.i, editCell.d, { start: p.s, end: p.e })}
+                    style={{ fontFamily: "var(--av3-mono)", fontSize: 11, padding: "4px 9px", borderRadius: 999, cursor: "pointer", fontWeight: 600,
+                      border: "1px solid " + (isPreset(p) ? "var(--av3-c3)" : "var(--av3-line)"),
+                      background: isPreset(p) ? "color-mix(in oklab, var(--av3-c3) 22%, var(--av3-s1))" : "var(--av3-s1)", color: "var(--av3-fg)" }}>
+                    {p.label} <span style={{ color: "var(--av3-subtle)" }}>{p.s}–{p.e}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "end", gap: 8, marginBottom: 12 }}>
+                <label className="av3-field"><span className="av3-field-label">Start</span><input className="av3-input" style={num} type="number" min={0} max={24} value={cur.start} onChange={(e) => setDay(editCell.i, editCell.d, { start: Number(e.target.value) || 0, end: cur.end })} /></label>
+                <span style={{ color: "var(--av3-muted)", paddingBottom: 8 }}>–</span>
+                <label className="av3-field"><span className="av3-field-label">End</span><input className="av3-input" style={num} type="number" min={0} max={24} value={cur.end} onChange={(e) => setDay(editCell.i, editCell.d, { start: cur.start, end: Number(e.target.value) || 0 })} /></label>
+                <span style={{ fontSize: 11.5, color: "var(--av3-muted)", fontFamily: "var(--av3-mono)", paddingBottom: 8 }}>{Math.max(0, cur.end - cur.start)}h</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button variant="ghost" size="sm" onClick={() => { setDay(editCell.i, editCell.d, null); setEditCell(null); }}>Day off</Button>
+                <Button variant="ghost" size="sm" title="Set every day this week to this shift" onClick={() => { setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((ll, idx) => idx !== editCell.i ? ll : { ...ll, week: Array.from({ length: 7 }, () => ({ start: cur.start, end: cur.end })), shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined }) }; }); setEditCell(null); }}>All week</Button>
+                <Button variant="secondary" size="sm" style={{ marginLeft: "auto" }} onClick={() => setEditCell(null)}>Done</Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        );
+      })()}
     </CalcCurrencyCtx.Provider>
   );
 }
