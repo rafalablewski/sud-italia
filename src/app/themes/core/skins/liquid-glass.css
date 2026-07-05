@@ -236,10 +236,15 @@
    whatever shows through. The scrim gets a light blur so the whole screen frosts
    softly behind the open panel (the "liquid glass screen"). */
 .core[data-skin="liquid-glass"] :is(.core-filt-pop, .core-ovf-pop, .core-notif-panel) {
-  background: var(--lg-sheen), var(--lg-fill), color-mix(in oklab, var(--bg) 60%, transparent);
-  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  /* Apple-style THICK material: a dense warm-dark tint + heavy blur, so the
+     content behind reads only as a soft saturated wash — never see-through —
+     with a subtle uniform top highlight (not the strong diagonal card sheen). */
+  background:
+    linear-gradient(rgba(255, 255, 255, .05), rgba(255, 255, 255, .012) 42%, transparent),
+    color-mix(in oklab, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
   border-color: var(--line-2);
-  box-shadow: var(--lg-float), var(--lg-rim);
+  box-shadow: var(--lg-float), inset 0 1px 0 rgba(255, 255, 255, .12);
 }
 /* the popover's own inner chips read over a frosted panel — lift them off
    --panel-2 (near-invisible under glass) onto a readable translucent fill. */
