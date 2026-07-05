@@ -12700,16 +12700,16 @@ export function defaultSimulationScenario(): SimulationScenario {
     // except the one staggered day off, so the floor is covered all 7 days and
     // no two consecutive shifts fall under 12h rest. Weekly hours (and pay)
     // derive from the rota — a consistent 8h × 6-day week ≈ 48h.
-    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(11, 19, 6) },
-    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(14, 22, 2) },
-    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, week: wk(11, 19, 0) },
-    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, week: wk(14, 22, 1) },
-    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, week: wk(15, 22, 3) },
-    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(11, 18, 4) },
-    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(14, 21, 5) },
-    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(15, 22, 6) },
-    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, week: wk(11, 19, 0) },
-    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, week: wk(11, 19, 6) },
+    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(12, 20, 6) },
+    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(15, 23, 2) },
+    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, week: wk(12, 20, 0) },
+    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, week: wk(15, 23, 1) },
+    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, week: wk(16, 23, 3) },
+    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(12, 19, 4) },
+    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(15, 22, 5) },
+    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(16, 23, 6) },
+    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, week: wk(12, 20, 0) },
+    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, week: wk(12, 20, 6) },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
     rent: 2_200_000,       // 22 000 zł — prime central lease (Rynek / Nowy Świat), ~150 m²
@@ -12856,8 +12856,8 @@ export function defaultSimulationScenario(): SimulationScenario {
     },
     menuScenario: "balanced",
     displayCurrency: "PLN",
-    // Service window 11:00–22:00 (= the 11 open-hours the capacity math assumes).
-    openingHours: { openHour: 11, closeHour: 22 },
+    // Service window 12:00–23:00 (= the 11 open-hours the capacity math assumes).
+    openingHours: { openHour: 12, closeHour: 23 },
     assumptions: defaultSimulationAssumptions(),
     weather: defaultSimulationWeather(),
     updatedAt: new Date().toISOString(),

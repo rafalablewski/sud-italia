@@ -289,7 +289,7 @@ export function CalculatorV3() {
   const patchFixed = (key: string, g: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fixedCosts: { ...s.fixedCosts, [key]: g } }; });
   const patchLabor = (i: number, over: Partial<SimulationLaborLine>) => setScn((s) => {
     if (!s) return s; setDirty(true);
-    const oh = s.openingHours ?? { openHour: 11, closeHour: 22 };
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
     return { ...s, labor: s.labor.map((l, idx) => {
       if (idx !== i) return l;
       const next = { ...l, ...over };
@@ -307,7 +307,7 @@ export function CalculatorV3() {
   // from an existing worker of the same role so a new hire matches the team.
   const addWorker = (role: BusinessCostPayrollRole) => setScn((s) => {
     if (!s) return s; setDirty(true);
-    const oh = s.openingHours ?? { openHour: 11, closeHour: 22 };
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
     const template = s.labor.find((l) => l.role === role);
     return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role, headcount: 1, hourlyRateGrosze: template?.hourlyRateGrosze ?? 3000, daysPerWeek: template?.daysPerWeek ?? DEFAULT_LABOR_DAYS, shifts: [{ start: Math.floor(oh.openHour), end: Math.ceil(oh.closeHour) }] }] }; });
   const rmLabor = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.filter((_, idx) => idx !== i) }; });
@@ -320,18 +320,18 @@ export function CalculatorV3() {
   // sync so the capacity-utilisation math and the demand curve agree.
   const patchOpeningHours = (over: Partial<{ openHour: number; closeHour: number }>) => setScn((s) => {
     if (!s) return s; setDirty(true);
-    const oh = { openHour: 11, closeHour: 22, ...(s.openingHours ?? {}), ...over };
+    const oh = { openHour: 12, closeHour: 23, ...(s.openingHours ?? {}), ...over };
     const openHoursPerDay = Math.max(1, oh.closeHour - oh.openHour);
     return { ...s, openingHours: oh, kitchenCapacity: s.kitchenCapacity ? { ...s.kitchenCapacity, openHoursPerDay } : s.kitchenCapacity };
   });
   // Roster actions — stagger everyone to the demand curve, revert to flat, or
   // break one line's headcount into hand-editable per-person shifts.
-  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
+  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 12, closeHour: 23 }; return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
   // Set one day of one worker's rota (null = day off). Materialises the week
   // first (migrating a legacy line) so every edit lands on a real 7-slot array.
   const setDay = (i: number, day: number, shift: DayShift) => setScn((s) => {
     if (!s) return s; setDirty(true);
-    const oh = s.openingHours ?? { openHour: 11, closeHour: 22 };
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
     return { ...s, labor: s.labor.map((l, idx) => {
       if (idx !== i) return l;
       const week = weekOf(l, Math.floor(oh.openHour), Math.ceil(oh.closeHour)).slice();
@@ -358,7 +358,7 @@ export function CalculatorV3() {
     const withDish = foodWasteLocked && dishCost ? { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct } : scn;
     // Derive each labour line's weekly hours from its roster so the engine cost
     // reflects the actual schedule, not a stale typed number.
-    const oh = scn.openingHours ?? { openHour: 11, closeHour: 22 };
+    const oh = scn.openingHours ?? { openHour: 12, closeHour: 23 };
     const openH = Math.floor(oh.openHour);
     const closeH = Math.ceil(oh.closeHour);
     const withLabor = { ...withDish, labor: withDish.labor.map((l) => ({ ...l, hoursPerWeek: laborHoursPerWeek(l, openH, closeH) })) };
@@ -497,7 +497,7 @@ export function CalculatorV3() {
     const weights = demandWeights(hours);
     const hourly = weights.map((w) => folded.ordersPerDay * w);
     const peak = Math.max(...hourly);
-    const startHour = Math.floor(folded.openingHours?.openHour ?? 11);
+    const startHour = Math.floor(folded.openingHours?.openHour ?? 12);
     const excessPerDay = hourly.reduce((s, h) => s + Math.max(0, h - perHourCap), 0);
     const balkShare = 0.5; // half of orders that can't be served at peak walk
     const lostPerMonth = Math.round(excessPerDay * balkShare * folded.daysOpenPerMonth);
@@ -516,9 +516,9 @@ export function CalculatorV3() {
   // kitchen line to the demand-driven requirement, and flag peak hours + gaps.
   const coverage = useMemo(() => {
     if (!folded) return null;
-    const oh = folded.openingHours ?? { openHour: 11, closeHour: 22 };
-    const openHour = Math.max(0, Math.min(23, Math.floor(Number.isFinite(oh.openHour) ? oh.openHour : 11)));
-    const closeHour = Math.max(openHour + 1, Math.min(30, Math.ceil(Number.isFinite(oh.closeHour) ? oh.closeHour : 22)));
+    const oh = folded.openingHours ?? { openHour: 12, closeHour: 23 };
+    const openHour = Math.max(0, Math.min(23, Math.floor(Number.isFinite(oh.openHour) ? oh.openHour : 12)));
+    const closeHour = Math.max(openHour + 1, Math.min(30, Math.ceil(Number.isFinite(oh.closeHour) ? oh.closeHour : 23)));
     const nHours = closeHour - openHour;
     const weights = demandWeights(nHours);
     const perHourCap = folded.kitchenCapacity?.pizzasPerHour ?? 0;
@@ -752,8 +752,8 @@ export function CalculatorV3() {
             } />
             <CardBody style={{ paddingTop: 6 }}>
               {(() => {
-                const openH = Math.floor(scn.openingHours?.openHour ?? 11);
-                const closeH = Math.ceil(scn.openingHours?.closeHour ?? 22);
+                const openH = Math.floor(scn.openingHours?.openHour ?? 12);
+                const closeH = Math.ceil(scn.openingHours?.closeHour ?? 23);
                 const order: BusinessCostPayrollRole[] = [];
                 const byRole = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
                 scn.labor.forEach((l, i) => { if (!byRole.has(l.role)) { byRole.set(l.role, []); order.push(l.role); } byRole.get(l.role)!.push({ l, i }); });
@@ -828,8 +828,8 @@ export function CalculatorV3() {
                 return (
                   <>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
-                      <N label="Open @" value={scn.openingHours?.openHour ?? 11} onChange={(n) => patchOpeningHours({ openHour: n })} w={72} />
-                      <N label="Close @" value={scn.openingHours?.closeHour ?? 22} onChange={(n) => patchOpeningHours({ closeHour: n })} w={72} />
+                      <N label="Open @" value={scn.openingHours?.openHour ?? 12} onChange={(n) => patchOpeningHours({ openHour: n })} w={72} />
+                      <N label="Close @" value={scn.openingHours?.closeHour ?? 23} onChange={(n) => patchOpeningHours({ closeHour: n })} w={72} />
                       <span style={{ fontSize: 11, color: "var(--av3-subtle)", alignSelf: "center" }}>· open 7 days</span>
                       <Badge tone={restBad === 0 ? "ok" : "bad"}>{restBad === 0 ? "Rest ✓ ≥12 h" : `${restBad} shift${restBad > 1 ? "s" : ""} < 12 h rest`}</Badge>
                     </div>
@@ -1389,8 +1389,8 @@ export function CalculatorV3() {
       </div>
       {editCell && scn.labor[editCell.i] && (() => {
         const worker = scn.labor[editCell.i];
-        const O = Math.floor(scn.openingHours?.openHour ?? 11);
-        const C = Math.ceil(scn.openingHours?.closeHour ?? 22);
+        const O = Math.floor(scn.openingHours?.openHour ?? 12);
+        const C = Math.ceil(scn.openingHours?.closeHour ?? 23);
         const wi = scn.labor.slice(0, editCell.i).filter((x) => x.role === worker.role).length + 1;
         const cur = weekOf(worker, O, C)[editCell.d] ?? { start: O, end: Math.min(C, O + 8) };
         const len = Math.min(C - O, 8);
