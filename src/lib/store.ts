@@ -12692,17 +12692,20 @@ export function defaultSimulationScenario(): SimulationScenario {
     // room carries floor staff (several waiters), a sous-chef and a
     // kitchen porter / dish-pit — roles a truck line never has.
     //
-    // Ships pre-rostered: each person carries a daily shift (24h clock) staggered
-    // across the 11:00–22:00 service window so the floor is covered open→close and
-    // staffing tracks the lunch + dinner peaks. Weekly hours (and cost) derive
-    // from shift length × daysPerWeek — mostly 8h × 6 = 48, matching the prior model.
-    { id: "pizzaiolo",      role: "pizzaiolo",      headcount: 2, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }, { start: 14, end: 22 }] },
-    { id: "chef",           role: "chef",           headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
-    { id: "sous-chef",      role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 14, end: 22 }] },
-    { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, daysPerWeek: 6, shifts: [{ start: 15, end: 22 }] },
-    { id: "waiter",         role: "waiter",         headcount: 3, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 11, end: 18 }, { start: 14, end: 21 }, { start: 15, end: 22 }] },
-    { id: "barista",        role: "barista",        headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
-    { id: "manager",        role: "manager",        headcount: 1, hourlyRateGrosze: 6000, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
+    // Each line is ONE worker (own rate + own shift). Ships pre-rostered: daily
+    // shifts (24h clock) staggered across the 11:00–22:00 window so the floor is
+    // covered open→close and staffing tracks the lunch + dinner peaks. Weekly hours
+    // (and pay) derive from shift length × daysPerWeek — mostly 8h × 6 = 48.
+    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
+    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 14, end: 22 }] },
+    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
+    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 14, end: 22 }] },
+    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, daysPerWeek: 6, shifts: [{ start: 15, end: 22 }] },
+    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 11, end: 18 }] },
+    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 14, end: 21 }] },
+    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 15, end: 22 }] },
+    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
+    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
     rent: 2_200_000,       // 22 000 zł — prime central lease (Rynek / Nowy Świat), ~150 m²
@@ -13003,7 +13006,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
     daysOpenPerMonth: saved.daysOpenPerMonth ?? defaults.daysOpenPerMonth,
     cogsPct: typeof saved.cogsPct === "number" ? saved.cogsPct : defaults.cogsPct,
-    labor: saved.labor.length > 0 ? saved.labor : defaults.labor,
+    labor: saved.labor.length > 0 ? expandLaborToWorkers(saved.labor) : defaults.labor,
     fixedCosts: saved.fixedCosts ?? defaults.fixedCosts,
     wageInflationPct:
       typeof saved.wageInflationPct === "number"
@@ -13065,6 +13068,23 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     ),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
+}
+
+/** Each labour line is now ONE worker (own rate + own shift). Legacy scenarios
+ *  stored a headcount per line; expand those into individual workers so the
+ *  Labour card and the roster can address each person, handing each their own
+ *  shift when the line carried a per-person shifts array. */
+function expandLaborToWorkers(labor: SimulationLaborLine[]): SimulationLaborLine[] {
+  return labor.flatMap((l) => {
+    const n = Math.max(1, Math.round(l.headcount ?? 1));
+    if (n === 1) return [{ ...l, headcount: 1 }];
+    return Array.from({ length: n }, (_, i) => ({
+      ...l,
+      id: `${l.id}-${i + 1}`,
+      headcount: 1,
+      shifts: Array.isArray(l.shifts) && l.shifts.length > 0 ? [l.shifts[Math.min(i, l.shifts.length - 1)]] : l.shifts,
+    }));
+  });
 }
 
 /** Hydrate the premises decision. A saved, valid premises wins; otherwise we

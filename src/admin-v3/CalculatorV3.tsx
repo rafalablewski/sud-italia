@@ -115,11 +115,14 @@ function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHou
   const H = Math.max(1, closeHour - openHour);
   const weights = demandWeights(H);
   const L = Math.min(H, Math.max(4, Math.round(H * 0.6)));
+  // Shared coverage across EVERY worker, so people stagger relative to each other
+  // (each line is one worker) — the greedy hands each the busiest under-covered
+  // block on the shared curve. L≥H (tiny window) → everyone on the full window.
+  const cov = new Array(H).fill(0);
   const out = labor.map((l) => {
     const N = Math.max(0, Math.round(l.headcount));
     if (N === 0) return { ...l, shifts: [] as { start: number; end: number }[] };
     if (L >= H) return { ...l, shifts: Array.from({ length: N }, () => ({ start: openHour, end: closeHour })) };
-    const cov = new Array(H).fill(0);
     const shifts: { start: number; end: number }[] = [];
     for (let p = 0; p < N; p++) {
       let bestStart = openHour;
@@ -247,6 +250,7 @@ export function CalculatorV3() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pnlDetailed, setPnlDetailed] = useState(false);
+  const [roleToAdd, setRoleToAdd] = useState<BusinessCostPayrollRole>("waiter");
 
   const load = useCallback(async () => {
     const [d, act] = await Promise.all([
@@ -288,7 +292,13 @@ export function CalculatorV3() {
       return next;
     }) };
   });
-  const addLabor = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role: "waiter" as BusinessCostPayrollRole, headcount: 1, hourlyRateGrosze: 3000, daysPerWeek: 6, shifts: [{ start: Math.floor(oh.openHour), end: Math.ceil(oh.closeHour) }] }] }; });
+  // Add one worker (each labour line is a single person). Copies rate + days
+  // from an existing worker of the same role so a new hire matches the team.
+  const addWorker = (role: BusinessCostPayrollRole) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 11, closeHour: 22 };
+    const template = s.labor.find((l) => l.role === role);
+    return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role, headcount: 1, hourlyRateGrosze: template?.hourlyRateGrosze ?? 3000, daysPerWeek: template?.daysPerWeek ?? DEFAULT_LABOR_DAYS, shifts: [{ start: Math.floor(oh.openHour), end: Math.ceil(oh.closeHour) }] }] }; });
   const rmLabor = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.filter((_, idx) => idx !== i) }; });
   const patchAssume = (over: Partial<SimulationAssumptions>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, assumptions: { ...(s.assumptions ?? {}), ...over } }; });
   const patchWeather = (over: Partial<SimulationWeather>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, weather: { ...DEFAULT_WEATHER, ...(s.weather ?? {}), ...over } }; });
@@ -560,7 +570,7 @@ export function CalculatorV3() {
   const pnl: { label: string; v: number; strong?: boolean; children?: { label: string; v: number }[] }[] = [
     { label: "Monthly revenue", v: c.monthlyRevenue, strong: true },
     { label: "Food cost (COGS)", v: -c.monthlyCogs },
-    { label: "Labour", v: -c.laborMonthly, children: c.laborByRole.filter((r) => r.grosze !== 0).map((r) => ({ label: ROLE_LABEL[r.role], v: -r.grosze })) },
+    { label: "Labour", v: -c.laborMonthly, children: (() => { const byRole = new Map<BusinessCostPayrollRole, number>(); for (const r of c.laborByRole) byRole.set(r.role, (byRole.get(r.role) ?? 0) + r.grosze); return [...byRole.entries()].filter(([, g]) => g !== 0).map(([role, g]) => ({ label: ROLE_LABEL[role], v: -g })); })() },
     { label: "Fixed costs", v: -c.fixedTotal, children: fixedChildren },
     { label: "Payment fees", v: -c.paymentFees },
     { label: "Waste + refunds + loyalty", v: -(c.wasteCost + c.refundLoss + c.loyaltyCost), children: [{ label: "Waste", v: -c.wasteCost }, { label: "Refunds / voids", v: -c.refundLoss }, { label: "Loyalty burn", v: -c.loyaltyCost }].filter((r) => r.v !== 0) },
@@ -718,26 +728,47 @@ export function CalculatorV3() {
           </Card>
 
           <Card>
-            <CardHead title="Labour" description="Rate + days/week per role. Weekly hours (and cost) come from each person's shift in the roster below — set them in Shift plan & coverage." actions={<Button variant="secondary" size="sm" onClick={addLabor}><Plus className="av3-btn-ico" /> Add role</Button>} />
+            <CardHead title="Labour" description="One row per person — set their pay rate. Hrs/wk + weekly salary come from each person's shift, set in Shift plan & coverage below." actions={
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <select className="av3-select" style={{ height: 30, fontSize: 12 }} value={roleToAdd} onChange={(e) => setRoleToAdd(e.target.value as BusinessCostPayrollRole)} aria-label="Role to add">{PAYROLL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
+                <Button variant="secondary" size="sm" onClick={() => addWorker(roleToAdd)}><Plus className="av3-btn-ico" /> Add</Button>
+              </div>
+            } />
             <CardBody style={{ paddingTop: 6 }}>
-              {(() => { const openH = Math.floor(scn.openingHours?.openHour ?? 11); const closeH = Math.ceil(scn.openingHours?.closeHour ?? 22); return scn.labor.map((l, i) => {
-                const rostered = !!(l.shifts && l.shifts.length > 0);
-                const hrs = laborHoursPerWeek(l, openH, closeH);
-                return (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "end", padding: "5px 0", flexWrap: "wrap" }}>
-                  <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Role</span><select className="av3-select" value={l.role} onChange={(e) => patchLabor(i, { role: e.target.value as BusinessCostPayrollRole })}>{PAYROLL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
-                  <N label="Heads" value={l.headcount} onChange={(n) => patchLabor(i, { headcount: n })} w={64} />
-                  <Z label="Rate/hr (brutto)" grosze={l.hourlyRateGrosze} onChange={(g) => patchLabor(i, { hourlyRateGrosze: g })} w={104} />
-                  <N label="Days/wk" value={l.daysPerWeek ?? DEFAULT_LABOR_DAYS} onChange={(n) => patchLabor(i, { daysPerWeek: n })} w={70} />
-                  {rostered ? (
-                    <label className="av3-field" style={{ width: 78 }}><span className="av3-field-label">Hrs/wk <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}>· auto</span></span><input className="av3-input" type="number" readOnly disabled value={hrs} title="Weekly hours per person = avg shift length × days/wk — edit each person's shift in the roster below" /></label>
-                  ) : (
-                    <N label="Hrs/wk" value={l.hoursPerWeek ?? hrs} onChange={(n) => patchLabor(i, { hoursPerWeek: n })} w={78} />
-                  )}
-                  <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
-                </div>
-                ); }); })()}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
+              {(() => {
+                const openH = Math.floor(scn.openingHours?.openHour ?? 11);
+                const closeH = Math.ceil(scn.openingHours?.closeHour ?? 22);
+                const order: BusinessCostPayrollRole[] = [];
+                const byRole = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
+                scn.labor.forEach((l, i) => { if (!byRole.has(l.role)) { byRole.set(l.role, []); order.push(l.role); } byRole.get(l.role)!.push({ l, i }); });
+                return order.map((role) => {
+                  const workers = byRole.get(role)!;
+                  const roleWeekly = workers.reduce((sum, { l }) => sum + laborHoursPerWeek(l, openH, closeH) * l.hourlyRateGrosze, 0);
+                  return (
+                    <div key={role} style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{ROLE_LABEL[role]}</span>
+                        <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>×{workers.length} · {money(Math.round(roleWeekly))}/wk</span>
+                        <Button variant="ghost" size="sm" onClick={() => addWorker(role)} title={`Add another ${ROLE_LABEL[role].toLowerCase()}`}><Plus className="av3-btn-ico" /> add</Button>
+                      </div>
+                      {workers.map(({ l, i }, wi) => {
+                        const hrs = laborHoursPerWeek(l, openH, closeH);
+                        const weekly = Math.round(hrs * l.hourlyRateGrosze);
+                        return (
+                          <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "end", padding: "4px 0 4px 10px", flexWrap: "wrap" }}>
+                            <span style={{ width: 96, fontSize: 12, color: "var(--av3-muted)", alignSelf: "center" }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                            <Z label="Rate/hr (brutto)" grosze={l.hourlyRateGrosze} onChange={(g) => patchLabor(i, { hourlyRateGrosze: g })} w={104} />
+                            <label className="av3-field" style={{ width: 66 }}><span className="av3-field-label">Hrs/wk <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}>auto</span></span><input className="av3-input" type="number" readOnly disabled value={hrs} title="Weekly hours = shift length × days/wk — set the shift + days in Shift plan & coverage" /></label>
+                            <label className="av3-field" style={{ width: 104 }}><span className="av3-field-label">Weekly salary</span><input className="av3-input" readOnly disabled value={money(weekly)} /></label>
+                            <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                });
+              })()}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
                 <P label="Labour flex %" frac={scn.laborVariablePct ?? 0} onChange={(f) => patch({ laborVariablePct: f })} w={110} />
                 <N label="Anchor orders/day" value={scn.laborAnchorOrdersPerDay ?? scn.ordersPerDay} onChange={(n) => patch({ laborAnchorOrdersPerDay: n })} w={140} />
               </div>
@@ -796,34 +827,46 @@ export function CalculatorV3() {
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-bad)" }} /> line short</span>
               </div>
 
-              {/* roster — individual per-person shifts (Auto-roster fills these; hand-tune here) */}
+              {/* roster — each worker's own shift + days (Auto-roster fills these; hand-tune here) */}
               <div style={{ marginTop: 12, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
-                <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Roster — individual shifts (24h)</div>
-                {scn.labor.map((l, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "5px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                    <span style={{ width: 128, fontSize: 12, fontWeight: 500 }}>{ROLE_LABEL[l.role]} <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}>×{l.headcount}</span></span>
-                    {l.shifts && l.shifts.length > 0 ? (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                        {l.shifts.map((sh, si) => { const len = Math.max(0, sh.end - sh.start); return (
-                          <span key={si} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--av3-s1)", borderRadius: 6, padding: "2px 6px" }}>
-                            <span style={{ fontSize: 10, color: "var(--av3-subtle)" }}>P{si + 1}</span>
-                            <input className="av3-input" style={{ width: 42, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.start} onChange={(e) => patchLaborShift(i, si, { start: Number(e.target.value) || 0 })} />
-                            <span style={{ fontSize: 10, color: "var(--av3-muted)" }}>–</span>
-                            <input className="av3-input" style={{ width: 42, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.end} onChange={(e) => patchLaborShift(i, si, { end: Number(e.target.value) || 0 })} />
-                            <span style={{ fontSize: 9.5, color: "var(--av3-subtle)" }}>{len}h</span>
-                          </span>
-                        ); })}
-                        <span style={{ fontSize: 10.5, color: "var(--av3-muted)", fontFamily: "var(--av3-mono)" }}>× {l.daysPerWeek ?? DEFAULT_LABOR_DAYS}d = {laborHoursPerWeek(l, coverage.openHour, coverage.closeHour)}h/wk ea.</span>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 11.5, color: "var(--av3-muted)", display: "inline-flex", alignItems: "center", gap: 8 }}>
-                        all {l.headcount} on {coverage.openHour}:00–{coverage.closeHour}:00 · not individually rostered
-                        <Button variant="ghost" size="sm" onClick={() => individualiseLine(i)}>Individualise</Button>
-                      </span>
-                    )}
-                  </div>
-                ))}
-                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 8 }}>Each P# is one person&rsquo;s daily shift. <b>Auto-roster</b> staggers everyone to the demand curve; <b>Flat</b> puts everyone on all day. Weekly hours + pay follow the shift length × days/wk — so a shorter shift is a cheaper person.</div>
+                <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Roster — each person&rsquo;s shift &amp; days (24h)</div>
+                {(() => {
+                  const orderR: BusinessCostPayrollRole[] = [];
+                  const byRoleR = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
+                  scn.labor.forEach((l, i) => { if (!byRoleR.has(l.role)) { byRoleR.set(l.role, []); orderR.push(l.role); } byRoleR.get(l.role)!.push({ l, i }); });
+                  return orderR.map((role) => (
+                    <div key={role} style={{ marginBottom: 4 }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--av3-muted)", padding: "2px 0" }}>{ROLE_LABEL[role]}</div>
+                      {byRoleR.get(role)!.map(({ l, i }, wi) => {
+                        const sh = l.shifts && l.shifts[0];
+                        const len = sh ? Math.max(0, sh.end - sh.start) : 0;
+                        const days = l.daysPerWeek ?? DEFAULT_LABOR_DAYS;
+                        return (
+                          <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "4px 0 4px 10px", borderBottom: "1px solid var(--av3-line)" }}>
+                            <span style={{ width: 96, fontSize: 12 }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                            {sh ? <>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <input className="av3-input" style={{ width: 46, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.start} onChange={(e) => patchLaborShift(i, 0, { start: Number(e.target.value) || 0 })} title="Shift start (24h)" />
+                                <span style={{ fontSize: 11, color: "var(--av3-muted)" }}>–</span>
+                                <input className="av3-input" style={{ width: 46, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.end} onChange={(e) => patchLaborShift(i, 0, { end: Number(e.target.value) || 0 })} title="Shift end (24h)" />
+                                <span style={{ fontSize: 10, color: "var(--av3-subtle)", width: 26 }}>{len}h</span>
+                              </span>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 10.5, color: "var(--av3-subtle)" }}>×</span>
+                                <input className="av3-input" style={{ width: 40, padding: "2px 4px", textAlign: "center" }} type="number" value={days} onChange={(e) => patchLabor(i, { daysPerWeek: Number(e.target.value) || 0 })} title="Days per week" />
+                                <span style={{ fontSize: 10.5, color: "var(--av3-subtle)" }}>d</span>
+                              </span>
+                              <span style={{ fontSize: 10.5, color: "var(--av3-muted)", fontFamily: "var(--av3-mono)" }}>= {len * days}h/wk · {money(len * days * l.hourlyRateGrosze)}/wk</span>
+                            </> : (
+                              <Button variant="ghost" size="sm" onClick={() => individualiseLine(i)}>Set shift</Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
+                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 8 }}>One row per person — each has their own shift &amp; days. <b>Auto-roster</b> staggers everyone to the demand curve; <b>Flat</b> puts everyone on all day. Weekly hours + pay follow shift length × days, so a shorter shift is a cheaper person.</div>
               </div>
             </CardBody>
           </Card>

@@ -1310,6 +1310,21 @@ auth canvas's signature lighting and the sign-in lockup:
   free. The default scenario ships **pre-rostered** (8h/7h staggered shifts) so
   Total on is demand-shaped out of the box (`5,5,5,8,10,10,10,9,5,5,4`) and the
   ~82.5k zł monthly labour matches the prior flat-48h baseline within ~1%.
+  **Part 3q shipped — labour is people, not headcounts:** each `SimulationLaborLine`
+  is now **one worker** (`headcount` is always 1) with its own pay rate and its
+  own shift — so five waiters can be five different wages/hours. The **Labour**
+  card is grouped by role: a role header with an "add" (plus a role picker in the
+  head to add a new role), and under it one row per person showing **Rate/hr ·
+  Hrs/wk (auto) · Weekly salary** — no headcount, no schedule (both derive). The
+  **schedule lives entirely in the Shift plan roster**: one row per person with
+  their shift start–end + days/wk, and the derived `= Nh/wk · zł/wk`. Weekly hours
+  and pay flow from shift length × days. `expandLaborToWorkers` migrates legacy
+  multi-headcount lines into individual workers on load (splitting a per-person
+  `shifts` array across them); the default ships as 10 individual workers.
+  `rosterToDemand` now greedily staggers against a **shared** coverage curve (each
+  worker is a line), so Auto-roster spreads people across the day instead of piling
+  each role onto the same block. The detailed-P&L labour breakdown re-aggregates
+  the now-per-worker `laborByRole` back to one line per role.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the
