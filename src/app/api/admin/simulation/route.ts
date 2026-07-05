@@ -7,6 +7,7 @@ import {
   seedSimulationFromHistory,
 } from "@/lib/store";
 import type { SimulationLaborLine, SimulationScenario } from "@/data/types";
+import { ALL_CURRENCIES } from "@/lib/currency";
 
 const VALID_ROLES = new Set([
   "pizzaiolo",
@@ -129,7 +130,7 @@ export const PUT = withAdmin(
       fleet: b.fleet,
       premises: b.premises && typeof b.premises === "object" ? b.premises : undefined,
       displayCurrency:
-        b.displayCurrency && ["PLN", "USD", "SGD", "EUR", "AED"].includes(b.displayCurrency)
+        b.displayCurrency && (ALL_CURRENCIES as string[]).includes(b.displayCurrency)
           ? b.displayCurrency
           : undefined,
       updatedAt: new Date().toISOString(),

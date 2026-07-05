@@ -58,6 +58,7 @@ import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
 import { getBaseSlug } from "@/lib/utils";
+import { ALL_CURRENCIES } from "@/lib/currency";
 import { estimateReadyAt, type PrepOpts } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
 import { tempVerdict } from "@/lib/haccp";
@@ -13018,7 +13019,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
     displayCurrency:
-      saved.displayCurrency && ["PLN", "USD", "SGD", "EUR", "AED"].includes(saved.displayCurrency)
+      saved.displayCurrency && (ALL_CURRENCIES as string[]).includes(saved.displayCurrency)
         ? saved.displayCurrency
         : defaults.displayCurrency,
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
@@ -13616,21 +13617,41 @@ export async function computeSimulationActuals(
   // recipe's wasteFactor (stable per dish); it's applied to the snapshot line
   // cost so the total (weightedCogsPct) never regresses. Items without a live
   // recipe contribute 0 waste (no data), all cost counts as food.
-  const distinctItems = new Map<string, MenuItem>();
+  //
+  // Recipes + ingredients + products are read ONCE (not per dish) and keyed by
+  // base slug — recipes are chain-wide (rule #10), so both locations' identical
+  // dishes share one waste fraction, and this stays 3 catalog reads regardless
+  // of menu size on a hot admin path.
+  const baseSlugs = new Set<string>();
   for (const o of fulfilled) {
     for (const line of o.items ?? []) {
-      if (line.menuItem && !distinctItems.has(line.menuItem.id)) {
-        distinctItems.set(line.menuItem.id, line.menuItem);
-      }
+      if (line.menuItem) baseSlugs.add(getBaseSlug(line.menuItem.id));
     }
   }
-  const wasteFractionById = new Map<string, number>();
-  await Promise.all(
-    [...distinctItems.keys()].map(async (id) => {
-      const b = await calculateFoodCostBreakdown(id).catch(() => null);
-      wasteFractionById.set(id, b && b.total > 0 ? b.waste / b.total : 0);
-    }),
-  );
+  const [allRecipes, allIngredients, allProducts] = await Promise.all([
+    getRecipes(),
+    getIngredients(),
+    getIngredientProducts(),
+  ]);
+  const recipeBySlug = new Map(allRecipes.map((r) => [getBaseSlug(r.menuItemId), r]));
+  const ingById = new Map(allIngredients.map((i) => [i.id, i]));
+  const productById = new Map(allProducts.map((p) => [p.id, p]));
+  const wasteFractionBySlug = new Map<string, number>();
+  for (const slug of baseSlugs) {
+    const recipe = recipeBySlug.get(slug);
+    if (!recipe || recipe.ingredients.length === 0) { wasteFractionBySlug.set(slug, 0); continue; }
+    let base = 0;
+    let total = 0;
+    for (const ri of recipe.ingredients) {
+      const ing = ingById.get(ri.ingredientId);
+      const product = ing?.activeProductId ? productById.get(ing.activeProductId) : undefined;
+      if (!product) continue;
+      const lineBase = product.costPerUnit * ri.quantity;
+      base += lineBase;
+      total += lineBase * (ri.wasteFactor || 1);
+    }
+    wasteFractionBySlug.set(slug, total > 0 ? (total - base) / total : 0);
+  }
 
   let menuCostTotal = 0;
   let menuWasteTotal = 0;
@@ -13652,7 +13673,7 @@ export async function computeSimulationActuals(
         }
       }
       menuCostTotal += qty * lineCost;
-      menuWasteTotal += qty * lineCost * (wasteFractionById.get(item.id) ?? 0);
+      menuWasteTotal += qty * lineCost * (wasteFractionBySlug.get(getBaseSlug(item.id)) ?? 0);
       menuRevenueTotal += qty * linePrice;
     }
   }
