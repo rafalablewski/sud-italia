@@ -138,12 +138,6 @@ export function CoreTables() {
             switch (when >1 zone) on the left · actions (Refresh · Add table). */}
         <CoreSurfToolbar
           ariaLabel="Table controls"
-          sub={
-            <>
-              {tables ? `${stats.count} table${stats.count === 1 ? "" : "s"} · ${stats.seats} seats` : "table plan"}
-              {zones.length ? ` · ${zones.map(([z]) => z.toLowerCase()).join(" + ")}` : ""}
-            </>
-          }
           left={
             zones.length > 1 ? (
               /* Zone scope switch — the view/scope toggle. */

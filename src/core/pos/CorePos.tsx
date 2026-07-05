@@ -1408,7 +1408,6 @@ export function CorePos({
       {!embedded && (
         <CoreSurfToolbar
           ariaLabel="Till controls"
-          sub={<>{pageLoc} · dine-in service</>}
           right={
             <>
               <CoreQrQueue location={pageLoc} />

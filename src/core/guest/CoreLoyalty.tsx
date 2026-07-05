@@ -299,7 +299,6 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
             Redemptions|Win-back view switch on the left · Refresh right. */}
         <CoreSurfToolbar
           ariaLabel="Loyalty controls"
-          sub={<>members · wallets · redemptions · win-back</>}
           left={
             /* Members|Wallets|Redemptions|Win-back — the view switch. */
             <div className="core-seg" role="tablist" aria-label="Loyalty views">

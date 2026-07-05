@@ -68,14 +68,6 @@ export function CoreDispatch() {
   const [loading, setLoading] = useState(() => peekCoreCache<Driver[]>(`core:dispatch-drivers:${location}`) === undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [clock, setClock] = useState("");
-
-  useEffect(() => {
-    const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-    tick();
-    const t = setInterval(tick, 30000);
-    return () => clearInterval(t);
-  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -195,7 +187,6 @@ export function CoreDispatch() {
             (auto-assign · Refresh). */}
         <CoreSurfToolbar
           ariaLabel="Dispatch controls"
-          sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
           right={
             <>
               <button type="button" className="core-qrpill" onClick={autoAssignNearest} title="Auto-assign nearest idle driver">

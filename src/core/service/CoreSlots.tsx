@@ -60,18 +60,6 @@ function weekDates(d: string): string[] {
 function dayLabel(d: string): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
-// Service period label derived from the day's real slot times (Rule #1) — the
-// mockup's "dinner"/"lunch" tag under the section head.
-function servicePeriod(times: string[]): string {
-  const hrs = times.map((t) => parseInt(t.slice(0, 2), 10)).filter((n) => Number.isFinite(n));
-  if (!hrs.length) return "";
-  const min = Math.min(...hrs), max = Math.max(...hrs);
-  const lunch = min < 16, dinner = max >= 16;
-  if (lunch && dinner) return "lunch + dinner";
-  if (dinner) return "dinner";
-  if (min < 11) return "breakfast";
-  return "lunch";
-}
 const zl = (g: number) => (g / 100).toFixed(0);
 const zl0 = (g: number) => `${Math.round(g / 100)} zł`;
 
@@ -294,7 +282,6 @@ export function CoreSlots() {
 
   const changeCount = board?.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze).length ?? 0;
 
-  const period = servicePeriod(ordered.map((s) => s.time));
   const dateDisplay = date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB") : "—";
   const CHAN_CYCLE: (FulfillmentType | "all")[] = ["all", "dine-in", "takeout", "delivery"];
   const cycleChan = () => setChan((c) => CHAN_CYCLE[(CHAN_CYCLE.indexOf(c) + 1) % CHAN_CYCLE.length]);
@@ -343,7 +330,6 @@ export function CoreSlots() {
             on the right (New slot · Refresh). */}
         <CoreSurfToolbar
           ariaLabel="Slot controls"
-          sub={<>{loc}{date ? ` · ${dayLabel(date).toLowerCase()}` : " · today"}{period ? ` · ${period}` : ""}</>}
           left={
             <>
               {/* Manage|Demand mode switch — the view/scope toggle. */}

@@ -936,7 +936,6 @@ export function CoreKds() {
                 the left · actions (board actions + fullscreen kiosk) right. */}
             <CoreSurfToolbar
               ariaLabel="Fleet controls"
-              sub={<>kraków + warszawa · live pass health</>}
               left={fleetScopeSeg}
               right={
                 <>
@@ -982,7 +981,6 @@ export function CoreKds() {
                 switch on the left · actions (board actions + fullscreen) right. */}
             <CoreSurfToolbar
               ariaLabel="Floor controls"
-              sub={<>sla-toned tickets · start / bump / pass</>}
               left={laneFilter}
               right={
                 <>
@@ -1387,7 +1385,6 @@ function ChefView({
           switch on the left · actions (chef controls + fullscreen) right. */}
       <CoreSurfToolbar
         ariaLabel="Chef controls"
-        sub={<>coursing · expedite · all-day prep counts</>}
         left={
           <div className="core-seg" role="tablist" aria-label="Mode">
             <button type="button" role="tab" aria-selected={chefFocus === "expo"} className={chefFocus === "expo" ? "on" : undefined} onClick={() => onFocus("expo")}>Expo</button>

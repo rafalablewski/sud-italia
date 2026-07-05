@@ -4,7 +4,7 @@
 > Legend: ☐ not started · ◐ in progress · ☑ done · ⏸ blocked/awaiting decision.
 > Companion: [`README.md`](./README.md) (the design spec).
 
-Last updated: **2026-07-04** — unified header collapsed from four rows to a single `.core-surf-toolbar` **ActionBar** (identity · controls · actions); `CoreCrumb` + `CoreSectionHead` deleted; all 11 surfaces + theme/module docs synced. See the latest decision-log entry.
+Last updated: **2026-07-05** — the unified header is now a single `.core-surf-toolbar` **ActionBar** holding only controls (`left`) + actions (`right`): `CoreCrumb` + `CoreSectionHead` deleted, the `.sglab` axis labels + `.core-surf-id` context line dropped, and filters collapse into shared `CoreFilterMenu` / `CoreActionMenu` popovers. See the latest decision-log entries.
 
 ---
 
@@ -239,3 +239,19 @@ _(append dated entries as choices are made)_
   collapses occasional actions (Book: Forecast/Policy) into a portaled popover so
   the bar keeps one primary + never clips. Theme README + every module doc synced
   (Rule #11); the historical entries above are left as-dated. Typecheck green.
+- **2026-07-05** — **ActionBar stripped to controls + actions only.** Follow-up to
+  the collapse above, driven by review: the `.core-seg` switches shed their
+  plain-text axis labels (`.sglab` VIEW/ZONE/MODE/SCOPE/STATUS — the options name
+  themselves; the `aria-label` keeps the axis for assistive tech), and the
+  `.core-surf-id` **context line was dropped entirely** — the command bar already
+  names the surface and the stat strip carries the figures, so the bar now holds
+  ONLY the working controls (`left`) + actions (`right`). `CoreSurfToolbar` loses
+  its `sub` prop; the `.core-surf-id` CSS + the dead `clock`/`period`/`servicePeriod`
+  derivations that only fed the context line are removed; the row tightens to 50px.
+  Two more shared filter primitives landed alongside: **`CoreFilterMenu`** (a funnel
+  popover that collapses several inline filters into one right-side control — CRM's
+  Segment/Tier/Sort, Orders' Channel) and the earlier **`CoreActionMenu`** (`⋯`
+  overflow); both portaled + opaque (composited over `--bg`). Also harmonized the
+  last bespoke filter styles (CRM `.core-segchips`/`.core-gems`, Orders `.core-chan`
+  filter) onto the shared vocabulary. Docs synced. Typecheck + lint green; verified
+  live across every surface.

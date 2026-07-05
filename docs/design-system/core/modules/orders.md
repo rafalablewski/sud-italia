@@ -8,9 +8,9 @@ One surface for **every order at the location** — live (current) and paid
 history — so staff aren't limited to the POS's open tickets.
 
 Rendered in the **dense-console** language: the unified **`.core-surf-toolbar`**
-ActionBar — the `.core-surf-id` context anchor left, `search` + a `today` date
-chip as its `left`, and a **`CoreFilterMenu`** funnel (the Channel filter) +
-Refresh as its `right` — then a 7-up `.core-statstrip`, then a `.core-otable`.
+ActionBar — `search` + a `today` date chip as its `left`, and a
+**`CoreFilterMenu`** funnel (the Channel filter) + Refresh as its `right` — then
+a 7-up `.core-statstrip`, then a `.core-otable`.
 
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.

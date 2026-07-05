@@ -307,7 +307,6 @@ export function CoreCrm() {
             Guest Inbox header tools. */}
         <CoreSurfToolbar
           ariaLabel="Customer-book filters"
-          sub={<>customer book · rfm health · consent &amp; points</>}
           left={
             <div className="core-crm-search">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>

@@ -177,28 +177,24 @@ in the surface ActionBar.
 - **`.core-surf-toolbar`** — the **unified ActionBar**: the ONE header row every
   surface renders under the command bar, over the stat strip. It **collapses the
   old three-row header** (a `.core-crumb` breadcrumb + a `.core-sectionhead`
-  title + this toolbar) into a single row — the breadcrumb AND the section-head
-  title both restated the command bar's own `core ❯ surface:tab` prompt, so both
-  were dropped. **Locked height** (56px, `nowrap`, overflow scrolls inside the
-  row) so the stat strip never shifts between a surface with controls and one
-  without. Three fixed element homes:
-  - **`.core-surf-id`** (context anchor, far left) — the surface's uppercase-mono
-    **context line** (`sub` — date · service · location). NOT a title: the command
-    bar already names the surface (`core ❯ surface:tab`), so this is the context
-    it does NOT carry. `flex: 0 1 auto` — it shrinks (ellipsis) before the
-    controls under pressure, and drops entirely below 900px.
+  title + this toolbar) into a single row — the breadcrumb, the section-head title
+  AND the context sub-line were all dropped: the command bar's own `core ❯
+  surface:tab` prompt names the surface and the stat strip below carries the
+  figures, so the bar holds only the **working controls**. **Locked height** (50px,
+  `nowrap`, overflow scrolls inside the row) so the stat strip never shifts between
+  a surface with controls and one without. Two element homes:
   - **`left`** (controls) — the **view/scope switch** that used to ride the
     section-head right (Book's timeline/floor/arrivals, Slots' Manage/Demand,
     Tables' Zone, KDS's Scope/Status/Mode, Loyalty's view tabs — always the
-    FIRST control), plus filters / date / search.
+    FIRST control, carrying NO visible axis label), plus filters / date / search.
   - **`right`** (actions) — utilities + the primary action, pinned right via
-    `.core-sp`. Occasional actions collapse behind a `⋯` `CoreActionMenu` (see
-    the overflow primitive below).
+    `.core-sp`. Occasional actions collapse behind a `⋯` `CoreActionMenu`, and a
+    surface's filters can collapse into a `CoreFilterMenu` funnel (see below).
   **Rendered by the shared `CoreSurfToolbar` component**
-  (`src/core/shell/CoreSurfToolbar.tsx`, `sub` / `left` / `right` props).
+  (`src/core/shell/CoreSurfToolbar.tsx`, `left` / `right` props).
   `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the surface,
-  not the global chrome — the same one row on every surface, so the context,
-  controls and actions never move between tabs.
+  not the global chrome — the same one row on every surface, so the controls and
+  actions never move between tabs.
 - **KDS board controls** — on the ActionBar the KDS lane/scope/mode switch rides
   the toolbar `left` (the view/scope home) and the board actions ride `right`
   (like every other surface). Only the **fullscreen kiosk** top strip still lays

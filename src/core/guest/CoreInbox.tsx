@@ -999,7 +999,6 @@ export function CoreInbox() {
             broadcast · settings · WhatsApp-live). */}
         <CoreSurfToolbar
           ariaLabel="Inbox controls"
-          sub={<>whatsapp · 3-pane over unified stat strip</>}
           right={
             <>
               <button type="button" className="core-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>

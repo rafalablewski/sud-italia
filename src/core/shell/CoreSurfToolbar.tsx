@@ -9,28 +9,25 @@ import type { ReactNode } from "react";
  *      ↑ identity                ↑ left (controls)                     ↑ right (actions)
  *
  * This single row **replaces the old three-row stack** (`CoreCrumb` breadcrumb +
- * `CoreSectionHead` title + this toolbar): the breadcrumb AND the section-head
- * title both duplicated the command bar's own `core ❯ surface:tab` prompt, so
- * both were dropped. The bar's far-left anchor is now just the **context** line
- * (`sub` — date · service · location), which the command bar does NOT carry.
+ * `CoreSectionHead` title + this toolbar): the breadcrumb, the section-head title
+ * AND the context sub-line were all dropped — the command bar's `core ❯
+ * surface:tab` prompt already names the surface and the stat strip below carries
+ * the live figures, so the bar carries only the WORKING controls.
  *
- * `left` holds what you scope the view WITH (the view/scope switch that used to
- * ride the section-head right, plus search / date / channel chips); `right` holds
- * what you DO (refresh, the primary create). Same discipline as before: every
- * surface renders this in the same place so the controls never move between tabs,
- * and the row height is locked in the theme so the stat strip never shifts.
+ * `left` holds what you scope the view WITH (the view/scope switch, search, date,
+ * channel chips); `right` holds what you DO (refresh, filter menu, the primary
+ * create). Every surface renders this in the same place so the controls never
+ * move between tabs, and the row height is locked in the theme so the stat strip
+ * never shifts.
  *
  * See `docs/design-system/core/theme/README.md` → `.core-surf-toolbar`.
  */
 export function CoreSurfToolbar({
-  sub,
   left,
   right,
   className,
   ariaLabel,
 }: {
-  /** The uppercase-mono context line anchoring the bar's left (date · service · location). */
-  sub?: ReactNode;
   /** The view/scope switch + filters / date / search — what you scope the view with. */
   left?: ReactNode;
   /** Utilities + the primary action — what you DO on this surface. */
@@ -45,9 +42,6 @@ export function CoreSurfToolbar({
       role="toolbar"
       aria-label={ariaLabel ?? "Surface controls"}
     >
-      {/* Context anchor — the surface's uppercase-mono context line (the command
-          bar already carries the `core ❯ surface:tab` identity, so no title). */}
-      {sub != null && <div className="core-surf-id">{sub}</div>}
       {left}
       <div className="core-sp" />
       {right}

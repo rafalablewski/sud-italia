@@ -584,7 +584,6 @@ export function CoreBook({
         <CoreSurfToolbar
           ariaLabel="Booking controls"
           className="core-bk-subbar"
-          sub={<>{daySub} · dinner service · {loc}</>}
           left={
             <>
               <div className="core-seg" role="tablist" aria-label="View">

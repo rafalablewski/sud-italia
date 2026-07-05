@@ -306,23 +306,18 @@
   overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* surface ActionBar — the ONE control strip at the TOP of a surface body. It
-   carries the slim page identity (left), the working controls the "Command" bar
-   deliberately omits (Slots' view filters + date, Book's date), and the surface
-   actions (right). Belongs to the surface, not the global chrome. */
+   carries ONLY the working controls (`left`: the view/scope switch + filters +
+   date the "Command" bar omits) and the surface actions (`right`) — no identity
+   or context text, since the command bar names the surface and the stat strip
+   below carries the figures. Belongs to the surface, not the global chrome. */
 /* The unified header, collapsed to a SINGLE row (was crumb + section head +
    toolbar): LOCKED height so the stat strip below never shifts between a surface
    with controls and one without. Controls that overflow scroll INSIDE the row
    (never wrap it taller / push rows down). */
-.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 56px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; font-family: var(--mono); font-size: 11.5px; }
+.core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 50px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; font-family: var(--mono); font-size: 11.5px; }
 .core .core-surf-toolbar::-webkit-scrollbar { height: 0; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-/* Context anchor — the bar's far-left uppercase-mono context line (date ·
-   service · location). Replaces the dropped `.core-crumb` breadcrumb +
-   `.core-sectionhead` title, both of which only restated the command bar's
-   `core ❯ surface:tab` prompt; the command bar does NOT carry this context, so
-   it is what remains. Shrinks (ellipsis) before the controls under pressure. */
-.core .core-surf-id { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; margin-right: 4px; align-self: center; }
 /* Normalise every labelled action pill in the toolbar to ONE size/shape/casing
    so a surface's "New reservation" / "New slot" / "Add table" / "Forecast" /
    "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
@@ -2065,9 +2060,6 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
   .core .cm-k .cm-k-label { display: none; }
   .core .cm-k { padding: 6px 8px; }
   .core .core-pos { grid-template-columns: 56px 1fr 292px; }
-  /* ActionBar reclaims width: the mono context anchor drops so the controls +
-     actions stay in one row (the command bar still names the surface). */
-  .core .core-surf-id { display: none; }
 }
 
 @media (max-width: 820px) {
