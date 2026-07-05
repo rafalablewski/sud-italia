@@ -228,4 +228,35 @@
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
 }
 
+/* ---------- click-open popovers → liquid glass ----------
+   The filter (CoreFilterMenu), overflow (CoreActionMenu) and notification panels
+   float OVER content, not the aurora — a bare --lg-fill would let that content
+   bleed through and turn the panel to mush. Layer the sheen + fill over a denser
+   --bg tint so the panel stays legible, while the strong --lg-blur frosts
+   whatever shows through. The scrim gets a light blur so the whole screen frosts
+   softly behind the open panel (the "liquid glass screen"). */
+.core[data-skin="liquid-glass"] :is(.core-filt-pop, .core-ovf-pop, .core-notif-panel) {
+  /* Apple-style THICK material: a dense warm-dark tint + heavy blur, so the
+     content behind reads only as a soft saturated wash — never see-through —
+     with a subtle uniform top highlight (not the strong diagonal card sheen). */
+  background:
+    linear-gradient(rgba(255, 255, 255, .05), rgba(255, 255, 255, .012) 42%, transparent),
+    color-mix(in oklab, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  border-color: var(--line-2);
+  box-shadow: var(--lg-float), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+/* the popover's own inner chips read over a frosted panel — lift them off
+   --panel-2 (near-invisible under glass) onto a readable translucent fill. */
+.core[data-skin="liquid-glass"] :is(.core-filt-chip, .core-ovf-item:hover) {
+  background: var(--lg-fill-hi);
+}
+.core[data-skin="liquid-glass"] .core-filt-chip.on {
+  background: var(--brand-wash);
+}
+.core[data-skin="liquid-glass"] :is(.core-ovf-scrim, .core-notif-scrim) {
+  background: rgba(6, 4, 3, .12);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+
 /* keep the KDS kitchen wall a dark wall — do NOT frost it (skins.md rule 2) */

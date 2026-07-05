@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
@@ -70,14 +68,6 @@ export function CoreDispatch() {
   const [loading, setLoading] = useState(() => peekCoreCache<Driver[]>(`core:dispatch-drivers:${location}`) === undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [clock, setClock] = useState("");
-
-  useEffect(() => {
-    const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-    tick();
-    const t = setInterval(tick, 30000);
-    return () => clearInterval(t);
-  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -193,13 +183,8 @@ export function CoreDispatch() {
       tabs={serviceTabs("dispatch")}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="SERVICE" page="DISPATCH" mode="pass → road" />
-        <CoreSectionHead
-          section="Service"
-          page="Dispatch"
-          sub={<>pass → road · {location}{clock ? ` · ${clock}` : ""}</>}
-        />
-        {/* Row 4 — no filters; actions right (auto-assign · Refresh). */}
+        {/* Unified ActionBar — identity (Service · Dispatch) · actions right
+            (auto-assign · Refresh). */}
         <CoreSurfToolbar
           ariaLabel="Dispatch controls"
           right={

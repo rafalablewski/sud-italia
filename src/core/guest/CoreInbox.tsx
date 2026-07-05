@@ -3,8 +3,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { useCoreCache } from "@/lib/useCoreCache";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -997,9 +995,8 @@ export function CoreInbox() {
       tabs={guestTabs("inbox")}
     >
       <div className="core-guest-inbox">
-        <CoreCrumb section="GUEST" page="INBOX" mode="whatsapp live" />
-        <CoreSectionHead section="Guest" page="Inbox" sub={<>whatsapp · 3-pane over unified stat strip</>} />
-        {/* Row 4 — no filters; actions right (funnel · broadcast · settings · live). */}
+        {/* Unified ActionBar — identity (Guest · Inbox) · actions right (funnel ·
+            broadcast · settings · WhatsApp-live). */}
         <CoreSurfToolbar
           ariaLabel="Inbox controls"
           right={

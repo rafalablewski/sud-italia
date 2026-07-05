@@ -6,11 +6,14 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 ## Tables (`/core/service/tables`) — wired
 
 - **Live code:** `src/core/service/CoreTables.tsx`.
-- **Theme:** `.core-crumb` (dense-console breadcrumb) · `.core-sectionhead`
-  (with the **`Zone` scope switch** as a `.core-seg` pinned title-row right) ·
-  `.core-surf-toolbar` (Refresh · Add table, right) · `.core-statstrip` ·
-  `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2` (+
-  `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-tbl-field` /
+- **Theme:** `.core-surf-toolbar` ActionBar (with the **`Zone` scope switch** as
+  a `.core-seg` in its `left`) ·
+  `.core-surf-toolbar` (Refresh · Add zone · Add table, right) · `.core-statstrip` ·
+  `.core-floor` / `.core-zone-group` / `.core-zone-h` (+ `.core-zone-tools` /
+  `.core-zone-tool` / `.core-zone-tool.del` / `.core-zone-rename-inp` /
+  `.core-zone-empty`) / `.core-tables` / `.core-tbl2` (+
+  `.core-tbl2-wrap` / `.core-tbl2-edit` / `.core-tbl2.is-dragging`) ·
+  `.core-tbl-field` /
   `.core-tbl-features` / `.core-tbl-feat` in `themes/core/index.css`; the
   tile cursor/focus ring + zone-header hairline live in
   `themes/core/parity/tables.css`.
@@ -18,9 +21,9 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   manage the physical layout — **zones, tables, seats**. There is deliberately
   **no seating, no order lookup, no live occupancy** here; that operational
   flow lives in **Book** (`/core/service/book`, whose Floor lens seats parties
-  and opens checks) and **POS**. Rendered in the **dense-console** language: a
-  `.core-crumb` breadcrumb (`CORE — SERVICE · TABLES · liquid glass · [loc ·
-  dine-in]`), a `.core-sectionhead` whose right slot carries the optional
+  and opens checks) and **POS**. Rendered in the **dense-console** language: the
+  `.core-surf-toolbar` ActionBar whose `left`
+  carries the optional
   **`Zone` scope switch** (a `.core-seg` — `Zone · All zones · <zone>×N`, shown
   when there is more than one zone) that filters the zoned groups, a
   `.core-surf-toolbar` (Refresh · Add table), then a **6-up `.core-statstrip`**
@@ -28,8 +31,35 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   available · out-of-service · accessible** — every figure derived live from
   the table catalogue (Rule #1; value colours read info/basil/amber/brand,
   each cell carries a mono delta).
-- Tables are grouped by **zone** (`.core-zone-h` header with a `N tables · N
-  seats` sub and a hairline rule). Tiles are **`.core-tbl2` cards** with a
+- **Zones are first-class entities**, not derived from tables — a separate
+  per-location list (`FloorZone` in `src/lib/store.ts`, served by
+  `GET/POST/PATCH/DELETE /api/admin/floor/zones?location=`), so **an empty zone
+  persists** (moving the last table out of a zone leaves the zone standing).
+  Tables still reference their zone by **name** (`FloorTable.zone`); the store
+  keeps the two in sync — `reconcileZones` (run on GET) back-fills a zone entity
+  for any distinct `table.zone` not yet listed (so legacy floor plans and zones
+  typed straight into the editor surface as managed rows), `renameZone` cascades
+  the new name onto member tables, and `deleteZone` frees member tables (they
+  drop to **Unzoned**) rather than deleting them. `getZones`/mutations are
+  manager+ (reads staff+). The board groups tables under those entities in
+  `position` order (`.core-zone-h` header with a `N tables · N seats` sub and a
+  hairline rule); a zone with no tables shows a dashed **`.core-zone-empty`**
+  ("Drop a table here") drop target; tables whose zone isn't (yet) an entity
+  fall into transient **orphan** groups, and zoneless tables into a trailing
+  **Unzoned** group.
+- **Add zone** (toolbar right) creates a `New zone` entity and drops straight
+  into inline-rename (`addZone`); the store auto-uniquifies the name.
+  Each zone group (`.core-zone-group`) is a **drop target**: a tile is
+  `draggable`, and dropping it on another group rewrites that table's `zone`
+  (`reassignZone` → the same status-preserving `persistTableZone` write the
+  editor uses, so a move never clobbers a live seating transition). The dragged
+  tile dims (`.core-tbl2.is-dragging`) and the hovered group lights
+  (`.core-zone-group.drop-target`). A managed zone header carries a hover
+  **tool cluster** (`.core-zone-tools`): `✎` (`.core-zone-tool`) swaps the
+  title for an input (`.core-zone-rename-inp`) — committing PATCHes the entity
+  and cascades the name (`commitRename`) — and `×` (`.core-zone-tool.del`)
+  deletes the zone (`removeZone`; confirms first when the zone still holds
+  tables, which then become Unzoned). Tiles are **`.core-tbl2` cards** with a
   status-tinted left accent rail: **available** = basil (`free`) · **reserved**
   muted (`booked`) · **out-of-service** faded (`oos`) · a table already
   **seated** by ops shows info-toned. Each tile reads a big `T`-prefixed table
@@ -37,16 +67,19 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   line (the accessibility glyphs `♿ · 🍼 · ▭`, or `N-top` when none), plus an
   optional `📝` service-note chip.
 - **Tap a tile (or its `⋯`) → the table editor.** Both open the `TableDialog`
-  (core `CoreDialog`, portaled per Rule #4) — **number/label · seats · zone ·
-  status · Accessibility features · Service note**, with **Delete**. The status
-  select offers the three **management** statuses (available · reserved ·
-  out-of-service); a table currently `seated` keeps that value as an option so
-  editing its seats/zone can't silently free the party (seating is a Book/POS
-  act, never done here). Accessibility toggles (`.core-tbl-features` /
-  `.core-tbl-feat` — accessible · high-chair · step-free) persist on
-  `FloorTable.features` (matched by the seating engine against a party's
-  needs); the note persists on `FloorTable.notes` and surfaces on the Book
-  Floor-lens tiles. *+ Add table* sits in the subbar.
+  (core `CoreDialog`, portaled per Rule #4). It edits **only the physical plan**:
+  **number/label · seats · zone · Accessibility features**, with **Delete**.
+  **Status and the service note are deliberately absent** — they're operational
+  and owned by Book/POS; the editor carries them through untouched on save
+  (re-reads the table's live `status` right before the whole-row write so an
+  edit can't clobber a seating transition, and preserves `FloorTable.notes`
+  verbatim). **Zone is a picker of the zones that already exist** (create one
+  from the board's *Add zone*), plus a *— No zone —* option; if a row's current
+  zone isn't yet a managed entity it stays selectable so an edit never moves the
+  table off it. Accessibility toggles (`.core-tbl-features` / `.core-tbl-feat` —
+  accessible · high-chair · step-free) persist on `FloorTable.features` (matched
+  by the seating engine against a party's needs). *+ Add table* sits in the
+  ActionBar right.
 - **Engine:** `GET /api/admin/floor/tables?location=` returns the location's
   `FloorTable[]` (gentle 20s `usePolling` — this is config, not the live floor;
   create/edit/delete merge optimistically so a tile never blanks until the
@@ -58,18 +91,18 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 ## Slots (`/core/service/slots`) — wired
 
 - **Live code:** `src/core/service/CoreSlots.tsx`.
-- **Theme:** `.core-crumb` · `.core-sectionhead` · `.core-statstrip` ·
+- **Theme:** `.core-surf-toolbar` (ActionBar) · `.core-statstrip` ·
   `.core-surge-banner` · `.core-slots-grid` (two-column) · `.core-frame` /
   `.core-frame-h` / `.core-frame-b` · Manage rows `.core-mslot` (`.barwrap` /
   `.mbar` fill + `.meta` + `.core-tchip` tier chip + `.mcap`) ·
   `.core-slot-week` / `.core-slot-day-h` (week grouping) · Demand rows
   `.core-exch-head` / `.core-applyall` / `.core-exrow` / `.core-tier` /
   `.core-lever` (`.lv` + `.why`) / `.core-apply`.
-- Rendered in the **dense-console** language (1:1 with
-  `tests/sketches/core-pages/05-service-slots.html`): a `.core-crumb`
-  breadcrumb, a `.core-sectionhead` whose right slot carries the **`Mode`
-  switch** (Manage | Demand, a `.core-seg`), a `.core-surf-toolbar` (Day / Week
-  + date + channel filter left; New slot · Refresh right), then a **6-up
+- Rendered in the **dense-console** language: the `.core-surf-toolbar` ActionBar
+  whose `left` leads with the **`Mode` switch** (Manage | Demand, a `.core-seg`),
+  then Day / Week and the shared **`CoreDateField`** picker; on the right the
+  **Fulfillment** filter collapses into a `CoreFilterMenu` funnel, then a standard
+  `.core-iconbtn` Refresh and the New-slot pill. Then a **6-up
   `.core-statstrip`** — **booked · capacity · fill ·
   surge windows · peak fill · demand price** (all live from the slot set —
   Rule #1; a "surge window" is one filled ≥85%, peak drives the price
@@ -108,8 +141,9 @@ in one move) is the **Book** view — see below.
 `src/core/service/CoreBook.tsx` — a **Service** view (`serviceTabs("book")`,
 eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
 `/core/book` and `/core/guest/book` redirect here. Rendered in the
-**dense-console** language (mockup 11-book): a `.core-crumb` breadcrumb +
-`.core-sectionhead`, then a **6-up `.core-statstrip`** — **bookings today ·
+**dense-console** language (mockup 11-book): the `.core-surf-toolbar` ActionBar
+(its `left` led by the View switch — timeline/floor/arrivals), then a **6-up
+`.core-statstrip`** — **bookings today ·
 covers · seated · upcoming · no-shows · fill** (all from the day's reservations
 — Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
@@ -119,7 +153,13 @@ status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
 upsert with `override`). The timeline sits **left**; the **new-reservation form
-is the right rail** (`.core-book-form`, grid col 2): pick a capacity-tinted
+is the right rail** (`.core-book-form`, grid col 2). The rail is `position:
+sticky` but `align-self: start` (so the grid never stretches it to the taller
+timeline row) and viewport-capped (`max-height: calc(100dvh - var(--book-rail-top)
+- 8px)`, `--book-rail-top` = the shell topbar + Book header rows), so its body
+(`.core-bk-resvb`) **scrolls internally** — every field down to the Book button is
+reachable in one scroll, never clipped off-screen. Below 1000px the rail unstacks
+into normal page flow (`position: static`, no cap). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**) + party size, then a table — ranked by the **Seating
 Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
@@ -211,12 +251,13 @@ reflects it immediately; conversely a walk-in seated from POS shows in this
 Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 `nowMin`) and unit-tested (`table-session.test.ts`). Timeline rows + the table-pick list read **`T{n}`, ordered by table
 number** (shared with the Tables `tLabel`). The **surface toolbar**
-(`.core-surf-toolbar.core-bk-subbar`, row 4 — under the section head, over the
-stat strip, via the shared `CoreSurfToolbar`) carries the weekday label + a
-compact date chip (`.core-bk-datefield`) on the left, and on the right the
-Forecast · Policy · Walk-in buttons + the brand **New reservation** pill
-(`.core-bk-newpill`, focuses the guest field). The **timeline / floor /
-arrivals** lenses render as the view switch in the section-head right. A
+(`.core-surf-toolbar.core-bk-subbar`, the ActionBar — under the command bar,
+over the stat strip, via the shared `CoreSurfToolbar`) carries, in its `left`,
+the **timeline / floor / arrivals** view switch, then the shared
+**`CoreDateField`** picker (same as Slots); on the right the occasional
+**Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, keeping
+the frequent **Walk-in** button + the brand **New reservation** pill
+(`.core-bk-newpill`, focuses the guest field) inline. A
 **◔ Forecast** button opens a **pre-service simulation** `CoreDialog`
 (`.core-bk-sim`, from `simulateService` via GET `/api/admin/seating/simulate`):
 bookings/covers/peak-occupancy KPIs, a per-30-min table-occupancy bar chart
@@ -253,8 +294,8 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 - **Live code:** `src/core/service/CoreDispatch.tsx`; API
   `src/app/api/admin/dispatch/route.ts`; store helper `assignOrderDriver`
   (`src/lib/store.ts`).
-- **Theme:** dense-console (mockup 06-service-dispatch): `.core-crumb` +
-  `.core-sectionhead` + `.core-statstrip`, then a `.core-disp-grid` (queue +
+- **Theme:** dense-console (mockup 06-service-dispatch): `.core-surf-toolbar`
+  ActionBar (actions only) + `.core-statstrip`, then a `.core-disp-grid` (queue +
   drivers). The order cards stay token-styled inline; `.core-disp-drivers` /
   `.core-disp-driver` / `.core-disp-dstat` style the drivers panel.
 - The delivery driver board. `GET /api/admin/dispatch?location=` returns the
@@ -283,6 +324,6 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 
 Parity layers: `src/app/themes/core/parity/{tables,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
-- **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); zone pills under the section head; tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
-- **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
+- **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); a `.core-seg` **Zone scope switch** in the ActionBar left plus **Add zone / Add table** on the right; tables grouped under first-class zone entities (drag to move, empty zones persist); tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
+- **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · the shared `CoreDateField` picker (left); on the right a `CoreFilterMenu` funnel (Fulfillment: All · Dine-in · Takeaway · Delivery) · standard `.core-iconbtn` Refresh · orange New-slot pill (`.core-slot-add`); stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

@@ -5,66 +5,10 @@
    shared `.core-seg button.on` rule, so the bespoke `.core-slots-viewseg`
    override was removed. */
 
-/* Date control — styled datefield (icon · date · chevron) sitting LEFT of the
-   spacer, with a full-bleed transparent native <input type=date> driving it so
-   the picker + value binding stay fully functional. */
-.core .core-surf-toolbar .core-slots-date {
-  position: relative;
-  margin-left: 0; /* override base .core-datefield margin-left:auto */
-  gap: 8px;
-  padding: 6px 11px;
-  cursor: pointer;
-}
-.core .core-surf-toolbar .core-slots-date .dv { color: var(--ink); }
-.core .core-surf-toolbar .core-slots-date svg { color: var(--ink-3); }
-.core .core-surf-toolbar .core-slots-date input[type="date"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-/* Hide the native picker glyph — the styled chevron stands in for it. */
-.core .core-surf-toolbar .core-slots-date input[type="date"]::-webkit-calendar-picker-indicator {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* Filters / Refresh ghost buttons (mockup `.subtoolbar .ghost`). */
-.core .core-surf-toolbar .core-ghostbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--ink-3);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 6px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.core .core-surf-toolbar .core-ghostbtn:hover { color: var(--ink-2); border-color: var(--line-2); }
-.core .core-surf-toolbar .core-ghostbtn svg { width: 12px; height: 12px; color: var(--ink-3); }
-/* Active channel filter reads as an engaged brand pill. */
-.core .core-surf-toolbar .core-ghostbtn.on {
-  color: var(--brand-bright);
-  border-color: transparent;
-  background: var(--brand-wash);
-  box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4);
-}
-.core .core-surf-toolbar .core-ghostbtn.on svg { color: var(--brand-bright); }
+/* Date control + channel filter now use the SHARED primitives — the `CoreDateField`
+   picker (`.core-datefield-pick`, same as Book) and the `CoreFilterMenu` funnel
+   (`.core-filt-*`, same as CRM/Orders) — so the bespoke `.core-slots-date` +
+   `.core-ghostbtn` rules are gone. Refresh is the standard `.core-iconbtn`. */
 
 /* New-slot → orange pill (mockup `.pill.add`) — brand-bright text on brand wash,
    not the green outlined primary. */

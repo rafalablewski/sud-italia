@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
-import { CoreCrumb } from "@/core/shell/CoreCrumb";
-import { CoreSectionHead } from "@/core/shell/CoreSectionHead";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { CoreActionMenu } from "@/core/shell/CoreActionMenu";
+import { CoreDateField } from "@/core/shell/CoreDateField";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
@@ -578,50 +578,36 @@ export function CoreBook({
       tabs={serviceTabs("book")}
     >
       <div className="core-book">
-        {/* Unified header rows in the fixed mockup order: breadcrumb (2) →
-            section head + view switch (3) → surface toolbar (4) → stat strip (5). */}
-        <CoreCrumb section="SERVICE" page="BOOK" mode="timeline view" />
-        <CoreSectionHead
-          section="Service"
-          page="Book"
-          sub={<>{daySub} · dinner service · {loc}</>}
-          actions={
-            <div className="core-seg" role="tablist" aria-label="View">
-              <span className="sglab">View</span>
-              {(["timeline", "floor", "arrivals"] as const).map((m) => (
-                <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          }
-        />
-        {/* Row 4 — filters left (weekday label + day picker), actions right
-            (Forecast · Policy · Walk-in · the primary New-reservation pill that
-            jumps focus to the always-open form). */}
+        {/* Unified ActionBar — identity (Service · Book) · controls (the View
+            switch + day picker) on the left · actions (Forecast · Policy ·
+            Walk-in · the primary New-reservation pill that jumps focus to the
+            always-open form) on the right. */}
         <CoreSurfToolbar
           ariaLabel="Booking controls"
           className="core-bk-subbar"
           left={
             <>
-              <span className="core-surf-tb-lbl">{daySub}</span>
-              <input
-                className="core-inp core-bk-datefield"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                aria-label="Booking day"
-              />
+              <div className="core-seg" role="tablist" aria-label="View">
+                {(["timeline", "floor", "arrivals"] as const).map((m) => (
+                  <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <CoreDateField value={date} onChange={setDate} ariaLabel="Booking day" />
             </>
           }
           right={
             <>
-              <button type="button" className="core-bk-toolbtn" onClick={() => void openForecast()} title="Pre-service forecast">
-                <span aria-hidden>◔</span> Forecast
-              </button>
-              <button type="button" className="core-bk-toolbtn" onClick={() => setPolicyOpen(true)} title="Seating engine policy">
-                <span aria-hidden>⚙</span> Policy
-              </button>
+              {/* Occasional actions collapse behind ⋯ so the bar keeps one
+                  primary + the frequent Walk-in inline (and never clips). */}
+              <CoreActionMenu
+                label="More booking actions"
+                items={[
+                  { label: "Forecast", icon: <span aria-hidden>◔</span>, onClick: () => void openForecast() },
+                  { label: "Policy", icon: <span aria-hidden>⚙</span>, onClick: () => setPolicyOpen(true) },
+                ]}
+              />
               <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
                 <span aria-hidden>+</span> Walk-in
               </button>

@@ -7,11 +7,10 @@ Live code: `src/core/orders/CoreOrders.tsx` · route `src/app/core/orders/page.t
 One surface for **every order at the location** — live (current) and paid
 history — so staff aren't limited to the POS's open tickets.
 
-Rendered in the **dense-console** language (1:1 with
-`tests/sketches/core-pages/03-orders.html`): a `.core-crumb` breadcrumb
-(`CORE — ORDERS · liquid glass · [cross-cutting surface]`), a `.core-sectionhead`,
-a row-4 `.core-surf-toolbar` (the filters), a 7-up `.core-statstrip`, then a
-`.core-otable`.
+Rendered in the **dense-console** language: the unified **`.core-surf-toolbar`**
+ActionBar — `search` + a `today` date chip as its `left`, and a
+**`CoreFilterMenu`** funnel (the Channel filter) + Refresh as its `right` — then
+a 7-up `.core-statstrip`, then a `.core-otable`.
 
 - **Data:** `GET /api/admin/orders?location=` (all orders, newest-first) +
   `GET /api/admin/floor/tables` (table-number map), polled every 15s.
@@ -23,11 +22,12 @@ a row-4 `.core-surf-toolbar` (the filters), a 7-up `.core-statstrip`, then a
 - **Scope** lives in the **command-bar view tabs** — **Current** (active
   statuses) · **Paid** (has `paidAt`) · **All** — so the prompt reads
   `orders:current` and the chrome matches every other surface.
-- **Toolbar** (row 4, `.core-surf-toolbar` via `CoreSurfToolbar`): on the left a
-  `.core-searchfield` over id / guest / phone / table, a `.core-chanset` of
-  `.core-chan` chips (all / dine-in / takeaway / delivery / qr — fulfillment
-  types + the QR channel) and a `.core-datefield` (today); on the right a refresh
-  icon.
+- **ActionBar** (`.core-surf-toolbar` via `CoreSurfToolbar`): on the left a
+  `.core-searchfield` over id / guest / phone / table and a `.core-datefield`
+  (today); on the right the **Channel** filter collapses into a shared
+  **`CoreFilterMenu`** funnel popover (All / Dine-in / Takeaway / Delivery / QR —
+  fulfillment types + the QR channel, base `all`), followed by a refresh icon.
+  The Current/Paid/All scope stays in the command-bar view tabs.
 - **Table** (`.core-otable`): columns **# · Time · Channel · Guest · Table ·
   Items · Total · Status**. The channel cell is a `.core-chanchip` toned by
   type (dinein basil · takeaway amber · delivery/qr info); the status cell is a

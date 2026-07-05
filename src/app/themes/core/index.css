@@ -262,9 +262,8 @@
    forces its own glass fills — see the KDS block). Sub-variants: .icons
    (square glyph cells) · .sm/.xs (compact) · .gfilters (guest 34px bar). */
 .core .core-seg { display: inline-flex; align-items: center; padding: 3px; gap: 2px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); }
-/* leading mono label (VIEW / SCOPE / MODE / ZONE / STATUS) — names the switch,
-   so every surface's view/scope toggle reads identically (unified-header). */
-.core .core-seg .sglab { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: 0 7px 0 6px; display: inline-flex; align-items: center; white-space: nowrap; }
+/* The switch carries no visible axis label — the options name themselves; the
+   `.core-seg`'s `aria-label` gives assistive tech the axis (View / Zone / …). */
 .core .core-seg button { height: auto; padding: 4px 10px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-3); background: transparent; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
 .core .core-seg button:hover { color: var(--ink-2); }
 .core .core-seg button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
@@ -306,27 +305,30 @@
 .core .core-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column;
   overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-/* surface sub-toolbar — a thin control strip at the TOP of a surface body, for
-   the working controls the "Command" bar deliberately omits (Slots' view
-   filters + date, Book's date). Distinct from the command bar: it belongs to
-   the surface, not the global chrome. */
-/* Row 4 of the unified header — LOCKED height so the stat strip below never
-   shifts between a surface with controls and one without. Controls that
-   overflow scroll INSIDE the row (never wrap it taller / push rows down). */
+/* surface ActionBar — the ONE control strip at the TOP of a surface body. It
+   carries ONLY the working controls (`left`: the view/scope switch + filters +
+   date the "Command" bar omits) and the surface actions (`right`) — no identity
+   or context text, since the command bar names the surface and the stat strip
+   below carries the figures. Belongs to the surface, not the global chrome. */
+/* The unified header, collapsed to a SINGLE row (was crumb + section head +
+   toolbar): LOCKED height so the stat strip below never shifts between a surface
+   with controls and one without. Controls that overflow scroll INSIDE the row
+   (never wrap it taller / push rows down). */
 .core .core-surf-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 50px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; font-family: var(--mono); font-size: 11.5px; }
 .core .core-surf-toolbar::-webkit-scrollbar { height: 0; }
 .core .core-surf-toolbar .core-sp { flex: 1; }
 .core .core-surf-tb-lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-/* explicit empty state — the row stays, so placement is identical everywhere */
-.core .core-surf-empty { color: var(--ink-3); opacity: .5; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
 /* Normalise every labelled action pill in the toolbar to ONE size/shape/casing
    so a surface's "New reservation" / "New slot" / "Add table" / "Forecast" /
    "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
    pill vs rounded-rect, some lowercase). Each keeps its own fill (brand vs
    neutral) — only the geometry is unified. */
-.core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-ghostbtn, .core-btn) {
-  height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1;
+.core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-btn) {
+  display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1; white-space: nowrap; flex: none;
 }
+/* keep icon glyphs inside toolbar buttons at label scale (the bare .core-btn has
+   no intrinsic svg sizing, unlike .cm-primary), so "＋ Add zone" reads as a pill. */
+.core .core-surf-toolbar .core-btn svg { width: 13px; height: 13px; }
 .core .core-surf-toolbar :is(.core-bk-newpill, .core-bk-toolbtn) span { font-size: 12px; }
 /* icon-glyph buttons share the same 30px box so nothing looks off-height */
 .core .core-surf-toolbar .core-iconbtn { height: 30px; min-width: 30px; }
@@ -341,20 +343,6 @@
 .core .core-qrpill-n { font-weight: 700; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 99px; display: inline-grid; place-items: center;
   background: var(--info); color: var(--on-info, #06222c); font-size: 10px; }
 .core .core-qrpill.on { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info) 55%, transparent), 0 0 14px -5px var(--info); }
-
-/* ---- surface section header (title + sub) — the dense-console page head ----
-   A big grotesk surface title beside an uppercase mono sub, matching the
-   mockup's `.sectionhead`. Sits at the top of a surface body, under the
-   sub-toolbar, over the stat strip. */
-/* Row 3 of the unified header — LOCKED height, title left, view/scope switch
-   pinned right (via `.core-sp`). align-items:center + nowrap so the row lands
-   on the same pixel on every surface and never bounces between tabs. */
-.core .core-sectionhead { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; }
-.core .core-sectionhead::-webkit-scrollbar { height: 0; }
-.core .core-sectionhead h1, .core .core-sectionhead h2 { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
-.core .core-sectionhead h1 .mid { color: var(--brand-bright); margin: 0 4px; }
-.core .core-sectionhead .sub { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.core .core-sectionhead .core-sp { flex: 1; }
 
 /* ---- unified surface stat strip — the dense-console KPI row -----------------
    Undivided cells over one clean glass panel (no inter-cell hairlines — the
@@ -1399,19 +1387,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* CRM filters now render in the shared row-4 `.core-surf-toolbar` (via
    CoreSurfToolbar), so the bespoke `.core-crm-filterbar` wrapper was removed;
    its child controls keep their own classes below. */
-.core .core-crm-search { display: flex; align-items: center; gap: 8px; min-width: 220px; flex: 0 0 auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 6px 12px; color: var(--ink-3); }
+.core .core-crm-search { display: flex; align-items: center; gap: 8px; min-width: 170px; flex: 0 1 auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 6px 12px; color: var(--ink-3); }
 .core .core-crm-search svg { flex: none; }
 .core .core-crm-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-crm-search input::placeholder { color: var(--ink-3); }
-.core .core-fsep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
-.core .core-segchips { display: inline-flex; gap: 3px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); }
-.core .core-segchips button { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: transparent; border: 0; cursor: pointer; padding: 5px 11px; border-radius: var(--pill); display: flex; align-items: center; gap: 6px; }
-.core .core-segchips button:hover { color: var(--ink-2); }
-.core .core-segchips button.on { color: var(--brand-bright); background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
-.core .core-segchips .ct { font-size: 9px; color: var(--ink-3); background: var(--panel-2); border-radius: 99px; padding: 0 5px; }
-.core .core-gems { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.core .core-gemchip { display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: .03em; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 4px 10px 4px 8px; }
-.core .core-gemchip.on { box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); color: var(--ink); border-color: var(--line-2); }
+/* CRM's Segment / Tier / Sort filters live in the shared `CoreFilterMenu` funnel
+   popover (`.core-filt-*`), not inline — so no bespoke `.core-segchips` /
+   `.core-gems` / `.core-fsep`. The tier metal `.core-gem` dot is reused in the
+   popover's tier chips and in the roster table. */
 .core .core-gem { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 8px -2px currentColor; flex: none; }
 .core .core-gem.bronze { background: linear-gradient(135deg, #d9915a, #8a4f27); color: #d9915a; }
 .core .core-gem.silver { background: linear-gradient(135deg, #e9edf2, #9aa4ae); color: #c9d1da; }
@@ -1639,12 +1622,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-form { grid-column: 2; }
 .core .core-book-side { grid-column: 1 / -1; }
 /* dense-console header rows span the full width above the form/side row */
-.core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
+.core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 /* Book renders its header inside the padded timeline GRID (0 14px). Pull the
-   shared header rows back to full-bleed so the crumb/title/toolbar land on the
-   SAME pixel as every other surface (whose wrapper has no side padding) — the
-   stat strip already sits inset, matching the others. */
-.core .core-book > .core-crumb, .core .core-book > .core-sectionhead, .core .core-book > .core-surf-toolbar { margin-left: -14px; margin-right: -14px; }
+   shared ActionBar back to full-bleed so it lands on the SAME pixel as every
+   other surface (whose wrapper has no side padding) — the stat strip already
+   sits inset, matching the others. */
+.core .core-book > .core-surf-toolbar { margin-left: -14px; margin-right: -14px; }
 .core .core-book-form { padding: 18px; }
 /* timeline title + status legend (mockup) */
 .core .core-book-tlbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
@@ -1729,19 +1712,30 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-bottleneck .bn-act { font-family: var(--mono); font-size: 10px; color: var(--on-accent); border: 0; border-radius: var(--pill); padding: 5px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .core .core-bottleneck.warn .bn-act { background: var(--amber); } .core .core-bottleneck.risk .bn-act { background: var(--danger); color: #fff; }
 .core .core-bottleneck .bn-act:hover { filter: brightness(1.06); }
-/* Dense-console breadcrumb line (mockup `.cap`) — sits above the section head. */
-/* Row 2 of the unified header — LOCKED height (breadcrumb grammar via CoreCrumb). */
-.core .core-crumb { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--ink-3); text-transform: uppercase; padding: 0 16px; height: 34px; display: flex; gap: 8px; align-items: center; flex: none; }
-.core .core-crumb b { color: var(--basil); font-weight: 600; }
-.core .core-crumb .d { opacity: .5; }
-.core .core-crumb .fix { color: var(--brand-bright); border: 1px solid var(--line-2); padding: 1px 7px; border-radius: var(--pill); font-size: 9px; background: var(--brand-wash); }
 
 .core .core-floor { flex: 1; overflow-y: auto; padding: 18px; }
 /* Tables' zone scope switch now renders as the canonical `.core-seg` pinned to
    the section-head right (unified header), so the bespoke `.core-zonetabs` /
    `.core-ztab` rules were removed. */
-.core .core-zone-h { display: flex; align-items: baseline; gap: 10px; margin: 6px 2px 12px; }
+.core .core-zone-h { display: flex; align-items: center; gap: 10px; margin: 6px 2px 12px; }
 .core .core-zone-h .zt { font-family: var(--display); font-weight: 600; font-size: 15px; }
+.core .core-zone-h .core-cust-sub { margin-left: auto; }
+/* Zone management — first-class zone entities: drag a table between zone
+   groups, rename/delete a zone inline, drop into an empty zone. */
+.core .core-zone-group { border-radius: var(--r-lg); padding: 4px; margin: 0 -4px; transition: background var(--fast), box-shadow var(--fast); }
+.core .core-zone-group.drop-target { background: var(--brand-wash); box-shadow: inset 0 0 0 1.5px rgba(232, 107, 62, .55); }
+.core .core-tbl2[draggable="true"] { cursor: grab; }
+.core .core-tbl2.is-dragging { opacity: .45; box-shadow: none; }
+/* rename/delete tool cluster on the zone header (appears on hover of the row) */
+.core .core-zone-tools { display: inline-flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--fast); }
+.core .core-zone-h:hover .core-zone-tools, .core .core-zone-tools:focus-within { opacity: 1; }
+.core .core-zone-tool { width: 22px; height: 22px; display: inline-grid; place-items: center; border: 0; background: transparent; color: var(--ink-3); border-radius: var(--r-sm); cursor: pointer; font-size: 12px; line-height: 1; transition: color var(--fast), background var(--fast); }
+.core .core-zone-tool:hover { color: var(--brand-bright); background: var(--brand-wash); }
+.core .core-zone-tool.del:hover { color: var(--danger); background: color-mix(in oklab, var(--danger) 14%, transparent); }
+.core .core-zone-rename-inp { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--brand); border-radius: var(--r-sm); padding: 1px 8px; outline: none; min-width: 90px; max-width: 220px; }
+/* empty zone — a dashed drop target so a zone with no tables still reads as a place to drop into */
+.core .core-zone-empty { grid-column: 1 / -1; display: grid; place-items: center; min-height: 62px; padding: 12px; border: 1.5px dashed var(--line-2); border-radius: var(--r-md); color: var(--ink-3); font-size: 12.5px; font-style: italic; }
+.core .core-zone-group.drop-target .core-zone-empty { border-color: transparent; color: var(--brand-bright); }
 /* Dense-console floor tiles — landscape cards (mockup `.tbl`): a big table
    number + status dot top row, then covers · dwell · check, with a left accent
    rail tinted by state (free=basil, seated=info, billing/freeing=amber). */
@@ -1785,14 +1779,23 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    filters (search · channel · date · refresh) render in the shared row-4
    `.core-surf-toolbar` (via CoreSurfToolbar), so the bespoke `.core-filterbar`
    wrapper was removed; its child controls keep their own classes below. */
-.core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; max-width: 360px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
+.core .core-searchfield { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 180px; max-width: 360px; padding: 6px 12px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-3); }
 .core .core-searchfield input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-searchfield input::placeholder { color: var(--ink-3); }
-.core .core-chanset { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); cursor: pointer; }
-.core .core-chan:hover { color: var(--ink-2); }
-.core .core-chan.on { color: var(--ink); background: var(--panel-3); box-shadow: var(--lg-rim, inset 0 1px 0 rgba(255,255,255,.14)); }
+/* `.core-chan` is the KDS ticket channel BADGE (per-channel tint via `chanBadge`);
+   Orders' channel FILTER now uses the shared labelled `.core-seg` capsule instead
+   of loose `.core-chan` chips, so the filter-only `.core-chanset` / `.core-chan.on`
+   are gone. Keep the base badge style below. */
+.core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); }
 .core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
+/* Interactive picker variant (CoreDateField) — a full-bleed transparent native
+   <input type=date> drives the styled pill (icon · date · chevron); the native
+   picker glyph is hidden so the styled chevron stands in. Shared by Book + Slots. */
+.core .core-datefield-pick { position: relative; margin-left: 0; flex: none; padding: 6px 11px; cursor: pointer; }
+.core .core-datefield-pick .dv { color: var(--ink); }
+.core .core-datefield-pick svg { color: var(--ink-3); flex: none; }
+.core .core-datefield-pick input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.core .core-datefield-pick input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: var(--panel); }
 .core .core-otable table { width: 100%; border-collapse: collapse; }
 .core .core-otable thead th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -1875,6 +1878,37 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-radial-v.primary:hover { background: var(--brand-bright); }
 .core .core-radial-v .ri { width: 20px; text-align: center; flex: none; }
 @media (prefers-reduced-motion: reduce) { .core .core-radial { animation: none; } }
+/* ActionBar overflow menu — the `⋯` popover (CoreActionMenu) that collapses a
+   surface's occasional actions so the bar keeps one inline primary + never
+   clips. Portaled to `.core`; anchored under its trigger via fixed coords. */
+.core .core-ovf-btn.on, .core .core-filt-btn.on { background: var(--brand-wash); color: var(--brand-bright); }
+/* ActionBar filter popover — one funnel trigger (CoreFilterMenu) collapsing a
+   surface's inline filter capsules into a right-side control; the trigger wears
+   a `.core-filt-badge` count when any filter is active. Popover is portaled +
+   frosted like the overflow menu, laid out as labelled `.core-filt-group`s of
+   selectable `.core-filt-chip`s. */
+.core .core-filt-btn { position: relative; }
+.core .core-filt-badge { position: absolute; top: -3px; right: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 99px; background: var(--brand); color: var(--on-accent); font-family: var(--mono); font-size: 9px; font-weight: 700; display: grid; place-items: center; line-height: 1; }
+.core .core-filt-pop { position: fixed; min-width: 232px; max-width: 300px; padding: 12px; border-radius: var(--r-md); background: linear-gradient(var(--panel-3), var(--panel-3)), var(--bg); border: 1px solid var(--line-2); box-shadow: var(--sh-pop); display: flex; flex-direction: column; gap: 12px; font-family: var(--mono); animation: core-ovf-in 140ms cubic-bezier(.16,1,.3,1); }
+.core .core-filt-group { display: flex; flex-direction: column; gap: 7px; }
+.core .core-filt-lbl { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.core .core-filt-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.core .core-filt-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.core .core-filt-chip:hover { color: var(--ink); border-color: var(--line-2); }
+.core .core-filt-chip.on { color: var(--brand-bright); background: var(--brand-wash); border-color: transparent; box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
+.core .core-filt-chip .c { font-size: 9px; color: var(--ink-3); }
+.core .core-filt-chip.on .c { color: var(--brand-bright); opacity: .8; }
+.core .core-filt-reset { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); background: transparent; border: 0; border-top: 1px solid var(--line); padding: 9px 0 0; margin-top: 1px; cursor: pointer; text-align: left; }
+.core .core-filt-reset:hover { color: var(--ink); }
+.core .core-ovf-scrim { position: fixed; inset: 0; z-index: 200; }
+.core .core-ovf-pop { position: fixed; min-width: 172px; padding: 6px; border-radius: var(--r-md); background: linear-gradient(var(--panel-3), var(--panel-3)), var(--bg); border: 1px solid var(--line-2); box-shadow: var(--sh-pop); display: flex; flex-direction: column; gap: 2px; font-family: var(--mono); animation: core-ovf-in 140ms cubic-bezier(.16,1,.3,1); }
+@keyframes core-ovf-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.core .core-ovf-item { display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 0 11px; border-radius: var(--r-sm); background: transparent; border: 0; color: var(--ink); font-family: var(--mono); font-size: 12px; cursor: pointer; text-align: left; white-space: nowrap; }
+.core .core-ovf-item:hover { background: var(--hover); }
+.core .core-ovf-item.danger { color: var(--danger); }
+.core .core-ovf-item:disabled { opacity: .4; cursor: default; }
+.core .core-ovf-item .ic { width: 16px; display: inline-grid; place-items: center; flex: none; opacity: .8; }
+@media (prefers-reduced-motion: reduce) { .core .core-ovf-pop { animation: none; } }
 .core .core-tbl2-edit { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--ink-3); font-size: 14px; line-height: 1; opacity: 0; transition: opacity var(--fast), background var(--fast); }
 .core .core-tbl2-wrap:hover .core-tbl2-edit { opacity: 1; }
 .core .core-tbl2-edit:hover { background: var(--panel-3); color: var(--ink); }

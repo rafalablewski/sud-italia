@@ -4,7 +4,7 @@
 > Legend: ☐ not started · ◐ in progress · ☑ done · ⏸ blocked/awaiting decision.
 > Companion: [`README.md`](./README.md) (the design spec).
 
-Last updated: **2026-07-02** — full live 1:1 audit of all 11 suite pages against the dense-console mockup; suite confirmed implemented and functional, CRM inspector defaulted-open to match the mockup's populated state.
+Last updated: **2026-07-05** — the unified header is now a single `.core-surf-toolbar` **ActionBar** holding only controls (`left`) + actions (`right`): `CoreCrumb` + `CoreSectionHead` deleted, the `.sglab` axis labels + `.core-surf-id` context line dropped, and filters collapse into shared `CoreFilterMenu` / `CoreActionMenu` popovers. See the latest decision-log entries.
 
 ---
 
@@ -220,3 +220,38 @@ _(append dated entries as choices are made)_
   `.core-surge-banner` when a window is ≥85% full. Manage rows are `.core-mslot` (fill bar + tier chip toggle + N/max);
   Demand rows are `.core-exrow` (tier + lever + Apply / Apply-all). All slot/demand mutations preserved. 343 tests green;
   both verified live (screenshotted).
+- **2026-07-04** — **Unified header collapsed to a single ActionBar.** The
+  four-row header stack (command bar → `.core-crumb` breadcrumb →
+  `.core-sectionhead` title → `.core-surf-toolbar`) was reduced to **two rows**:
+  the global command bar, then ONE `.core-surf-toolbar` **ActionBar**. Rationale:
+  the breadcrumb only ever restated the command bar's own `core ❯ surface:tab`
+  prompt, and the oversized section head restated it a second time — pure
+  duplication above every surface. Both `CoreCrumb` and `CoreSectionHead` (and
+  their `.core-crumb` / `.core-sectionhead` CSS) were **deleted**. The
+  section-head TITLE went too — it only restated the command-bar prompt — so the
+  ActionBar's far-left anchor is just the surface's uppercase-mono **context
+  line** (`.core-surf-id`: date · service · location — the one thing the command
+  bar does NOT carry). The view/scope switch that used to ride the section-head
+  right moves to the toolbar `left` (leading the controls), and the actions stay
+  in `right`. `CoreSurfToolbar`'s only identity prop is `sub`; all 11 surfaces
+  (POS · Book · Tables · Slots · Dispatch · KDS fleet/floor/chef · Orders · CRM ·
+  Inbox · Loyalty · Concierge) were converted. A shared `⋯` `CoreActionMenu`
+  collapses occasional actions (Book: Forecast/Policy) into a portaled popover so
+  the bar keeps one primary + never clips. Theme README + every module doc synced
+  (Rule #11); the historical entries above are left as-dated. Typecheck green.
+- **2026-07-05** — **ActionBar stripped to controls + actions only.** Follow-up to
+  the collapse above, driven by review: the `.core-seg` switches shed their
+  plain-text axis labels (`.sglab` VIEW/ZONE/MODE/SCOPE/STATUS — the options name
+  themselves; the `aria-label` keeps the axis for assistive tech), and the
+  `.core-surf-id` **context line was dropped entirely** — the command bar already
+  names the surface and the stat strip carries the figures, so the bar now holds
+  ONLY the working controls (`left`) + actions (`right`). `CoreSurfToolbar` loses
+  its `sub` prop; the `.core-surf-id` CSS + the dead `clock`/`period`/`servicePeriod`
+  derivations that only fed the context line are removed; the row tightens to 50px.
+  Two more shared filter primitives landed alongside: **`CoreFilterMenu`** (a funnel
+  popover that collapses several inline filters into one right-side control — CRM's
+  Segment/Tier/Sort, Orders' Channel) and the earlier **`CoreActionMenu`** (`⋯`
+  overflow); both portaled + opaque (composited over `--bg`). Also harmonized the
+  last bespoke filter styles (CRM `.core-segchips`/`.core-gems`, Orders `.core-chan`
+  filter) onto the shared vocabulary. Docs synced. Typecheck + lint green; verified
+  live across every surface.

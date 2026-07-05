@@ -19,12 +19,12 @@ A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
 All three views (Fleet · Floor · Chef) render in the **liquid-glass** language
-1:1 with the Core-suite mockup, on the unified header: the in-shell board
+1:1 with the Core-suite mockup, on the unified ActionBar: the in-shell board
 (`.core-body .core-kds`) sits on the warm KDS radial-gradient, and each view
-opens with the `.core-crumb` breadcrumb + `.core-sectionhead` (whose right slot
-carries the view/scope switch — Floor **STATUS** lane · Fleet **SCOPE** kitchen ·
-Chef **MODE** expo/all-day, each a `.core-seg`), then the row-4
-`.core-surf-toolbar` (the board actions — Σ all-day · refresh · 86 · chime ·
+opens with the `.core-surf-toolbar` — the view/scope switch as its `left` (Floor
+**STATUS** lane · Fleet **SCOPE** kitchen · Chef **MODE** expo/all-day, each a
+`.core-seg`), and the board actions as its
+`right` (Σ all-day · refresh · 86 · chime ·
 pause · fullscreen — right, via `CoreSurfToolbar`), then the frosted
 `.core-statstrip` KPI band (shared `.core-kds .core-statstrip` glass). The
 **fullscreen kiosk** (`.core-kiosk`, outside `.core-body`) keeps the flat dark
@@ -70,11 +70,10 @@ wall, laying scope + actions out inline in its top strip.
   owners** (the role from `/api/admin/me` flips the board to Fleet on load).
   Rendered in the **liquid-glass** language 1:1 with the Core-suite mockup: the
   `.core-fleet` container carries the warm KDS radial-gradient wash, opening with
-  a `.core-crumb` (`CORE — KDS · FLEET · liquid glass · all kitchens · one pass`)
-  + a `.core-sectionhead` (`KDS · Fleet`) whose right slot carries the SCOPE
-    switch + a row-4 `.core-surf-toolbar` with the fleet actions.
+  the `.core-surf-toolbar` ActionBar — the SCOPE switch as its `left`, and the
+  fleet actions as its `right`.
   - **Fleet SCOPE switch** — a `.core-seg` kitchen filter (**All kitchens** + one
-    button per truck, labelled by `city`), pinned to the section-head right. The
+    button per truck, labelled by `city`), first control in the ActionBar `left`. The
     KDS switches + board actions (this filter, the Floor lane filter, the Chef
     Expo/All-day toggle, the
     `.core-tpill` action pills, and the `.core-iconbtn` tool glyphs) is tuned to

@@ -81,10 +81,10 @@ global cluster. Per surface: **POS** = QR + fullscreen · **KDS** = *nothing*
 (Floor "Add table", Slots "New") · **Guest** = the 3 inbox tools + WhatsApp-live.
 Anything heavier — KDS's lane filter + board actions, POS's channel/held flags,
 Slots' view filters + date, Book's date — lives **on the surface**, not the
-chrome: the view/scope switch in the `.core-sectionhead` right, the working
-controls in the row-4 `.core-surf-toolbar` (see below). When you add a
-control, ask "does the mockup put this in the bar?" — if not, it goes in the
-surface toolbar / section head.
+chrome: the view/scope switch + working controls in the surface ActionBar's
+`left`, the actions in its `right` (the `.core-surf-toolbar`, see below). When
+you add a control, ask "does the mockup put this in the bar?" — if not, it goes
+in the surface ActionBar.
 
 - **`.core-bar`** — the command bar itself: `font-family: var(--mono)`, a
   `--panel` row with a `--line` bottom hairline.
@@ -174,48 +174,31 @@ surface toolbar / section head.
     The cells carry **no divider** — the panel border frames them and the cell
     padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
     Matches the mockup's `.statstrip`.
-- **`.core-crumb`** — the dense-console breadcrumb line (mockup `.cap`): an
-  uppercase mono `CORE — {SECTION} · {PAGE} · liquid glass · [mode]`, with `b`
-  basil and a `.fix` ember pill for the mode/context tag. It is a flex row with
-  an 8px `gap`, so **each segment is its own element** and every separator is a
-  muted `.d` dot (`opacity: .5`) — never a plain-text "·" baked into one node
-  (that would tightly space the left half and gap-space the right, and lose the
-  dimmed dot). Sits directly above the `.core-sectionhead`. **Rendered by the
-  shared `CoreCrumb` component** (`src/core/shell/CoreCrumb.tsx`): every surface
-  passes only `section` / `page` / `mode`, and the green `b` theme slot is
-  ALWAYS "liquid glass" — so the
-  grammar can't drift per surface again (before this, `slots`/`crm`/`inbox`/
-  `concierge` had put mode text in the theme slot and `slots`/`book`/`kds:floor`
-  mis-ordered section·page; the toolbar-audit fix centralised the line here).
-- **`.core-sectionhead`** — **row 3** of the unified header: a grotesk
-  `<h1>`/`<h2>` title (the `·` separator is a brand-toned `.mid` span) beside an
-  uppercase-mono `.sub`, with a `.core-sp` spacer for a right-aligned view/scope
-  switch. **Locked height** (56px, `align-items:center`, `nowrap`) so it lands
-  on the same pixel on every surface. Sits directly under the `.core-crumb`,
-  over the toolbar. **Rendered by the shared `CoreSectionHead` component**
-  (`src/core/shell/CoreSectionHead.tsx`): every surface passes only `section` /
-  optional `page` (the title reads `{Section}·{Page}`, or just `{Section}` for
-  single-page surfaces like Orders), the `sub`, and any right-aligned `actions`
-  (a view/scope switch, pinned via `.core-sp`). Same discipline as `CoreCrumb`
-  one row down — centralising the title row keeps the separator, the `<h1>`
-  element and the `.sub` styling from drifting per surface, and gives the
-  view/scope switch a single fixed home.
-- **`.core-surf-toolbar`** — **row 4** of the unified header: the surface's
-  working control strip, directly under the section head and over the stat
-  strip. **Locked height** (50px, `nowrap`, overflow scrolls inside the row) so
-  the stat strip never shifts between a surface with controls and one without.
-  Fixed element homes: **filters / date / search on the LEFT**, **utilities +
-  the primary action on the RIGHT** (split by `.core-sp`). **Rendered by the
-  shared `CoreSurfToolbar` component** (`src/core/shell/CoreSurfToolbar.tsx`,
-  `left` / `right` slots); when a surface has no controls it renders the
-  `.core-surf-empty` "— no page controls —" state rather than collapsing the
-  row. `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the
-  surface, not the global chrome — this replaces the old split where controls
-  lived in the shell `subLeft`/`subRight` (above the crumb) or bespoke bars.
-- **KDS board controls** — on the unified header the KDS lane/scope/mode switch
-  rides the `.core-sectionhead` right and the board actions ride the row-4
-  `.core-surf-toolbar` (like every other surface). Only the **fullscreen kiosk**
-  top strip still lays them out inline, split by `.core-kds-tb-sp`.
+- **`.core-surf-toolbar`** — the **unified ActionBar**: the ONE header row every
+  surface renders under the command bar, over the stat strip. It **collapses the
+  old three-row header** (a `.core-crumb` breadcrumb + a `.core-sectionhead`
+  title + this toolbar) into a single row — the breadcrumb, the section-head title
+  AND the context sub-line were all dropped: the command bar's own `core ❯
+  surface:tab` prompt names the surface and the stat strip below carries the
+  figures, so the bar holds only the **working controls**. **Locked height** (50px,
+  `nowrap`, overflow scrolls inside the row) so the stat strip never shifts between
+  a surface with controls and one without. Two element homes:
+  - **`left`** (controls) — the **view/scope switch** that used to ride the
+    section-head right (Book's timeline/floor/arrivals, Slots' Manage/Demand,
+    Tables' Zone, KDS's Scope/Status/Mode, Loyalty's view tabs — always the
+    FIRST control, carrying NO visible axis label), plus filters / date / search.
+  - **`right`** (actions) — utilities + the primary action, pinned right via
+    `.core-sp`. Occasional actions collapse behind a `⋯` `CoreActionMenu`, and a
+    surface's filters can collapse into a `CoreFilterMenu` funnel (see below).
+  **Rendered by the shared `CoreSurfToolbar` component**
+  (`src/core/shell/CoreSurfToolbar.tsx`, `left` / `right` props).
+  `.core-surf-tb-lbl` = a small uppercase field label. Belongs to the surface,
+  not the global chrome — the same one row on every surface, so the controls and
+  actions never move between tabs.
+- **KDS board controls** — on the ActionBar the KDS lane/scope/mode switch rides
+  the toolbar `left` (the view/scope home) and the board actions ride `right`
+  (like every other surface). Only the **fullscreen kiosk** top strip still lays
+  them out inline, split by `.core-kds-tb-sp`.
 
 ### Global-action primitives
 
@@ -226,14 +209,41 @@ surface toolbar / section head.
   control (chime, filters). ONE definition for every surface — the
   `.core-surf-toolbar` / `.cm-right` / `.core-kds` variants only tune spacing,
   not the look. `.core-recall-btn` widens it for a text label (KDS "↩ Undo").
+- **`.core-ovf-*` (ActionBar overflow)** — the `⋯` menu that collapses a
+  surface's **occasional** actions so the ActionBar keeps one inline primary (+
+  the frequent action) and never clips on a narrow screen. **Rendered by the
+  shared `CoreActionMenu` component** (`src/core/shell/CoreActionMenu.tsx`,
+  `items: {label, onClick, icon?, tone?}[]`): a `.core-ovf-btn` (a `.core-iconbtn`
+  three-dot trigger, ember `.on` while open) blooms a `.core-ovf-pop` popover of
+  `.core-ovf-item` rows, **portaled to the `.core` root** (Rule #4 — escapes the
+  toolbar's `overflow` clip, not z-index) and anchored under the trigger.
+  Dismisses on select · scrim click · Escape · scroll/resize. Book uses it for
+  Forecast + Policy (keeping Walk-in + the New-reservation primary inline).
+- **`.core-filt-*` (ActionBar filter popover)** — one funnel `.core-iconbtn`
+  trigger that collapses a surface's several inline filter capsules into a
+  single right-side control (the Guest Inbox header-tool treatment). **Rendered
+  by the shared `CoreFilterMenu` component** (`src/core/shell/CoreFilterMenu.tsx`,
+  `groups: {label, options, value, onChange, base?, clearable?, noBadge?}[]`): the
+  `.core-filt-btn` shows a `.core-filt-badge` count when any filter is active and
+  opens a portaled `.core-filt-pop` of labelled `.core-filt-group`s, each a wrap
+  of selectable `.core-filt-chip`s (with optional `.c` counts or a `.core-gem`
+  dot); a **Reset filters** row appears when anything is set. Same portal/dismiss
+  discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort;
+  Orders for the Channel filter; Slots for the Fulfillment filter.
+- **`.core-datefield` / `.core-datefield-pick`** — the date control. Base
+  `.core-datefield` is a read-only "today" chip (Orders). **`CoreDateField`**
+  (`src/core/shell/CoreDateField.tsx`) is the shared interactive picker
+  (`.core-datefield-pick`): a styled pill (calendar glyph · formatted date ·
+  chevron) with a full-bleed transparent native `<input type=date>` driving it —
+  ONE date picker across Book + Slots (they had two bespoke fields).
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
   command bar they carry `.cm-tabs` for the mono/lowercase treatment.
 - **Selected = brand-ember (one rule).** Every selection/active state across
   Core — command-bar view tabs (`.cm-tabs`), shell tabs (`.core-tabs`), and all
-  segmented controls (`.core-seg`, `.core-segs`, `.core-segchips`,
-  `.core-miniseg`, `.core-switch`) — renders the
+  segmented controls (`.core-seg`, `.core-segs`, `.core-miniseg`,
+  `.core-switch`) — renders the
   same **brand-ember** active: `background: var(--brand-wash); color:
   var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4)`. Green
   (basil) is reserved for **status**, not selection — a live/on signal (WhatsApp
@@ -241,15 +251,15 @@ surface toolbar / section head.
 - **`.core-seg`** — the shared **dense-console segmented control**: ONE
   canonical definition (deduped from two) used by every surface (POS scope
   tabs, KDS lane/kitchen filters, Slots view toggles, Guest filters). A
-  mono-labelled **glass capsule** (`--pill` track + buttons, 11px regular) whose
-  active option takes the shared brand-ember fill; token-driven track fills so it
-  turns to glass on liquid-glass surfaces and the KDS wall re-glazes its opaque
-  tokens. When it is a surface's **view/scope switch** (pinned to the section-head
-  right), it leads with a `.sglab` mono label naming the axis (`VIEW` / `SCOPE` /
-  `MODE` / `ZONE` / `STATUS`) and each option may carry a `.c` count pill — so
-  every surface's switch reads identically (Tables `Zone`, Slots `Mode`, Book
-  timeline/floor/arrivals, Loyalty views). `.core-seg.icons` = square glyph cells
-  for an icon-only switcher / filter pod; pair each button with a `title` /
+  **glass capsule** (`--pill` track + buttons, 11px regular) whose active option
+  takes the shared brand-ember fill; token-driven track fills so it turns to glass
+  on liquid-glass surfaces and the KDS wall re-glazes its opaque tokens. As a
+  surface's **view/scope switch** (in the ActionBar `left`) it carries **no visible
+  axis label** — the options name themselves (Book timeline/floor/arrivals, Slots
+  Manage/Demand, Tables' zones, KDS scope/status); the `.core-seg`'s `aria-label`
+  gives assistive tech the axis, and each option may carry a `.c` count pill.
+  `.core-seg.icons` = square glyph cells for an icon-only switcher / filter pod;
+  pair each button with a `title` /
   `aria-label` so the dropped text stays accessible.
 - **`.core-gfilters`** — the shared **glyph-only filter bar** for the guest
   surfaces (Inbox / Loyalty / CRM): one flex-wrap row where every control is a

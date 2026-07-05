@@ -19,11 +19,10 @@ The till. `/core/pos` — **and**, embedded, the Floor's check panel.
 
 ## Layout
 
-The surface leads with a **`.core-sectionhead`** (grotesk "POS · Order" title
-+ an uppercase-mono `<location> · dine-in service` sub, left-aligned), then a
-row-4 **`.core-surf-toolbar`** (via `CoreSurfToolbar` — the QR-order queue +
-the fullscreen-kiosk toggle on the right), over the **`.core-statstrip`** — the
-dense-console KPI row. Then the **`.core-pos`** grid inside the shell body:
+The surface leads with the unified **`.core-surf-toolbar`** ActionBar (via
+`CoreSurfToolbar` — the QR-order queue + the fullscreen-kiosk toggle on the
+right; no left controls), over the **`.core-statstrip`** — the dense-console KPI
+row. Then the **`.core-pos`** grid inside the shell body:
 **rail · [check-bar over menu] · ticket**.
 
 Every region is a **separate rounded, bordered glass card** — the stat strip,
