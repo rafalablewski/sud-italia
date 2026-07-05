@@ -3,8 +3,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
+import { applyAnnualWeather, applyAssumptions, applyPremises, computeChannelEconomics, computeFleetEconomics, computePremises, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationPremises, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonPage, SkeletonRows, Switch } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -12,8 +12,10 @@ const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   pizzaiolo: "Pizzaiolo", chef: "Chef", "sous-chef": "Sous-chef", "kitchen-porter": "Kitchen porter", waiter: "Waiter",
   barista: "Barista", driver: "Driver", manager: "Manager", cleaner: "Cleaner", other: "Other",
 };
+// Rent is not here — the Premises card owns the occupancy line (rent or
+// mortgage) and folds it into fixedCosts.rent via applyPremises.
 const FIXED_KEYS: { key: string; label: string }[] = [
-  { key: "rent", label: "Rent" }, { key: "utilities", label: "Utilities" }, { key: "fuel", label: "Fuel" },
+  { key: "utilities", label: "Utilities" }, { key: "fuel", label: "Fuel" },
   { key: "vehicle", label: "Vehicle" }, { key: "insurance", label: "Insurance" }, { key: "licenses", label: "Licenses" },
   { key: "marketing", label: "Marketing" }, { key: "software", label: "Software" }, { key: "professional", label: "Professional" }, { key: "other", label: "Other" },
 ];
@@ -36,8 +38,11 @@ const DEFAULT_WEATHER: SimulationWeather = { enabled: true, rainyDayMultiplier: 
 const DEFAULT_FLEET: SimulationFleetModel = { unitCount: 1, hqOverheadMonthlyGrosze: 0, supplyDiscountAtUnits: 5, supplyDiscountPct: 0.10, commissaryEnabledAtUnits: 4, commissarySavingsPct: 0.04, royaltyPct: 0.06, marketingFundPct: 0.02, dmaOverlapPct: 0.15, buildoutLearningPct: 0.05, buildoutFloorPct: 0.55 };
 
 // generic field helpers — money in zł, percent in %
-function Z({ label, grosze, onChange, w = 120 }: { label: string; grosze: number; onChange: (g: number) => void; w?: number }) {
-  return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} onChange={(e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} /></label>;
+function Z({ label, grosze, onChange, w = 120, readOnly = false, hint }: { label: string; grosze: number; onChange: (g: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
+  return <label className="av3-field" style={{ width: w }}>
+    <span className="av3-field-label">{label}{hint ? <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {hint}</span> : null}</span>
+    <input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} readOnly={readOnly} disabled={readOnly} onChange={readOnly ? undefined : (e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} />
+  </label>;
 }
 function P({ label, frac, onChange, w = 110, readOnly = false, hint }: { label: string; frac: number; onChange: (f: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
   return <label className="av3-field" style={{ width: w }}>
@@ -176,6 +181,7 @@ export function CalculatorV3() {
   const patchWeather = (over: Partial<SimulationWeather>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, weather: { ...DEFAULT_WEATHER, ...(s.weather ?? {}), ...over } }; });
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
   const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
+  const patchPremises = (over: Partial<SimulationPremises>) => setScn((s) => { if (!s || !s.premises) return s; setDirty(true); return { ...s, premises: { ...s.premises, ...over } }; });
 
   // A named preset locks Food-cost-% + Waste-% to the dish-derived values;
   // only Custom (or a scenario with no preset yet) lets the operator edit them.
@@ -187,9 +193,13 @@ export function CalculatorV3() {
   // stored guess. Everything downstream computes off this.
   const scnEff = useMemo<SimulationScenario | null>(() => {
     if (!scn) return null;
-    if (!foodWasteLocked || !dishCost) return scn;
-    return { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct };
+    const withDish = foodWasteLocked && dishCost ? { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct } : scn;
+    // Fold the rent-vs-buy decision into rent / mortgage interest / building
+    // depreciation / property costs + setup cost so the whole P&L reflects it.
+    return applyPremises(withDish);
   }, [scn, foodWasteLocked, dishCost]);
+  // Derived premises economics for the readout in the Premises card.
+  const prem = useMemo(() => (scn?.premises ? computePremises(scn.premises) : null), [scn?.premises]);
 
   // Fold the behaviour levers + annual weather into the headline scenario so
   // the P&L / tornado / returns reflect them (rule #8 — end-to-end). The
@@ -199,7 +209,7 @@ export function CalculatorV3() {
   const c = useMemo(() => (folded ? computeScenario(folded) : null), [folded]);
   const tornado = useMemo(() => (folded ? computeTornado(folded) : []), [folded]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
-  const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
+  const ret = useMemo(() => (scnEff && c ? computeReturns(c.netProfit, scnEff.setupCostGrosze ?? 0, 24) : null), [scnEff, c]);
   const projection = useMemo(() => (scnEff ? projectTwelveMonths(applyAssumptions(scnEff)) : []), [scnEff]);
   // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
   // on-site card rate isn't the blended one (matches v2).
@@ -536,12 +546,62 @@ export function CalculatorV3() {
             </div></CardBody>
           </Card>
 
+          {/* premises — the rent-vs-buy occupancy decision, folded into rent / mortgage / property costs + upfront cash */}
+          {scn.premises && (
           <Card>
-            <CardHead title="Investment & capacity" />
+            <CardHead title="Premises" description="Rent or buy the unit — occupancy cost, mortgage, property costs, upfront cash + payback all follow from this" actions={
+              <InfoButton title="Premises — rent vs buy"
+                description="The single biggest capital decision behind the unit: lease the space or buy it (cash or mortgage). Everything downstream — the rent line, mortgage interest, building depreciation, property tax + upkeep, the upfront cheque and therefore payback and IRR — is derived from this one toggle."
+                institutional="Occupancy is the third rail of restaurant P&Ls: institutional operators hold it under 8–10% of revenue. Renting keeps the upfront cheque small and the model asset-light (better cash-on-cash, faster payback) but the rent line is a permanent margin drag and exposes you to renewal hikes. Buying converts rent into a mortgage — the interest portion hits the P&L, the principal builds equity (a balance-sheet transfer, not an expense), and you carry property tax, structural upkeep and building depreciation — but you own an appreciating asset and fix your occupancy cost. The gate: only buy if the unit's EBITDA comfortably services the mortgage AND the tied-up down payment still clears your cost of capital versus deploying it into a second site."
+                plain="Rent a prime unit at 22 000 zł/mo: 66 000 zł deposit + 834 000 zł fit-out = ~900 000 zł to open, and 22 000 zł leaves every month forever. Buy the same unit for 3.5 M zł with 30% down: ~1.05 M zł deposit + 834 000 zł fit-out = ~1.9 M zł upfront, then a ~20 000 zł/mo mortgage — of which only the interest (~15 000 zł early on) is a cost, the rest buys the building — plus property tax and a roof-and-façade upkeep line. Bigger cheque, but in year 20 you own a multi-million-złoty asset instead of a stack of rent receipts."
+                tips="Renting: negotiate a rent-free fit-out period and a cap on annual indexation; a lower deposit frees working capital. Buying: a bigger down payment cuts the interest drag but slows payback — model both here and read the Investor returns card. Watch the occupancy ratio KPI; if buying pushes monthly occupancy far below a market rent, the equity build is effectively free margin."
+                methodology="computePremises(): rent mode → occupancy = rent + service charge, upfront = rent×depositMonths + fit-out. Buy mode → level annuity payment M = L·r ÷ (1−(1+r)^−n) on loan L = price×(1−down%), interest levelled as (M·n−L)÷n, building depreciation = price×rate÷12, upfront = down payment + fit-out. applyPremises() folds these into fixedCosts.rent, interest, depreciation and setupCostGrosze so the whole engine sees them. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody>
+              <div className="av3-chiprow" role="tablist" style={{ marginBottom: 12 }}>
+                {(["rent", "buy"] as const).map((m) => (
+                  <button key={m} type="button" role="tab" aria-selected={scn.premises!.mode === m} className={`av3-chip ${scn.premises!.mode === m ? "is-active" : ""}`} onClick={() => patchPremises({ mode: m })}>{m === "rent" ? "Rent" : "Buy / mortgage"}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {scn.premises.mode === "rent" ? <>
+                  <Z label="Rent / mo" grosze={scn.premises.monthlyRentGrosze} onChange={(g) => patchPremises({ monthlyRentGrosze: g })} w={120} />
+                  <Z label="Service charge / mo" grosze={scn.premises.serviceChargeMonthlyGrosze} onChange={(g) => patchPremises({ serviceChargeMonthlyGrosze: g })} w={150} />
+                  <N label="Deposit (months)" value={scn.premises.depositMonths} onChange={(n) => patchPremises({ depositMonths: n })} w={130} step={0.5} />
+                  <P label="Rent escalation %/yr" frac={scn.premises.rentEscalationPct} onChange={(f) => patchPremises({ rentEscalationPct: f })} w={150} />
+                  <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
+                </> : <>
+                  <Z label="Purchase price" grosze={scn.premises.purchasePriceGrosze} onChange={(g) => patchPremises({ purchasePriceGrosze: g })} w={140} />
+                  <P label="Down payment %" frac={scn.premises.downPaymentPct} onChange={(f) => patchPremises({ downPaymentPct: f })} w={130} />
+                  <P label="Mortgage rate %/yr" frac={scn.premises.mortgageRatePct} onChange={(f) => patchPremises({ mortgageRatePct: f })} w={150} />
+                  <N label="Term (years)" value={scn.premises.mortgageTermYears} onChange={(n) => patchPremises({ mortgageTermYears: n })} w={110} />
+                  <Z label="Property tax / yr" grosze={scn.premises.propertyTaxAnnualGrosze} onChange={(g) => patchPremises({ propertyTaxAnnualGrosze: g })} w={130} />
+                  <Z label="Building upkeep / mo" grosze={scn.premises.buildingMaintenanceMonthlyGrosze} onChange={(g) => patchPremises({ buildingMaintenanceMonthlyGrosze: g })} w={150} />
+                  <P label="Bldg deprec. %/yr" frac={scn.premises.buildingDepreciationPct} onChange={(f) => patchPremises({ buildingDepreciationPct: f })} w={140} />
+                  <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
+                </>}
+              </div>
+              {prem && (
+                <div className="av3-od-grid" style={{ marginTop: 12 }}>
+                  <div className="av3-od-field"><div className="k">Monthly occupancy</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.monthlyOccupancyGrosze)}</div></div>
+                  {scn.premises.mode === "buy" && <>
+                    <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.mortgagePaymentGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.mortgageInterestMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.buildingDepreciationMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.loanAmountGrosze)}</div></div>
+                  </>}
+                  <div className="av3-od-field"><div className="k">Upfront cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.upfrontCashGrosze)}</div></div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+          )}
+
+          <Card>
+            <CardHead title="Investment & capacity" description="Fit-out depreciation + non-mortgage interest (Premises adds building deprec. + mortgage interest on top); kitchen throughput ceiling" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Z label="Setup cost" grosze={scn.setupCostGrosze ?? 0} onChange={(g) => patch({ setupCostGrosze: g })} w={130} />
-              <Z label="Deprec./mo" grosze={scn.depreciationMonthlyGrosze ?? 0} onChange={(g) => patch({ depreciationMonthlyGrosze: g })} w={120} />
-              <Z label="Interest/mo" grosze={scn.interestMonthlyGrosze ?? 0} onChange={(g) => patch({ interestMonthlyGrosze: g })} w={120} />
+              <Z label="Fit-out deprec./mo" grosze={scn.depreciationMonthlyGrosze ?? 0} onChange={(g) => patch({ depreciationMonthlyGrosze: g })} w={140} />
+              <Z label="Other interest/mo" grosze={scn.interestMonthlyGrosze ?? 0} onChange={(g) => patch({ interestMonthlyGrosze: g })} w={130} />
               {scn.kitchenCapacity && <>
                 <N label="Pizzas/hr" value={scn.kitchenCapacity.pizzasPerHour} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, pizzasPerHour: n } })} w={100} />
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
@@ -585,17 +645,18 @@ export function CalculatorV3() {
             </CardBody>
           </Card>
 
-          {/* ingredient cost stress — each lever shifts COGS by share × delta */}
+          {/* ingredient cost stress — same lever-row look as Behaviour assumptions; each shifts COGS by share × delta */}
           <Card>
             <CardHead title="Ingredient cost stress" description="Flex a line's cost — COGS moves by its share × delta" />
-            <CardBody><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; return (
-                <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3, width: 116, border: "1px solid var(--av3-line)", borderRadius: 7, padding: 7 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 11 }}>{INGREDIENT_LABELS[k]}</span><Switch aria-label={INGREDIENT_LABELS[k]} size="sm" checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: lev?.cogsShare ?? INGREDIENT_SHARES[k], costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} /></div>
-                  {on && lev && <input className="av3-input" type="number" step="1" value={Math.round((lev.costDeltaPct ?? 0) * 100)} onChange={(e) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: (Number(e.target.value) || 0) / 100 } } })} title="cost delta %" />}
+            <CardBody style={{ paddingTop: 4 }}>
+              {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; const share = lev?.cogsShare ?? INGREDIENT_SHARES[k]; return (
+                <div key={k} className="av3-leverrow">
+                  <Switch aria-label={INGREDIENT_LABELS[k]} checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: share, costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} />
+                  <span className="av3-lever-name">{INGREDIENT_LABELS[k]}<span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {Math.round(share * 100)}% COGS</span></span>
+                  {on && lev && <P label="Cost Δ %" frac={lev.costDeltaPct ?? 0} onChange={(f) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: f } } })} w={96} />}
                 </div>
               ); })}
-            </div></CardBody>
+            </CardBody>
           </Card>
 
           {/* seasonality + weather → fold into the headline ordersPerDay/daysOpen */}
@@ -742,7 +803,7 @@ export function CalculatorV3() {
             </Card>
           )}
 
-          {ret && (scn.setupCostGrosze ?? 0) > 0 && (
+          {ret && (scnEff?.setupCostGrosze ?? 0) > 0 && (
             <Card>
               <CardHead title="Investor returns" description="24-month horizon on a steady net-profit stream" />
               <CardBody>

@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationPremises, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
@@ -12809,6 +12809,28 @@ export function defaultSimulationScenario(): SimulationScenario {
     // prime-street venue. An order of magnitude above a truck buildout, and
     // the number payback / IRR are computed against.
     setupCostGrosze: 90_000_000,
+    // Premises — defaults to RENTING a prime-street unit, tuned so the folded
+    // numbers reproduce the legacy baseline exactly: rent 22 000 zł/mo (= the
+    // old fixedCosts.rent), a 3-month deposit (66 000 zł) + 834 000 zł fit-out
+    // & opening capital ⇒ 900 000 zł upfront (= the old setupCost). Flip to
+    // "buy" to model a mortgage: ~3.5 M zł prime unit, 30% down, 7.8% over
+    // 20 years, 2.5%/yr building depreciation (≈40-yr straight line), plus
+    // property tax + structural upkeep the owner carries instead of a landlord.
+    premises: {
+      mode: "rent",
+      monthlyRentGrosze: 2_200_000,
+      depositMonths: 3,
+      rentEscalationPct: 0.05,
+      serviceChargeMonthlyGrosze: 0,
+      purchasePriceGrosze: 350_000_000,
+      downPaymentPct: 0.30,
+      mortgageRatePct: 0.078,
+      mortgageTermYears: 20,
+      propertyTaxAnnualGrosze: 600_000,
+      buildingMaintenanceMonthlyGrosze: 150_000,
+      buildingDepreciationPct: 0.025,
+      fitoutGrosze: 83_400_000,
+    },
     seasonality: {
       // Indoor dining is far less weather-elastic than an outdoor truck.
       // Winter holds up — a warm room is a draw when it's cold out, and
@@ -13016,8 +13038,49 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
     prepComplexityMultiplier: typeof saved.prepComplexityMultiplier === "number" && saved.prepComplexityMultiplier > 0 ? Math.min(3, saved.prepComplexityMultiplier) : defaults.prepComplexityMultiplier,
     fleet: hydrateFleet(saved.fleet, defaults.fleet),
+    premises: hydratePremises(
+      saved.premises,
+      defaults.premises!,
+      saved.fixedCosts?.rent,
+      saved.setupCostGrosze,
+    ),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
+}
+
+/** Hydrate the premises decision. A saved, valid premises wins; otherwise we
+ *  migrate legacy scenarios (which only had a flat rent line + setup cost) into
+ *  a rent-mode premises that reproduces their numbers — rent from the old rent
+ *  line, fit-out = old setup − deposit — so nothing shifts on first load. */
+function hydratePremises(
+  saved: Partial<SimulationPremises> | undefined,
+  def: SimulationPremises,
+  legacyRentGrosze?: number,
+  legacySetupGrosze?: number,
+): SimulationPremises {
+  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "buy")) {
+    return {
+      mode: saved.mode,
+      monthlyRentGrosze: clampNonNeg(saved.monthlyRentGrosze, def.monthlyRentGrosze),
+      depositMonths: clampNonNeg(saved.depositMonths, def.depositMonths),
+      rentEscalationPct: clamp01(saved.rentEscalationPct, def.rentEscalationPct),
+      serviceChargeMonthlyGrosze: clampNonNeg(saved.serviceChargeMonthlyGrosze, def.serviceChargeMonthlyGrosze),
+      purchasePriceGrosze: clampNonNeg(saved.purchasePriceGrosze, def.purchasePriceGrosze),
+      downPaymentPct: clamp01(saved.downPaymentPct, def.downPaymentPct),
+      mortgageRatePct: clamp01(saved.mortgageRatePct, def.mortgageRatePct),
+      mortgageTermYears: clampNonNeg(saved.mortgageTermYears, def.mortgageTermYears),
+      propertyTaxAnnualGrosze: clampNonNeg(saved.propertyTaxAnnualGrosze, def.propertyTaxAnnualGrosze),
+      buildingMaintenanceMonthlyGrosze: clampNonNeg(saved.buildingMaintenanceMonthlyGrosze, def.buildingMaintenanceMonthlyGrosze),
+      buildingDepreciationPct: clamp01(saved.buildingDepreciationPct, def.buildingDepreciationPct),
+      fitoutGrosze: clampNonNeg(saved.fitoutGrosze, def.fitoutGrosze),
+    };
+  }
+  const rent = typeof legacyRentGrosze === "number" && legacyRentGrosze >= 0 ? legacyRentGrosze : def.monthlyRentGrosze;
+  const deposit = rent * def.depositMonths;
+  const fitout = typeof legacySetupGrosze === "number" && legacySetupGrosze >= 0
+    ? Math.max(0, legacySetupGrosze - deposit)
+    : def.fitoutGrosze;
+  return { ...def, monthlyRentGrosze: rent, fitoutGrosze: fitout };
 }
 
 function clamp01(n: unknown, fallback: number): number {

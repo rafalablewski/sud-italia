@@ -1386,6 +1386,47 @@ export interface SimulationWeather {
   eventDayMultiplier: number;
 }
 
+/** The premises / occupancy decision — rent a unit or buy it (with a mortgage).
+ *  This is the single source of truth for the restaurant's property costs: the
+ *  engine's `applyPremises` derives the monthly rent line, mortgage interest,
+ *  building depreciation, property tax + upkeep and the upfront cash from it, so
+ *  the Rent-vs-Buy choice flows all the way through the P&L, payback and IRR. */
+export interface SimulationPremises {
+  /** "rent" a leased unit or "buy" it outright / with a mortgage. */
+  mode: "rent" | "buy";
+  // ── Rent path ──────────────────────────────────────────────────────────
+  /** Monthly base rent in grosze (feeds the fixed-cost rent line). */
+  monthlyRentGrosze: number;
+  /** Security deposit held upfront, expressed in months of rent (× rent = cash). */
+  depositMonths: number;
+  /** Annual rent escalation / indexation (0–1) — rent step-up per year. */
+  rentEscalationPct: number;
+  /** Monthly service charge / common-area maintenance in grosze (on top of rent). */
+  serviceChargeMonthlyGrosze: number;
+  // ── Buy path ───────────────────────────────────────────────────────────
+  /** Purchase price of the premises in grosze. */
+  purchasePriceGrosze: number;
+  /** Down payment as a fraction of the price (0–1); the rest is mortgaged. */
+  downPaymentPct: number;
+  /** Annual mortgage interest rate (0–1). */
+  mortgageRatePct: number;
+  /** Mortgage term in years. */
+  mortgageTermYears: number;
+  /** Annual property tax (podatek od nieruchomości) in grosze. */
+  propertyTaxAnnualGrosze: number;
+  /** Owner's structural building upkeep per month in grosze (roof / façade /
+   *  systems — over and above the operational maintenance line). */
+  buildingMaintenanceMonthlyGrosze: number;
+  /** Annual building depreciation rate (0–1) applied to the purchase price —
+   *  e.g. 0.025 ≈ a 40-year straight line on the structure. */
+  buildingDepreciationPct: number;
+  // ── Shared ─────────────────────────────────────────────────────────────
+  /** One-off fit-out / build-out + opening working-capital capex in grosze
+   *  (kitchen, oven, interior). Added to deposit / down payment for the total
+   *  upfront cash the payback + IRR are computed against. */
+  fitoutGrosze: number;
+}
+
 export interface SimulationScenario {
   /** Average orders served per operating day. */
   ordersPerDay: number;
@@ -1404,8 +1445,14 @@ export interface SimulationScenario {
   ingredientInflationPct?: number;
   /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
   paymentProcessorPct?: number;
-  /** Setup cost in grosze (restaurant fit-out, kitchen build, deposits) — payback calc. */
+  /** Setup cost in grosze (restaurant fit-out, kitchen build, deposits) — payback calc.
+   *  When `premises` is set it is the authoritative source and `applyPremises`
+   *  derives this from the fit-out + deposit / down payment. */
   setupCostGrosze?: number;
+  /** Premises / occupancy decision (rent vs buy). Drives the rent line,
+   *  mortgage interest, building depreciation, property costs + upfront cash
+   *  via `applyPremises`. */
+  premises?: SimulationPremises;
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
   /** Id of the active menu scenario preset (e.g. "balanced", "premium").

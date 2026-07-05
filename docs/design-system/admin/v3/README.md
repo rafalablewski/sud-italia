@@ -1216,6 +1216,29 @@ auth canvas's signature lighting and the sign-in lockup:
   dishes. The remaining Variable-cost levers (payment · refund · loyalty · CIT ·
   packaging) stay the per-revenue **constants** they always were. The `P()` field
   primitive gained an optional `readOnly` + `hint` for the locked state.
+  **Part 3k shipped — premises (rent vs buy) + matching lever cards:** the
+  **Investment & capacity** card was unprofessional about the biggest capital
+  decision — a single flat "Setup cost" and "Rent" line hid the rent-vs-buy
+  choice entirely. A new **Premises** card (between Fixed costs and Investment)
+  carries a Rent / Buy segmented toggle: *Rent* → monthly rent, service charge,
+  deposit (months), escalation, fit-out capex; *Buy* → purchase price, down
+  payment %, mortgage rate + term, property tax, structural upkeep, building
+  depreciation %, fit-out capex. A derived readout shows monthly occupancy,
+  mortgage P&I (with the interest split), building depreciation, loan and upfront
+  cash. The engine gained `computePremises` + `applyPremises` (a fold like
+  `applyAssumptions`/`applyAnnualWeather`): it derives `fixedCosts.rent`, mortgage
+  interest, building depreciation, property tax + upkeep and `setupCostGrosze`
+  from the decision, stacking premises interest/depreciation on top of the
+  operator's non-premises values — so rent-vs-buy flows all the way to payback +
+  IRR. `SimulationPremises` is the new authoritative source: `rent` left the
+  Fixed-costs card (`FIXED_KEYS`) and the Investment card now holds only fit-out
+  depreciation + non-mortgage interest + capacity. Rent-mode defaults reproduce
+  the legacy baseline exactly (22 000 zł rent, 900 000 zł setup). `hydratePremises`
+  migrates legacy scenarios from their flat rent + setup. The `Z()` primitive
+  gained the same `readOnly` + `hint` as `P()`. In the same pass the **Ingredient
+  cost stress** card was restyled to the identical `av3-leverrow` toggle-row look
+  as **Behaviour assumptions** (switch + name + inline `P` field), replacing its
+  odd bordered-tile grid so the two lever cards read as one system.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the
