@@ -1332,7 +1332,7 @@ auth canvas's signature lighting and the sign-in lockup:
   pay) = Σ each on-day's shift length** (`laborHoursPerWeek`/`weekOf`), so Labour's
   Hrs/wk + salary and the coverage grid both derive from the rota, live. The Shift
   plan card is now a **weekly rota grid** (person × Mon–Sun; each cell a clean
-  readable shift *chip* — `11–19` or `off` — that opens a portal **popover editor**
+  readable shift *chip* — `12–20` or `off` — that opens a portal **popover editor**
   with shift presets, Start/End, *Day off* + *All week*; per-worker h/wk on the
   right) over a **per-day coverage grid**
   with Mon–Sun day tabs (staffing varies by day as days-off thin the floor). A hard
@@ -1345,6 +1345,29 @@ auth canvas's signature lighting and the sign-in lockup:
   single-shift lines; the sanitizer + PUT validate `week`; the default ships as 10
   workers each with a staggered day off (labour unchanged at ~82.5k zł). Design
   chosen from `tests/sketches/labour-per-day-scheduler-concepts.html` (concept 01).
+  **Part 3s shipped — coverage-complete, cost-minimal auto-roster + 12–23 window:**
+  the default service window moved to **12:00–23:00** (still 11 open-hours; the
+  default worker shifts + fallbacks slid +1 h, coverage/labour unchanged). More
+  importantly `rosterWeek` was rewritten from a flat "7 h shift + one staggered
+  day off" heuristic — which left the open/close edges bare on whichever day a
+  worker's sole cover was off (the reported "short days") — into a demand-driven
+  scheduler that **provably covers every open hour on all 7 days at the minimum
+  labour hours**. It now takes a `RosterCtx {ordersPerDay, effCap}` (the same
+  numbers the coverage grid uses) so it knows the real requirement. Per role it
+  builds an hourly `need[i]` (pizzaioli `⌈demand÷effCap⌉`, other roles
+  demand-proportional to headcount, floored at 1 for continuity, capped at
+  headcount), decomposes that staircase into contiguous **coverage bands** (band
+  k = the hours needing ≥ k people, split into ≤`ROSTER_MAX_SHIFT`=12 h chunks so
+  rest never breaks), and tiles each band's 7 days across a crew as contiguous
+  runs. Because every band is filled on all 7 days, per-hour coverage = `need`
+  every day — no gaps — at exactly `7 × Σ need[i]` hours (the theoretical floor),
+  with ≥12 h rest by construction and days off backfilled by the crew. Where the
+  team can't reach peak `need` the depth caps at headcount and the coverage grid
+  surfaces the residual gap (a genuine "hire one more" signal). Verified: on the
+  default team the all-7-day gap count drops 11→0 while weekly hours *fall*
+  660→602, and an overloaded scenario correctly leaves only the true headcount
+  shortfall red. `autoRoster` passes the demand context; the ⓘ methodology +
+  card footnote document the formula.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

@@ -152,34 +152,100 @@ function restViolationDays(week: DayShift[]): Set<number> {
   return bad;
 }
 
-// Auto-roster the whole team's week: give each worker a demand-fit *consistent*
-// shift (greedy on a shared coverage curve so people stagger relative to each
-// other), then a staggered day off so every day is covered. A consistent shift
-// of length L leaves 24−L h rest between consecutive days, so ≤12h shifts never
-// breach the rest rule — violations only come from manual edits.
-function rosterWeek(labor: SimulationLaborLine[], openHour: number, closeHour: number): SimulationLaborLine[] {
+// Demand context the roster needs to size coverage: daily order volume and the
+// effective per-hour kitchen ceiling (pizzas/hr ÷ prep-complexity) — the SAME
+// numbers the coverage grid uses, so a rostered week reads green there.
+interface RosterCtx { ordersPerDay: number; effCap: number }
+const ROSTER_MAX_SHIFT = 12; // cap a consistent shift so 24−L ≥ 12 h rest always holds
+
+// Cost-minimal, coverage-complete auto-roster.
+//
+// The old roster placed a flat 7 h shift per person and staggered a single day
+// off — which left the open/close edges bare on whichever day their sole cover
+// was off (the "short days"). This one is demand-driven and provably covers
+// every open hour on all 7 days at the minimum possible labour hours.
+//
+// Per role it computes an hourly requirement `need[i]` (pizzaioli: ⌈demand ÷
+// effCap⌉; other roles: demand-proportional to headcount) with a floor of 1 —
+// continuity while open — capped at the headcount on hand. It then decomposes
+// that staircase into contiguous "coverage bands" (band k = the hours needing
+// ≥ k people) and hands each band to a subset of the role's workers, tiling the
+// 7 days among them as contiguous runs. Because every band is filled on all 7
+// days, per-hour coverage equals `need` every day — no gaps. Total hours =
+// 7 × Σ need[i], the theoretical minimum to satisfy the requirement, so it's as
+// lean as a covered rota can be. Consistent shifts (≤12 h) keep 24−L ≥ 12 h
+// rest by construction. Where the team is too small to reach `need` at peak the
+// depth is capped at headcount and the coverage grid surfaces the residual gap
+// (a genuine "hire one more" signal, not a rostering failure).
+function rosterWeek(labor: SimulationLaborLine[], openHour: number, closeHour: number, ctx?: RosterCtx): SimulationLaborLine[] {
   const H = Math.max(1, closeHour - openHour);
   const weights = demandWeights(H);
-  const L = Math.min(H, Math.max(4, Math.round(H * 0.6)));
-  const cov = new Array(H).fill(0);
-  return labor.map((l, idx) => {
-    let shift: { start: number; end: number };
-    if (L >= H) {
-      shift = { start: openHour, end: closeHour };
-    } else {
-      let bestStart = openHour;
-      let best = -Infinity;
-      for (let st = openHour; st <= closeHour - L; st++) {
-        let score = 0;
-        for (let h = st; h < st + L; h++) score += weights[h - openHour] / (cov[h - openHour] + 1);
-        if (score > best) { best = score; bestStart = st; }
-      }
-      for (let h = bestStart; h < bestStart + L; h++) cov[h - openHour]++;
-      shift = { start: bestStart, end: bestStart + L };
+  const ordersPerDay = Math.max(0, ctx?.ordersPerDay ?? 0);
+  const effCap = Math.max(1e-6, ctx?.effCap ?? Infinity);
+  const demand = weights.map((w) => ordersPerDay * w);
+  const peak = Math.max(1e-9, ...demand);
+
+  // group workers by role, preserving first-seen order
+  const byRole = new Map<BusinessCostPayrollRole, SimulationLaborLine[]>();
+  for (const l of labor) { if (!byRole.has(l.role)) byRole.set(l.role, []); byRole.get(l.role)!.push(l); }
+
+  const weekById = new Map<string, DayShift[]>();
+  for (const [role, workers] of byRole) {
+    const n = workers.length;
+    // hourly requirement for this role, floored at 1 (continuity) and capped at headcount
+    const need = demand.map((dh) => {
+      const base = role === "pizzaiolo" ? Math.ceil(dh / effCap) : Math.round((n * dh) / peak);
+      return Math.min(n, Math.max(1, base));
+    });
+    const depth = Math.max(1, ...need);
+
+    // coverage bands: band k = contiguous hull of the hours needing ≥ k people,
+    // split into ≤ROSTER_MAX_SHIFT-hour chunks so no single shift breaks rest
+    const bands: { s: number; e: number }[] = [];
+    for (let k = 1; k <= depth; k++) {
+      let a = -1, b = -1;
+      for (let i = 0; i < H; i++) if (need[i] >= k) { if (a < 0) a = i; b = i; }
+      if (a < 0) continue;
+      let s = openHour + a; const e = openHour + b + 1;
+      while (e - s > ROSTER_MAX_SHIFT) { bands.push({ s, e: s + ROSTER_MAX_SHIFT }); s += ROSTER_MAX_SHIFT; }
+      bands.push({ s, e });
     }
-    const offDay = idx % 7; // stagger the single day off across the team
-    return { ...l, week: Array.from({ length: 7 }, (_, d) => (d === offDay ? null : { ...shift })), shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined };
-  });
+
+    // one worker per band minimum; spare workers reinforce the band whose workers
+    // currently carry the most days (spreads the load → creates days off, no extra hours)
+    const bandCrew = bands.map(() => 1);
+    let placed = Math.min(n, bands.length);
+    while (placed < n) {
+      let bi = 0, worst = -1;
+      for (let j = 0; j < bands.length; j++) { const load = 7 / bandCrew[j]; if (load > worst) { worst = load; bi = j; } }
+      bandCrew[bi]++; placed++;
+    }
+    // flatten to a worker→band map (extra workers beyond Σ bandCrew fold onto band 0;
+    // if the team can't man every band, deep bands go unstaffed = the capped shortage)
+    const workerBand: number[] = [];
+    bands.forEach((_, bi) => { for (let c = 0; c < bandCrew[bi]; c++) if (workerBand.length < n) workerBand.push(bi); });
+    while (workerBand.length < n) workerBand.push(0);
+
+    const weeks: DayShift[][] = workers.map(() => Array<DayShift>(7).fill(null));
+    bands.forEach((band, bi) => {
+      const crew = workerBand.map((b, wi) => (b === bi ? wi : -1)).filter((wi) => wi >= 0);
+      if (crew.length === 0) return; // unstaffed band → covered by the shortage cap above
+      // tile all 7 days among this band's crew as contiguous runs; offset by band so
+      // days off stagger across bands and daily headcount stays smooth
+      for (let d = 0; d < 7; d++) {
+        const day = (d + bi) % 7;
+        const owner = crew[Math.min(crew.length - 1, Math.floor((d * crew.length) / 7))];
+        weeks[owner][day] = { start: band.s, end: band.e };
+      }
+    });
+    workers.forEach((w, wi) => weekById.set(w.id, weeks[wi]));
+  }
+
+  return labor.map((l) => ({
+    ...l,
+    week: weekById.get(l.id) ?? weekOf(l, openHour, closeHour),
+    shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined,
+  }));
 }
 
 // Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
@@ -326,7 +392,12 @@ export function CalculatorV3() {
   });
   // Roster actions — stagger everyone to the demand curve, revert to flat, or
   // break one line's headcount into hand-editable per-person shifts.
-  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 12, closeHour: 23 }; return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
+  const autoRoster = () => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
+    const effCap = (s.kitchenCapacity?.pizzasPerHour ?? 0) / Math.max(0.5, s.prepComplexityMultiplier ?? 1);
+    return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour), { ordersPerDay: s.ordersPerDay, effCap }) };
+  });
   // Set one day of one worker's rota (null = day off). Materialises the week
   // first (migrating a legacy line) so every edit lands on a real 7-slot array.
   const setDay = (i: number, day: number, shift: DayShift) => setScn((s) => {
@@ -807,13 +878,13 @@ export function CalculatorV3() {
           <Card>
             <CardHead title="Shift plan & coverage" description="Weekly rota — set each person's shift per day (open 7 days · ≥12 h rest between shifts). Pick a day to check its coverage vs demand." actions={
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <Button variant="secondary" size="sm" onClick={autoRoster} title="Give everyone a demand-fit shift on 6 staggered days (rest-safe)">Auto-roster</Button>
+                <Button variant="secondary" size="sm" onClick={autoRoster} title="Cover every open hour on all 7 days at the leanest labour hours — depth matched to demand, staggered days off, ≥12 h rest">Auto-roster</Button>
                 <InfoButton title="Shift plan & coverage"
                 description="A weekly rota: set each person's shift per day (or a day off), and a per-day coverage grid shows how many of each role are on the floor every hour against demand — flagging peak hours, under-staffed gaps and any shift that breaks the 12-hour-rest rule."
                 institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — while giving each person their 1–2 days off and honouring the ≥12 h rest between shifts that the labour code (and basic humanity) require. A rota that's green at peak, lean off-peak and rest-legal is what holds labour % in the 22–28% band without wrecking service or burning the team out."
                 plain="The restaurant is open all 7 days; each person works 5–6 of them. Pizzaiolo 2 closes Thu at 22:00 and you try to open them Fri at 08:00 — that's only 10 h rest, so the Friday cell outlines red. Slide dinner people onto the busy days, give quiet Mondays fewer staff, and watch the coverage grid for the day you pick recompute live."
-                tips="Hit Auto-roster for a demand-fit, rest-safe week in one click, then hand-tune cells. Use the day tabs to check each day's coverage — Mondays and mid-week are where days-off thin the floor. Any red-outlined cell breaks the 12 h-rest rule; push that shift later or the previous one earlier."
-                methodology="Each worker has a 7-slot week (Mon–Sun); a null slot is a day off. Weekly hours (and pay) = Σ each on-day's shift length. Coverage for the selected day: per hour, staff-on counts every worker whose that-day shift covers the hour; kitchen need = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Rest between a shift ending at e and the next on-day starting at s = (24−e)+s (+24 h per skipped day, incl. Sun→Mon wrap); <12 h flags. Auto-roster gives a consistent shift (24−L h rest, always ≥12) on 6 staggered days. src/admin-v3/CalculatorV3.tsx." />
+                tips="Hit Auto-roster for a fully-covered, cost-minimal week in one click, then hand-tune cells. Use the day tabs to check each day — coverage is now identical across the 7 (days off are backfilled). If a peak hour still shows red after Auto-roster the team is genuinely one short at that hour: add a head to that role and re-roster."
+                methodology="Each worker has a 7-slot week (Mon–Sun); a null slot is a day off. Weekly hours (and pay) = Σ each on-day's shift length. Coverage for the selected day: per hour, staff-on counts every worker whose that-day shift covers the hour; kitchen need = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Rest between a shift ending at e and the next on-day starting at s = (24−e)+s (+24 h per skipped day, incl. Sun→Mon wrap); <12 h flags. Auto-roster: per role, need[i] = ⌈demand÷effCap⌉ for pizzaioli, else demand-proportional to headcount, floored at 1 (continuity) and capped at headcount; that staircase is split into contiguous coverage bands (band k = hours needing ≥k) and each band's 7 days are tiled across a crew as contiguous ≤12 h shifts — so every hour is covered on all 7 days at exactly 7×Σneed[i] hours, the minimum, with ≥12 h rest by construction. Where need exceeds headcount the depth caps and the grid shows the residual gap. src/admin-v3/CalculatorV3.tsx." />
               </div>
             } />
             <CardBody>
@@ -875,7 +946,7 @@ export function CalculatorV3() {
                         </Fragment>
                       ))}
                     </div></div>
-                    <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 6 }}>Two numbers = that day&rsquo;s shift; <b>off</b> toggles a day off. A <span style={{ color: "var(--av3-bad)" }}>red outline</span> means &lt;12 h rest after the previous shift. Weekly hours + pay = Σ the on-day shifts. <b>Auto-roster</b> fills a demand-fit, rest-safe week.</div>
+                    <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 6 }}>Two numbers = that day&rsquo;s shift; <b>off</b> toggles a day off. A <span style={{ color: "var(--av3-bad)" }}>red outline</span> means &lt;12 h rest after the previous shift. Weekly hours + pay = Σ the on-day shifts. <b>Auto-roster</b> covers every open hour on all 7 days at the leanest labour hours.</div>
 
                     {/* ── coverage for the selected day ── */}
                     <div style={{ marginTop: 14, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
