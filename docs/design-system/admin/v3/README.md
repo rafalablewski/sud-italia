@@ -1239,6 +1239,21 @@ auth canvas's signature lighting and the sign-in lockup:
   cost stress** card was restyled to the identical `av3-leverrow` toggle-row look
   as **Behaviour assumptions** (switch + name + inline `P` field), replacing its
   odd bordered-tile grid so the two lever cards read as one system.
+  **Part 3l shipped — display currency (PLN / USD / EUR / AED):** a currency
+  selector in the Calculator page-head lets the operator read + enter the whole
+  model in any of four currencies. The canonical model stays in **PLN grosze** —
+  this is a pure display/entry layer: a `CalcCurrencyCtx` provides `{ cur, money }`
+  down the tree, the `Z` money-field converts grosze→display on render
+  (`convertFromGrosze`) and display→grosze on input (`convertToGrosze`, the new
+  inverse in `src/lib/currency.ts`), and every `formatPrice` in the page became a
+  context `money()` so KPIs, P&L, premises, heatmaps, projection, returns and the
+  real-order sandboxes all reformat together. Rates come from the operator's
+  `/admin/currency` settings (hydrated on load via `fetchPublicSettings`), falling
+  back to the build-time reference rates. **AED** was added as a first-class
+  currency across the system (`Currency`/`AppCurrency` unions, `CURRENCY_META`,
+  `DEFAULT_RATES` ≈ 0.92/PLN, the `/admin/currency` Zod schema + CurrencyV3 board),
+  so it's also selectable for the customer storefront once enabled. The choice
+  persists as `SimulationScenario.displayCurrency`.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

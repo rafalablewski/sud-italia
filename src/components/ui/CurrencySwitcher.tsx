@@ -27,6 +27,7 @@ const SHORT_SYMBOL: Record<Currency, string> = {
   EUR: "€",
   USD: "$",
   SGD: "S$",
+  AED: "د.إ",
 };
 
 export function CurrencySwitcher() {

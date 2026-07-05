@@ -325,11 +325,11 @@ export default async function CapabilitiesPage() {
             "Read-only inspector for the three-theme architecture (Core / Admin / Homepage). Each theme view shows: source files + line counts, the routes that load it, live token swatches imported from the typed JS mirror (themes/{core,homepage}/theme.ts + admin/v2/theme.ts) so colours always match the code, the font stack and how it's loaded, the CSS selector prefixes the theme owns, and the file paths to edit. Inspector-only today; future capabilities (live token override, theme upload) land on the same surface.",
         },
         {
-          name: "Multi-currency display (PLN / USD / SGD / EUR)",
+          name: "Multi-currency display (PLN / USD / SGD / EUR / AED)",
           status: "live",
           href: "/admin/currency",
           summary:
-            "Customer header switcher exposes USD, SGD, EUR alongside the source-of-truth PLN. Operator sets exchange rates + enabled list + default at /admin/currency; rates flow to /api/settings/public so the customer site hydrates the formatter on mount. formatPrice() in src/lib/utils.ts routes through src/lib/currency.ts and converts grosze→target at display time. Charges still settle in PLN via the Stripe account — non-PLN selections are a reference display, with an explicit footer note in the switcher. Admin pages never mount the customer CurrencyProvider so they continue to render PLN.",
+            "Customer header switcher exposes USD, SGD, EUR, AED alongside the source-of-truth PLN. Operator sets exchange rates + enabled list + default at /admin/currency; rates flow to /api/settings/public so the customer site hydrates the formatter on mount. formatPrice() in src/lib/utils.ts routes through src/lib/currency.ts and converts grosze→target at display time. The Finance Calculator (/admin/simulation) carries its own PLN/USD/EUR/AED selector that overrides the admin PLN pin — the whole P&L, premises, heatmaps and inputs reformat + reparse (convertToGrosze) at the operator rate, persisted as SimulationScenario.displayCurrency. Charges still settle in PLN via the Stripe account — non-PLN selections are a reference display, with an explicit footer note in the switcher. Admin pages never mount the customer CurrencyProvider so they continue to render PLN.",
           caveats:
             "Display-only. Stripe Checkout still creates PLN sessions — to charge in USD/SGD/EUR end-to-end we'd need separate Stripe accounts (currency is bound to the merchant account at creation). Acceptable for cross-border tourists / DACH-Singapore expansion who want to see what they'd pay in their home currency before committing.",
         },

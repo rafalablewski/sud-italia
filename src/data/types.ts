@@ -1453,6 +1453,10 @@ export interface SimulationScenario {
    *  mortgage interest, building depreciation, property costs + upfront cash
    *  via `applyPremises`. */
   premises?: SimulationPremises;
+  /** Display currency for the Calculator — the canonical model stays in PLN
+   *  grosze; this only changes how amounts are shown + entered, converted at
+   *  the operator's exchange rate. Mirrors `Currency` in src/lib/currency.ts. */
+  displayCurrency?: "PLN" | "USD" | "SGD" | "EUR" | "AED";
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
   /** Id of the active menu scenario preset (e.g. "balanced", "premium").

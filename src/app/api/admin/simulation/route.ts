@@ -128,6 +128,10 @@ export const PUT = withAdmin(
       prepComplexityMultiplier: typeof b.prepComplexityMultiplier === "number" ? b.prepComplexityMultiplier : undefined,
       fleet: b.fleet,
       premises: b.premises && typeof b.premises === "object" ? b.premises : undefined,
+      displayCurrency:
+        b.displayCurrency && ["PLN", "USD", "SGD", "EUR", "AED"].includes(b.displayCurrency)
+          ? b.displayCurrency
+          : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

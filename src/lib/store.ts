@@ -3547,7 +3547,7 @@ export async function renameCustomMenuItem(
 
 // --- Settings ---
 
-export type AppCurrency = "PLN" | "USD" | "SGD" | "EUR";
+export type AppCurrency = "PLN" | "USD" | "SGD" | "EUR" | "AED";
 export type AppLocale = "pl" | "en" | "de" | "en-SG";
 
 export interface CurrencyConfig {
@@ -3718,7 +3718,7 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   enabledCurrencies: ["PLN", "USD", "SGD", "EUR"],
   // Reference rates per 1 PLN as of mid-2026 — operator overrides via
   // /admin/currency the moment FX moves.
-  rates: { PLN: 1, USD: 0.25, SGD: 0.34, EUR: 0.23 },
+  rates: { PLN: 1, USD: 0.25, SGD: 0.34, EUR: 0.23, AED: 0.92 },
 };
 
 export const DEFAULT_LOCALE_CONFIG: LocaleConfig = {
@@ -12843,6 +12843,7 @@ export function defaultSimulationScenario(): SimulationScenario {
       autumn: 1.00,
     },
     menuScenario: "balanced",
+    displayCurrency: "PLN",
     assumptions: defaultSimulationAssumptions(),
     weather: defaultSimulationWeather(),
     updatedAt: new Date().toISOString(),
@@ -13016,6 +13017,10 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     seasonality: saved.seasonality ?? defaults.seasonality,
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
+    displayCurrency:
+      saved.displayCurrency && ["PLN", "USD", "SGD", "EUR", "AED"].includes(saved.displayCurrency)
+        ? saved.displayCurrency
+        : defaults.displayCurrency,
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
     assumptions,
     assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,

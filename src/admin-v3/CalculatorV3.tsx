@@ -1,8 +1,10 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, Fragment, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { CURRENCY_META, convertFromGrosze, convertToGrosze, formatPriceInCurrency, type Currency } from "@/lib/currency";
+import { fetchPublicSettings } from "@/lib/public-settings";
 import { applyAnnualWeather, applyAssumptions, applyPremises, computeChannelEconomics, computeFleetEconomics, computePremises, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationPremises, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonPage, SkeletonRows, Switch } from "./ui";
@@ -37,11 +39,19 @@ const SEASONS: { key: keyof SimulationSeasonality; label: string }[] = [{ key: "
 const DEFAULT_WEATHER: SimulationWeather = { enabled: true, rainyDayMultiplier: 0.75, rainyShare: 0.30, heatwaveMultiplier: 1.40, heatwaveShare: 0.10, holidayClosedDaysPerMonth: 1, holidayPeakDaysPerMonth: 1, holidayPeakMultiplier: 1.60, schoolHolidayLunchMultiplier: 0.85, eventDaysPerMonth: 1, eventDayMultiplier: 1.50 };
 const DEFAULT_FLEET: SimulationFleetModel = { unitCount: 1, hqOverheadMonthlyGrosze: 0, supplyDiscountAtUnits: 5, supplyDiscountPct: 0.10, commissaryEnabledAtUnits: 4, commissarySavingsPct: 0.04, royaltyPct: 0.06, marketingFundPct: 0.02, dmaOverlapPct: 0.15, buildoutLearningPct: 0.05, buildoutFloorPct: 0.55 };
 
-// generic field helpers — money in zł, percent in %
+// Calculator display currency — the model stays canonical in PLN grosze; this
+// context only reformats + reparses money at the operator's FX rate. The four
+// currencies the Calculator offers (SGD lives in the customer switcher only).
+const CALC_CURRENCIES: Currency[] = ["PLN", "USD", "EUR", "AED"];
+const CalcCurrencyCtx = createContext<{ cur: Currency; money: (g: number) => string }>({ cur: "PLN", money: formatPrice });
+const useCalcCurrency = () => useContext(CalcCurrencyCtx);
+
+// generic field helpers — money shown/entered in the chosen display currency, percent in %
 function Z({ label, grosze, onChange, w = 120, readOnly = false, hint }: { label: string; grosze: number; onChange: (g: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
+  const { cur } = useCalcCurrency();
   return <label className="av3-field" style={{ width: w }}>
     <span className="av3-field-label">{label}{hint ? <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {hint}</span> : null}</span>
-    <input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} readOnly={readOnly} disabled={readOnly} onChange={readOnly ? undefined : (e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} />
+    <input className="av3-input" type="number" step="0.01" value={+convertFromGrosze(Math.round(grosze), cur).toFixed(2)} readOnly={readOnly} disabled={readOnly} onChange={readOnly ? undefined : (e) => onChange(convertToGrosze(Number(e.target.value) || 0, cur))} />
   </label>;
 }
 function P({ label, frac, onChange, w = 110, readOnly = false, hint }: { label: string; frac: number; onChange: (f: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
@@ -115,13 +125,14 @@ function resolveScenarioPreset(id: string, overrides?: Record<string, Simulation
   return ovr ? { ...base, ordersPerDay: ovr.ordersPerDay, daysOpenPerMonth: ovr.daysOpenPerMonth, avgTicketGrosze: ovr.avgTicketGrosze, cogsPct: ovr.cogsPct, attach: ovr.attach } : base;
 }
 
-// compact zł for dense heatmap cells (grosze → "7.2k" / "320")
-function kZl(g: number): string {
-  const z = g / 100;
+// compact money for dense heatmap cells (grosze → "7.2k" / "320"), in display currency
+function kMoney(g: number, cur: Currency): string {
+  const z = convertFromGrosze(g, cur);
   return Math.abs(z) >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
 }
 interface HeatData { cells: number[][]; colHeaders: string[]; rowHeaders: string[]; centerRow: number; centerCol: number }
 function Heatmap({ data }: { data: HeatData }) {
+  const { cur, money } = useCalcCurrency();
   const maxAbs = Math.max(1, ...data.cells.flat().map((v) => Math.abs(v)));
   const ncol = data.colHeaders.length;
   return (
@@ -136,7 +147,7 @@ function Heatmap({ data }: { data: HeatData }) {
               const pct = Math.round((Math.abs(v) / maxAbs) * 56) + 8;
               const bg = `color-mix(in oklab, var(${v >= 0 ? "--av3-ok" : "--av3-bad"}) ${pct}%, var(--av3-s1))`;
               const center = ri === data.centerRow && ci === data.centerCol;
-              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={formatPrice(v)}>{kZl(v)}</div>;
+              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={money(v)}>{kMoney(v, cur)}</div>;
             })}
           </Fragment>
         ))}
@@ -158,6 +169,10 @@ export function CalculatorV3() {
     const [d, act] = await Promise.all([
       fetch("/api/admin/simulation").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/admin/simulation/actuals?days=90").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      // Hydrate the currency module's rate table from the operator's settings
+      // (setExchangeRates side-effect) so non-PLN display uses real FX, not just
+      // the build-time defaults. Best-effort — falls back to DEFAULT_RATES.
+      fetchPublicSettings().catch(() => null),
     ]);
     const dc = act && typeof act.weightedCogsPct === "number" && act.weightedCogsPct > 0
       ? { foodCostPct: act.weightedFoodCostPct ?? act.weightedCogsPct, wastePct: act.weightedWastePct ?? 0 }
@@ -182,6 +197,11 @@ export function CalculatorV3() {
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
   const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
   const patchPremises = (over: Partial<SimulationPremises>) => setScn((s) => { if (!s || !s.premises) return s; setDirty(true); return { ...s, premises: { ...s.premises, ...over } }; });
+
+  // Display currency — the canonical model stays in PLN grosze; `money` reformats
+  // every amount at the operator's FX rate, and the Z inputs reparse back to grosze.
+  const cur: Currency = (scn?.displayCurrency ?? "PLN") as Currency;
+  const money = useCallback((g: number) => formatPriceInCurrency(g, cur), [cur]);
 
   // A named preset locks Food-cost-% + Waste-% to the dish-derived values;
   // only Custom (or a scenario with no preset yet) lets the operator edit them.
@@ -227,10 +247,10 @@ export function CalculatorV3() {
     return {
       cells,
       colHeaders: MULTS.map((m) => (folded.ordersPerDay * m).toFixed(0)),
-      rowHeaders: rowMults.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      rowHeaders: rowMults.map((m) => money(Math.round(folded.avgTicketGrosze * m))),
       centerCol: MULTS.indexOf(1), centerRow: rowMults.indexOf(1),
     };
-  }, [folded, MULTS]);
+  }, [folded, MULTS, money]);
   const foodTicketHeat = useMemo(() => {
     if (!folded) return null;
     // rows = COGS % (low→high so profit falls going down), cols = avg ticket
@@ -239,11 +259,11 @@ export function CalculatorV3() {
       computeScenario({ ...folded, cogsPct: Math.max(0, folded.cogsPct + d), avgTicketGrosze: Math.round(folded.avgTicketGrosze * cm) }).netProfit));
     return {
       cells,
-      colHeaders: MULTS.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      colHeaders: MULTS.map((m) => money(Math.round(folded.avgTicketGrosze * m))),
       rowHeaders: cogsRows.map((d) => `${((folded.cogsPct + d) * 100).toFixed(0)}%`),
       centerCol: MULTS.indexOf(1), centerRow: cogsRows.indexOf(0),
     };
-  }, [folded, MULTS]);
+  }, [folded, MULTS, money]);
 
   // ── scenario archetypes: conservative / base / optimistic (real engine) ───
   const archetypes = useMemo(() => {
@@ -381,13 +401,19 @@ export function CalculatorV3() {
   ];
 
   return (
-    <>
+    <CalcCurrencyCtx.Provider value={{ cur, money }}>
       <div className="av3-pagehead">
         <div>
           <h1>Calculator</h1>
           <div className="av3-pagehead-sub">P&amp;L simulator · live levers → real economics (shared engine)</div>
         </div>
         <div className="av3-pagehead-actions">
+          <label className="av3-field" style={{ width: 108 }} title="Display currency — the model stays in PLN; amounts are converted at the operator's FX rate">
+            <span className="av3-field-label">Currency</span>
+            <select className="av3-select" value={cur} onChange={(e) => patch({ displayCurrency: e.target.value as Currency })}>
+              {CALC_CURRENCIES.map((code) => <option key={code} value={code}>{code} · {CURRENCY_META[code].symbol}</option>)}
+            </select>
+          </label>
           <Button variant="ghost" size="sm" loading={seeding} onClick={seedFromActuals} title="Seed orders/day, ticket & COGS from the last 30 days of real orders">Seed from last 30 days</Button>
           <Button variant="ghost" size="sm" onClick={load}>Reset</Button>
           <Button variant="primary" size="sm" loading={saving} disabled={!dirty} onClick={save}>Save scenario</Button>
@@ -396,7 +422,7 @@ export function CalculatorV3() {
 
       {/* headline KPIs — each carries a five-section ⓘ explainer (Rule #12) */}
       <div className="av3-kpi-rail">
-        <Kpi label="Net profit / mo" value={formatPrice(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
+        <Kpi label="Net profit / mo" value={money(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
           <InfoButton title="Net profit / month"
             description="The bottom line — what's left each month after every cost, including tax, is paid."
             institutional="The single number investors underwrite. For a single full-service Neapolitan restaurant a healthy steady-state net margin is 8–15% of revenue; below ~5% the unit is fragile to one bad month, above ~18% you're likely under-investing in labour or marketing. The institutional gate: net profit must clear the owner's opportunity cost of capital AND service any debt with headroom."
@@ -412,7 +438,7 @@ export function CalculatorV3() {
             tips="Margin moves on mix, not just cost-cutting: shift volume toward high-CM items (the menu-engineering 'stars'), trim the 'dogs', and protect price (avoid blanket discounts — use targeted combos instead). Watch prime cost (below) — it's the fastest margin destroyer."
             methodology="margin = netProfit ÷ monthlyRevenue. Returns 0 when revenue is 0. Same computeScenario() pipeline as net profit." />
         } />
-        <Kpi label="EBITDA / mo" value={formatPrice(c.ebitda)} accentVar="--av3-c2" info={
+        <Kpi label="EBITDA / mo" value={money(c.ebitda)} accentVar="--av3-c2" info={
           <InfoButton title="EBITDA / month"
             description="Operating cash generation before financing and accounting choices — earnings before interest, tax, depreciation & amortisation."
             institutional="EBITDA is the multiple buyers pay on (a single restaurant might trade at 3–5× annual EBITDA; a proven multi-unit chain higher). It strips out how the restaurant was financed and how fast it's depreciated, so it compares operating quality across units. The gate for expansion: EBITDA must comfortably cover D&A + interest + a reinvestment buffer."
@@ -461,7 +487,7 @@ export function CalculatorV3() {
             <CardHead title="Volume & price" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <N label="Orders / day" value={scn.ordersPerDay} onChange={(n) => patch({ ordersPerDay: n })} />
-              <Z label="Avg ticket (zł)" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
+              <Z label="Avg ticket" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
               <N label="Days open / mo" value={scn.daysOpenPerMonth} onChange={(n) => patch({ daysOpenPerMonth: n })} />
               <P label="Wage infl. %/yr" frac={scn.wageInflationPct ?? 0} onChange={(f) => patch({ wageInflationPct: f })} w={120} />
               <P label="Ingred. infl. %/yr" frac={scn.ingredientInflationPct ?? 0} onChange={(f) => patch({ ingredientInflationPct: f })} w={132} />
@@ -506,7 +532,7 @@ export function CalculatorV3() {
                         <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
                       </div>
                       <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
-                      <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {custom ? "food cost editable" : "food cost from dishes"}</div>
+                      <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {money(p.avgTicketGrosze)} · {custom ? "food cost editable" : "food cost from dishes"}</div>
                       <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
                         <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
                         <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
@@ -583,14 +609,14 @@ export function CalculatorV3() {
               </div>
               {prem && (
                 <div className="av3-od-grid" style={{ marginTop: 12 }}>
-                  <div className="av3-od-field"><div className="k">Monthly occupancy</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.monthlyOccupancyGrosze)}</div></div>
+                  <div className="av3-od-field"><div className="k">Monthly occupancy</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
                   {scn.premises.mode === "buy" && <>
-                    <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.mortgagePaymentGrosze)}</div></div>
-                    <div className="av3-od-field"><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.mortgageInterestMonthlyGrosze)}</div></div>
-                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.buildingDepreciationMonthlyGrosze)}</div></div>
-                    <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.loanAmountGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePaymentGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgageInterestMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.buildingDepreciationMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.loanAmountGrosze)}</div></div>
                   </>}
-                  <div className="av3-od-field"><div className="k">Upfront cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(prem.upfrontCashGrosze)}</div></div>
+                  <div className="av3-od-field"><div className="k">Upfront cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.upfrontCashGrosze)}</div></div>
                 </div>
               )}
             </CardBody>
@@ -737,7 +763,7 @@ export function CalculatorV3() {
               {pnl.map((r) => (
                 <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--av3-line)", fontWeight: r.strong ? 700 : 400 }}>
                   <span style={{ fontSize: 12.5 }}>{r.label}</span>
-                  <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : r.strong ? "var(--av3-fg)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{formatPrice(Math.abs(r.v))}</span>
+                  <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : r.strong ? "var(--av3-fg)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{money(Math.abs(r.v))}</span>
                 </div>
               ))}
             </CardBody>
@@ -754,7 +780,7 @@ export function CalculatorV3() {
             } />
             <CardBody>
               <div className="av3-od-grid">
-                <div className="av3-od-field"><div className="k">True CM1 / order</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(c.trueCm1PerOrderGrosze)}</div></div>
+                <div className="av3-od-field"><div className="k">True CM1 / order</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(c.trueCm1PerOrderGrosze)}</div></div>
                 <div className="av3-od-field"><div className="k">True CM %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.trueContributionMarginPct * 100).toFixed(0)}%</div></div>
                 <div className="av3-od-field"><div className="k">Food cost %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.foodCostPct * 100).toFixed(0)}%</div></div>
                 <div className="av3-od-field"><div className="k">Labour %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.laborPct * 100).toFixed(0)}%</div></div>
@@ -771,9 +797,9 @@ export function CalculatorV3() {
                 <thead><tr><th>Channel</th><th className="av3-th-num">Share</th><th className="av3-th-num">Fee</th><th className="av3-th-num">CM1 / order</th><th className="av3-th-num">CM1 %</th><th className="av3-th-num">Monthly contrib.</th></tr></thead>
                 <tbody>{channels.map((ch) => (
                   <tr key={ch.key}><td style={{ fontWeight: 600 }}>{ch.label}</td><td className="av3-num">{(ch.sharePct * 100).toFixed(0)}%</td>
-                    <td className="av3-num">{(ch.feePct * 100).toFixed(1)}%</td><td className="av3-num">{formatPrice(ch.cm1PerOrderGrosze)}</td>
+                    <td className="av3-num">{(ch.feePct * 100).toFixed(1)}%</td><td className="av3-num">{money(ch.cm1PerOrderGrosze)}</td>
                     <td className="av3-num"><Badge tone={ch.cm1PctOfTicket >= 0.6 ? "ok" : ch.cm1PctOfTicket >= 0.4 ? "warn" : "bad"}>{(ch.cm1PctOfTicket * 100).toFixed(0)}%</Badge></td>
-                    <td className="av3-num">{formatPrice(Math.round(ch.monthlyContributionGrosze))}</td></tr>
+                    <td className="av3-num">{money(Math.round(ch.monthlyContributionGrosze))}</td></tr>
                 ))}</tbody>
               </table></div>
             </CardBody>
@@ -784,19 +810,19 @@ export function CalculatorV3() {
               <CardHead title="Fleet economics" description={`${fleet.unitCount} units · DMA cannibalisation, supply/commissary savings, royalty + HQ`} actions={<div style={{ display: "flex", gap: 6 }}>{fleet.supplyDiscountActive && <Badge tone="ok">supply −</Badge>}{fleet.commissaryActive && <Badge tone="ok">commissary</Badge>}</div>} />
               <CardBody>
                 <div className="av3-od-grid" style={{ marginBottom: 12 }}>
-                  <div className="av3-od-field"><div className="k">Fleet revenue / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalRevenue))}</div></div>
-                  <div className="av3-od-field"><div className="k">Fleet EBITDA / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: fleet.totalEbitda >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(Math.round(fleet.totalEbitda))}</div></div>
-                  <div className="av3-od-field"><div className="k">Avg EBITDA / unit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.avgEbitdaPerUnit))}</div></div>
+                  <div className="av3-od-field"><div className="k">Fleet revenue / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.totalRevenue))}</div></div>
+                  <div className="av3-od-field"><div className="k">Fleet EBITDA / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: fleet.totalEbitda >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(Math.round(fleet.totalEbitda))}</div></div>
+                  <div className="av3-od-field"><div className="k">Avg EBITDA / unit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.avgEbitdaPerUnit))}</div></div>
                   <div className="av3-od-field"><div className="k">HQ absorption</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(fleet.hqOverheadAbsorption * 100).toFixed(1)}%</div></div>
-                  <div className="av3-od-field"><div className="k">Total build-out</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalSetupCost))}</div></div>
-                  <div className="av3-od-field"><div className="k">HQ overhead / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(fleet.hqOverhead)}</div></div>
+                  <div className="av3-od-field"><div className="k">Total build-out</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.totalSetupCost))}</div></div>
+                  <div className="av3-od-field"><div className="k">HQ overhead / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(fleet.hqOverhead)}</div></div>
                 </div>
                 <div className="av3-table-wrap"><table className="av3-table">
                   <thead><tr><th>Unit</th><th className="av3-th-num">Revenue</th><th className="av3-th-num">EBITDA</th><th className="av3-th-num">Royalty</th><th className="av3-th-num">Build-out</th></tr></thead>
                   <tbody>{fleet.units.map((u) => (
-                    <tr key={u.unitIndex}><td>#{u.unitIndex}</td><td className="av3-num">{formatPrice(Math.round(u.revenue))}</td>
-                      <td className="av3-num" style={{ color: u.ebitda >= 0 ? undefined : "var(--av3-bad)" }}>{formatPrice(Math.round(u.ebitda))}</td>
-                      <td className="av3-num">{formatPrice(Math.round(u.royalty))}</td><td className="av3-num">{formatPrice(Math.round(u.setupCost))}</td></tr>
+                    <tr key={u.unitIndex}><td>#{u.unitIndex}</td><td className="av3-num">{money(Math.round(u.revenue))}</td>
+                      <td className="av3-num" style={{ color: u.ebitda >= 0 ? undefined : "var(--av3-bad)" }}>{money(Math.round(u.ebitda))}</td>
+                      <td className="av3-num">{money(Math.round(u.royalty))}</td><td className="av3-num">{money(Math.round(u.setupCost))}</td></tr>
                   ))}</tbody>
                 </table></div>
               </CardBody>
@@ -808,19 +834,19 @@ export function CalculatorV3() {
               <CardHead title="Investor returns" description="24-month horizon on a steady net-profit stream" />
               <CardBody>
                 <div className="av3-od-grid" style={{ marginBottom: 12 }}>
-                  <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r10)}</div></div>
-                  <div className="av3-od-field"><div className="k">NPV @ 15%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r15 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r15)}</div></div>
-                  <div className="av3-od-field"><div className="k">NPV @ 20%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r20 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r20)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r10)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 15%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r15 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r15)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 20%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r20 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r20)}</div></div>
                   <div className="av3-od-field"><div className="k">IRR (annual)</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.irrAnnualPct != null ? `${ret.irrAnnualPct.toFixed(0)}%` : "—"}</div></div>
                   <div className="av3-od-field"><div className="k">Payback</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.paybackMonth != null ? `${ret.paybackMonth} mo` : "—"}</div></div>
-                  <div className="av3-od-field"><div className="k">24-mo cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.cumulative[23] >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.cumulative[23])}</div></div>
+                  <div className="av3-od-field"><div className="k">24-mo cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.cumulative[23] >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.cumulative[23])}</div></div>
                 </div>
                 {/* cumulative cash recovery — bars cross from red (below 0) to green */}
                 <div style={{ display: "flex", alignItems: "stretch", gap: 2, height: 48 }}>
                   {ret.cumulative.map((cv, i) => {
                     const peak = Math.max(1, ...ret.cumulative.map((x) => Math.abs(x)));
                     const h = (Math.abs(cv) / peak) * 100;
-                    return <div key={i} title={`Mo ${i + 1}: ${formatPrice(cv)}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}><div style={{ height: `${h / 2}%`, alignSelf: cv >= 0 ? "flex-start" : "flex-end", width: "100%", background: cv >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: 2 }} /></div>;
+                    return <div key={i} title={`Mo ${i + 1}: ${money(cv)}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}><div style={{ height: `${h / 2}%`, alignSelf: cv >= 0 ? "flex-start" : "flex-end", width: "100%", background: cv >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: 2 }} /></div>;
                   })}
                 </div>
                 <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 4, fontFamily: "var(--av3-mono)" }}>cumulative cash · mo 1 → 24</div>
@@ -833,7 +859,7 @@ export function CalculatorV3() {
             <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
               {tornado.map((t) => (
                 <div key={t.key} style={{ padding: "6px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, marginBottom: 4 }}><span>{t.label}</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", color: "var(--av3-muted)" }}>±{formatPrice(Math.round(t.totalSwing / 2))}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, marginBottom: 4 }}><span>{t.label}</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", color: "var(--av3-muted)" }}>±{money(Math.round(t.totalSwing / 2))}</span></div>
                   <div style={{ display: "flex", height: 6, gap: 2 }}>
                     <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}><div style={{ width: `${(Math.abs(t.downGrosze) / maxSwing) * 100}%`, background: "var(--av3-bad)", borderRadius: "3px 0 0 3px" }} /></div>
                     <div style={{ flex: 1 }}><div style={{ width: `${(Math.abs(t.upGrosze) / maxSwing) * 100}%`, background: "var(--av3-ok)", borderRadius: "0 3px 3px 0" }} /></div>
@@ -861,8 +887,8 @@ export function CalculatorV3() {
               title="12-month projection"
               description="Seasonality × weather × wage/ingredient inflation composed per month — revenue vs net profit"
               actions={<div style={{ display: "flex", gap: 14, fontSize: 11.5, fontFamily: "var(--av3-mono)" }}>
-                <span style={{ color: "var(--av3-muted)" }}>Yr revenue <b style={{ color: "var(--av3-fg)" }}>{formatPrice(annualRevenue)}</b></span>
-                <span style={{ color: "var(--av3-muted)" }}>Yr net <b style={{ color: annualNet >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(annualNet)}</b></span>
+                <span style={{ color: "var(--av3-muted)" }}>Yr revenue <b style={{ color: "var(--av3-fg)" }}>{money(annualRevenue)}</b></span>
+                <span style={{ color: "var(--av3-muted)" }}>Yr net <b style={{ color: annualNet >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(annualNet)}</b></span>
               </div>}
             />
             <CardBody>
@@ -874,7 +900,7 @@ export function CalculatorV3() {
                   const npH = (Math.abs(r.netProfit) / range) * H;
                   const npUp = r.netProfit >= 0;
                   return (
-                    <div key={r.monthIndex} title={`${r.month} · revenue ${formatPrice(r.revenue)} · net ${formatPrice(r.netProfit)}`} style={{ flex: 1, position: "relative" }}>
+                    <div key={r.monthIndex} title={`${r.month} · revenue ${money(r.revenue)} · net ${money(r.netProfit)}`} style={{ flex: 1, position: "relative" }}>
                       <div style={{ position: "absolute", bottom: `${zeroBottomPct}%`, left: "8%", width: "40%", height: revH, background: "var(--av3-c3)", opacity: 0.5, borderRadius: "2px 2px 0 0" }} />
                       <div style={{ position: "absolute", [npUp ? "bottom" : "top"]: `${npUp ? zeroBottomPct : zeroTopPct}%`, left: "52%", width: "40%", height: npH, background: npUp ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: npUp ? "2px 2px 0 0" : "0 0 2px 2px" }} />
                     </div>
@@ -910,9 +936,9 @@ export function CalculatorV3() {
               {archetypes.map((a) => (
                 <div key={a.name} className="av3-scn-card" data-base={a.base}>
                   <div className="av3-scn-name">{a.name}{a.base && <Badge tone="brand">live</Badge>}</div>
-                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
+                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
                   <div className="av3-scn-line"><span>Net margin</span><span className="v">{(a.margin * 100).toFixed(1)}%</span></div>
-                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{formatPrice(a.ebitda)}</span></div>
+                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{money(a.ebitda)}</span></div>
                   <div className="av3-scn-line"><span>Break-even / day</span><span className="v">{Math.ceil(a.breakEven)}</span></div>
                   <div className="av3-scn-line"><span>Payback</span><span className="v">{a.payback != null ? `${a.payback.toFixed(1)} mo` : "—"}</span></div>
                 </div>
@@ -1034,7 +1060,7 @@ export function CalculatorV3() {
       <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>
         Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The sandboxes below read <b>real orders</b>; the model above is hypothetical. Five-section ⓘ explainers (Rule #12) land next.
       </div>
-    </>
+    </CalcCurrencyCtx.Provider>
   );
 }
 
@@ -1048,6 +1074,7 @@ interface MenuEng { menuItemId: string; name: string; category: string; unitsSol
 const QUADRANT_TONE: Record<string, "ok" | "warn" | "info" | "bad"> = { star: "ok", plowhorse: "warn", puzzle: "info", dog: "bad" };
 
 function SimSandboxes() {
+  const { money } = useCalcCurrency();
   const [tab, setTab] = useState<SandTab>("cohorts");
   const [days, setDays] = useState(90);
   const [cohort, setCohort] = useState<Cohort | null>(null);
@@ -1107,20 +1134,20 @@ function SimSandboxes() {
                 <Kpi label="Customers" value={cohort.totalCustomers.toLocaleString("pl-PL")} accentVar="--av3-c3" />
                 <Kpi label="Repeat rate" value={`${(cohort.repeatRatePct * 100).toFixed(0)}%`} accentVar="--av3-c4" />
                 <Kpi label="Orders / cust" value={cohort.avgOrdersPerCustomer.toFixed(2)} accentVar="--av3-c2" />
-                <Kpi label="Revenue / cust" value={formatPrice(cohort.avgRevenuePerCustomerGrosze)} accentVar="--av3-c5" />
-                <Kpi label="GP / cust (LTV)" value={formatPrice(cohort.avgGpPerCustomerGrosze)} accentVar="--av3-c4" />
+                <Kpi label="Revenue / cust" value={money(cohort.avgRevenuePerCustomerGrosze)} accentVar="--av3-c5" />
+                <Kpi label="GP / cust (LTV)" value={money(cohort.avgGpPerCustomerGrosze)} accentVar="--av3-c4" />
                 <Kpi label="New / mo" value={cohort.newCustomersPerMonth.toFixed(0)} accentVar="--av3-c1" />
               </div>
               <div className="av3-subhead">New vs returning revenue</div>
               {(() => { const n = cohort.newCustomerRevenueGrosze, r = cohort.returningCustomerRevenueGrosze, tot = Math.max(1, n + r); return (
                 <>
                   <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden" }}>
-                    <div title={`New ${formatPrice(n)}`} style={{ width: `${(n / tot) * 100}%`, background: "var(--av3-c3)" }} />
-                    <div title={`Returning ${formatPrice(r)}`} style={{ width: `${(r / tot) * 100}%`, background: "var(--av3-c4)" }} />
+                    <div title={`New ${money(n)}`} style={{ width: `${(n / tot) * 100}%`, background: "var(--av3-c3)" }} />
+                    <div title={`Returning ${money(r)}`} style={{ width: `${(r / tot) * 100}%`, background: "var(--av3-c4)" }} />
                   </div>
                   <div style={{ display: "flex", gap: 16, marginTop: 6, fontSize: 11, color: "var(--av3-muted)" }}>
-                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c3)", marginRight: 5 }} />New {formatPrice(n)} ({Math.round((n / tot) * 100)}%)</span>
-                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c4)", marginRight: 5 }} />Returning {formatPrice(r)} ({Math.round((r / tot) * 100)}%)</span>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c3)", marginRight: 5 }} />New {money(n)} ({Math.round((n / tot) * 100)}%)</span>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c4)", marginRight: 5 }} />Returning {money(r)} ({Math.round((r / tot) * 100)}%)</span>
                   </div>
                 </>
               ); })()}
@@ -1133,8 +1160,8 @@ function SimSandboxes() {
               <tbody>{dayparts.map((d) => (
                 <tr key={d.key}><td style={{ fontWeight: 600 }}>{d.label}</td><td className="av3-cell-muted">{d.hours}</td>
                   <td className="av3-num">{d.ordersCount}</td><td className="av3-num">{(d.sharePct * 100).toFixed(0)}%</td>
-                  <td className="av3-num">{formatPrice(d.avgTicketGrosze)}</td><td className="av3-num">{formatPrice(d.revenueGrosze)}</td>
-                  <td className="av3-num">{formatPrice(d.gpGrosze)}</td><td className="av3-num"><Badge tone={d.gpRatePct >= 0.68 ? "ok" : d.gpRatePct >= 0.6 ? "warn" : "bad"}>{(d.gpRatePct * 100).toFixed(0)}%</Badge></td></tr>
+                  <td className="av3-num">{money(d.avgTicketGrosze)}</td><td className="av3-num">{money(d.revenueGrosze)}</td>
+                  <td className="av3-num">{money(d.gpGrosze)}</td><td className="av3-num"><Badge tone={d.gpRatePct >= 0.68 ? "ok" : d.gpRatePct >= 0.6 ? "warn" : "bad"}>{(d.gpRatePct * 100).toFixed(0)}%</Badge></td></tr>
               ))}</tbody>
             </table></div>
           )
@@ -1166,7 +1193,7 @@ function SimSandboxes() {
                 <tbody>{[...menuEng].sort((a, b) => b.unitsSold - a.unitsSold).slice(0, 30).map((m) => (
                   <tr key={m.menuItemId}><td style={{ fontWeight: 600 }}>{m.name}<span className="av3-cell-muted" style={{ fontSize: 11, marginLeft: 6 }}>{m.category}</span></td>
                     <td><Badge tone={QUADRANT_TONE[m.quadrant]}>{m.quadrant}</Badge></td>
-                    <td className="av3-num">{m.unitsSold}</td><td className="av3-num">{formatPrice(m.gpPerUnit)}</td><td className="av3-num">{formatPrice(m.trueCm1PerUnit)}</td>
+                    <td className="av3-num">{m.unitsSold}</td><td className="av3-num">{money(m.gpPerUnit)}</td><td className="av3-num">{money(m.trueCm1PerUnit)}</td>
                     <td>{m.marginTrap && <Badge tone="bad">margin trap</Badge>}{m.prepHeavy && <Badge tone="warn">prep-heavy</Badge>}{m.menuRole && <Badge tone="neutral">{m.menuRole}</Badge>}</td></tr>
                 ))}</tbody>
               </table></div>
