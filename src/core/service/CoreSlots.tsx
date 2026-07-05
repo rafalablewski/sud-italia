@@ -348,7 +348,6 @@ export function CoreSlots() {
             <>
               {/* Manage|Demand mode switch — the view/scope toggle. */}
               <div className="core-seg" role="tablist" aria-label="Mode">
-                <span className="sglab">Mode</span>
                 <button type="button" role="tab" aria-selected={panel === "manage"} className={panel === "manage" ? "on" : undefined} onClick={() => setPanel("manage")}>Manage</button>
                 <button type="button" role="tab" aria-selected={panel === "demand"} className={panel === "demand" ? "on" : undefined} onClick={() => setPanel("demand")}>Demand</button>
               </div>

@@ -262,9 +262,8 @@
    forces its own glass fills — see the KDS block). Sub-variants: .icons
    (square glyph cells) · .sm/.xs (compact) · .gfilters (guest 34px bar). */
 .core .core-seg { display: inline-flex; align-items: center; padding: 3px; gap: 2px; border-radius: var(--pill); background: var(--panel-2); border: 1px solid var(--line); }
-/* leading mono label (VIEW / SCOPE / MODE / ZONE / STATUS) — names the switch,
-   so every surface's view/scope toggle reads identically (unified-header). */
-.core .core-seg .sglab { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: 0 7px 0 6px; display: inline-flex; align-items: center; white-space: nowrap; }
+/* The switch carries no visible axis label — the options name themselves; the
+   `.core-seg`'s `aria-label` gives assistive tech the axis (View / Zone / …). */
 .core .core-seg button { height: auto; padding: 4px 10px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-3); background: transparent; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
 .core .core-seg button:hover { color: var(--ink-2); }
 .core .core-seg button.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .4); }
@@ -1394,10 +1393,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-crm-search svg { flex: none; }
 .core .core-crm-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-family: var(--mono); font-size: 11.5px; }
 .core .core-crm-search input::placeholder { color: var(--ink-3); }
-/* CRM's segment + tier + sort filters use the shared `.core-seg` capsule (with a
-   `.sglab` label) like every other surface — no bespoke `.core-segchips` /
-   `.core-gems` / `.core-fsep`. The tier metal `.core-gem` dot is reused inside
-   the tier `.core-seg` buttons (and in the roster table). */
+/* CRM's Segment / Tier / Sort filters live in the shared `CoreFilterMenu` funnel
+   popover (`.core-filt-*`), not inline — so no bespoke `.core-segchips` /
+   `.core-gems` / `.core-fsep`. The tier metal `.core-gem` dot is reused in the
+   popover's tier chips and in the roster table. */
 .core .core-gem { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 8px -2px currentColor; flex: none; }
 .core .core-gem.bronze { background: linear-gradient(135deg, #d9915a, #8a4f27); color: #d9915a; }
 .core .core-gem.silver { background: linear-gradient(135deg, #e9edf2, #9aa4ae); color: #c9d1da; }

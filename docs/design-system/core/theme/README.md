@@ -249,15 +249,15 @@ in the surface ActionBar.
 - **`.core-seg`** — the shared **dense-console segmented control**: ONE
   canonical definition (deduped from two) used by every surface (POS scope
   tabs, KDS lane/kitchen filters, Slots view toggles, Guest filters). A
-  mono-labelled **glass capsule** (`--pill` track + buttons, 11px regular) whose
-  active option takes the shared brand-ember fill; token-driven track fills so it
-  turns to glass on liquid-glass surfaces and the KDS wall re-glazes its opaque
-  tokens. When it is a surface's **view/scope switch** (pinned to the section-head
-  right), it leads with a `.sglab` mono label naming the axis (`VIEW` / `SCOPE` /
-  `MODE` / `ZONE` / `STATUS`) and each option may carry a `.c` count pill — so
-  every surface's switch reads identically (Tables `Zone`, Slots `Mode`, Book
-  timeline/floor/arrivals, Loyalty views). `.core-seg.icons` = square glyph cells
-  for an icon-only switcher / filter pod; pair each button with a `title` /
+  **glass capsule** (`--pill` track + buttons, 11px regular) whose active option
+  takes the shared brand-ember fill; token-driven track fills so it turns to glass
+  on liquid-glass surfaces and the KDS wall re-glazes its opaque tokens. As a
+  surface's **view/scope switch** (in the ActionBar `left`) it carries **no visible
+  axis label** — the options name themselves (Book timeline/floor/arrivals, Slots
+  Manage/Demand, Tables' zones, KDS scope/status); the `.core-seg`'s `aria-label`
+  gives assistive tech the axis, and each option may carry a `.c` count pill.
+  `.core-seg.icons` = square glyph cells for an icon-only switcher / filter pod;
+  pair each button with a `title` /
   `aria-label` so the dropped text stays accessible.
 - **`.core-gfilters`** — the shared **glyph-only filter bar** for the guest
   surfaces (Inbox / Loyalty / CRM): one flex-wrap row where every control is a

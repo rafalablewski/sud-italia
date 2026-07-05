@@ -763,7 +763,6 @@ export function CoreKds() {
   const laneFilter =
     view === "fleet" ? null : (
       <div className="core-seg" role="tablist" aria-label="Status">
-        <span className="sglab">Status</span>
         <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
           All <b>{counts.all}</b>
         </button>
@@ -818,7 +817,6 @@ export function CoreKds() {
   const fleetScopeSeg =
     view !== "fleet" ? null : (
       <div className="core-seg" role="tablist" aria-label="Scope">
-        <span className="sglab">Scope</span>
         <button className={fleetLoc === "all" ? "on" : ""} onClick={() => setFleetLoc("all")}>
           All kitchens
         </button>
@@ -1392,7 +1390,6 @@ function ChefView({
         sub={<>coursing · expedite · all-day prep counts</>}
         left={
           <div className="core-seg" role="tablist" aria-label="Mode">
-            <span className="sglab">Mode</span>
             <button type="button" role="tab" aria-selected={chefFocus === "expo"} className={chefFocus === "expo" ? "on" : undefined} onClick={() => onFocus("expo")}>Expo</button>
             <button type="button" role="tab" aria-selected={chefFocus === "allday"} className={chefFocus === "allday" ? "on" : undefined} onClick={() => onFocus("allday")}>All-day</button>
           </div>

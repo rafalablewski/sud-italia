@@ -148,7 +148,6 @@ export function CoreTables() {
             zones.length > 1 ? (
               /* Zone scope switch — the view/scope toggle. */
               <div className="core-seg" role="tablist" aria-label="Zone">
-                <span className="sglab">Zone</span>
                 <button type="button" role="tab" aria-selected={!zoneFilter} className={!zoneFilter ? "on" : undefined} onClick={() => setZoneFilter(null)}>
                   All zones<span className="c">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
                 </button>

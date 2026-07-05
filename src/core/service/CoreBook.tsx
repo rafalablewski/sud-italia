@@ -588,7 +588,6 @@ export function CoreBook({
           left={
             <>
               <div className="core-seg" role="tablist" aria-label="View">
-                <span className="sglab">View</span>
                 {(["timeline", "floor", "arrivals"] as const).map((m) => (
                   <button key={m} type="button" role="tab" aria-selected={viewMode === m} className={viewMode === m ? "on" : undefined} onClick={() => setViewMode(m)}>
                     {m}

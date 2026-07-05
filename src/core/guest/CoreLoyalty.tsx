@@ -303,7 +303,6 @@ export function CoreLoyalty({ rewards = [] }: { rewards?: Reward[] }) {
           left={
             /* Members|Wallets|Redemptions|Win-back — the view switch. */
             <div className="core-seg" role="tablist" aria-label="Loyalty views">
-              <span className="sglab">View</span>
               {TABS.map((t) => {
                 const c = tabCount[t.key];
                 return (
