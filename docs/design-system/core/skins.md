@@ -77,6 +77,19 @@ it will stick without being overridden on mount.
   never washes it out — plus a brighter top `--lg-rim`. The aurora also
   carries a soft central wash so cards down the middle column have colour
   to refract, not just the corners.
+- **A popover over CONTENT needs a denser fill than one over the aurora.**
+  The frosted surface primitives (`--lg-fill`, ~13% white) look right
+  floating over the transparent body (they refract the aurora). But the
+  **click-open popovers** — the filter (`.core-filt-pop`), overflow
+  (`.core-ovf-pop`) and notification (`.core-notif-panel`) panels — float over
+  dense *content*, which would bleed through a 13%-white fill and turn the
+  panel to mush. The skin layers the sheen + fill over a denser `--bg` tint
+  (`var(--lg-sheen), var(--lg-fill), color-mix(in oklab, var(--bg) 60%,
+  transparent)`) so the panel stays legible while `--lg-blur` frosts whatever
+  shows through, and lifts the inner chips off the near-invisible `--panel-2`
+  onto `--lg-fill-hi`. Their scrims (`.core-ovf-scrim` / `.core-notif-scrim`)
+  get a light `blur(3px)` so the whole screen frosts softly behind an open
+  panel. See the "click-open popovers → liquid glass" block.
 
 ## Skins
 
