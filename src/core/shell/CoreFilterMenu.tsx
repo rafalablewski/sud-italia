@@ -42,8 +42,10 @@ export function CoreFilterMenu({ groups, label = "Filters" }: { groups: CoreFilt
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
+  // Falls back to `document.body` when no `.core` root is present (isolated
+  // tests / Storybook), so the popover always has a portal target.
   useEffect(() => {
-    setRoot(document.querySelector(".core"));
+    setRoot(document.querySelector(".core") ?? document.body);
   }, []);
 
   const active = groups.filter((g) => !g.noBadge && (g.value ?? null) !== (g.base ?? null)).length;
@@ -86,6 +88,7 @@ export function CoreFilterMenu({ groups, label = "Filters" }: { groups: CoreFilt
         className={open || active ? "core-iconbtn core-filt-btn on" : "core-iconbtn core-filt-btn"}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls={menuId}
         aria-label={label}
         title={label}
         onClick={toggle}

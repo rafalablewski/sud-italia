@@ -41,9 +41,10 @@ export function CoreActionMenu({
   const menuId = useId();
 
   // Portal into the theme root so the popover inherits core tokens and escapes
-  // the toolbar's `overflow-x` clip. Resolved on the client only.
+  // the toolbar's `overflow-x` clip. Resolved on the client only; falls back to
+  // `document.body` when no `.core` root is present (isolated tests / Storybook).
   useEffect(() => {
-    setRoot(document.querySelector(".core"));
+    setRoot(document.querySelector(".core") ?? document.body);
   }, []);
 
   const place = () => {
@@ -83,6 +84,7 @@ export function CoreActionMenu({
         className={open ? "core-iconbtn core-ovf-btn on" : "core-iconbtn core-ovf-btn"}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={menuId}
         aria-label={label}
         title={label}
         onClick={toggle}
