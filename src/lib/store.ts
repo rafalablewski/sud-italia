@@ -12686,26 +12686,30 @@ export function defaultSimulationScenario(): SimulationScenario {
   // Hourly rates: brutto Warsaw 2026 × 1.22 employer narzut, rounded
   // to the nearest 50 grosze. Operators who'd rather think in pure
   // brutto can divide by 1.22.
+  // 7-day rota (Mon…Sun): `shift` on every day but `offDay`.
+  const wk = (start: number, end: number, offDay: number): ({ start: number; end: number } | null)[] =>
+    Array.from({ length: 7 }, (_, d) => (d === offDay ? null : { start, end }));
   const labor: SimulationLaborLine[] = [
     // Sized for a ~90-seat full-service restaurant doing ~110 checks/day
     // across lunch + dinner, seven days. Unlike a food truck, a dining
     // room carries floor staff (several waiters), a sous-chef and a
     // kitchen porter / dish-pit — roles a truck line never has.
     //
-    // Each line is ONE worker (own rate + own shift). Ships pre-rostered: daily
-    // shifts (24h clock) staggered across the 11:00–22:00 window so the floor is
-    // covered open→close and staffing tracks the lunch + dinner peaks. Weekly hours
-    // (and pay) derive from shift length × daysPerWeek — mostly 8h × 6 = 48.
-    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
-    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 14, end: 22 }] },
-    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
-    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, daysPerWeek: 6, shifts: [{ start: 14, end: 22 }] },
-    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, daysPerWeek: 6, shifts: [{ start: 15, end: 22 }] },
-    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 11, end: 18 }] },
-    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 14, end: 21 }] },
-    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, daysPerWeek: 6, shifts: [{ start: 15, end: 22 }] },
-    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
-    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, daysPerWeek: 6, shifts: [{ start: 11, end: 19 }] },
+    // Each line is ONE worker (own rate + own weekly rota). `wk(start,end,off)`
+    // builds a 7-day week (Mon…Sun) with that consistent shift on every day
+    // except the one staggered day off, so the floor is covered all 7 days and
+    // no two consecutive shifts fall under 12h rest. Weekly hours (and pay)
+    // derive from the rota — a consistent 8h × 6-day week ≈ 48h.
+    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(11, 19, 6) },
+    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(14, 22, 2) },
+    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, week: wk(11, 19, 0) },
+    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, week: wk(14, 22, 1) },
+    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, week: wk(15, 22, 3) },
+    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(11, 18, 4) },
+    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(14, 21, 5) },
+    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(15, 22, 6) },
+    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, week: wk(11, 19, 0) },
+    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, week: wk(11, 19, 6) },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
     rent: 2_200_000,       // 22 000 zł — prime central lease (Rynek / Nowy Świat), ~150 m²
@@ -13434,8 +13438,11 @@ export async function saveSimulationScenario(
         role: l.role,
         headcount: Math.max(0, Math.round(l.headcount)),
         hourlyRateGrosze: Math.max(0, Math.round(l.hourlyRateGrosze)),
-        // hoursPerWeek is legacy; new lines carry daysPerWeek + per-person shifts
-        // and derive hours from the schedule. Preserve whichever are present.
+        // `week` is the 7-day rota (source of truth). hoursPerWeek / daysPerWeek
+        // / shifts are legacy and only kept if a scenario predates `week`.
+        ...(Array.isArray(l.week)
+          ? { week: l.week.slice(0, 7).map((sh) => (sh && typeof sh.start === "number" && typeof sh.end === "number" ? { start: Math.max(0, Math.round(sh.start)), end: Math.max(0, Math.round(sh.end)) } : null)) }
+          : {}),
         ...(typeof l.hoursPerWeek === "number" ? { hoursPerWeek: Math.max(0, Math.round(l.hoursPerWeek)) } : {}),
         ...(typeof l.daysPerWeek === "number" ? { daysPerWeek: Math.max(0, Math.round(l.daysPerWeek)) } : {}),
         ...(Array.isArray(l.shifts) ? { shifts: l.shifts.map((sh) => ({ start: Math.max(0, Math.round(sh.start)), end: Math.max(0, Math.round(sh.end)) })) } : {}),

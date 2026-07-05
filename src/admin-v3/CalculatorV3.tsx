@@ -105,26 +105,67 @@ function demandWeights(n: number): number[] {
   return w.map((v) => v / sum);
 }
 
-// Auto-roster: staple each line's headcount into staggered per-person shifts
-// that track the demand curve. Greedy — each next person takes the L-hour block
-// that maximises Σ demand ÷ (already-scheduled staff + 1), so people pile onto
-// the busy, under-covered hours (peak) and thin out over the quiet shoulders,
-// instead of everyone sitting on the floor all day. Cost is unchanged (still
-// avg shift length × days/week); a shorter shift is simply a cheaper person.
-function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHour: number): SimulationLaborLine[] {
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DEFAULT_LABOR_DAYS = 6;
+const MIN_REST_HOURS = 12;
+type DayShift = { start: number; end: number } | null;
+
+// A worker's normalised 7-day rota (Mon…Sun). Uses `week` when set; otherwise
+// migrates the legacy single shift onto `daysPerWeek` days, or defaults to the
+// full open window on 6 days.
+function weekOf(l: SimulationLaborLine, openHour: number, closeHour: number): DayShift[] {
+  if (Array.isArray(l.week) && l.week.length === 7) {
+    return l.week.map((s) => (s && Number.isFinite(s.start) && Number.isFinite(s.end) ? { start: s.start, end: s.end } : null));
+  }
+  const shift = (l.shifts && l.shifts[0]) ? { start: l.shifts[0].start, end: l.shifts[0].end } : { start: openHour, end: closeHour };
+  const days = Math.max(0, Math.min(7, Math.round(l.daysPerWeek ?? DEFAULT_LABOR_DAYS)));
+  return Array.from({ length: 7 }, (_, d) => (d < days ? { start: shift.start, end: shift.end } : null));
+}
+
+// Weekly hours (and therefore pay) = Σ each on-day's shift length. The rota is
+// the single source of the labour hours.
+function laborHoursPerWeek(l: SimulationLaborLine, openHour: number, closeHour: number): number {
+  return weekOf(l, openHour, closeHour).reduce((sum, sh) => sum + (sh ? Math.max(0, sh.end - sh.start) : 0), 0);
+}
+
+// Days (0-based, Mon…Sun) whose shift starts under MIN_REST_HOURS after the
+// previous on-day's shift ended — includes the Sun→Mon wrap. Rest between an
+// end at `e` and the next start at `s` the following day = (24 − e) + s.
+function restViolationDays(week: DayShift[]): Set<number> {
+  const bad = new Set<number>();
+  for (let d = 0; d < 7; d++) {
+    const cur = week[d];
+    if (!cur) continue;
+    // nearest previous on-day (wrapping)
+    for (let back = 1; back <= 7; back++) {
+      const pd = (d - back + 7) % 7;
+      const prev = week[pd];
+      if (!prev) continue;
+      const restDays = back; // full days between the two on-days
+      // rest hours = (24 − prevEnd) + curStart + 24×(gap days − 1)
+      const rest = (24 - prev.end) + cur.start + 24 * (restDays - 1);
+      if (rest < MIN_REST_HOURS) bad.add(d);
+      break;
+    }
+  }
+  return bad;
+}
+
+// Auto-roster the whole team's week: give each worker a demand-fit *consistent*
+// shift (greedy on a shared coverage curve so people stagger relative to each
+// other), then a staggered day off so every day is covered. A consistent shift
+// of length L leaves 24−L h rest between consecutive days, so ≤12h shifts never
+// breach the rest rule — violations only come from manual edits.
+function rosterWeek(labor: SimulationLaborLine[], openHour: number, closeHour: number): SimulationLaborLine[] {
   const H = Math.max(1, closeHour - openHour);
   const weights = demandWeights(H);
   const L = Math.min(H, Math.max(4, Math.round(H * 0.6)));
-  // Shared coverage across EVERY worker, so people stagger relative to each other
-  // (each line is one worker) — the greedy hands each the busiest under-covered
-  // block on the shared curve. L≥H (tiny window) → everyone on the full window.
   const cov = new Array(H).fill(0);
-  const out = labor.map((l) => {
-    const N = Math.max(0, Math.round(l.headcount));
-    if (N === 0) return { ...l, shifts: [] as { start: number; end: number }[] };
-    if (L >= H) return { ...l, shifts: Array.from({ length: N }, () => ({ start: openHour, end: closeHour })) };
-    const shifts: { start: number; end: number }[] = [];
-    for (let p = 0; p < N; p++) {
+  return labor.map((l, idx) => {
+    let shift: { start: number; end: number };
+    if (L >= H) {
+      shift = { start: openHour, end: closeHour };
+    } else {
       let bestStart = openHour;
       let best = -Infinity;
       for (let st = openHour; st <= closeHour - L; st++) {
@@ -133,50 +174,11 @@ function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHou
         if (score > best) { best = score; bestStart = st; }
       }
       for (let h = bestStart; h < bestStart + L; h++) cov[h - openHour]++;
-      shifts.push({ start: bestStart, end: bestStart + L });
+      shift = { start: bestStart, end: bestStart + L };
     }
-    return { ...l, shifts };
+    const offDay = idx % 7; // stagger the single day off across the team
+    return { ...l, week: Array.from({ length: 7 }, (_, d) => (d === offDay ? null : { ...shift })), shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined };
   });
-  // Skeleton coverage: never leave the floor empty while open. Any hour that
-  // ended up with zero staff gets the nearest existing shift stretched to
-  // swallow it (fewest added hours). Always satisfiable when ≥1 person exists.
-  const allShifts = out.flatMap((l) => l.shifts ?? []);
-  if (allShifts.length > 0) {
-    const totalCov = () => {
-      const c = new Array(H).fill(0);
-      for (const sh of allShifts) for (let h = Math.max(openHour, sh.start); h < Math.min(closeHour, sh.end); h++) c[h - openHour]++;
-      return c;
-    };
-    let cov = totalCov();
-    for (let i = 0; i < H; i++) {
-      if (cov[i] > 0) continue;
-      const hour = openHour + i;
-      let target: { start: number; end: number } | null = null;
-      let bestDist = Infinity;
-      let mode: "start" | "end" = "start";
-      for (const sh of allShifts) {
-        if (sh.start > hour && sh.start - hour < bestDist) { bestDist = sh.start - hour; target = sh; mode = "start"; }
-        else if (sh.end <= hour && hour + 1 - sh.end < bestDist) { bestDist = hour + 1 - sh.end; target = sh; mode = "end"; }
-      }
-      if (target) { if (mode === "start") target.start = hour; else target.end = hour + 1; cov = totalCov(); }
-    }
-  }
-  return out;
-}
-
-const DEFAULT_LABOR_DAYS = 6;
-// Weekly hours per person = (avg daily shift length × days/week) when the line is
-// rostered; else the legacy manual hours, else the full open window × days. This
-// is the single source of the labour cost hours — the schedule drives the pay.
-function laborHoursPerWeek(l: SimulationLaborLine, openHour: number, closeHour: number): number {
-  const days = Math.max(0, l.daysPerWeek ?? DEFAULT_LABOR_DAYS);
-  if (l.shifts && l.shifts.length > 0) {
-    const heads = Math.max(1, Math.round(l.headcount));
-    const totalDaily = l.shifts.reduce((s, sh) => s + Math.max(0, sh.end - sh.start), 0);
-    return Math.round((totalDaily * days) / heads);
-  }
-  if (typeof l.hoursPerWeek === "number") return l.hoursPerWeek;
-  return Math.round(Math.max(1, closeHour - openHour) * days);
 }
 
 // Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
@@ -250,6 +252,7 @@ export function CalculatorV3() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pnlDetailed, setPnlDetailed] = useState(false);
+  const [coverageDay, setCoverageDay] = useState(4); // which weekday the coverage grid shows (default Fri)
   const [roleToAdd, setRoleToAdd] = useState<BusinessCostPayrollRole>("waiter");
 
   const load = useCallback(async () => {
@@ -315,10 +318,19 @@ export function CalculatorV3() {
   });
   // Roster actions — stagger everyone to the demand curve, revert to flat, or
   // break one line's headcount into hand-editable per-person shifts.
-  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: rosterToDemand(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
-  const clearRoster = () => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l) => ({ ...l, shifts: undefined })) }; });
-  const individualiseLine = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; const start = Math.floor(oh.openHour); const end = Math.ceil(oh.closeHour); return { ...s, labor: s.labor.map((l, idx) => idx !== i ? l : { ...l, shifts: Array.from({ length: Math.max(0, Math.round(l.headcount)) }, () => ({ start, end })) }) }; });
-  const patchLaborShift = (i: number, si: number, over: Partial<{ start: number; end: number }>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l, idx) => idx !== i ? l : { ...l, shifts: (l.shifts ?? []).map((sh, sj) => sj === si ? { ...sh, ...over } : sh) }) }; });
+  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
+  // Set one day of one worker's rota (null = day off). Materialises the week
+  // first (migrating a legacy line) so every edit lands on a real 7-slot array.
+  const setDay = (i: number, day: number, shift: DayShift) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 11, closeHour: 22 };
+    return { ...s, labor: s.labor.map((l, idx) => {
+      if (idx !== i) return l;
+      const week = weekOf(l, Math.floor(oh.openHour), Math.ceil(oh.closeHour)).slice();
+      week[day] = shift;
+      return { ...l, week, shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined };
+    }) };
+  });
 
   // Display currency — the canonical model stays in PLN grosze; `money` reformats
   // every amount at the operator's FX rate, and the Z inputs reparse back to grosze.
@@ -490,10 +502,10 @@ export function CalculatorV3() {
     };
   }, [folded]);
 
-  // ── live shift-coverage grid: staff on the floor per hour vs demand ───────
-  // Each labour line's shift window (start/end, default = whole service day)
-  // places its headcount on the clock; per hour we sum staff by role, compare
-  // the kitchen line to the demand-driven requirement, and flag peak hours + gaps.
+  // ── live shift-coverage grid for the selected weekday: staff on vs demand ──
+  // Reads each worker's rota for `coverageDay`; a worker on that day sits on the
+  // clock for that day's shift. Per hour we sum staff by role, compare the
+  // kitchen line to the demand-driven requirement, and flag peak hours + gaps.
   const coverage = useMemo(() => {
     if (!folded) return null;
     const oh = folded.openingHours ?? { openHour: 11, closeHour: 22 };
@@ -505,12 +517,11 @@ export function CalculatorV3() {
     const prepMult = Math.max(0.5, folded.prepComplexityMultiplier ?? 1);
     const effCap = perHourCap / prepMult;
     const peakDemand = Math.max(1e-9, ...weights) * folded.ordersPerDay;
-    // Per-person shifts (staggered roster) take precedence; otherwise the whole
-    // headcount sits on the line's single window (or the full service day).
-    const windowsOf = (l: SimulationLaborLine): { s: number; e: number; heads: number }[] =>
-      l.shifts && l.shifts.length > 0
-        ? l.shifts.map((sh) => ({ s: Math.max(openHour, Math.min(closeHour, sh.start)), e: Math.max(openHour, Math.min(closeHour, sh.end)), heads: 1 }))
-        : [{ s: openHour, e: closeHour, heads: l.headcount }];
+    // This weekday's window for each worker (null = off that day).
+    const dayWindow = (l: SimulationLaborLine): { s: number; e: number } | null => {
+      const sh = weekOf(l, openHour, closeHour)[coverageDay];
+      return sh ? { s: Math.max(openHour, Math.min(closeHour, sh.start)), e: Math.max(openHour, Math.min(closeHour, sh.end)) } : null;
+    };
     const roles = [...new Set(folded.labor.map((l) => l.role))];
     const hours = weights.map((w, i) => {
       const hour = openHour + i;
@@ -519,12 +530,11 @@ export function CalculatorV3() {
       let totalOn = 0;
       let kitchenOn = 0;
       for (const l of folded.labor) {
-        for (const win of windowsOf(l)) {
-          if (hour < win.s || hour >= win.e) continue;
-          perRole[l.role] = (perRole[l.role] ?? 0) + win.heads;
-          totalOn += win.heads;
-          if (l.role === "pizzaiolo") kitchenOn += win.heads;
-        }
+        const win = dayWindow(l);
+        if (!win || hour < win.s || hour >= win.e) continue;
+        perRole[l.role] = (perRole[l.role] ?? 0) + 1;
+        totalOn += 1;
+        if (l.role === "pizzaiolo") kitchenOn += 1;
       }
       const requiredKitchen = effCap > 0 ? Math.max(1, Math.ceil(demand / effCap)) : 1;
       const isPeak = demand >= 0.85 * peakDemand;
@@ -537,11 +547,9 @@ export function CalculatorV3() {
     const gaps = hours.filter((h) => !h.covered).map((h) => h.hour);
     const peakHours = hours.filter((h) => h.isPeak).map((h) => h.hour);
     const peakCovered = hours.filter((h) => h.isPeak).every((h) => h.covered);
-    // Scheduled floor-hours/day = Σ (each window's heads × its length).
-    const staffHoursPerDay = folded.labor.reduce((sum, l) => sum + windowsOf(l).reduce((a, win) => a + win.heads * Math.max(0, win.e - win.s), 0), 0);
-    const rostered = folded.labor.some((l) => (l.shifts?.length ?? 0) > 0);
-    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, staffHoursPerDay, rostered };
-  }, [folded]);
+    const onToday = folded.labor.filter((l) => weekOf(l, openHour, closeHour)[coverageDay]).length;
+    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, onToday };
+  }, [folded, coverageDay]);
 
   const save = async () => {
     if (!scn) return;
@@ -789,96 +797,108 @@ export function CalculatorV3() {
           {/* live shift-coverage grid — sits next to Labour so you roster + check in one place */}
           {coverage && (
           <Card>
-            <CardHead title="Shift plan & coverage" description="Set opening hours, roster each person's shift, and see live who's on vs demand — covered at peak or short" actions={
+            <CardHead title="Shift plan & coverage" description="Weekly rota — set each person's shift per day (open 7 days · ≥12 h rest between shifts). Pick a day to check its coverage vs demand." actions={
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <Button variant="secondary" size="sm" onClick={autoRoster} title="Stagger everyone into per-person shifts that match the demand curve">Auto-roster</Button>
-                {coverage.rostered && <Button variant="ghost" size="sm" onClick={clearRoster} title="Clear per-person shifts — back to flat all-day">Flat</Button>}
+                <Button variant="secondary" size="sm" onClick={autoRoster} title="Give everyone a demand-fit shift on 6 staggered days (rest-safe)">Auto-roster</Button>
                 <InfoButton title="Shift plan & coverage"
-                description="A live, hour-by-hour roster: set the service window, schedule each person's shift (or Auto-roster to the demand curve), and the grid shows how many of each role are on the floor every hour, flagging peak hours and under-staffed gaps."
-                institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — and the institutional gate is simple: the kitchen line must never be short at a peak hour (that's walked orders and blown tickets), and you shouldn't be paying a full brigade through a dead afternoon. A roster that's green at peak and lean off-peak is what holds labour % in the 22–28% band without wrecking service."
-                plain="Say dinner peaks 19:00–21:00 at ~22 orders/hr against a ~16/hr line. The grid turns those hours red until you put a second pizzaiolo on from 18:00 — add the shift, the cells go green, and you can see you're not also paying that person through the empty 15:00 lull. Move the opening hour later and the whole curve + coverage recompute instantly."
-                tips="Hit Auto-roster to stagger everyone onto the busy hours in one click, then hand-tune any person's start/end in the roster below. Watch the 'Line on/need' row — any red hour is a coverage gap; extend a shift or add heads until peak is green. Trim floor-hours where the demand bars are short to pull labour % down without touching peak service."
-                methodology="Demand/hr = ordersPerDay × a documented double-peak curve over the opening window. Per hour, staff-on sums every scheduled shift (per-person `shifts`, else the line's headcount×window) whose [start,end) covers the hour; kitchen requirement = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Auto-roster greedily places each person's shift on the busiest under-covered block. An hour is 'covered' when pizzaioli-on ≥ requirement and someone's on; peak hours are ≥85% of peak demand. Modelling layer in CalculatorV3." />
+                description="A weekly rota: set each person's shift per day (or a day off), and a per-day coverage grid shows how many of each role are on the floor every hour against demand — flagging peak hours, under-staffed gaps and any shift that breaks the 12-hour-rest rule."
+                institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — while giving each person their 1–2 days off and honouring the ≥12 h rest between shifts that the labour code (and basic humanity) require. A rota that's green at peak, lean off-peak and rest-legal is what holds labour % in the 22–28% band without wrecking service or burning the team out."
+                plain="The restaurant is open all 7 days; each person works 5–6 of them. Pizzaiolo 2 closes Thu at 22:00 and you try to open them Fri at 08:00 — that's only 10 h rest, so the Friday cell outlines red. Slide dinner people onto the busy days, give quiet Mondays fewer staff, and watch the coverage grid for the day you pick recompute live."
+                tips="Hit Auto-roster for a demand-fit, rest-safe week in one click, then hand-tune cells. Use the day tabs to check each day's coverage — Mondays and mid-week are where days-off thin the floor. Any red-outlined cell breaks the 12 h-rest rule; push that shift later or the previous one earlier."
+                methodology="Each worker has a 7-slot week (Mon–Sun); a null slot is a day off. Weekly hours (and pay) = Σ each on-day's shift length. Coverage for the selected day: per hour, staff-on counts every worker whose that-day shift covers the hour; kitchen need = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Rest between a shift ending at e and the next on-day starting at s = (24−e)+s (+24 h per skipped day, incl. Sun→Mon wrap); <12 h flags. Auto-roster gives a consistent shift (24−L h rest, always ≥12) on 6 staggered days. src/admin-v3/CalculatorV3.tsx." />
               </div>
             } />
             <CardBody>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
-                <N label="Open @" value={scn.openingHours?.openHour ?? 11} onChange={(n) => patchOpeningHours({ openHour: n })} w={78} />
-                <N label="Close @" value={scn.openingHours?.closeHour ?? 22} onChange={(n) => patchOpeningHours({ closeHour: n })} w={78} />
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginLeft: 4 }}>
-                  <Badge tone={coverage.gaps.length === 0 ? "ok" : "bad"}>{coverage.gaps.length === 0 ? "All hours covered" : `${coverage.gaps.length} short hr${coverage.gaps.length > 1 ? "s" : ""}: ${coverage.gaps.map((h) => `${h}:00`).join(", ")}`}</Badge>
-                  <Badge tone={coverage.peakHours.length === 0 ? "neutral" : coverage.peakCovered ? "ok" : "bad"}>{coverage.peakHours.length ? `Peak ${coverage.peakHours[0]}:00–${coverage.peakHours[coverage.peakHours.length - 1] + 1}:00 ${coverage.peakCovered ? "covered" : "SHORT"}` : "No peak"}</Badge>
-                  <Badge tone="neutral">{coverage.staffHoursPerDay} floor-hrs/day</Badge>
-                </div>
-              </div>
-              <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: `88px repeat(${coverage.nHours}, minmax(26px, 1fr))`, gap: 2 }}>
-                {/* hour header — peak hours tinted */}
-                <div />
-                {coverage.hours.map((h) => <div key={h.hour} title={h.isPeak ? "peak hour" : undefined} style={{ textAlign: "center", fontSize: 10, fontFamily: "var(--av3-mono)", padding: "2px 0", borderRadius: 3, fontWeight: h.isPeak ? 700 : 400, color: h.isPeak ? "var(--av3-fg)" : "var(--av3-subtle)", background: h.isPeak ? "color-mix(in oklab, var(--av3-c5) 24%, transparent)" : "transparent" }}>{h.hour}</div>)}
-                {/* demand/hr bars */}
-                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Demand/hr</div>
-                {coverage.hours.map((h) => <div key={h.hour} title={`${h.hour}:00 · ${h.demand.toFixed(0)} orders/hr`} style={{ display: "flex", alignItems: "flex-end", height: 30, background: "var(--av3-s1)", borderRadius: 3 }}><div style={{ width: "100%", height: `${Math.round((h.demand / coverage.maxDemand) * 100)}%`, background: h.kitchenShort ? "var(--av3-bad)" : "var(--av3-c3)", opacity: 0.9, borderRadius: "3px 3px 0 0" }} /></div>)}
-                {/* one row per role on the roster */}
-                {coverage.roles.map((role) => (
-                  <Fragment key={role}>
-                    <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>{ROLE_LABEL[role]}</div>
-                    {coverage.hours.map((h) => { const cnt = h.perRole[role] ?? 0; const inten = cnt > 0 ? 22 + Math.round((cnt / coverage.maxStaff) * 58) : 0; return <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: cnt > 0 ? "var(--av3-fg)" : "var(--av3-subtle)", background: cnt > 0 ? `color-mix(in oklab, var(--av3-c2) ${inten}%, var(--av3-s1))` : "var(--av3-s1)" }}>{cnt > 0 ? cnt : "·"}</div>; })}
-                  </Fragment>
-                ))}
-                {/* total on the floor */}
-                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center", fontWeight: 600 }}>Total on</div>
-                {coverage.hours.map((h) => <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", fontWeight: 600 }}>{h.totalOn || "·"}</div>)}
-                {/* kitchen line coverage: on / need */}
-                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Line on/need</div>
-                {coverage.hours.map((h) => <div key={h.hour} title={`Pizzaioli on ${h.kitchenOn} · need ${h.requiredKitchen}${h.kitchenShort ? " · SHORT" : ""}`} style={{ textAlign: "center", fontSize: 10.5, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: h.kitchenShort ? "#fff" : "var(--av3-fg)", background: h.kitchenShort ? "var(--av3-bad)" : "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }}>{h.kitchenOn}/{h.requiredKitchen}</div>)}
-              </div></div>
-              <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10.5, color: "var(--av3-muted)", flexWrap: "wrap" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-c5)", opacity: 0.5 }} /> peak hour</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }} /> line covered</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-bad)" }} /> line short</span>
-              </div>
-
-              {/* roster — each worker's own shift + days (Auto-roster fills these; hand-tune here) */}
-              <div style={{ marginTop: 12, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
-                <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Roster — each person&rsquo;s shift &amp; days (24h)</div>
-                {(() => {
-                  const orderR: BusinessCostPayrollRole[] = [];
-                  const byRoleR = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
-                  scn.labor.forEach((l, i) => { if (!byRoleR.has(l.role)) { byRoleR.set(l.role, []); orderR.push(l.role); } byRoleR.get(l.role)!.push({ l, i }); });
-                  return orderR.map((role) => (
-                    <div key={role} style={{ marginBottom: 4 }}>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--av3-muted)", padding: "2px 0" }}>{ROLE_LABEL[role]}</div>
-                      {byRoleR.get(role)!.map(({ l, i }, wi) => {
-                        const sh = l.shifts && l.shifts[0];
-                        const len = sh ? Math.max(0, sh.end - sh.start) : 0;
-                        const days = l.daysPerWeek ?? DEFAULT_LABOR_DAYS;
-                        return (
-                          <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "4px 0 4px 10px", borderBottom: "1px solid var(--av3-line)" }}>
-                            <span style={{ width: 96, fontSize: 12 }}>{ROLE_LABEL[role]} {wi + 1}</span>
-                            {sh ? <>
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                                <input className="av3-input" style={{ width: 46, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.start} onChange={(e) => patchLaborShift(i, 0, { start: Number(e.target.value) || 0 })} title="Shift start (24h)" />
-                                <span style={{ fontSize: 11, color: "var(--av3-muted)" }}>–</span>
-                                <input className="av3-input" style={{ width: 46, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.end} onChange={(e) => patchLaborShift(i, 0, { end: Number(e.target.value) || 0 })} title="Shift end (24h)" />
-                                <span style={{ fontSize: 10, color: "var(--av3-subtle)", width: 26 }}>{len}h</span>
-                              </span>
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ fontSize: 10.5, color: "var(--av3-subtle)" }}>×</span>
-                                <input className="av3-input" style={{ width: 40, padding: "2px 4px", textAlign: "center" }} type="number" value={days} onChange={(e) => patchLabor(i, { daysPerWeek: Number(e.target.value) || 0 })} title="Days per week" />
-                                <span style={{ fontSize: 10.5, color: "var(--av3-subtle)" }}>d</span>
-                              </span>
-                              <span style={{ fontSize: 10.5, color: "var(--av3-muted)", fontFamily: "var(--av3-mono)" }}>= {len * days}h/wk · {money(len * days * l.hourlyRateGrosze)}/wk</span>
-                            </> : (
-                              <Button variant="ghost" size="sm" onClick={() => individualiseLine(i)}>Set shift</Button>
-                            )}
-                          </div>
-                        );
-                      })}
+              {(() => {
+                const openH = coverage.openHour; const closeH = coverage.closeHour;
+                const orderR: BusinessCostPayrollRole[] = [];
+                const byRoleR = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
+                scn.labor.forEach((l, i) => { if (!byRoleR.has(l.role)) { byRoleR.set(l.role, []); orderR.push(l.role); } byRoleR.get(l.role)!.push({ l, i }); });
+                let restBad = 0;
+                scn.labor.forEach((l) => { restBad += restViolationDays(weekOf(l, openH, closeH)).size; });
+                const dayHdr: CSSProperties = { fontSize: 10, fontWeight: 600, textAlign: "center", border: "none", cursor: "pointer", borderRadius: 4, padding: "3px 0" };
+                const cellInput: CSSProperties = { width: 24, padding: "1px 2px", textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)" };
+                return (
+                  <>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
+                      <N label="Open @" value={scn.openingHours?.openHour ?? 11} onChange={(n) => patchOpeningHours({ openHour: n })} w={72} />
+                      <N label="Close @" value={scn.openingHours?.closeHour ?? 22} onChange={(n) => patchOpeningHours({ closeHour: n })} w={72} />
+                      <span style={{ fontSize: 11, color: "var(--av3-subtle)", alignSelf: "center" }}>· open 7 days</span>
+                      <Badge tone={restBad === 0 ? "ok" : "bad"}>{restBad === 0 ? "Rest ✓ ≥12 h" : `${restBad} shift${restBad > 1 ? "s" : ""} < 12 h rest`}</Badge>
                     </div>
-                  ));
-                })()}
-                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 8 }}>One row per person — each has their own shift &amp; days. <b>Auto-roster</b> staggers everyone to the demand curve; <b>Flat</b> puts everyone on all day. Weekly hours + pay follow shift length × days, so a shorter shift is a cheaper person.</div>
-              </div>
+
+                    {/* ── weekly rota ── */}
+                    <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Weekly rota (24h · off = day off)</div>
+                    <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: "minmax(100px, 1fr) repeat(7, minmax(58px, 1fr)) 46px", columnGap: 4, rowGap: 4, alignItems: "center", minWidth: 600 }}>
+                      <div />
+                      {DAYS.map((d, di) => <button key={d} type="button" onClick={() => setCoverageDay(di)} title="Show this day's coverage below" style={{ ...dayHdr, background: di === coverageDay ? "color-mix(in oklab, var(--av3-c3) 24%, transparent)" : "transparent", color: di === coverageDay ? "var(--av3-fg)" : "var(--av3-subtle)" }}>{d}</button>)}
+                      <div style={{ fontSize: 9.5, fontWeight: 600, textAlign: "right", color: "var(--av3-subtle)", textTransform: "uppercase", letterSpacing: 0.4 }}>h/wk</div>
+                      {orderR.map((role) => (
+                        <Fragment key={role}>
+                          <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>{ROLE_LABEL[role]}</span>
+                            <Button variant="ghost" size="sm" style={{ marginLeft: "auto" }} onClick={() => addWorker(role)} title={`Add another ${ROLE_LABEL[role].toLowerCase()}`}><Plus className="av3-btn-ico" /> add</Button>
+                          </div>
+                          {byRoleR.get(role)!.map(({ l, i }, wi) => {
+                            const wkArr = weekOf(l, openH, closeH);
+                            const viol = restViolationDays(wkArr);
+                            const rep = wkArr.find(Boolean) ?? { start: openH, end: closeH };
+                            const hrs = laborHoursPerWeek(l, openH, closeH);
+                            return (
+                              <Fragment key={l.id}>
+                                <span style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 2 }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                                {wkArr.map((sh, d) => (
+                                  <div key={d} title={viol.has(d) ? "Less than 12 h rest after the previous shift" : undefined} style={{ background: d === coverageDay ? "color-mix(in oklab, var(--av3-c3) 8%, transparent)" : "transparent", borderRadius: 5, padding: 2, outline: viol.has(d) ? "1.5px solid var(--av3-bad)" : "none", outlineOffset: -1 }}>
+                                    {sh ? (
+                                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                                        <div style={{ display: "flex", gap: 1 }}>
+                                          <input className="av3-input" style={cellInput} type="number" value={sh.start} onChange={(e) => setDay(i, d, { start: Number(e.target.value) || 0, end: sh.end })} title="start" />
+                                          <input className="av3-input" style={cellInput} type="number" value={sh.end} onChange={(e) => setDay(i, d, { start: sh.start, end: Number(e.target.value) || 0 })} title="end" />
+                                        </div>
+                                        <button type="button" onClick={() => setDay(i, d, null)} style={{ background: "none", border: "none", color: "var(--av3-subtle)", fontSize: 9, cursor: "pointer", padding: 0, lineHeight: 1 }}>off</button>
+                                      </div>
+                                    ) : (
+                                      <button type="button" onClick={() => setDay(i, d, { ...rep })} title="Add this day" style={{ width: "100%", background: "var(--av3-s2)", border: "none", borderRadius: 4, color: "var(--av3-subtle)", fontSize: 10, padding: "8px 0", cursor: "pointer" }}>off</button>
+                                    )}
+                                  </div>
+                                ))}
+                                <span style={{ fontSize: 11, fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-fg)" }}>{hrs}</span>
+                              </Fragment>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </div></div>
+                    <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 6 }}>Two numbers = that day&rsquo;s shift; <b>off</b> toggles a day off. A <span style={{ color: "var(--av3-bad)" }}>red outline</span> means &lt;12 h rest after the previous shift. Weekly hours + pay = Σ the on-day shifts. <b>Auto-roster</b> fills a demand-fit, rest-safe week.</div>
+
+                    {/* ── coverage for the selected day ── */}
+                    <div style={{ marginTop: 14, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                        <span className="av3-subhead" style={{ margin: 0 }}>Coverage · {DAYS[coverageDay]}</span>
+                        <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{coverage.onToday} on</span>
+                        <Badge tone={coverage.gaps.length === 0 ? "ok" : "bad"}>{coverage.gaps.length === 0 ? "all hours covered" : `${coverage.gaps.length} short: ${coverage.gaps.map((h) => `${h}:00`).join(", ")}`}</Badge>
+                        <Badge tone={coverage.peakHours.length === 0 ? "neutral" : coverage.peakCovered ? "ok" : "bad"}>{coverage.peakHours.length ? `peak ${coverage.peakHours[0]}:00–${coverage.peakHours[coverage.peakHours.length - 1] + 1}:00 ${coverage.peakCovered ? "covered" : "SHORT"}` : "no peak"}</Badge>
+                      </div>
+                      <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: `88px repeat(${coverage.nHours}, minmax(26px, 1fr))`, gap: 2 }}>
+                        <div />
+                        {coverage.hours.map((h) => <div key={h.hour} title={h.isPeak ? "peak hour" : undefined} style={{ textAlign: "center", fontSize: 10, fontFamily: "var(--av3-mono)", padding: "2px 0", borderRadius: 3, fontWeight: h.isPeak ? 700 : 400, color: h.isPeak ? "var(--av3-fg)" : "var(--av3-subtle)", background: h.isPeak ? "color-mix(in oklab, var(--av3-c5) 24%, transparent)" : "transparent" }}>{h.hour}</div>)}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Demand/hr</div>
+                        {coverage.hours.map((h) => <div key={h.hour} title={`${h.hour}:00 · ${h.demand.toFixed(0)} orders/hr`} style={{ display: "flex", alignItems: "flex-end", height: 30, background: "var(--av3-s1)", borderRadius: 3 }}><div style={{ width: "100%", height: `${Math.round((h.demand / coverage.maxDemand) * 100)}%`, background: h.kitchenShort ? "var(--av3-bad)" : "var(--av3-c3)", opacity: 0.9, borderRadius: "3px 3px 0 0" }} /></div>)}
+                        {coverage.roles.map((role) => (
+                          <Fragment key={role}>
+                            <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>{ROLE_LABEL[role]}</div>
+                            {coverage.hours.map((h) => { const cnt = h.perRole[role] ?? 0; const inten = cnt > 0 ? 22 + Math.round((cnt / coverage.maxStaff) * 58) : 0; return <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: cnt > 0 ? "var(--av3-fg)" : "var(--av3-subtle)", background: cnt > 0 ? `color-mix(in oklab, var(--av3-c2) ${inten}%, var(--av3-s1))` : "var(--av3-s1)" }}>{cnt > 0 ? cnt : "·"}</div>; })}
+                          </Fragment>
+                        ))}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center", fontWeight: 600 }}>Total on</div>
+                        {coverage.hours.map((h) => <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", fontWeight: 600 }}>{h.totalOn || "·"}</div>)}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Line on/need</div>
+                        {coverage.hours.map((h) => <div key={h.hour} title={`Pizzaioli on ${h.kitchenOn} · need ${h.requiredKitchen}${h.kitchenShort ? " · SHORT" : ""}`} style={{ textAlign: "center", fontSize: 10.5, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: h.kitchenShort ? "#fff" : "var(--av3-fg)", background: h.kitchenShort ? "var(--av3-bad)" : "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }}>{h.kitchenOn}/{h.requiredKitchen}</div>)}
+                      </div></div>
+                    </div>
+                  </>
+                );
+              })()}
             </CardBody>
           </Card>
           )}

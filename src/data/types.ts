@@ -1224,13 +1224,15 @@ export interface SimulationLaborLine {
   headcount: number;
   /** Per-person gross pay rate in grosze / hour. */
   hourlyRateGrosze: number;
-  /** Days per week these people work — with the daily shift length it gives the
-   *  weekly hours (and therefore cost). Defaults to 6 when unset. */
+  /** This worker's weekly rota — a 7-slot array (Mon…Sun); each slot is that
+   *  day's shift (24h clock) or `null` for a day off. The single scheduling
+   *  surface: it drives the per-day coverage grid AND the weekly hours = Σ of
+   *  each on-day's shift length. The restaurant is open 7 days; a person works
+   *  the 5–6 they're rostered. Consecutive on-days must leave ≥12h rest. */
+  week?: ({ start: number; end: number } | null)[];
+  /** Legacy — a single representative-day shift + days/week. Superseded by
+   *  `week`; migrated on load. */
   daysPerWeek?: number;
-  /** Per-person shift windows (24h clock, one entry = one person on the floor
-   *  for that daily window). This is the single scheduling surface: it drives
-   *  the live coverage grid AND the weekly hours = (avg shift length × days).
-   *  Hand-edited or filled by the Shift plan card's auto-roster. */
   shifts?: { start: number; end: number }[];
   /** Legacy per-person weekly hours — only used as the cost fallback for old
    *  scenarios that predate `shifts`. New/rostered lines derive hours from the

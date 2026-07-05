@@ -1325,6 +1325,24 @@ auth canvas's signature lighting and the sign-in lockup:
   worker is a line), so Auto-roster spreads people across the day instead of piling
   each role onto the same block. The detailed-P&L labour breakdown re-aggregates
   the now-per-worker `laborByRole` back to one line per role.
+  **Part 3r shipped — weekly rota (per-day shifts + 12h rest):** the single-shift
+  model became a full **7-day rota** — `SimulationLaborLine.week` is a 7-slot array
+  (Mon–Sun), each slot a `{start,end}` shift or `null` (day off). The restaurant is
+  open all 7 days; each person works the 5–6 they're rostered. **Weekly hours (and
+  pay) = Σ each on-day's shift length** (`laborHoursPerWeek`/`weekOf`), so Labour's
+  Hrs/wk + salary and the coverage grid both derive from the rota, live. The Shift
+  plan card is now a **weekly rota grid** (person × Mon–Sun; two-number cells with
+  an *off* toggle; per-worker h/wk on the right) over a **per-day coverage grid**
+  with Mon–Sun day tabs (staffing varies by day as days-off thin the floor). A hard
+  **≥12 h rest** rule (`restViolationDays`, incl. the Sun→Mon wrap: rest between an
+  end `e` and next-day start `s` = (24−e)+s +24/skipped-day) red-outlines any
+  offending cell and shows a card-level count. `rosterWeek` (replacing
+  `rosterToDemand`) gives each worker a demand-fit **consistent** shift on 6
+  staggered days — a consistent shift leaves 24−L h rest, always ≥12, so
+  auto-rosters are rest-legal by construction. `weekOf` migrates legacy
+  single-shift lines; the sanitizer + PUT validate `week`; the default ships as 10
+  workers each with a staggered day off (labour unchanged at ~82.5k zł). Design
+  chosen from `tests/sketches/labour-per-day-scheduler-concepts.html` (concept 01).
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

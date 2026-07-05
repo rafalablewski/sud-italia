@@ -81,7 +81,8 @@ export const PUT = withAdmin(
         !VALID_ROLES.has(line.role) ||
         typeof line.headcount !== "number" ||
         typeof line.hourlyRateGrosze !== "number" ||
-        // hoursPerWeek is legacy/optional now — hours derive from `shifts` × days.
+        // `week` is the 7-day rota; hoursPerWeek/daysPerWeek/shifts are legacy.
+        (line.week !== undefined && (!Array.isArray(line.week) || line.week.some((sh) => sh !== null && (typeof sh?.start !== "number" || typeof sh?.end !== "number")))) ||
         (line.hoursPerWeek !== undefined && typeof line.hoursPerWeek !== "number") ||
         (line.daysPerWeek !== undefined && typeof line.daysPerWeek !== "number") ||
         (line.shifts !== undefined && (!Array.isArray(line.shifts) || line.shifts.some((sh) => typeof sh?.start !== "number" || typeof sh?.end !== "number")))
