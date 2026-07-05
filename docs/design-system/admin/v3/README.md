@@ -1189,16 +1189,33 @@ auth canvas's signature lighting and the sign-in lockup:
   (Seasonality); build-out learning % + floor % (Fleet). Every scenario field
   the engine reads is now editable.
   **Part 3i shipped — menu-scenario system (full v2 parity, nothing left):** the
-  named-scenario model is ported — a **Menu scenarios** card with the five baked
+  named-scenario model is ported — a **Scenarios** card with the five baked
   archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) + **Custom**,
   each resolving its `menuScenarioOverrides[id]` over the baked preset. **Apply**
-  loads the full input set (orders/day · days · ticket · COGS + the six attach %,
+  loads the full input set (orders/day · days · ticket + the six attach %,
   preserving enabled-state) and sets `menuScenario=id`; **Save current** captures
   the live inputs into the override; **Reset** drops it. The same overrides
   round-trip with v2 via `PUT /api/admin/simulation`. With this the v3 Calculator
   is at **field-for-field AND feature-for-feature parity** with the 17k-line v2
   `AdminSimulation` — every variable, lever, what-if, operational view and named
   scenario.
+  **Part 3j shipped — food cost + waste come from the dishes, not the preset:**
+  the **Scenarios** card moved up into the inputs column directly **below Variable
+  costs** (it read as an afterthought stranded at the page bottom). The Variable
+  costs card keeps **Food cost %** and **Waste %**, but they're now the *derived*
+  half of the card — pinned to the real menu and **read-only on all five named
+  presets**; only **Custom** unlocks them for hand-typed what-ifs. The derivation
+  is `computeSimulationActuals`, extended to split each dish's recipe cost into
+  the ingredient that reaches the plate vs the `wasteFactor` trim/spill overhead
+  (`calculateFoodCostBreakdown`) and weight both by real sales mix →
+  `weightedFoodCostPct` + `weightedWastePct` on `SimulationActualsSnapshot` (they
+  sum to the existing `weightedCogsPct`, so no double-count). The Calculator
+  fetches `/api/admin/simulation/actuals` on load, seeds cogs/waste from it on
+  every **Apply**, and overrides them in the compute scenario (`scnEff`) whenever
+  a named preset is active so the whole P&L / heatmaps / projection reflect the
+  dishes. The remaining Variable-cost levers (payment · refund · loyalty · CIT ·
+  packaging) stay the per-revenue **constants** they always were. The `P()` field
+  primitive gained an optional `readOnly` + `hint` for the locked state.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

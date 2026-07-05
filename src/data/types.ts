@@ -1717,6 +1717,15 @@ export interface SimulationActualsSnapshot {
    *  operator-typed flat cogsPct. Falls back to 0 when no item carries
    *  cost data. */
   weightedCogsPct: number;
+  /** Weighted food cost *excluding* trim/spill waste — the ingredient that
+   *  reaches the plate as a fraction of revenue (Σqty×base ÷ Σqty×price).
+   *  Feeds the Calculator's Food-cost-% lever so it and Waste-% sum back to
+   *  weightedCogsPct without double-counting. */
+  weightedFoodCostPct: number;
+  /** Weighted trim/spill waste overhead as a fraction of revenue — the extra
+   *  ingredient purchased to cover loss (from each recipe line's wasteFactor).
+   *  Feeds the Calculator's Waste-% lever. */
+  weightedWastePct: number;
   /** Share of orders by fulfillment type. */
   takeoutSharePct: number;
   deliverySharePct: number;

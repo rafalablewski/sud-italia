@@ -5262,6 +5262,42 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
 }
 
 /**
+ * Split a dish's recipe food cost into the ingredient cost that reaches the
+ * plate (`base`) and the trim/spill overhead carried by each line's
+ * `wasteFactor` (`waste`). `base + waste === total === calculateFoodCost()`.
+ * The Calculator derives its separate Food-cost-% and Waste-% levers from the
+ * menu-wide weighting of this split, so waste isn't double-counted inside the
+ * flat food-cost ratio. Returns all-zero when there's no recipe.
+ */
+export async function calculateFoodCostBreakdown(
+  menuItemId: string,
+): Promise<{ base: number; waste: number; total: number }> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return { base: 0, waste: 0, total: 0 };
+
+  const activeProducts = await resolveActiveProducts(
+    recipe.ingredients.map((ri) => ri.ingredientId),
+  );
+
+  let base = 0;
+  let total = 0;
+  for (const ri of recipe.ingredients) {
+    const product = activeProducts.get(ri.ingredientId);
+    if (!product) continue;
+    const lineBase = product.costPerUnit * ri.quantity;
+    base += lineBase;
+    total += lineBase * (ri.wasteFactor || 1);
+  }
+
+  const yieldPortions = recipe.yieldPortions || 1;
+  return {
+    base: Math.round(base / yieldPortions),
+    waste: Math.round((total - base) / yieldPortions),
+    total: Math.round(total / yieldPortions),
+  };
+}
+
+/**
  * Calculate per-portion kcal from the recipe. Reads each ingredient's
  * active distributor offering. Returns `null` when:
  *  - there's no recipe, or
@@ -13439,7 +13475,10 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
     seeded.ordersPerDay = Math.max(1, Math.round(actuals.ordersPerDay));
     seeded.avgTicketGrosze = Math.max(0, Math.round(actuals.avgTicketGrosze));
     if (actuals.weightedCogsPct > 0) {
-      seeded.cogsPct = clamp01(actuals.weightedCogsPct, seeded.cogsPct);
+      // Food cost + waste split so the two Calculator levers stay honest and
+      // don't double-count (base + waste === total dish cost).
+      seeded.cogsPct = clamp01(actuals.weightedFoodCostPct, seeded.cogsPct);
+      seeded.wastePct = clamp01(actuals.weightedWastePct, seeded.wastePct ?? 0);
     }
     // Map delivery share from actuals onto the existing deliveryShare lever
     // so downstream packaging + processor math picks it up.
@@ -13502,7 +13541,31 @@ export async function computeSimulationActuals(
   // sum(qty × (item.price + Σ option.priceDelta)) across every line item
   // in every fulfilled order. The honest replacement for the operator's
   // flat cogsPct guess.
+  //
+  // The Calculator wants Food-cost-% and Waste-% as *separate* levers, so we
+  // also split each line's cost into the ingredient that reaches the plate vs
+  // the trim/spill overhead. The waste fraction comes from the *current*
+  // recipe's wasteFactor (stable per dish); it's applied to the snapshot line
+  // cost so the total (weightedCogsPct) never regresses. Items without a live
+  // recipe contribute 0 waste (no data), all cost counts as food.
+  const distinctItems = new Map<string, MenuItem>();
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      if (line.menuItem && !distinctItems.has(line.menuItem.id)) {
+        distinctItems.set(line.menuItem.id, line.menuItem);
+      }
+    }
+  }
+  const wasteFractionById = new Map<string, number>();
+  await Promise.all(
+    [...distinctItems.keys()].map(async (id) => {
+      const b = await calculateFoodCostBreakdown(id).catch(() => null);
+      wasteFractionById.set(id, b && b.total > 0 ? b.waste / b.total : 0);
+    }),
+  );
+
   let menuCostTotal = 0;
+  let menuWasteTotal = 0;
   let menuRevenueTotal = 0;
   const modIndex: ModifierIndexCache = new Map();
   for (const o of fulfilled) {
@@ -13521,10 +13584,15 @@ export async function computeSimulationActuals(
         }
       }
       menuCostTotal += qty * lineCost;
+      menuWasteTotal += qty * lineCost * (wasteFractionById.get(item.id) ?? 0);
       menuRevenueTotal += qty * linePrice;
     }
   }
   const weightedCogsPct = menuRevenueTotal > 0 ? menuCostTotal / menuRevenueTotal : 0;
+  const weightedWastePct = menuRevenueTotal > 0 ? menuWasteTotal / menuRevenueTotal : 0;
+  // Food cost ex-waste — what the Calculator's Food-cost-% lever holds so it
+  // and the Waste-% lever sum back to the true dish cost.
+  const weightedFoodCostPct = Math.max(0, weightedCogsPct - weightedWastePct);
   const dayKeys = new Set(
     fulfilled
       .map((o) => {
@@ -13574,6 +13642,8 @@ export async function computeSimulationActuals(
     ordersPerDay,
     avgTicketGrosze,
     weightedCogsPct,
+    weightedFoodCostPct,
+    weightedWastePct,
     takeoutSharePct,
     deliverySharePct,
     refundPct,

@@ -39,8 +39,11 @@ const DEFAULT_FLEET: SimulationFleetModel = { unitCount: 1, hqOverheadMonthlyGro
 function Z({ label, grosze, onChange, w = 120 }: { label: string; grosze: number; onChange: (g: number) => void; w?: number }) {
   return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} onChange={(e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} /></label>;
 }
-function P({ label, frac, onChange, w = 110 }: { label: string; frac: number; onChange: (f: number) => void; w?: number }) {
-  return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.1" value={+(frac * 100).toFixed(2)} onChange={(e) => onChange((Number(e.target.value) || 0) / 100)} /></label>;
+function P({ label, frac, onChange, w = 110, readOnly = false, hint }: { label: string; frac: number; onChange: (f: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
+  return <label className="av3-field" style={{ width: w }}>
+    <span className="av3-field-label">{label}{hint ? <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {hint}</span> : null}</span>
+    <input className="av3-input" type="number" step="0.1" value={+(frac * 100).toFixed(2)} readOnly={readOnly} disabled={readOnly} title={readOnly ? "Derived from dish recipes — switch to the Custom scenario to edit" : undefined} onChange={readOnly ? undefined : (e) => onChange((Number(e.target.value) || 0) / 100)} />
+  </label>;
 }
 function N({ label, value, onChange, w = 110, step = 1 }: { label: string; value: number; onChange: (n: number) => void; w?: number; step?: number }) {
   return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value) || 0)} /></label>;
@@ -95,6 +98,9 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
 ];
 const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 90, daysOpenPerMonth: 30, avgTicketGrosze: 8000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
 const MENU_SCENARIOS_ALL = [...MENU_SCENARIOS, CUSTOM_PRESET];
+// The five baked archetypes lock Food-cost-% + Waste-% to the dish-derived
+// values; only the Custom scenario lets the operator hand-edit them.
+const NAMED_PRESET_IDS = new Set(MENU_SCENARIOS.map((s) => s.id));
 const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_ALL.map((s) => [s.id, s]));
 const ATTACH_OF: Record<keyof MenuScenarioPreset["attach"], AttachKey> = { coffee: "coffeeAttach", dessert: "dessertAttach", antipasti: "antipastiAttach", aperitivo: "aperitivoAttach", premiumToppings: "premiumToppingsAttach", pastaPrimo: "pastaPrimoAttach" };
 // Overlay the operator's saved override (if any) on top of the baked preset.
@@ -136,13 +142,28 @@ function Heatmap({ data }: { data: HeatData }) {
 
 export function CalculatorV3() {
   const [scn, setScn] = useState<SimulationScenario | null>(null);
+  // Dish-derived food cost + waste (menu mix weighted, ex-waste split) — the
+  // source of truth for the two levers in every scenario except Custom.
+  const [dishCost, setDishCost] = useState<{ foodCostPct: number; wastePct: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   const load = useCallback(async () => {
-    const d = await fetch("/api/admin/simulation").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    setScn(d); setLoading(false); setDirty(false);
+    const [d, act] = await Promise.all([
+      fetch("/api/admin/simulation").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/admin/simulation/actuals?days=90").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]);
+    const dc = act && typeof act.weightedCogsPct === "number" && act.weightedCogsPct > 0
+      ? { foodCostPct: act.weightedFoodCostPct ?? act.weightedCogsPct, wastePct: act.weightedWastePct ?? 0 }
+      : null;
+    setDishCost(dc);
+    // A named preset draws food cost + waste from dishes — sync the stored
+    // scenario so what's saved matches what's shown and computed.
+    const scenario = d && dc && NAMED_PRESET_IDS.has(d.menuScenario ?? "")
+      ? { ...d, cogsPct: dc.foodCostPct, wastePct: dc.wastePct }
+      : d;
+    setScn(scenario); setLoading(false); setDirty(false);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -156,20 +177,34 @@ export function CalculatorV3() {
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
   const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
 
+  // A named preset locks Food-cost-% + Waste-% to the dish-derived values;
+  // only Custom (or a scenario with no preset yet) lets the operator edit them.
+  const foodWasteLocked = !!scn && NAMED_PRESET_IDS.has(scn.menuScenario ?? "");
+  const effCogsPct = foodWasteLocked && dishCost ? dishCost.foodCostPct : (scn?.cogsPct ?? 0);
+  const effWastePct = foodWasteLocked && dishCost ? dishCost.wastePct : (scn?.wastePct ?? 0);
+  // Scenario as the engine should see it: when locked, override cogs/waste with
+  // the dish-derived split so the whole P&L reflects the real menu, not a stale
+  // stored guess. Everything downstream computes off this.
+  const scnEff = useMemo<SimulationScenario | null>(() => {
+    if (!scn) return null;
+    if (!foodWasteLocked || !dishCost) return scn;
+    return { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct };
+  }, [scn, foodWasteLocked, dishCost]);
+
   // Fold the behaviour levers + annual weather into the headline scenario so
   // the P&L / tornado / returns reflect them (rule #8 — end-to-end). The
   // projection applies weather per-month itself, so it takes the
   // assumptions-folded (but not annual-weather) scenario.
-  const folded = useMemo(() => (scn ? applyAnnualWeather(applyAssumptions(scn)) : null), [scn]);
+  const folded = useMemo(() => (scnEff ? applyAnnualWeather(applyAssumptions(scnEff)) : null), [scnEff]);
   const c = useMemo(() => (folded ? computeScenario(folded) : null), [folded]);
   const tornado = useMemo(() => (folded ? computeTornado(folded) : []), [folded]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
   const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
-  const projection = useMemo(() => (scn ? projectTwelveMonths(applyAssumptions(scn)) : []), [scn]);
+  const projection = useMemo(() => (scnEff ? projectTwelveMonths(applyAssumptions(scnEff)) : []), [scnEff]);
   // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
   // on-site card rate isn't the blended one (matches v2).
-  const channels = useMemo(() => (scn ? computeChannelEconomics(scn) : []), [scn]);
-  const fleet = useMemo(() => (scn ? computeFleetEconomics(scn, scn.setupCostGrosze ?? 0) : null), [scn]);
+  const channels = useMemo(() => (scnEff ? computeChannelEconomics(scnEff) : []), [scnEff]);
+  const fleet = useMemo(() => (scnEff ? computeFleetEconomics(scnEff, scnEff.setupCostGrosze ?? 0) : null), [scnEff]);
 
   // ── what-if heatmaps: recompute net profit over a grid (real engine) ──────
   const MULTS = useMemo(() => [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3], []);
@@ -241,7 +276,11 @@ export function CalculatorV3() {
       const ak = ATTACH_OF[k];
       a[ak] = { ...(s.assumptions?.[ak] ?? ATTACH_DEFAULTS[ak]), attachPct: p.attach[k] };
     });
-    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct: p.cogsPct, assumptions: a };
+    // Food cost + waste are dish-sourced, not baked into the preset — seed them
+    // from the live dish mix (Custom then lets the operator diverge).
+    const cogsPct = dishCost ? dishCost.foodCostPct : s.cogsPct;
+    const wastePct = dishCost ? dishCost.wastePct : (s.wastePct ?? 0);
+    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct, wastePct, assumptions: a };
   });
   // capture the current live inputs into this scenario's override
   const saveScenarioOverride = (id: string) => setScn((s) => {
@@ -420,16 +459,54 @@ export function CalculatorV3() {
           </Card>
 
           <Card>
-            <CardHead title="Variable costs" />
+            <CardHead title="Variable costs" description={foodWasteLocked ? "Food cost + waste are derived from dish recipes — switch to the Custom scenario to edit them. Payment · refund · loyalty · tax are per-revenue constants." : "Payment · refund · loyalty · tax are per-revenue constants. Food cost + waste are editable here on the Custom scenario; named presets lock them to the dish recipes."} />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <P label="Food cost %" frac={scn.cogsPct} onChange={(f) => patch({ cogsPct: f })} />
+              <P label="Food cost %" frac={effCogsPct} onChange={(f) => patch({ cogsPct: f })} readOnly={foodWasteLocked} hint={foodWasteLocked ? "from dishes" : undefined} />
+              <P label="Waste %" frac={effWastePct} onChange={(f) => patch({ wastePct: f })} readOnly={foodWasteLocked} hint={foodWasteLocked ? "from dishes" : undefined} />
               <P label="Payment %" frac={scn.paymentProcessorPct ?? 0} onChange={(f) => patch({ paymentProcessorPct: f })} />
-              <P label="Waste %" frac={scn.wastePct ?? 0} onChange={(f) => patch({ wastePct: f })} />
               <P label="Refund %" frac={scn.refundPct ?? 0} onChange={(f) => patch({ refundPct: f })} />
               <P label="Loyalty %" frac={scn.loyaltyBurnPct ?? 0} onChange={(f) => patch({ loyaltyBurnPct: f })} />
               <Z label="Packaging/order" grosze={scn.packagingPerOrderGrosze ?? 0} onChange={(g) => patch({ packagingPerOrderGrosze: g })} />
               <P label="CIT (tax) %" frac={scn.citPct ?? 0} onChange={(f) => patch({ citPct: f })} />
             </div></CardBody>
+          </Card>
+
+          {/* menu scenarios — five named archetypes + Custom; apply loads a full input set, edits persist as overrides */}
+          <Card>
+            <CardHead title="Scenarios" description="Five menu archetypes + Custom — apply loads volume · days · ticket · attach in one click" actions={
+              <InfoButton title="Scenarios"
+                description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo) plus a Custom slot. Applying one loads a whole input set; your edits save back onto the scenario."
+                institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume and ticket together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs, capacity and dish-derived food cost to see which clears the return gate."
+                plain="Tap 'Premium' and the model jumps to 85 orders/day at a 110 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Food cost + waste stay pinned to your real dish recipes; only 'Custom' lets you hand-type them to explore a what-if. Tweak a few fields, hit Save current, and that becomes your saved case; Reset reverts it to the baked archetype."
+                tips="Start from the closest archetype, fine-tune in the cards above, then Save current to keep it. Switch to Custom when you want to stress food cost or waste directly. Use Scenario comparison to band each concept and the heatmaps to test sensitivity."
+                methodology="Applying writes ordersPerDay/days/ticket + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Food-cost-% + Waste-% are seeded from the dish mix (computeSimulationActuals → weightedFoodCostPct / weightedWastePct) and stay read-only on the five named presets — only Custom unlocks them. Save current captures live inputs into menuScenarioOverrides[id], overlaid by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
+            } />
+            <CardBody>
+              <div className="av3-cols-3" style={{ gap: 10 }}>
+                {MENU_SCENARIOS_ALL.map((base) => {
+                  const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
+                  const active = scn.menuScenario === base.id;
+                  const edited = !!scn.menuScenarioOverrides?.[base.id];
+                  const custom = base.id === CUSTOM_PRESET.id;
+                  return (
+                    <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ fontSize: 16 }}>{p.emoji}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
+                      </div>
+                      <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
+                      <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {custom ? "food cost editable" : "food cost from dishes"}</div>
+                      <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
+                        <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
+                        <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
+                        {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardBody>
           </Card>
 
           <Card>
@@ -812,43 +889,6 @@ export function CalculatorV3() {
           </Card>
         </div>
       )}
-
-      {/* menu scenarios — named archetypes; apply loads a full input set, edits persist as overrides */}
-      <Card>
-        <CardHead title="Menu scenarios" description="Named menu shapes — apply loads volume · days · ticket · COGS · attach in one click" actions={
-          <InfoButton title="Menu scenarios"
-            description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo + Custom). Applying one loads a whole input set; your edits save back onto the scenario."
-            institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume, ticket and COGS together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs and capacity to see which clears the return gate."
-            plain="Tap 'Premium' and the model jumps to 55 orders/day at an 88 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Tweak a few fields, hit Save, and that becomes your saved Premium case; Reset reverts it to the baked archetype."
-            tips="Start from the closest archetype, fine-tune in the cards above, then Save to keep it. Use Scenario comparison to band each concept and the heatmaps to test how sensitive it is. 'Custom' is the blank slot for a concept that doesn't match an archetype."
-            methodology="Applying writes ordersPerDay/days/ticket/COGS + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Save captures the live inputs into menuScenarioOverrides[id], overlaid on the baked preset by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
-        } />
-        <CardBody>
-          <div className="av3-cols-3" style={{ gap: 10 }}>
-            {MENU_SCENARIOS_ALL.map((base) => {
-              const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
-              const active = scn.menuScenario === base.id;
-              const edited = !!scn.menuScenarioOverrides?.[base.id];
-              return (
-                <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ fontSize: 16 }}>{p.emoji}</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
-                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
-                  </div>
-                  <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
-                  <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {(p.cogsPct * 100).toFixed(0)}% COGS</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
-                    <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
-                    <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
-                    {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
 
       {oven && shiftPlan && (
         <div className="av3-grid-2">
