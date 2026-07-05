@@ -1,8 +1,8 @@
 /* Core parity (book) — dense-console 1:1 fixes. Scope every rule under .core */
 
-/* ── Surface sub-bar (mockup `.subbar`) — day label · date chip · pill ───── */
-/* Compact date chip so it reads like the mockup's datefield, not a full input */
-.core .core-bk-datefield { width: auto; height: 30px; padding: 3px 9px; font-size: 11px; }
+/* ── Surface sub-bar (mockup `.subbar`) — date chip · pills ─────────────── */
+/* The date chip now uses the shared `CoreDateField` (`.core-datefield-pick`,
+   same as Slots) — no bespoke `.core-bk-datefield` input. */
 /* Brand-tinted "New reservation" pill (mockup `.pill.new`) */
 .core .core-bk-newpill {
   display: inline-flex; align-items: center; gap: 6px;

@@ -66,9 +66,10 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   `.core-exch-head` / `.core-applyall` / `.core-exrow` / `.core-tier` /
   `.core-lever` (`.lv` + `.why`) / `.core-apply`.
 - Rendered in the **dense-console** language: the `.core-surf-toolbar` ActionBar
-  ActionBar whose `left` leads with the **`Mode`
-  switch** (Manage | Demand, a `.core-seg`), then Day / Week
-  + date + channel filter left; New slot · Refresh right), then a **6-up
+  whose `left` leads with the **`Mode` switch** (Manage | Demand, a `.core-seg`),
+  then Day / Week and the shared **`CoreDateField`** picker; on the right the
+  **Fulfillment** filter collapses into a `CoreFilterMenu` funnel, then a standard
+  `.core-iconbtn` Refresh and the New-slot pill. Then a **6-up
   `.core-statstrip`** — **booked · capacity · fill ·
   surge windows · peak fill · demand price** (all live from the slot set —
   Rule #1; a "surge window" is one filled ≥85%, peak drives the price
@@ -213,8 +214,8 @@ Floor lens as an off-book tile. `buildTableSessions` is pure (caller passes
 number** (shared with the Tables `tLabel`). The **surface toolbar**
 (`.core-surf-toolbar.core-bk-subbar`, the ActionBar — under the command bar,
 over the stat strip, via the shared `CoreSurfToolbar`) carries, in its `left`,
-the **timeline / floor / arrivals** view switch, then the weekday label + a
-compact date chip (`.core-bk-datefield`); on the right the occasional
+the **timeline / floor / arrivals** view switch, then the shared
+**`CoreDateField`** picker (same as Slots); on the right the occasional
 **Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, keeping
 the frequent **Walk-in** button + the brand **New reservation** pill
 (`.core-bk-newpill`, focuses the guest field) inline. A
@@ -285,5 +286,5 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 Parity layers: `src/app/themes/core/parity/{tables,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
 - **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); zone pills under the section head; tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
-- **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · styled `datefield` · `Filters` ghost (cycles fulfillment channel) · orange New-slot pill (`.core-slot-add`) · `Refresh` ghost; stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
+- **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · the shared `CoreDateField` picker (left); on the right a `CoreFilterMenu` funnel (Fulfillment: All · Dine-in · Takeaway · Delivery) · standard `.core-iconbtn` Refresh · orange New-slot pill (`.core-slot-add`); stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

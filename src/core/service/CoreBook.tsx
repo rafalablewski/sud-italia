@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { CoreActionMenu } from "@/core/shell/CoreActionMenu";
+import { CoreDateField } from "@/core/shell/CoreDateField";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { CorePos } from "@/core/pos/CorePos";
 import { useSelection } from "@/core/shell/SelectionContext";
@@ -593,14 +594,7 @@ export function CoreBook({
                   </button>
                 ))}
               </div>
-              <span className="core-surf-tb-lbl">{daySub}</span>
-              <input
-                className="core-inp core-bk-datefield"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                aria-label="Booking day"
-              />
+              <CoreDateField value={date} onChange={setDate} ariaLabel="Booking day" />
             </>
           }
           right={

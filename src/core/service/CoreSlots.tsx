@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { CoreDateField } from "@/core/shell/CoreDateField";
+import { CoreFilterMenu } from "@/core/shell/CoreFilterMenu";
 import { useCoreCache } from "@/lib/useCoreCache";
-import { PlusIcon } from "@/core/shell/toolIcons";
+import { PlusIcon, RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
@@ -282,10 +284,6 @@ export function CoreSlots() {
 
   const changeCount = board?.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze).length ?? 0;
 
-  const dateDisplay = date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-GB") : "—";
-  const CHAN_CYCLE: (FulfillmentType | "all")[] = ["all", "dine-in", "takeout", "delivery"];
-  const cycleChan = () => setChan((c) => CHAN_CYCLE[(CHAN_CYCLE.indexOf(c) + 1) % CHAN_CYCLE.length]);
-  const chanLabel = chan === "all" ? "Filters" : `Filters · ${FULFIL.find((f) => f.key === chan)?.label ?? chan}`;
   const refresh = () => {
     void loadSlots();
     void loadBoard();
@@ -341,23 +339,27 @@ export function CoreSlots() {
                 <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
                 <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
               </div>
-              <label className="core-datefield core-slots-date" title="Change date">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
-                <span className="dv">{dateDisplay}</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* not supported */ } }} aria-label="Date" />
-              </label>
-              <button type="button" className={`core-ghostbtn ${chan !== "all" ? "on" : ""}`} onClick={cycleChan}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M7 12h10M10 18h4" /></svg>{chanLabel}
-              </button>
+              <CoreDateField value={date} onChange={setDate} ariaLabel="Slot date" />
             </>
           }
           right={
             <>
+              {/* Fulfillment filter collapses into the shared funnel popover (same as CRM/Orders). */}
+              <CoreFilterMenu
+                label="Filter slots"
+                groups={[
+                  {
+                    key: "fulfillment",
+                    label: "Fulfillment",
+                    value: chan,
+                    base: "all",
+                    onChange: (v) => setChan((v ?? "all") as FulfillmentType | "all"),
+                    options: [{ value: "all", label: "All" }, ...FULFIL.map((f) => ({ value: f.key, label: f.label }))],
+                  },
+                ]}
+              />
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={refresh}><RefreshIcon /></button>
               <button type="button" className="core-slot-add" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
-              <button type="button" className="core-ghostbtn" onClick={refresh}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" /></svg>Refresh
-              </button>
             </>
           }
         />

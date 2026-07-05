@@ -229,7 +229,13 @@ in the surface ActionBar.
   of selectable `.core-filt-chip`s (with optional `.c` counts or a `.core-gem`
   dot); a **Reset filters** row appears when anything is set. Same portal/dismiss
   discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort;
-  Orders for the Channel filter.
+  Orders for the Channel filter; Slots for the Fulfillment filter.
+- **`.core-datefield` / `.core-datefield-pick`** — the date control. Base
+  `.core-datefield` is a read-only "today" chip (Orders). **`CoreDateField`**
+  (`src/core/shell/CoreDateField.tsx`) is the shared interactive picker
+  (`.core-datefield-pick`): a styled pill (calendar glyph · formatted date ·
+  chevron) with a full-bleed transparent native `<input type=date>` driving it —
+  ONE date picker across Book + Slots (they had two bespoke fields).
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the

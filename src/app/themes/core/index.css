@@ -323,7 +323,7 @@
    "Filters" / "Refresh" all read identically across tabs (they were 28–38px,
    pill vs rounded-rect, some lowercase). Each keeps its own fill (brand vs
    neutral) — only the geometry is unified. */
-.core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-ghostbtn, .core-btn) {
+.core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-btn) {
   height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1; white-space: nowrap; flex: none;
 }
 .core .core-surf-toolbar :is(.core-bk-newpill, .core-bk-toolbtn) span { font-size: 12px; }
@@ -1768,6 +1768,14 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    are gone. Keep the base badge style below. */
 .core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); }
 .core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
+/* Interactive picker variant (CoreDateField) — a full-bleed transparent native
+   <input type=date> drives the styled pill (icon · date · chevron); the native
+   picker glyph is hidden so the styled chevron stands in. Shared by Book + Slots. */
+.core .core-datefield-pick { position: relative; margin-left: 0; flex: none; padding: 6px 11px; cursor: pointer; }
+.core .core-datefield-pick .dv { color: var(--ink); }
+.core .core-datefield-pick svg { color: var(--ink-3); flex: none; }
+.core .core-datefield-pick input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.core .core-datefield-pick input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: var(--panel); }
 .core .core-otable table { width: 100%; border-collapse: collapse; }
 .core .core-otable thead th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
