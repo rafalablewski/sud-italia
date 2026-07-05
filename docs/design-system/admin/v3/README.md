@@ -1280,6 +1280,18 @@ auth canvas's signature lighting and the sign-in lockup:
   hours, peak coverage and scheduled floor-hours/day. All derived in a `coverage`
   memo over the folded scenario; the oven-curve card now stands alone (its start
   hour follows `openingHours.openHour`).
+  **Part 3o shipped — individual shifts + demand auto-roster:** a flat headcount
+  sat everyone on the floor all day, so "Total on" read the same every hour. New
+  `SimulationLaborLine.shifts` (per-person `{start,end}` windows) let staff be
+  scheduled individually; when present they define coverage instead of the flat
+  headcount×window. The Shift plan card gained a **roster editor** (one editable
+  start–end pair per person, per line, with an *Individualise* button to break a
+  flat line into per-person shifts) and two header actions: **Auto-roster** —
+  `rosterToDemand`, a greedy that places each person's shift on the busiest
+  under-covered block so staffing tracks the demand curve (Total on ramps into
+  lunch/dinner and thins at the dead open/close), and **Flat** to revert. Pay is
+  unchanged (still headcount × hrs/wk × rate); shifts only shape *when* people are
+  on, and the coverage grid + gap badges give live feedback as you tune them.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

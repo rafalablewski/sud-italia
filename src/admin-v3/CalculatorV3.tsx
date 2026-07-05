@@ -105,6 +105,37 @@ function demandWeights(n: number): number[] {
   return w.map((v) => v / sum);
 }
 
+// Auto-roster: staple each line's headcount into staggered per-person shifts
+// that track the demand curve. Greedy — each next person takes the L-hour block
+// that maximises Σ demand ÷ (already-scheduled staff + 1), so people pile onto
+// the busy, under-covered hours (peak) and thin out over the quiet shoulders,
+// instead of everyone sitting on the floor all day. Cost is unchanged (still
+// headcount × hoursPerWeek); this only shapes *when* they're on.
+function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHour: number): SimulationLaborLine[] {
+  const H = Math.max(1, closeHour - openHour);
+  const weights = demandWeights(H);
+  const L = Math.min(H, Math.max(4, Math.round(H * 0.6)));
+  return labor.map((l) => {
+    const N = Math.max(0, Math.round(l.headcount));
+    if (N === 0) return { ...l, shifts: [] };
+    if (L >= H) return { ...l, shifts: Array.from({ length: N }, () => ({ start: openHour, end: closeHour })) };
+    const cov = new Array(H).fill(0);
+    const shifts: { start: number; end: number }[] = [];
+    for (let p = 0; p < N; p++) {
+      let bestStart = openHour;
+      let best = -Infinity;
+      for (let st = openHour; st <= closeHour - L; st++) {
+        let score = 0;
+        for (let h = st; h < st + L; h++) score += weights[h - openHour] / (cov[h - openHour] + 1);
+        if (score > best) { best = score; bestStart = st; }
+      }
+      for (let h = bestStart; h < bestStart + L; h++) cov[h - openHour]++;
+      shifts.push({ start: bestStart, end: bestStart + L });
+    }
+    return { ...l, shifts };
+  });
+}
+
 // Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
 // Applying one loads a full input set (volume / days / ticket / COGS + the six
 // attach % values, preserving each lever's enabled state). Operator edits to a
@@ -217,6 +248,12 @@ export function CalculatorV3() {
     const openHoursPerDay = Math.max(1, oh.closeHour - oh.openHour);
     return { ...s, openingHours: oh, kitchenCapacity: s.kitchenCapacity ? { ...s.kitchenCapacity, openHoursPerDay } : s.kitchenCapacity };
   });
+  // Roster actions — stagger everyone to the demand curve, revert to flat, or
+  // break one line's headcount into hand-editable per-person shifts.
+  const autoRoster = () => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: rosterToDemand(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour)) }; });
+  const clearRoster = () => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l) => ({ ...l, shifts: undefined })) }; });
+  const individualiseLine = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); const oh = s.openingHours ?? { openHour: 11, closeHour: 22 }; return { ...s, labor: s.labor.map((l, idx) => { if (idx !== i) return l; const start = Number.isFinite(l.startHour) ? (l.startHour as number) : Math.floor(oh.openHour); const end = Number.isFinite(l.endHour) ? (l.endHour as number) : Math.ceil(oh.closeHour); return { ...l, shifts: Array.from({ length: Math.max(0, Math.round(l.headcount)) }, () => ({ start, end })) }; }) }; });
+  const patchLaborShift = (i: number, si: number, over: Partial<{ start: number; end: number }>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l, idx) => idx !== i ? l : { ...l, shifts: (l.shifts ?? []).map((sh, sj) => sj === si ? { ...sh, ...over } : sh) }) }; });
 
   // Display currency — the canonical model stays in PLN grosze; `money` reformats
   // every amount at the operator's FX rate, and the Z inputs reparse back to grosze.
@@ -397,10 +434,16 @@ export function CalculatorV3() {
     const prepMult = Math.max(0.5, folded.prepComplexityMultiplier ?? 1);
     const effCap = perHourCap / prepMult;
     const peakDemand = Math.max(1e-9, ...weights) * folded.ordersPerDay;
-    const shiftOf = (l: SimulationLaborLine) => ({
-      s: Number.isFinite(l.startHour) ? Math.max(openHour, l.startHour as number) : openHour,
-      e: Number.isFinite(l.endHour) ? Math.min(closeHour, l.endHour as number) : closeHour,
-    });
+    // Per-person shifts (staggered roster) take precedence; otherwise the whole
+    // headcount sits on the line's single window (or the full service day).
+    const windowsOf = (l: SimulationLaborLine): { s: number; e: number; heads: number }[] =>
+      l.shifts && l.shifts.length > 0
+        ? l.shifts.map((sh) => ({ s: Math.max(openHour, Math.min(closeHour, sh.start)), e: Math.max(openHour, Math.min(closeHour, sh.end)), heads: 1 }))
+        : [{
+            s: Number.isFinite(l.startHour) ? Math.max(openHour, l.startHour as number) : openHour,
+            e: Number.isFinite(l.endHour) ? Math.min(closeHour, l.endHour as number) : closeHour,
+            heads: l.headcount,
+          }];
     const roles = [...new Set(folded.labor.map((l) => l.role))];
     const hours = weights.map((w, i) => {
       const hour = openHour + i;
@@ -409,11 +452,12 @@ export function CalculatorV3() {
       let totalOn = 0;
       let kitchenOn = 0;
       for (const l of folded.labor) {
-        const { s, e } = shiftOf(l);
-        if (hour < s || hour >= e) continue;
-        perRole[l.role] = (perRole[l.role] ?? 0) + l.headcount;
-        totalOn += l.headcount;
-        if (l.role === "pizzaiolo") kitchenOn += l.headcount;
+        for (const win of windowsOf(l)) {
+          if (hour < win.s || hour >= win.e) continue;
+          perRole[l.role] = (perRole[l.role] ?? 0) + win.heads;
+          totalOn += win.heads;
+          if (l.role === "pizzaiolo") kitchenOn += win.heads;
+        }
       }
       const requiredKitchen = effCap > 0 ? Math.max(1, Math.ceil(demand / effCap)) : 1;
       const isPeak = demand >= 0.85 * peakDemand;
@@ -426,9 +470,10 @@ export function CalculatorV3() {
     const gaps = hours.filter((h) => !h.covered).map((h) => h.hour);
     const peakHours = hours.filter((h) => h.isPeak).map((h) => h.hour);
     const peakCovered = hours.filter((h) => h.isPeak).every((h) => h.covered);
-    // Scheduled floor-hours/day = Σ headcount × shift length (what the roster costs the day).
-    const staffHoursPerDay = folded.labor.reduce((sum, l) => { const { s, e } = shiftOf(l); return sum + l.headcount * Math.max(0, e - s); }, 0);
-    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, staffHoursPerDay };
+    // Scheduled floor-hours/day = Σ (each window's heads × its length).
+    const staffHoursPerDay = folded.labor.reduce((sum, l) => sum + windowsOf(l).reduce((a, win) => a + win.heads * Math.max(0, win.e - win.s), 0), 0);
+    const rostered = folded.labor.some((l) => (l.shifts?.length ?? 0) > 0);
+    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, staffHoursPerDay, rostered };
   }, [folded]);
 
   const save = async () => {
@@ -639,13 +684,17 @@ export function CalculatorV3() {
           {/* live shift-coverage grid — sits next to Labour so you roster + check in one place */}
           {coverage && (
           <Card>
-            <CardHead title="Shift plan & coverage" description="Set opening hours + each role's shift; see live who's on, per-hour demand and whether the line is covered at peak" actions={
-              <InfoButton title="Shift plan & coverage"
-                description="A live, hour-by-hour roster: set the service window and each labour line's shift, and the grid shows how many of each role are on the floor every hour against the demand curve, flagging peak hours and under-staffed gaps."
+            <CardHead title="Shift plan & coverage" description="Set opening hours, roster each person's shift, and see live who's on vs demand — covered at peak or short" actions={
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <Button variant="secondary" size="sm" onClick={autoRoster} title="Stagger everyone into per-person shifts that match the demand curve">Auto-roster</Button>
+                {coverage.rostered && <Button variant="ghost" size="sm" onClick={clearRoster} title="Clear per-person shifts — back to flat all-day">Flat</Button>}
+                <InfoButton title="Shift plan & coverage"
+                description="A live, hour-by-hour roster: set the service window, schedule each person's shift (or Auto-roster to the demand curve), and the grid shows how many of each role are on the floor every hour, flagging peak hours and under-staffed gaps."
                 institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — and the institutional gate is simple: the kitchen line must never be short at a peak hour (that's walked orders and blown tickets), and you shouldn't be paying a full brigade through a dead afternoon. A roster that's green at peak and lean off-peak is what holds labour % in the 22–28% band without wrecking service."
                 plain="Say dinner peaks 19:00–21:00 at ~22 orders/hr against a ~16/hr line. The grid turns those hours red until you put a second pizzaiolo on from 18:00 — add the shift, the cells go green, and you can see you're not also paying that person through the empty 15:00 lull. Move the opening hour later and the whole curve + coverage recompute instantly."
-                tips="Split a busy role into two lines with staggered On/Off hours to cover the peak without over-staffing the shoulders. Watch the 'Line on/need' row — any red hour is a coverage gap; add heads or extend a shift until peak is green. Trim floor-hours where demand is thin (the demand bars are short) to pull labour % down."
-                methodology="Demand/hr = ordersPerDay × a documented double-peak curve over the opening window. Per hour, staff-on sums each labour line's headcount whose [On,Off) covers the hour; kitchen requirement = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. An hour is 'covered' when pizzaioli-on ≥ requirement and someone's on; peak hours are those ≥85% of peak demand. Modelling layer in CalculatorV3 over the folded scenario." />
+                tips="Hit Auto-roster to stagger everyone onto the busy hours in one click, then hand-tune any person's start/end in the roster below. Watch the 'Line on/need' row — any red hour is a coverage gap; extend a shift or add heads until peak is green. Trim floor-hours where the demand bars are short to pull labour % down without touching peak service."
+                methodology="Demand/hr = ordersPerDay × a documented double-peak curve over the opening window. Per hour, staff-on sums every scheduled shift (per-person `shifts`, else the line's headcount×window) whose [start,end) covers the hour; kitchen requirement = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Auto-roster greedily places each person's shift on the busiest under-covered block. An hour is 'covered' when pizzaioli-on ≥ requirement and someone's on; peak hours are ≥85% of peak demand. Modelling layer in CalculatorV3." />
+              </div>
             } />
             <CardBody>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
@@ -682,7 +731,34 @@ export function CalculatorV3() {
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-c5)", opacity: 0.5 }} /> peak hour</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }} /> line covered</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-bad)" }} /> line short</span>
-                <span>· set each role&rsquo;s <b>On/Off</b> in Labour above; split a role into two lines for staggered shifts</span>
+              </div>
+
+              {/* roster — individual per-person shifts (Auto-roster fills these; hand-tune here) */}
+              <div style={{ marginTop: 12, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
+                <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Roster — individual shifts (24h)</div>
+                {scn.labor.map((l, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "5px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                    <span style={{ width: 128, fontSize: 12, fontWeight: 500 }}>{ROLE_LABEL[l.role]} <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}>×{l.headcount}</span></span>
+                    {l.shifts && l.shifts.length > 0 ? (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {l.shifts.map((sh, si) => (
+                          <span key={si} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--av3-s1)", borderRadius: 6, padding: "2px 6px" }}>
+                            <span style={{ fontSize: 10, color: "var(--av3-subtle)" }}>P{si + 1}</span>
+                            <input className="av3-input" style={{ width: 42, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.start} onChange={(e) => patchLaborShift(i, si, { start: Number(e.target.value) || 0 })} />
+                            <span style={{ fontSize: 10, color: "var(--av3-muted)" }}>–</span>
+                            <input className="av3-input" style={{ width: 42, padding: "2px 4px", textAlign: "center" }} type="number" value={sh.end} onChange={(e) => patchLaborShift(i, si, { end: Number(e.target.value) || 0 })} />
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11.5, color: "var(--av3-muted)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        all {l.headcount} on {(l.startHour ?? coverage.openHour)}:00–{(l.endHour ?? coverage.closeHour)}:00
+                        <Button variant="ghost" size="sm" onClick={() => individualiseLine(i)}>Individualise</Button>
+                      </span>
+                    )}
+                  </div>
+                ))}
+                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 8 }}>Each P# is one person&rsquo;s shift. <b>Auto-roster</b> staggers everyone to the demand curve; <b>Flat</b> reverts to all-day. Individual hours don&rsquo;t change pay — that&rsquo;s still headcount × hrs/wk × rate.</div>
               </div>
             </CardBody>
           </Card>

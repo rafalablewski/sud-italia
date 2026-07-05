@@ -1225,11 +1225,17 @@ export interface SimulationLaborLine {
   hoursPerWeek: number;
   /** Per-person gross pay rate in grosze / hour. */
   hourlyRateGrosze: number;
-  /** Daily shift window (24h clock) this line's headcount is on the floor —
+  /** Daily shift window (24h clock) the whole line's headcount is on the floor —
    *  drives the live coverage grid. Undefined = covers the whole service day.
-   *  Split a role into multiple lines to staff staggered shifts. */
+   *  Overridden by `shifts` when individual people are scheduled. */
   startHour?: number;
   endHour?: number;
+  /** Per-person shift windows (one entry = one person on the floor for that
+   *  window). When set + non-empty this defines coverage instead of the flat
+   *  headcount×window above, so staff can be staggered to the demand curve
+   *  (hand-edited in the Shift plan card, or filled by its auto-roster). Does
+   *  not change cost — pay is still headcount × hoursPerWeek × rate. */
+  shifts?: { start: number; end: number }[];
 }
 
 export interface SimulationSeasonality {
