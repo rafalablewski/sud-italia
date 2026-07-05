@@ -67,16 +67,19 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   line (the accessibility glyphs `♿ · 🍼 · ▭`, or `N-top` when none), plus an
   optional `📝` service-note chip.
 - **Tap a tile (or its `⋯`) → the table editor.** Both open the `TableDialog`
-  (core `CoreDialog`, portaled per Rule #4) — **number/label · seats · zone ·
-  status · Accessibility features · Service note**, with **Delete**. The status
-  select offers the three **management** statuses (available · reserved ·
-  out-of-service); a table currently `seated` keeps that value as an option so
-  editing its seats/zone can't silently free the party (seating is a Book/POS
-  act, never done here). Accessibility toggles (`.core-tbl-features` /
-  `.core-tbl-feat` — accessible · high-chair · step-free) persist on
-  `FloorTable.features` (matched by the seating engine against a party's
-  needs); the note persists on `FloorTable.notes` and surfaces on the Book
-  Floor-lens tiles. *+ Add table* sits in the subbar.
+  (core `CoreDialog`, portaled per Rule #4). It edits **only the physical plan**:
+  **number/label · seats · zone · Accessibility features**, with **Delete**.
+  **Status and the service note are deliberately absent** — they're operational
+  and owned by Book/POS; the editor carries them through untouched on save
+  (re-reads the table's live `status` right before the whole-row write so an
+  edit can't clobber a seating transition, and preserves `FloorTable.notes`
+  verbatim). **Zone is a picker of the zones that already exist** (create one
+  from the board's *Add zone*), plus a *— No zone —* option; if a row's current
+  zone isn't yet a managed entity it stays selectable so an edit never moves the
+  table off it. Accessibility toggles (`.core-tbl-features` / `.core-tbl-feat` —
+  accessible · high-chair · step-free) persist on `FloorTable.features` (matched
+  by the seating engine against a party's needs). *+ Add table* sits in the
+  ActionBar right.
 - **Engine:** `GET /api/admin/floor/tables?location=` returns the location's
   `FloorTable[]` (gentle 20s `usePolling` — this is config, not the live floor;
   create/edit/delete merge optimistically so a tile never blanks until the

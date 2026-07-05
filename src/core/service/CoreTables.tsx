@@ -24,11 +24,10 @@ import { tLabel } from "./tableLabel";
  * `GET/POST/DELETE /api/admin/floor/tables?location=`.
  */
 
-// Management statuses — a config surface sets a table available, reserved, or
-// out of service. "seated" is an operational state owned by Book/POS and is
-// never *set* here; if a table is already seated the editor keeps that value
-// so editing its seats/zone can't accidentally free a party.
-const EDIT_STATUSES: TableStatus[] = ["available", "reserved", "out-of-service"];
+// Status is NOT set here — it's an operational state owned by Book/POS. A new
+// table starts "available"; an edit carries the table's live status through
+// untouched (see `save()` in TableDialog). This surface only configures the
+// physical plan: number, seats, zone, accessibility.
 
 const FEATURE_LABEL: Record<TableFeature, string> = {
   accessible: "♿ accessible",
@@ -428,6 +427,7 @@ export function CoreTables() {
       <TableDialog
         loc={loc}
         table={editing}
+        zones={groupNames}
         onClose={() => setEditing(null)}
         onSaved={(change) => {
           setEditing(null);
@@ -442,11 +442,13 @@ export function CoreTables() {
 function TableDialog({
   loc,
   table,
+  zones,
   onClose,
   onSaved,
 }: {
   loc: string;
   table: FloorTable | "new" | null;
+  zones: string[];
   onClose: () => void;
   onSaved: (change: { table?: FloorTable; deletedId?: string }) => void;
 }) {
@@ -456,15 +458,8 @@ function TableDialog({
   const [number, setNumber] = useState("");
   const [seats, setSeats] = useState("4");
   const [zone, setZone] = useState("");
-  const [status, setStatus] = useState<TableStatus>("available");
-  // Did the manager deliberately change the status field this session? A `save`
-  // that doesn't touch status must NOT write the value captured at open — see
-  // the note in `save()`.
-  const [statusDirty, setStatusDirty] = useState(false);
-  const [notes, setNotes] = useState("");
   const [features, setFeatures] = useState<TableFeature[]>([]);
   const [busy, setBusy] = useState(false);
-  const rowNotes = row?.notes ?? "";
   const rowFeatures = (row?.features ?? []).join(",");
 
   useEffect(() => {
@@ -472,43 +467,43 @@ function TableDialog({
       setNumber(row?.number ?? "");
       setSeats(String(row?.seats ?? 4));
       setZone(row?.zone ?? "");
-      setStatus(row?.status ?? "available");
-      setStatusDirty(false);
-      setNotes(rowNotes);
       setFeatures(rowFeatures ? (rowFeatures.split(",") as TableFeature[]) : []);
       setBusy(false);
     }
-  }, [table, row, rowNotes, rowFeatures]);
+  }, [table, row, rowFeatures]);
   const toggleFeature = (f: TableFeature) =>
     setFeatures((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]));
 
-  // If a table is already seated, keep that value selectable so editing its
-  // seats/zone can't silently free the party; otherwise offer the three
-  // management statuses only — seating happens in Book, not here.
-  const statusOptions = EDIT_STATUSES.includes(status) ? EDIT_STATUSES : [status, ...EDIT_STATUSES];
+  // Zone is picked from the zones that already exist (create a new zone from the
+  // board's "Add zone"); if the row's current zone isn't in that list — a
+  // freshly-typed legacy value not yet reconciled — keep it selectable so an
+  // edit never silently moves the table off it.
+  const zoneOptions = zone && !zones.includes(zone) ? [zone, ...zones] : zones;
 
   const save = async () => {
     if (!number.trim() || busy) return;
     setBusy(true);
     try {
-      // `saveTable` overwrites the WHOLE row, so a config-only edit (seats,
-      // zone, notes…) would blindly re-write whatever status the form captured
-      // at open — and this surface polls only every 20s. If the party was
-      // seated/freed elsewhere in that window, writing the stale status would
-      // re-seat an empty table (or free a live one) and log a bogus floor
-      // transition. So when the manager didn't touch status, re-read the
-      // table's CURRENT status right before writing; only send the form's value
-      // when they explicitly changed it.
-      let statusToWrite: TableStatus = status;
-      if (!isNew && row && !statusDirty) {
+      // This surface only configures the physical plan (number, seats, zone,
+      // accessibility) — status and the service note are OPERATIONAL and owned
+      // by Book/POS, so they are never edited here. `saveTable` overwrites the
+      // WHOLE row, so we must carry the live status + existing note through
+      // untouched: re-read the CURRENT status right before writing (this surface
+      // polls only every 20s, so the captured value could be stale and re-seat
+      // an empty table / free a live one), and preserve the row's note verbatim.
+      let statusToWrite: TableStatus = "available";
+      let noteToKeep: string | undefined = undefined;
+      if (!isNew && row) {
+        statusToWrite = row.status;
+        noteToKeep = row.notes;
         try {
           const cur = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
           if (cur.ok) {
             const list = (await cur.json()) as FloorTable[];
             const fresh = (Array.isArray(list) ? list : []).find((t) => t.id === row.id);
-            if (fresh) statusToWrite = fresh.status;
+            if (fresh) { statusToWrite = fresh.status; noteToKeep = fresh.notes; }
           }
-        } catch { /* fall back to the loaded status */ }
+        } catch { /* fall back to the loaded row */ }
       }
       const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`, {
         method: "POST",
@@ -519,7 +514,7 @@ function TableDialog({
           seats: Math.max(1, Math.min(50, Math.round(Number(seats) || 1))),
           zone: zone.trim() || undefined,
           status: statusToWrite,
-          notes: notes.trim() || undefined,
+          notes: noteToKeep || undefined,
           features,
         }),
       });
@@ -588,13 +583,10 @@ function TableDialog({
       </label>
       <label className="core-tbl-field">
         <span>Zone</span>
-        <input className="core-inp" value={zone} onChange={(e) => setZone(e.target.value)} placeholder="main, patio, bar" />
-      </label>
-      <label className="core-tbl-field">
-        <span>Status</span>
-        <select className="core-inp" value={status} onChange={(e) => { setStatus(e.target.value as TableStatus); setStatusDirty(true); }}>
-          {statusOptions.map((st) => (
-            <option key={st} value={st}>{st}</option>
+        <select className="core-inp" value={zone} onChange={(e) => setZone(e.target.value)}>
+          <option value="">— No zone —</option>
+          {zoneOptions.map((z) => (
+            <option key={z} value={z}>{z}</option>
           ))}
         </select>
       </label>
@@ -614,10 +606,6 @@ function TableDialog({
           ))}
         </div>
       </div>
-      <label className="core-tbl-field">
-        <span>Service note</span>
-        <textarea className="core-inp" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="allergy, VIP, high-chair, split bill…" style={{ resize: "vertical", fontFamily: "inherit" }} />
-      </label>
     </CoreDialog>
   );
 }
