@@ -5291,10 +5291,15 @@ export async function calculateFoodCostBreakdown(
   }
 
   const yieldPortions = recipe.yieldPortions || 1;
+  // Round base + total independently, then derive waste as the difference so the
+  // `base + waste === total` invariant holds exactly (three independent Math.round
+  // calls can drift by 1) and waste can never round negative.
+  const roundedBase = Math.round(base / yieldPortions);
+  const roundedTotal = Math.round(total / yieldPortions);
   return {
-    base: Math.round(base / yieldPortions),
-    waste: Math.round((total - base) / yieldPortions),
-    total: Math.round(total / yieldPortions),
+    base: roundedBase,
+    waste: Math.max(0, roundedTotal - roundedBase),
+    total: roundedTotal,
   };
 }
 
