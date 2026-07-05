@@ -177,8 +177,10 @@ export const POST = withAdmin(
         labor: s.labor.map((l) => ({
           role: l.role,
           headcount: l.headcount,
-          hoursPerWeek: l.hoursPerWeek,
           hourlyRateGrosze: l.hourlyRateGrosze,
+          daysPerWeek: l.daysPerWeek,
+          shifts: l.shifts,
+          hoursPerWeek: l.hoursPerWeek,
         })),
         fixedCosts: s.fixedCosts,
         assumptions: s.assumptions,

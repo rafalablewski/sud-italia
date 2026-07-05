@@ -1291,9 +1291,25 @@ auth canvas's signature lighting and the sign-in lockup:
   under-covered block so staffing tracks the demand curve (Total on ramps into
   lunch/dinner and thins to a skeleton at the quiet open/close — a min-1 pass
   stretches the nearest shift so the floor is never left empty while open), and
-  **Flat** to revert. Pay is
-  unchanged (still headcount × hrs/wk × rate); shifts only shape *when* people are
-  on, and the coverage grid + gap badges give live feedback as you tune them.
+  **Flat** to revert; the coverage grid + gap badges give live feedback as you
+  tune them.
+  **Part 3p shipped — schedule drives the hours (de-duped labour model):** the
+  Labour card had three overlapping ways to say *when* people worked — a line
+  `startHour`/`endHour`, the per-person roster `shifts`, and a hand-typed
+  `hoursPerWeek` disconnected from either. Collapsed to one: the **roster is the
+  single scheduling surface**, and weekly hours (hence cost) **derive** from it —
+  `hoursPerWeek = avg shift length × daysPerWeek`, folded into the engine in
+  `scnEff`. `SimulationLaborLine` dropped `startHour`/`endHour`, gained
+  `daysPerWeek`, and made `hoursPerWeek` a legacy cost-fallback (only used by
+  pre-`shifts` scenarios). The Labour row is now **Role · Heads · Rate · Days/wk ·
+  Hrs/wk** (read-only "auto" once a line is rostered; editable only for legacy
+  flat lines), the On/Off fields are gone, and `patchLabor` keeps `shifts.length`
+  in lock-step with headcount. The roster editor shows each person's shift length
+  + the resulting `h/wk ea.`, so a shorter shift reads as a cheaper person —
+  individual differentiation (e.g. 5 waiters on different hours) falls out for
+  free. The default scenario ships **pre-rostered** (8h/7h staggered shifts) so
+  Total on is demand-shaped out of the box (`5,5,5,8,10,10,10,9,5,5,4`) and the
+  ~82.5k zł monthly labour matches the prior flat-48h baseline within ~1%.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

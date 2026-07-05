@@ -80,8 +80,11 @@ export const PUT = withAdmin(
         typeof line.id !== "string" ||
         !VALID_ROLES.has(line.role) ||
         typeof line.headcount !== "number" ||
-        typeof line.hoursPerWeek !== "number" ||
-        typeof line.hourlyRateGrosze !== "number"
+        typeof line.hourlyRateGrosze !== "number" ||
+        // hoursPerWeek is legacy/optional now — hours derive from `shifts` × days.
+        (line.hoursPerWeek !== undefined && typeof line.hoursPerWeek !== "number") ||
+        (line.daysPerWeek !== undefined && typeof line.daysPerWeek !== "number") ||
+        (line.shifts !== undefined && (!Array.isArray(line.shifts) || line.shifts.some((sh) => typeof sh?.start !== "number" || typeof sh?.end !== "number")))
       ) {
         return NextResponse.json({ error: "Invalid labor line" }, { status: 400 });
       }

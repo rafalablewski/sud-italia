@@ -1219,23 +1219,23 @@ export interface BusinessCost {
 export interface SimulationLaborLine {
   id: string;
   role: BusinessCostPayrollRole;
-  /** Number of people on this role line. */
+  /** Number of people on this role line. When `shifts` is set it stays in lock
+   *  step with `shifts.length` (one shift = one person). */
   headcount: number;
-  /** Per-person hours per week (service + prep + close-down) — drives cost. */
-  hoursPerWeek: number;
   /** Per-person gross pay rate in grosze / hour. */
   hourlyRateGrosze: number;
-  /** Daily shift window (24h clock) the whole line's headcount is on the floor —
-   *  drives the live coverage grid. Undefined = covers the whole service day.
-   *  Overridden by `shifts` when individual people are scheduled. */
-  startHour?: number;
-  endHour?: number;
-  /** Per-person shift windows (one entry = one person on the floor for that
-   *  window). When set + non-empty this defines coverage instead of the flat
-   *  headcount×window above, so staff can be staggered to the demand curve
-   *  (hand-edited in the Shift plan card, or filled by its auto-roster). Does
-   *  not change cost — pay is still headcount × hoursPerWeek × rate. */
+  /** Days per week these people work — with the daily shift length it gives the
+   *  weekly hours (and therefore cost). Defaults to 6 when unset. */
+  daysPerWeek?: number;
+  /** Per-person shift windows (24h clock, one entry = one person on the floor
+   *  for that daily window). This is the single scheduling surface: it drives
+   *  the live coverage grid AND the weekly hours = (avg shift length × days).
+   *  Hand-edited or filled by the Shift plan card's auto-roster. */
   shifts?: { start: number; end: number }[];
+  /** Legacy per-person weekly hours — only used as the cost fallback for old
+   *  scenarios that predate `shifts`. New/rostered lines derive hours from the
+   *  schedule instead; this is not shown once a line has shifts. */
+  hoursPerWeek?: number;
 }
 
 export interface SimulationSeasonality {

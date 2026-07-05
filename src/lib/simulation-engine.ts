@@ -108,10 +108,10 @@ export function computeScenario(s: SimulationScenario): Computed {
   const laborVolumeFlex = Math.max(0, 1 + laborVariableShare * (volumeRatio - 1));
   const laborByRole: { role: BusinessCostPayrollRole; grosze: number }[] = s.labor.map((l) => ({
     role: l.role,
-    grosze: Math.round(l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze * laborVolumeFlex),
+    grosze: Math.round(l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze * laborVolumeFlex),
   }));
   const laborMonthly = laborByRole.reduce((sum, r) => sum + r.grosze, 0);
-  const laborHoursPerMonth = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH, 0);
+  const laborHoursPerMonth = s.labor.reduce((sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH, 0);
   const marketingFixed = s.fixedCosts.marketing ?? 0;
   const useMarketingAsCac = s.marketingAsCac !== false;
   const marketingCac = useMarketingAsCac ? marketingFixed : 0;
@@ -331,7 +331,7 @@ export function projectMonths(
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
   const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
   const baseLaborMonthly = s.labor.reduce(
-    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    (sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze,
     0,
   );
   // Same marketing-as-CAC reclassification as computeScenario so the
@@ -627,7 +627,7 @@ export function computeFleetEconomics(s: SimulationScenario, baseSetupCost: numb
   effectiveCogsPct = Math.max(0, effectiveCogsPct);
 
   const baseRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
-  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
+  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
   const useMarketingAsCac = s.marketingAsCac !== false;
   const baseFixedExHq = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
     if (useMarketingAsCac && k === "marketing") return sum;
