@@ -42,6 +42,7 @@ const FEATURE_GLYPH: Record<TableFeature, string> = {
 };
 
 export function CoreTables() {
+  const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
   // Cached by location so switching pages/tabs re-renders the last floor plan
@@ -128,6 +129,62 @@ export function CoreTables() {
     return { cls: "free", label: "available" };
   };
 
+  // ── Zone management: drag a table between zone groups, or rename a zone ────
+  // Zones are derived from each table's `zone` field (no separate entity), so
+  // moving a table = rewriting its `zone`, and renaming a zone = rewriting the
+  // `zone` of every table in it. The label a null/empty zone is grouped under.
+  const DEFAULT_ZONE = "Floor";
+  const zoneToWrite = (label: string): string | undefined => (label === DEFAULT_ZONE ? undefined : label);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropZone, setDropZone] = useState<string | null>(null);
+  const [renamingZone, setRenamingZone] = useState<string | null>(null);
+  const [renameVal, setRenameVal] = useState("");
+
+  // Persist a table's whole row with `patch`, preserving its LIVE status: the
+  // route overwrites the row, and this surface only polls every 20s, so re-read
+  // the current status right before writing — a zone move must never clobber a
+  // seating transition that happened in Book/POS (same guard as the editor).
+  const persistTableZone = async (t: FloorTable, zone: string | undefined): Promise<boolean> => {
+    let status = t.status;
+    try {
+      const cur = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
+      if (cur.ok) {
+        const list = (await cur.json()) as FloorTable[];
+        const fresh = (Array.isArray(list) ? list : []).find((x) => x.id === t.id);
+        if (fresh) status = fresh.status;
+      }
+    } catch { /* fall back to the known status */ }
+    const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: t.id, number: t.number, seats: t.seats, zone: zone || undefined, status, notes: t.notes || undefined, features: t.features ?? [] }),
+    });
+    return res.ok;
+  };
+
+  const reassignZone = async (t: FloorTable, targetLabel: string) => {
+    const zone = zoneToWrite(targetLabel);
+    if ((t.zone || undefined) === zone) return;
+    applyChange({ table: { ...t, zone } }); // optimistic
+    const ok = await persistTableZone(t, zone);
+    toast(ok ? `${tLabel(t.number)} → ${targetLabel}` : "Could not move table", ok ? "success" : "danger");
+    await load();
+  };
+
+  const commitRename = async () => {
+    const from = renamingZone;
+    const to = renameVal.trim();
+    setRenamingZone(null);
+    if (!from || !to || to === from) return;
+    const zone = zoneToWrite(to);
+    const inZone = (tables ?? []).filter((t) => (t.zone || DEFAULT_ZONE) === from);
+    inZone.forEach((t) => applyChange({ table: { ...t, zone } })); // optimistic
+    const results = await Promise.all(inZone.map((t) => persistTableZone(t, zone)));
+    const ok = results.every(Boolean);
+    toast(ok ? `Zone renamed → ${to}` : "Some tables could not move", ok ? "success" : "danger");
+    await load();
+  };
+
   return (
     <CoreShell
       eyebrow="Service · Tables"
@@ -212,10 +269,48 @@ export function CoreTables() {
             // zones rather than an empty list (the effect above also clears it).
             (zoneFilter && zones.some(([z]) => z === zoneFilter) ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => {
               const zSeats = tbls.reduce((a, t) => a + t.seats, 0);
+              const isDrop = dragId != null && dropZone === zone;
               return (
-                <div key={zone}>
+                <div
+                  key={zone}
+                  className={isDrop ? "core-zone-group drop-target" : "core-zone-group"}
+                  onDragOver={(e) => { if (dragId) { e.preventDefault(); if (dropZone !== zone) setDropZone(zone); } }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const t = (tables ?? []).find((x) => x.id === dragId);
+                    if (t) void reassignZone(t, zone);
+                    setDragId(null);
+                    setDropZone(null);
+                  }}
+                >
                   <div className="core-zone-h">
-                    <span className="zt">{zone}</span>
+                    {renamingZone === zone ? (
+                      <input
+                        className="core-zone-rename-inp"
+                        value={renameVal}
+                        autoFocus
+                        onChange={(e) => setRenameVal(e.target.value)}
+                        onBlur={() => void commitRename()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); void commitRename(); }
+                          else if (e.key === "Escape") { e.preventDefault(); setRenamingZone(null); }
+                        }}
+                        aria-label={`Rename zone ${zone}`}
+                      />
+                    ) : (
+                      <>
+                        <span className="zt">{zone}</span>
+                        <button
+                          type="button"
+                          className="core-zone-rename"
+                          title="Rename zone"
+                          aria-label={`Rename zone ${zone}`}
+                          onClick={() => { setRenamingZone(zone); setRenameVal(zone); }}
+                        >
+                          ✎
+                        </button>
+                      </>
+                    )}
                     <span className="core-cust-sub">{tbls.length} table{tbls.length === 1 ? "" : "s"} · {zSeats} seats</span>
                   </div>
                   <div className="core-tables">
@@ -227,10 +322,13 @@ export function CoreTables() {
                           <div
                             role="button"
                             tabIndex={0}
-                            className={`core-tbl2 ${st.cls}`}
+                            draggable
+                            className={`core-tbl2 ${st.cls}${dragId === t.id ? " is-dragging" : ""}`}
                             onClick={() => setEditing(t)}
                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(t); } }}
-                            title={`Table ${t.number} — edit`}
+                            onDragStart={(e) => { setDragId(t.id); e.dataTransfer.effectAllowed = "move"; }}
+                            onDragEnd={() => { setDragId(null); setDropZone(null); }}
+                            title={`Table ${t.number} — click to edit · drag to move zone`}
                           >
                             <span className="thead">
                               <span className="tnum">{tLabel(t.number)}</span>

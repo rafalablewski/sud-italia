@@ -29,7 +29,17 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   the table catalogue (Rule #1; value colours read info/basil/amber/brand,
   each cell carries a mono delta).
 - Tables are grouped by **zone** (`.core-zone-h` header with a `N tables · N
-  seats` sub and a hairline rule). Tiles are **`.core-tbl2` cards** with a
+  seats` sub and a hairline rule). Each zone group (`.core-zone-group`) is a
+  **drop target**: a tile is `draggable`, and dropping it on another zone
+  rewrites that table's `zone` (`reassignZone` → the same status-preserving
+  `persistTableZone` write the editor uses, so a move never clobbers a live
+  seating transition). The dragged tile dims (`.core-tbl2.is-dragging`) and the
+  hovered group lights (`.core-zone-group.drop-target`). A zone can also be
+  **renamed in place** — the header's hover `✎` (`.core-zone-rename`) swaps the
+  title for an input (`.core-zone-rename-inp`); committing rewrites the `zone`
+  of **every** table in that group (`commitRename`). Zones are derived from the
+  tables' `zone` field, so both operations are pure table writes — no zone
+  entity. Tiles are **`.core-tbl2` cards** with a
   status-tinted left accent rail: **available** = basil (`free`) · **reserved**
   muted (`booked`) · **out-of-service** faded (`oos`) · a table already
   **seated** by ops shows info-toned. Each tile reads a big `T`-prefixed table
