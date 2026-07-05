@@ -5,6 +5,7 @@ import { usePolling } from "@/lib/usePolling";
 import { effectiveUnitPrice } from "@/lib/upsell";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
+import { CoreFilterMenu } from "@/core/shell/CoreFilterMenu";
 import { useCoreCache, peekCoreCache } from "@/lib/useCoreCache";
 import { RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
@@ -202,23 +203,31 @@ export function CoreOrders() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="id · guest · phone · table" aria-label="Search orders" />
               </div>
-              {/* Channel filter as a labelled `.core-seg` capsule — the shared
-                  view/scope vocabulary, with the one-rule brand-ember active. */}
-              <div className="core-seg" role="group" aria-label="Channel">
-                <span className="sglab">Channel</span>
-                {CHANS.map((c) => (
-                  <button key={c} type="button" className={channel === c ? "on" : undefined} aria-pressed={channel === c} onClick={() => setChannel(c)}>
-                    {c}
-                  </button>
-                ))}
-              </div>
               <div className="core-datefield" title="Today">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" /></svg>
                 {`${new Date().toLocaleDateString("en-GB", { weekday: "short" })} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
               </div>
             </>
           }
-          right={<button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>}
+          right={
+            <>
+              {/* Channel filter collapses into the shared funnel popover (same as CRM). */}
+              <CoreFilterMenu
+                label="Filter orders"
+                groups={[
+                  {
+                    key: "channel",
+                    label: "Channel",
+                    value: channel,
+                    base: "all",
+                    onChange: (v) => setChannel((v ?? "all") as ChannelFilter),
+                    options: CHANS.map((c) => ({ value: c, label: c === "qr" ? "QR" : c[0].toUpperCase() + c.slice(1) })),
+                  },
+                ]}
+              />
+              <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+            </>
+          }
         />
         {/* dense-console 7-up stat strip — every figure from live order state (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Order metrics">

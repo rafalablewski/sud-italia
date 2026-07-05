@@ -232,7 +232,8 @@ in the surface ActionBar.
   opens a portaled `.core-filt-pop` of labelled `.core-filt-group`s, each a wrap
   of selectable `.core-filt-chip`s (with optional `.c` counts or a `.core-gem`
   dot); a **Reset filters** row appears when anything is set. Same portal/dismiss
-  discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort.
+  discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort;
+  Orders for the Channel filter.
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
