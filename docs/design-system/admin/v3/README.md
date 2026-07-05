@@ -1221,10 +1221,10 @@ auth canvas's signature lighting and the sign-in lockup:
   decision — a single flat "Setup cost" and "Rent" line hid the rent-vs-buy
   choice entirely. A new **Premises** card (between Fixed costs and Investment)
   carries a Rent / Buy segmented toggle: *Rent* → monthly rent, service charge,
-  deposit (months), escalation, fit-out capex; *Buy* → purchase price, down
+  deposit (months), fit-out capex; *Buy* → purchase price, down
   payment %, mortgage rate + term, property tax, structural upkeep, building
-  depreciation %, fit-out capex. A derived readout shows monthly occupancy,
-  mortgage P&I (with the interest split), building depreciation, loan and upfront
+  depreciation %, fit-out capex. A derived readout shows cash outlay/mo,
+  mortgage P&I (split into interest = P&L and principal = equity), building depreciation, loan and upfront
   cash. The engine gained `computePremises` + `applyPremises` (a fold like
   `applyAssumptions`/`applyAnnualWeather`): it derives `fixedCosts.rent`, mortgage
   interest, building depreciation, property tax + upkeep and `setupCostGrosze`

@@ -229,7 +229,15 @@ export function CalculatorV3() {
   const c = useMemo(() => (folded ? computeScenario(folded) : null), [folded]);
   const tornado = useMemo(() => (folded ? computeTornado(folded) : []), [folded]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
-  const ret = useMemo(() => (scnEff && c ? computeReturns(c.netProfit, scnEff.setupCostGrosze ?? 0, 24) : null), [scnEff, c]);
+  // Investor returns are a *cash* view: in buy mode the mortgage principal is a
+  // real monthly cash outflow that accrual net profit doesn't capture (it only
+  // deducts interest), so net it out of the stream or a financed purchase looks
+  // artificially strong. Rent mode / cash purchase → principal is 0, no change.
+  const ret = useMemo(() => {
+    if (!scnEff || !c) return null;
+    const principal = scnEff.premises?.mode === "buy" && prem ? prem.mortgagePrincipalMonthlyGrosze : 0;
+    return computeReturns(c.netProfit - principal, scnEff.setupCostGrosze ?? 0, 24);
+  }, [scnEff, c, prem]);
   const projection = useMemo(() => (scnEff ? projectTwelveMonths(applyAssumptions(scnEff)) : []), [scnEff]);
   // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
   // on-site card rate isn't the blended one (matches v2).
@@ -594,7 +602,6 @@ export function CalculatorV3() {
                   <Z label="Rent / mo" grosze={scn.premises.monthlyRentGrosze} onChange={(g) => patchPremises({ monthlyRentGrosze: g })} w={120} />
                   <Z label="Service charge / mo" grosze={scn.premises.serviceChargeMonthlyGrosze} onChange={(g) => patchPremises({ serviceChargeMonthlyGrosze: g })} w={150} />
                   <N label="Deposit (months)" value={scn.premises.depositMonths} onChange={(n) => patchPremises({ depositMonths: n })} w={130} step={0.5} />
-                  <P label="Rent escalation %/yr" frac={scn.premises.rentEscalationPct} onChange={(f) => patchPremises({ rentEscalationPct: f })} w={150} />
                   <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
                 </> : <>
                   <Z label="Purchase price" grosze={scn.premises.purchasePriceGrosze} onChange={(g) => patchPremises({ purchasePriceGrosze: g })} w={140} />
@@ -609,10 +616,11 @@ export function CalculatorV3() {
               </div>
               {prem && (
                 <div className="av3-od-grid" style={{ marginTop: 12 }}>
-                  <div className="av3-od-field"><div className="k">Monthly occupancy</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
+                  <div className="av3-od-field" title={scn.premises.mode === "buy" ? "Cash that leaves your account each month (mortgage P&I + property tax + upkeep). The P&L only expenses the interest portion — principal builds equity, so it's netted from the cash-flow returns but not from EBITDA." : "Rent + service charge — the full monthly occupancy cost, all of which hits the P&L."}><div className="k">Cash outlay / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
                   {scn.premises.mode === "buy" && <>
                     <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePaymentGrosze)}</div></div>
-                    <div className="av3-od-field"><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgageInterestMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field" title="Hits the P&L (the only mortgage cost that reduces net profit)."><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgageInterestMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field" title="Cash out, but builds equity — not a P&L cost. Netted from the cash-flow investor returns."><div className="k">— principal (equity) / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePrincipalMonthlyGrosze)}</div></div>
                     <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.buildingDepreciationMonthlyGrosze)}</div></div>
                     <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.loanAmountGrosze)}</div></div>
                   </>}
@@ -831,7 +839,7 @@ export function CalculatorV3() {
 
           {ret && (scnEff?.setupCostGrosze ?? 0) > 0 && (
             <Card>
-              <CardHead title="Investor returns" description="24-month horizon on a steady net-profit stream" />
+              <CardHead title="Investor returns" description="24-month cash-flow horizon — buy mode nets mortgage principal (debt service), not just interest" />
               <CardBody>
                 <div className="av3-od-grid" style={{ marginBottom: 12 }}>
                   <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r10)}</div></div>

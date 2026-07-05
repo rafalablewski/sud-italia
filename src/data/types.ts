@@ -1399,8 +1399,6 @@ export interface SimulationPremises {
   monthlyRentGrosze: number;
   /** Security deposit held upfront, expressed in months of rent (× rent = cash). */
   depositMonths: number;
-  /** Annual rent escalation / indexation (0–1) — rent step-up per year. */
-  rentEscalationPct: number;
   /** Monthly service charge / common-area maintenance in grosze (on top of rent). */
   serviceChargeMonthlyGrosze: number;
   // ── Buy path ───────────────────────────────────────────────────────────
