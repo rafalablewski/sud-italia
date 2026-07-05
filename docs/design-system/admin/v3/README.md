@@ -1289,7 +1289,9 @@ auth canvas's signature lighting and the sign-in lockup:
   flat line into per-person shifts) and two header actions: **Auto-roster** —
   `rosterToDemand`, a greedy that places each person's shift on the busiest
   under-covered block so staffing tracks the demand curve (Total on ramps into
-  lunch/dinner and thins at the dead open/close), and **Flat** to revert. Pay is
+  lunch/dinner and thins to a skeleton at the quiet open/close — a min-1 pass
+  stretches the nearest shift so the floor is never left empty while open), and
+  **Flat** to revert. Pay is
   unchanged (still headcount × hrs/wk × rate); shifts only shape *when* people are
   on, and the coverage grid + gap badges give live feedback as you tune them.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`

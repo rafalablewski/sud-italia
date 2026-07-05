@@ -115,9 +115,9 @@ function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHou
   const H = Math.max(1, closeHour - openHour);
   const weights = demandWeights(H);
   const L = Math.min(H, Math.max(4, Math.round(H * 0.6)));
-  return labor.map((l) => {
+  const out = labor.map((l) => {
     const N = Math.max(0, Math.round(l.headcount));
-    if (N === 0) return { ...l, shifts: [] };
+    if (N === 0) return { ...l, shifts: [] as { start: number; end: number }[] };
     if (L >= H) return { ...l, shifts: Array.from({ length: N }, () => ({ start: openHour, end: closeHour })) };
     const cov = new Array(H).fill(0);
     const shifts: { start: number; end: number }[] = [];
@@ -134,6 +134,31 @@ function rosterToDemand(labor: SimulationLaborLine[], openHour: number, closeHou
     }
     return { ...l, shifts };
   });
+  // Skeleton coverage: never leave the floor empty while open. Any hour that
+  // ended up with zero staff gets the nearest existing shift stretched to
+  // swallow it (fewest added hours). Always satisfiable when ≥1 person exists.
+  const allShifts = out.flatMap((l) => l.shifts ?? []);
+  if (allShifts.length > 0) {
+    const totalCov = () => {
+      const c = new Array(H).fill(0);
+      for (const sh of allShifts) for (let h = Math.max(openHour, sh.start); h < Math.min(closeHour, sh.end); h++) c[h - openHour]++;
+      return c;
+    };
+    let cov = totalCov();
+    for (let i = 0; i < H; i++) {
+      if (cov[i] > 0) continue;
+      const hour = openHour + i;
+      let target: { start: number; end: number } | null = null;
+      let bestDist = Infinity;
+      let mode: "start" | "end" = "start";
+      for (const sh of allShifts) {
+        if (sh.start > hour && sh.start - hour < bestDist) { bestDist = sh.start - hour; target = sh; mode = "start"; }
+        else if (sh.end <= hour && hour + 1 - sh.end < bestDist) { bestDist = hour + 1 - sh.end; target = sh; mode = "end"; }
+      }
+      if (target) { if (mode === "start") target.start = hour; else target.end = hour + 1; cov = totalCov(); }
+    }
+  }
+  return out;
 }
 
 // Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
