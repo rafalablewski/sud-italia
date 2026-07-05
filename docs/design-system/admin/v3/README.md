@@ -1264,6 +1264,22 @@ auth canvas's signature lighting and the sign-in lockup:
   **Depreciation + interest** into fit-out depreciation + (buy mode) building
   depreciation + mortgage interest + other interest. All values come from the
   engine `Computed` output + `computePremises`, no re-derivation.
+  **Part 3n shipped — live shift-coverage planner:** the old read-only
+  "Shift plan — labour by daypart" card was replaced by an interactive
+  **Shift plan & coverage** card moved up next to **Labour** (roster + check in
+  one place). New model fields: `SimulationScenario.openingHours` (the service
+  window, which owns and keeps `kitchenCapacity.openHoursPerDay` in sync, so the
+  standalone "Open hrs/day" field left the Investment card) and per-line
+  `SimulationLaborLine.startHour`/`endHour` (a shift window; two On/Off fields
+  were added to each Labour row — split a role into two lines for staggered
+  shifts). The card renders a live hour-by-hour grid: a demand/hr bar row, one
+  headcount-heatmap row per role on the roster, a Total-on row, and a
+  "Line on/need" row that goes red when pizzaioli-on < the demand-driven kitchen
+  requirement (⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉). Peak hours (≥85%
+  of peak demand) are tinted in the header; summary badges call out under-staffed
+  hours, peak coverage and scheduled floor-hours/day. All derived in a `coverage`
+  memo over the folded scenario; the oven-curve card now stands alone (its start
+  hour follows `openingHours.openHour`).
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

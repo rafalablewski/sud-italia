@@ -1221,10 +1221,15 @@ export interface SimulationLaborLine {
   role: BusinessCostPayrollRole;
   /** Number of people on this role line. */
   headcount: number;
-  /** Per-person hours per week (service + prep + close-down). */
+  /** Per-person hours per week (service + prep + close-down) — drives cost. */
   hoursPerWeek: number;
   /** Per-person gross pay rate in grosze / hour. */
   hourlyRateGrosze: number;
+  /** Daily shift window (24h clock) this line's headcount is on the floor —
+   *  drives the live coverage grid. Undefined = covers the whole service day.
+   *  Split a role into multiple lines to staff staggered shifts. */
+  startHour?: number;
+  endHour?: number;
 }
 
 export interface SimulationSeasonality {
@@ -1455,6 +1460,10 @@ export interface SimulationScenario {
    *  grosze; this only changes how amounts are shown + entered, converted at
    *  the operator's exchange rate. Mirrors `Currency` in src/lib/currency.ts. */
   displayCurrency?: "PLN" | "USD" | "SGD" | "EUR" | "AED";
+  /** Daily service window (24h clock) — drives the demand curve start, the
+   *  open-hours capacity math and the live shift-coverage grid. `openHoursPerDay`
+   *  on kitchenCapacity is kept in sync (= closeHour − openHour). */
+  openingHours?: { openHour: number; closeHour: number };
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
   /** Id of the active menu scenario preset (e.g. "balanced", "premium").

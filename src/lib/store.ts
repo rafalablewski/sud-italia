@@ -12844,6 +12844,8 @@ export function defaultSimulationScenario(): SimulationScenario {
     },
     menuScenario: "balanced",
     displayCurrency: "PLN",
+    // Service window 11:00–22:00 (= the 11 open-hours the capacity math assumes).
+    openingHours: { openHour: 11, closeHour: 22 },
     assumptions: defaultSimulationAssumptions(),
     weather: defaultSimulationWeather(),
     updatedAt: new Date().toISOString(),
@@ -13021,6 +13023,13 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
       saved.displayCurrency && (ALL_CURRENCIES as string[]).includes(saved.displayCurrency)
         ? saved.displayCurrency
         : defaults.displayCurrency,
+    openingHours:
+      saved.openingHours &&
+      typeof saved.openingHours.openHour === "number" &&
+      typeof saved.openingHours.closeHour === "number" &&
+      saved.openingHours.closeHour > saved.openingHours.openHour
+        ? { openHour: saved.openingHours.openHour, closeHour: saved.openingHours.closeHour }
+        : defaults.openingHours,
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
     assumptions,
     assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,

@@ -133,6 +133,13 @@ export const PUT = withAdmin(
         b.displayCurrency && (ALL_CURRENCIES as string[]).includes(b.displayCurrency)
           ? b.displayCurrency
           : undefined,
+      openingHours:
+        b.openingHours &&
+        typeof b.openingHours.openHour === "number" &&
+        typeof b.openingHours.closeHour === "number" &&
+        b.openingHours.closeHour > b.openingHours.openHour
+          ? { openHour: b.openingHours.openHour, closeHour: b.openingHours.closeHour }
+          : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

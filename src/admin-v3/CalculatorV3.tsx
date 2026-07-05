@@ -209,6 +209,14 @@ export function CalculatorV3() {
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
   const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
   const patchPremises = (over: Partial<SimulationPremises>) => setScn((s) => { if (!s || !s.premises) return s; setDirty(true); return { ...s, premises: { ...s.premises, ...over } }; });
+  // Opening hours own the service window; keep kitchenCapacity.openHoursPerDay in
+  // sync so the capacity-utilisation math and the demand curve agree.
+  const patchOpeningHours = (over: Partial<{ openHour: number; closeHour: number }>) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = { openHour: 11, closeHour: 22, ...(s.openingHours ?? {}), ...over };
+    const openHoursPerDay = Math.max(1, oh.closeHour - oh.openHour);
+    return { ...s, openingHours: oh, kitchenCapacity: s.kitchenCapacity ? { ...s.kitchenCapacity, openHoursPerDay } : s.kitchenCapacity };
+  });
 
   // Display currency — the canonical model stays in PLN grosze; `money` reformats
   // every amount at the operator's FX rate, and the Z inputs reparse back to grosze.
@@ -361,7 +369,7 @@ export function CalculatorV3() {
     const weights = demandWeights(hours);
     const hourly = weights.map((w) => folded.ordersPerDay * w);
     const peak = Math.max(...hourly);
-    const startHour = 11;
+    const startHour = Math.floor(folded.openingHours?.openHour ?? 11);
     const excessPerDay = hourly.reduce((s, h) => s + Math.max(0, h - perHourCap), 0);
     const balkShare = 0.5; // half of orders that can't be served at peak walk
     const lostPerMonth = Math.round(excessPerDay * balkShare * folded.daysOpenPerMonth);
@@ -374,27 +382,54 @@ export function CalculatorV3() {
     };
   }, [folded]);
 
-  // ── shift plan by daypart (modelled from the same demand curve) ───────────
-  const shiftPlan = useMemo(() => {
-    if (!oven || !folded) return null;
-    const dayparts = [
-      { key: "Lunch", lo: 0, hi: 0.45 },
-      { key: "Afternoon", lo: 0.45, hi: 0.62 },
-      { key: "Dinner", lo: 0.62, hi: 1.01 },
-    ];
-    const n = oven.bars.length;
-    const scheduledPizzaioli = folded.labor.filter((l) => l.role === "pizzaiolo").reduce((s, l) => s + l.headcount, 0);
-    const rows = dayparts.map((d) => {
-      const slice = oven.bars.filter((_, i) => { const x = i / (n - 1 || 1); return x >= d.lo && x < d.hi; });
-      const orders = slice.reduce((s, b) => s + b.orders, 0);
-      const hrs = slice.length || 1;
-      const ordersPerHour = orders / hrs;
-      const heads = Math.max(1, Math.ceil(ordersPerHour / (oven.perHourCap || 1)));
-      const range = slice.length ? `${slice[0].hour}:00–${slice[slice.length - 1].hour + 1}:00` : "—";
-      return { key: d.key, range, orders: Math.round(orders), ordersPerHour, heads };
+  // ── live shift-coverage grid: staff on the floor per hour vs demand ───────
+  // Each labour line's shift window (start/end, default = whole service day)
+  // places its headcount on the clock; per hour we sum staff by role, compare
+  // the kitchen line to the demand-driven requirement, and flag peak hours + gaps.
+  const coverage = useMemo(() => {
+    if (!folded) return null;
+    const oh = folded.openingHours ?? { openHour: 11, closeHour: 22 };
+    const openHour = Math.max(0, Math.min(23, Math.floor(Number.isFinite(oh.openHour) ? oh.openHour : 11)));
+    const closeHour = Math.max(openHour + 1, Math.min(30, Math.ceil(Number.isFinite(oh.closeHour) ? oh.closeHour : 22)));
+    const nHours = closeHour - openHour;
+    const weights = demandWeights(nHours);
+    const perHourCap = folded.kitchenCapacity?.pizzasPerHour ?? 0;
+    const prepMult = Math.max(0.5, folded.prepComplexityMultiplier ?? 1);
+    const effCap = perHourCap / prepMult;
+    const peakDemand = Math.max(1e-9, ...weights) * folded.ordersPerDay;
+    const shiftOf = (l: SimulationLaborLine) => ({
+      s: Number.isFinite(l.startHour) ? Math.max(openHour, l.startHour as number) : openHour,
+      e: Number.isFinite(l.endHour) ? Math.min(closeHour, l.endHour as number) : closeHour,
     });
-    return { rows, scheduledPizzaioli };
-  }, [oven, folded]);
+    const roles = [...new Set(folded.labor.map((l) => l.role))];
+    const hours = weights.map((w, i) => {
+      const hour = openHour + i;
+      const demand = folded.ordersPerDay * w;
+      const perRole: Partial<Record<BusinessCostPayrollRole, number>> = {};
+      let totalOn = 0;
+      let kitchenOn = 0;
+      for (const l of folded.labor) {
+        const { s, e } = shiftOf(l);
+        if (hour < s || hour >= e) continue;
+        perRole[l.role] = (perRole[l.role] ?? 0) + l.headcount;
+        totalOn += l.headcount;
+        if (l.role === "pizzaiolo") kitchenOn += l.headcount;
+      }
+      const requiredKitchen = effCap > 0 ? Math.max(1, Math.ceil(demand / effCap)) : 1;
+      const isPeak = demand >= 0.85 * peakDemand;
+      const kitchenShort = kitchenOn < requiredKitchen;
+      const covered = !kitchenShort && totalOn > 0;
+      return { hour, demand, perRole, totalOn, kitchenOn, requiredKitchen, isPeak, kitchenShort, covered };
+    });
+    const maxDemand = Math.max(1e-9, ...hours.map((h) => h.demand));
+    const maxStaff = Math.max(1, ...hours.map((h) => h.totalOn));
+    const gaps = hours.filter((h) => !h.covered).map((h) => h.hour);
+    const peakHours = hours.filter((h) => h.isPeak).map((h) => h.hour);
+    const peakCovered = hours.filter((h) => h.isPeak).every((h) => h.covered);
+    // Scheduled floor-hours/day = Σ headcount × shift length (what the roster costs the day).
+    const staffHoursPerDay = folded.labor.reduce((sum, l) => { const { s, e } = shiftOf(l); return sum + l.headcount * Math.max(0, e - s); }, 0);
+    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, staffHoursPerDay };
+  }, [folded]);
 
   const save = async () => {
     if (!scn) return;
@@ -586,9 +621,11 @@ export function CalculatorV3() {
               {scn.labor.map((l, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "end", padding: "5px 0", flexWrap: "wrap" }}>
                   <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Role</span><select className="av3-select" value={l.role} onChange={(e) => patchLabor(i, { role: e.target.value as BusinessCostPayrollRole })}>{PAYROLL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
-                  <N label="Heads" value={l.headcount} onChange={(n) => patchLabor(i, { headcount: n })} w={70} />
-                  <N label="Hrs/wk" value={l.hoursPerWeek} onChange={(n) => patchLabor(i, { hoursPerWeek: n })} w={80} />
-                  <Z label="Rate/hr (brutto)" grosze={l.hourlyRateGrosze} onChange={(g) => patchLabor(i, { hourlyRateGrosze: g })} w={110} />
+                  <N label="Heads" value={l.headcount} onChange={(n) => patchLabor(i, { headcount: n })} w={64} />
+                  <N label="Hrs/wk" value={l.hoursPerWeek} onChange={(n) => patchLabor(i, { hoursPerWeek: n })} w={72} />
+                  <Z label="Rate/hr (brutto)" grosze={l.hourlyRateGrosze} onChange={(g) => patchLabor(i, { hourlyRateGrosze: g })} w={104} />
+                  <N label="On @" value={l.startHour ?? (scn.openingHours?.openHour ?? 11)} onChange={(n) => patchLabor(i, { startHour: n })} w={60} />
+                  <N label="Off @" value={l.endHour ?? (scn.openingHours?.closeHour ?? 22)} onChange={(n) => patchLabor(i, { endHour: n })} w={60} />
                   <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
                 </div>
               ))}
@@ -598,6 +635,58 @@ export function CalculatorV3() {
               </div>
             </CardBody>
           </Card>
+
+          {/* live shift-coverage grid — sits next to Labour so you roster + check in one place */}
+          {coverage && (
+          <Card>
+            <CardHead title="Shift plan & coverage" description="Set opening hours + each role's shift; see live who's on, per-hour demand and whether the line is covered at peak" actions={
+              <InfoButton title="Shift plan & coverage"
+                description="A live, hour-by-hour roster: set the service window and each labour line's shift, and the grid shows how many of each role are on the floor every hour against the demand curve, flagging peak hours and under-staffed gaps."
+                institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — and the institutional gate is simple: the kitchen line must never be short at a peak hour (that's walked orders and blown tickets), and you shouldn't be paying a full brigade through a dead afternoon. A roster that's green at peak and lean off-peak is what holds labour % in the 22–28% band without wrecking service."
+                plain="Say dinner peaks 19:00–21:00 at ~22 orders/hr against a ~16/hr line. The grid turns those hours red until you put a second pizzaiolo on from 18:00 — add the shift, the cells go green, and you can see you're not also paying that person through the empty 15:00 lull. Move the opening hour later and the whole curve + coverage recompute instantly."
+                tips="Split a busy role into two lines with staggered On/Off hours to cover the peak without over-staffing the shoulders. Watch the 'Line on/need' row — any red hour is a coverage gap; add heads or extend a shift until peak is green. Trim floor-hours where demand is thin (the demand bars are short) to pull labour % down."
+                methodology="Demand/hr = ordersPerDay × a documented double-peak curve over the opening window. Per hour, staff-on sums each labour line's headcount whose [On,Off) covers the hour; kitchen requirement = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. An hour is 'covered' when pizzaioli-on ≥ requirement and someone's on; peak hours are those ≥85% of peak demand. Modelling layer in CalculatorV3 over the folded scenario." />
+            } />
+            <CardBody>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
+                <N label="Open @" value={scn.openingHours?.openHour ?? 11} onChange={(n) => patchOpeningHours({ openHour: n })} w={78} />
+                <N label="Close @" value={scn.openingHours?.closeHour ?? 22} onChange={(n) => patchOpeningHours({ closeHour: n })} w={78} />
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginLeft: 4 }}>
+                  <Badge tone={coverage.gaps.length === 0 ? "ok" : "bad"}>{coverage.gaps.length === 0 ? "All hours covered" : `${coverage.gaps.length} short hr${coverage.gaps.length > 1 ? "s" : ""}: ${coverage.gaps.map((h) => `${h}:00`).join(", ")}`}</Badge>
+                  <Badge tone={coverage.peakHours.length === 0 ? "neutral" : coverage.peakCovered ? "ok" : "bad"}>{coverage.peakHours.length ? `Peak ${coverage.peakHours[0]}:00–${coverage.peakHours[coverage.peakHours.length - 1] + 1}:00 ${coverage.peakCovered ? "covered" : "SHORT"}` : "No peak"}</Badge>
+                  <Badge tone="neutral">{coverage.staffHoursPerDay} floor-hrs/day</Badge>
+                </div>
+              </div>
+              <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: `88px repeat(${coverage.nHours}, minmax(26px, 1fr))`, gap: 2 }}>
+                {/* hour header — peak hours tinted */}
+                <div />
+                {coverage.hours.map((h) => <div key={h.hour} title={h.isPeak ? "peak hour" : undefined} style={{ textAlign: "center", fontSize: 10, fontFamily: "var(--av3-mono)", padding: "2px 0", borderRadius: 3, fontWeight: h.isPeak ? 700 : 400, color: h.isPeak ? "var(--av3-fg)" : "var(--av3-subtle)", background: h.isPeak ? "color-mix(in oklab, var(--av3-c5) 24%, transparent)" : "transparent" }}>{h.hour}</div>)}
+                {/* demand/hr bars */}
+                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Demand/hr</div>
+                {coverage.hours.map((h) => <div key={h.hour} title={`${h.hour}:00 · ${h.demand.toFixed(0)} orders/hr`} style={{ display: "flex", alignItems: "flex-end", height: 30, background: "var(--av3-s1)", borderRadius: 3 }}><div style={{ width: "100%", height: `${Math.round((h.demand / coverage.maxDemand) * 100)}%`, background: h.kitchenShort ? "var(--av3-bad)" : "var(--av3-c3)", opacity: 0.9, borderRadius: "3px 3px 0 0" }} /></div>)}
+                {/* one row per role on the roster */}
+                {coverage.roles.map((role) => (
+                  <Fragment key={role}>
+                    <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>{ROLE_LABEL[role]}</div>
+                    {coverage.hours.map((h) => { const cnt = h.perRole[role] ?? 0; const inten = cnt > 0 ? 22 + Math.round((cnt / coverage.maxStaff) * 58) : 0; return <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: cnt > 0 ? "var(--av3-fg)" : "var(--av3-subtle)", background: cnt > 0 ? `color-mix(in oklab, var(--av3-c2) ${inten}%, var(--av3-s1))` : "var(--av3-s1)" }}>{cnt > 0 ? cnt : "·"}</div>; })}
+                  </Fragment>
+                ))}
+                {/* total on the floor */}
+                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center", fontWeight: 600 }}>Total on</div>
+                {coverage.hours.map((h) => <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", fontWeight: 600 }}>{h.totalOn || "·"}</div>)}
+                {/* kitchen line coverage: on / need */}
+                <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Line on/need</div>
+                {coverage.hours.map((h) => <div key={h.hour} title={`Pizzaioli on ${h.kitchenOn} · need ${h.requiredKitchen}${h.kitchenShort ? " · SHORT" : ""}`} style={{ textAlign: "center", fontSize: 10.5, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: h.kitchenShort ? "#fff" : "var(--av3-fg)", background: h.kitchenShort ? "var(--av3-bad)" : "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }}>{h.kitchenOn}/{h.requiredKitchen}</div>)}
+              </div></div>
+              <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10.5, color: "var(--av3-muted)", flexWrap: "wrap" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-c5)", opacity: 0.5 }} /> peak hour</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }} /> line covered</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-bad)" }} /> line short</span>
+                <span>· set each role&rsquo;s <b>On/Off</b> in Labour above; split a role into two lines for staggered shifts</span>
+              </div>
+            </CardBody>
+          </Card>
+          )}
 
           <Card>
             <CardHead title="Fixed costs (monthly)" />
@@ -666,7 +755,6 @@ export function CalculatorV3() {
               {scn.kitchenCapacity && <>
                 <N label="Pizzas/hr" value={scn.kitchenCapacity.pizzasPerHour} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, pizzasPerHour: n } })} w={100} />
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
-                <N label="Open hrs/day" value={scn.kitchenCapacity.openHoursPerDay} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, openHoursPerDay: n } })} w={104} step={0.5} />
                 <N label="Oven / cycle" value={scn.kitchenCapacity.ovenPizzasPerCycle ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenPizzasPerCycle: n } })} w={96} />
                 <N label="Cycle (s)" value={scn.kitchenCapacity.ovenCycleSeconds ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenCycleSeconds: n } })} w={92} />
                 <P label="Oven eff. %" frac={scn.kitchenCapacity.ovenEfficiencyPct ?? 0} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenEfficiencyPct: f } })} w={100} />
@@ -1025,9 +1113,7 @@ export function CalculatorV3() {
         </div>
       )}
 
-      {oven && shiftPlan && (
-        <div className="av3-grid-2">
-          {/* oven curve & peak saturation */}
+      {oven && (
           <Card>
             <CardHead title="Oven curve & peak saturation" actions={
               <InfoButton title="Oven curve & peak saturation"
@@ -1072,34 +1158,6 @@ export function CalculatorV3() {
               })()}
             </CardBody>
           </Card>
-
-          {/* shift plan by daypart */}
-          <Card>
-            <CardHead title="Shift plan — labour by daypart" actions={
-              <InfoButton title="Shift plan — labour by daypart"
-                description="Forecast orders per daypart and the line headcount needed to serve them within the oven ceiling."
-                institutional="Labour is the second-biggest controllable cost, and flat all-day staffing is where it leaks. Matching heads to the demand curve — light at the lunch shoulder, doubled at the dinner peak — is how good operators hold labour % in range without blowing service. The gate: scheduled peak heads must cover the dinner daypart's orders/hr, or the oven curve goes red."
-                plain="Dinner does 22 orders/hr against a 16/hr line, so you need 2 pizzaioli on at 18:00–21:00; lunch at 9/hr needs only 1. Staffing 2 all day burns wage on the dead afternoon; staffing 1 all day loses the dinner rush."
-                tips="Schedule to the 'rec. heads' column: add the second pair of hands only for the dinner block, cross-train so a waiter can plate at peak, and start prep before the lunch ramp. If recommended > scheduled at dinner, that's your queue loss in the oven curve."
-                methodology="Orders/daypart = Σ of the modelled hourly demand within the daypart window; rec. heads = ⌈(orders/hr) ÷ kitchenCapacity.pizzasPerHour⌉ (min 1). Scheduled pizzaioli = Σ headcount of pizzaiolo labour lines. Modelling layer over the scenario." />
-            } />
-            <CardBody>
-              <div className="av3-cfgrow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
-              {shiftPlan.rows.map((r) => (
-                <div key={r.key} className="av3-cfgrow" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.key}</span>
-                  <span className="av3-cell-muted" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5 }}>{r.range}</span>
-                  <span style={{ textAlign: "right", fontFamily: "var(--av3-mono)", fontSize: 12 }}>{r.orders}<span className="av3-cell-muted" style={{ fontSize: 10 }}> · {r.ordersPerHour.toFixed(0)}/h</span></span>
-                  <span style={{ textAlign: "right" }}><Badge tone={r.heads > shiftPlan.scheduledPizzaioli ? "bad" : "ok"}>{r.heads}</Badge></span>
-                </div>
-              ))}
-              <div style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 8 }}>
-                Scheduled pizzaioli: <b style={{ color: "var(--av3-fg)" }}>{shiftPlan.scheduledPizzaioli}</b>
-                {shiftPlan.rows.some((r) => r.heads > shiftPlan.scheduledPizzaioli) ? <span style={{ color: "var(--av3-warn)" }}> · peak daypart needs more heads than scheduled</span> : <span style={{ color: "var(--av3-ok)" }}> · covers every daypart</span>}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
       )}
 
       {/* real-data sandboxes — independent of the hypothetical scenario above */}
