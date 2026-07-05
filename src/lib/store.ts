@@ -14313,6 +14313,96 @@ export async function deleteTable(id: string, locationSlug?: string): Promise<bo
   return tablesBlob.remove(id, locationSlug);
 }
 
+/**
+ * Floor **zone** — a first-class, separately-persisted entity (was derived from
+ * each table's `zone` string, so an empty zone vanished the moment its last
+ * table left). Tables still reference a zone by **name** (`FloorTable.zone`, read
+ * in ~40 places — seating, floor-twin, Book, POS — so kept as a name, not an id);
+ * this list is the authoritative set of zones + their order, so empty zones
+ * persist and zones can be created / renamed / deleted independently. Rename
+ * cascades the name onto member tables; delete clears it (they become unzoned).
+ */
+export interface FloorZone {
+  id: string;
+  locationSlug: string;
+  name: string;
+  position: number;
+  createdAt: string;
+}
+const zonesBlob = makePerLocationBlob<FloorZone>("floor-zones");
+const newZoneId = () => `zone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+export async function getZones(locationSlug?: string): Promise<FloorZone[]> {
+  const list = locationSlug ? await zonesBlob.readForLocation(locationSlug) : await zonesBlob.readAll();
+  const scoped = locationSlug ? list.filter((z) => z.locationSlug === locationSlug) : list;
+  return scoped.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+}
+
+/** Back-fill a zone entity for every distinct `table.zone` not yet listed, so
+ *  existing floor plans (and any zone typed straight into the table editor) show
+ *  up as managed zones. Idempotent; returns the reconciled list. */
+export async function reconcileZones(locationSlug: string): Promise<FloorZone[]> {
+  const [zones, tables] = await Promise.all([getZones(locationSlug), getTables(locationSlug)]);
+  const known = new Set(zones.map((z) => z.name.toLowerCase()));
+  const missing = [...new Set(tables.map((t) => (t.zone ?? "").trim()).filter(Boolean))].filter(
+    (n) => !known.has(n.toLowerCase()),
+  );
+  if (missing.length === 0) return zones;
+  let pos = zones.length ? Math.max(...zones.map((z) => z.position)) + 1 : 0;
+  for (const name of missing) {
+    await zonesBlob.upsert({ id: newZoneId(), locationSlug, name, position: pos++, createdAt: new Date().toISOString() });
+  }
+  return getZones(locationSlug);
+}
+
+export async function createZone(locationSlug: string, name: string): Promise<FloorZone | { error: string }> {
+  const base = name.trim();
+  if (!base) return { error: "Zone name is required" };
+  const existing = await getZones(locationSlug);
+  // Auto-uniquify so "+ Add zone" (which seeds a placeholder name) never collides.
+  let unique = base;
+  for (let n = 2; existing.some((z) => z.name.toLowerCase() === unique.toLowerCase()); n++) unique = `${base} ${n}`;
+  const zone: FloorZone = {
+    id: newZoneId(),
+    locationSlug,
+    name: unique,
+    position: existing.length ? Math.max(...existing.map((z) => z.position)) + 1 : 0,
+    createdAt: new Date().toISOString(),
+  };
+  return zonesBlob.upsert(zone);
+}
+
+export async function renameZone(locationSlug: string, id: string, name: string): Promise<FloorZone | { error: string }> {
+  const next = name.trim();
+  if (!next) return { error: "Zone name is required" };
+  const zones = await getZones(locationSlug);
+  const zone = zones.find((z) => z.id === id);
+  if (!zone) return { error: "Zone not found" };
+  if (zones.some((z) => z.id !== id && z.name.toLowerCase() === next.toLowerCase())) return { error: "That zone already exists" };
+  const prevName = zone.name;
+  const updated = await zonesBlob.upsert({ ...zone, name: next });
+  // Cascade the new name onto the tables that referenced the old one (they link
+  // by name), so the group stays intact under its new label.
+  if (prevName !== next) {
+    await tablesBlob.mutate<void>(locationSlug, async (rows) => {
+      for (const t of rows) if ((t.zone ?? "") === prevName) t.zone = next;
+      return { rows, result: undefined };
+    });
+  }
+  return updated;
+}
+
+export async function deleteZone(locationSlug: string, id: string): Promise<boolean> {
+  const zone = (await getZones(locationSlug)).find((z) => z.id === id);
+  if (!zone) return false;
+  // Member tables aren't deleted — they just lose the zone (drop to "unzoned").
+  await tablesBlob.mutate<void>(locationSlug, async (rows) => {
+    for (const t of rows) if ((t.zone ?? "") === zone.name) t.zone = undefined;
+    return { rows, result: undefined };
+  });
+  return zonesBlob.remove(id, locationSlug);
+}
+
 const reservationsBlob = makePerLocationBlob<Reservation>("reservations");
 
 export async function getReservations(

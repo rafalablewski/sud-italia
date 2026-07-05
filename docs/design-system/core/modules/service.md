@@ -8,9 +8,12 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
 - **Live code:** `src/core/service/CoreTables.tsx`.
 - **Theme:** `.core-surf-toolbar` ActionBar (with the **`Zone` scope switch** as
   a `.core-seg` in its `left`) ·
-  `.core-surf-toolbar` (Refresh · Add table, right) · `.core-statstrip` ·
-  `.core-floor` / `.core-zone-h` / `.core-tables` / `.core-tbl2` (+
-  `.core-tbl2-wrap` / `.core-tbl2-edit`) · `.core-tbl-field` /
+  `.core-surf-toolbar` (Refresh · Add zone · Add table, right) · `.core-statstrip` ·
+  `.core-floor` / `.core-zone-group` / `.core-zone-h` (+ `.core-zone-tools` /
+  `.core-zone-tool` / `.core-zone-tool.del` / `.core-zone-rename-inp` /
+  `.core-zone-empty`) / `.core-tables` / `.core-tbl2` (+
+  `.core-tbl2-wrap` / `.core-tbl2-edit` / `.core-tbl2.is-dragging`) ·
+  `.core-tbl-field` /
   `.core-tbl-features` / `.core-tbl-feat` in `themes/core/index.css`; the
   tile cursor/focus ring + zone-header hairline live in
   `themes/core/parity/tables.css`.
@@ -28,18 +31,35 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   available · out-of-service · accessible** — every figure derived live from
   the table catalogue (Rule #1; value colours read info/basil/amber/brand,
   each cell carries a mono delta).
-- Tables are grouped by **zone** (`.core-zone-h` header with a `N tables · N
-  seats` sub and a hairline rule). Each zone group (`.core-zone-group`) is a
-  **drop target**: a tile is `draggable`, and dropping it on another zone
-  rewrites that table's `zone` (`reassignZone` → the same status-preserving
-  `persistTableZone` write the editor uses, so a move never clobbers a live
-  seating transition). The dragged tile dims (`.core-tbl2.is-dragging`) and the
-  hovered group lights (`.core-zone-group.drop-target`). A zone can also be
-  **renamed in place** — the header's hover `✎` (`.core-zone-rename`) swaps the
-  title for an input (`.core-zone-rename-inp`); committing rewrites the `zone`
-  of **every** table in that group (`commitRename`). Zones are derived from the
-  tables' `zone` field, so both operations are pure table writes — no zone
-  entity. Tiles are **`.core-tbl2` cards** with a
+- **Zones are first-class entities**, not derived from tables — a separate
+  per-location list (`FloorZone` in `src/lib/store.ts`, served by
+  `GET/POST/PATCH/DELETE /api/admin/floor/zones?location=`), so **an empty zone
+  persists** (moving the last table out of a zone leaves the zone standing).
+  Tables still reference their zone by **name** (`FloorTable.zone`); the store
+  keeps the two in sync — `reconcileZones` (run on GET) back-fills a zone entity
+  for any distinct `table.zone` not yet listed (so legacy floor plans and zones
+  typed straight into the editor surface as managed rows), `renameZone` cascades
+  the new name onto member tables, and `deleteZone` frees member tables (they
+  drop to **Unzoned**) rather than deleting them. `getZones`/mutations are
+  manager+ (reads staff+). The board groups tables under those entities in
+  `position` order (`.core-zone-h` header with a `N tables · N seats` sub and a
+  hairline rule); a zone with no tables shows a dashed **`.core-zone-empty`**
+  ("Drop a table here") drop target; tables whose zone isn't (yet) an entity
+  fall into transient **orphan** groups, and zoneless tables into a trailing
+  **Unzoned** group.
+- **Add zone** (toolbar right) creates a `New zone` entity and drops straight
+  into inline-rename (`addZone`); the store auto-uniquifies the name.
+  Each zone group (`.core-zone-group`) is a **drop target**: a tile is
+  `draggable`, and dropping it on another group rewrites that table's `zone`
+  (`reassignZone` → the same status-preserving `persistTableZone` write the
+  editor uses, so a move never clobbers a live seating transition). The dragged
+  tile dims (`.core-tbl2.is-dragging`) and the hovered group lights
+  (`.core-zone-group.drop-target`). A managed zone header carries a hover
+  **tool cluster** (`.core-zone-tools`): `✎` (`.core-zone-tool`) swaps the
+  title for an input (`.core-zone-rename-inp`) — committing PATCHes the entity
+  and cascades the name (`commitRename`) — and `×` (`.core-zone-tool.del`)
+  deletes the zone (`removeZone`; confirms first when the zone still holds
+  tables, which then become Unzoned). Tiles are **`.core-tbl2` cards** with a
   status-tinted left accent rail: **available** = basil (`free`) · **reserved**
   muted (`booked`) · **out-of-service** faded (`oos`) · a table already
   **seated** by ops shows info-toned. Each tile reads a big `T`-prefixed table
@@ -295,6 +315,6 @@ padding + `.book-grid` gap). Stat strip: Fill basil, Upcoming plain ink.
 
 Parity layers: `src/app/themes/core/parity/{tables,slots,dispatch}.css` (imported after base+skin; scoped under `.core`). See `../redesign/PARITY-AUDIT.md`.
 
-- **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); zone pills under the section head; tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
+- **Tables** — stat strip Tables · Seats · Zones · Available · Out of service · Accessible (all derived live from the table catalogue); a `.core-seg` **Zone scope switch** in the ActionBar left plus **Add zone / Add table** on the right; tables grouped under first-class zone entities (drag to move, empty zones persist); tiles are `div[role=button]` that open the table editor on tap; `T`-prefixed numbers. `parity/tables.css` keeps only the tile cursor/focus ring + the zone-header hairline — the old `.core-tqa` quick-action row and `.core-floor-tools` lookup/recommender disclosure were dropped with the operational Floor board.
 - **Slots** — leading `Manage|Demand` seg (brand-active) · Day/Week seg · the shared `CoreDateField` picker (left); on the right a `CoreFilterMenu` funnel (Fulfillment: All · Dine-in · Takeaway · Delivery) · standard `.core-iconbtn` Refresh · orange New-slot pill (`.core-slot-add`); stat cells 5–6 are Covers booked (info) + No-show risk (danger, flagged); default `.delta` basil/green; Manage tier chips fixed 46px.
 - **Dispatch** — free-standing status-tinted order-pass cards (`.core-dcard .ready/.inkitchen/.road`) with itemized lines + inline assign/advance (no wrapping frame, no full-width advance button); driver roster gains an ETA column (`.core-roster-eta`); stat strip carries Avg delivery + Late; section sub `pass → road · {loc} · {clock}`; `delivery dispatch` subbar label. Drivers are seeded (delivery-role staff) so the roster populates.

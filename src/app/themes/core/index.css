@@ -324,8 +324,11 @@
    pill vs rounded-rect, some lowercase). Each keeps its own fill (brand vs
    neutral) — only the geometry is unified. */
 .core .core-surf-toolbar :is(.cm-primary, .core-bk-newpill, .core-bk-toolbtn, .core-slot-add, .core-btn) {
-  height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1; white-space: nowrap; flex: none;
+  display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: var(--pill); font-family: var(--mono); font-size: 11px; text-transform: none; gap: 6px; line-height: 1; white-space: nowrap; flex: none;
 }
+/* keep icon glyphs inside toolbar buttons at label scale (the bare .core-btn has
+   no intrinsic svg sizing, unlike .cm-primary), so "＋ Add zone" reads as a pill. */
+.core .core-surf-toolbar .core-btn svg { width: 13px; height: 13px; }
 .core .core-surf-toolbar :is(.core-bk-newpill, .core-bk-toolbtn) span { font-size: 12px; }
 /* icon-glyph buttons share the same 30px box so nothing looks off-height */
 .core .core-surf-toolbar .core-iconbtn { height: 30px; min-width: 30px; }
@@ -1714,18 +1717,25 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 /* Tables' zone scope switch now renders as the canonical `.core-seg` pinned to
    the section-head right (unified header), so the bespoke `.core-zonetabs` /
    `.core-ztab` rules were removed. */
-.core .core-zone-h { display: flex; align-items: baseline; gap: 10px; margin: 6px 2px 12px; }
+.core .core-zone-h { display: flex; align-items: center; gap: 10px; margin: 6px 2px 12px; }
 .core .core-zone-h .zt { font-family: var(--display); font-weight: 600; font-size: 15px; }
-/* Zone management — drag a table between zone groups, rename a zone inline. */
+.core .core-zone-h .core-cust-sub { margin-left: auto; }
+/* Zone management — first-class zone entities: drag a table between zone
+   groups, rename/delete a zone inline, drop into an empty zone. */
 .core .core-zone-group { border-radius: var(--r-lg); padding: 4px; margin: 0 -4px; transition: background var(--fast), box-shadow var(--fast); }
 .core .core-zone-group.drop-target { background: var(--brand-wash); box-shadow: inset 0 0 0 1.5px rgba(232, 107, 62, .55); }
 .core .core-tbl2[draggable="true"] { cursor: grab; }
 .core .core-tbl2.is-dragging { opacity: .45; box-shadow: none; }
-/* inline rename affordance on the zone header (appears on hover) */
-.core .core-zone-h .core-zone-rename { opacity: 0; margin-left: -4px; width: 22px; height: 22px; display: inline-grid; place-items: center; border: 0; background: transparent; color: var(--ink-3); border-radius: var(--r-sm); cursor: pointer; font-size: 12px; line-height: 1; align-self: center; transition: opacity var(--fast), color var(--fast), background var(--fast); }
-.core .core-zone-h:hover .core-zone-rename, .core .core-zone-h .core-zone-rename:focus-visible { opacity: 1; }
-.core .core-zone-h .core-zone-rename:hover { color: var(--brand-bright); background: var(--brand-wash); }
+/* rename/delete tool cluster on the zone header (appears on hover of the row) */
+.core .core-zone-tools { display: inline-flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--fast); }
+.core .core-zone-h:hover .core-zone-tools, .core .core-zone-tools:focus-within { opacity: 1; }
+.core .core-zone-tool { width: 22px; height: 22px; display: inline-grid; place-items: center; border: 0; background: transparent; color: var(--ink-3); border-radius: var(--r-sm); cursor: pointer; font-size: 12px; line-height: 1; transition: color var(--fast), background var(--fast); }
+.core .core-zone-tool:hover { color: var(--brand-bright); background: var(--brand-wash); }
+.core .core-zone-tool.del:hover { color: var(--danger); background: color-mix(in oklab, var(--danger) 14%, transparent); }
 .core .core-zone-rename-inp { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--brand); border-radius: var(--r-sm); padding: 1px 8px; outline: none; min-width: 90px; max-width: 220px; }
+/* empty zone — a dashed drop target so a zone with no tables still reads as a place to drop into */
+.core .core-zone-empty { grid-column: 1 / -1; display: grid; place-items: center; min-height: 62px; padding: 12px; border: 1.5px dashed var(--line-2); border-radius: var(--r-md); color: var(--ink-3); font-size: 12.5px; font-style: italic; }
+.core .core-zone-group.drop-target .core-zone-empty { border-color: transparent; color: var(--brand-bright); }
 /* Dense-console floor tiles — landscape cards (mockup `.tbl`): a big table
    number + status dot top row, then covers · dwell · check, with a left accent
    rail tinted by state (free=basil, seated=info, billing/freeing=amber). */

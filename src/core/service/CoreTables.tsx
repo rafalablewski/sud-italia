@@ -41,6 +41,11 @@ const FEATURE_GLYPH: Record<TableFeature, string> = {
   "step-free": "▭",
 };
 
+// A floor zone — a first-class entity (GET/POST/PATCH/DELETE
+// /api/admin/floor/zones), separate from tables, so an empty zone persists.
+// Tables still reference a zone by NAME (`FloorTable.zone`).
+type Zone = { id: string; name: string; position: number };
+
 export function CoreTables() {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
@@ -48,6 +53,7 @@ export function CoreTables() {
   // Cached by location so switching pages/tabs re-renders the last floor plan
   // instantly (no loading flash); the poll/mount fetch revalidates it.
   const [tables, setTables] = useCoreCache<FloorTable[] | null>(`core:tables:${loc}`, null);
+  const [zoneList, setZoneList] = useCoreCache<Zone[]>(`core:zones:${loc}`, []);
   const [zoneFilter, setZoneFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<FloorTable | "new" | null>(null);
   // A load error is surfaced (with a Retry) rather than swallowed — otherwise a
@@ -57,18 +63,25 @@ export function CoreTables() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
-      if (!res.ok) {
-        setError(res.status === 403 ? "You don't have access to this location's tables." : "Couldn't load tables.");
+      const [tRes, zRes] = await Promise.all([
+        fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`),
+        fetch(`/api/admin/floor/zones?location=${encodeURIComponent(loc)}`),
+      ]);
+      if (!tRes.ok) {
+        setError(tRes.status === 403 ? "You don't have access to this location's tables." : "Couldn't load tables.");
         return;
       }
-      const d = await res.json();
+      const d = await tRes.json();
       setError(null);
       setTables(Array.isArray(d) ? d : (d.tables ?? []));
+      if (zRes.ok) {
+        const zd = await zRes.json().catch(() => null);
+        if (Array.isArray(zd?.zones)) setZoneList(zd.zones);
+      }
     } catch {
       setError("Couldn't reach the server. Check your connection.");
     }
-  }, [loc, setTables]);
+  }, [loc, setTables, setZoneList]);
   useEffect(() => { void load(); }, [load]);
   // A gentle poll so a table added on another till appears here — the plan
   // changes rarely, so 20s is plenty (this is config, not the live floor).
@@ -90,26 +103,40 @@ export function CoreTables() {
     });
   }, [setTables]);
 
-  const zones = useMemo(() => {
-    const m = new Map<string, FloorTable[]>();
+  // Group tables under the ZONE ENTITIES (ordered) — empty zones persist because
+  // they're real rows, not derived from tables. Tables whose zone isn't (yet) a
+  // managed entity fall into `orphans` (transient — reconcile promotes them on
+  // the next load); tables with no zone into `unzoned`.
+  const grouped = useMemo(() => {
+    const byName = new Map<string, FloorTable[]>();
+    for (const z of zoneList) byName.set(z.name, []);
+    const orphan = new Map<string, FloorTable[]>();
+    const unzoned: FloorTable[] = [];
     for (const t of tables ?? []) {
-      const z = t.zone || "Floor";
-      (m.get(z) ?? m.set(z, []).get(z)!).push(t);
+      const zn = (t.zone ?? "").trim();
+      if (!zn) unzoned.push(t);
+      else if (byName.has(zn)) byName.get(zn)!.push(t);
+      else (orphan.get(zn) ?? orphan.set(zn, []).get(zn)!).push(t);
     }
-    return [...m.entries()];
-  }, [tables]);
+    return {
+      groups: zoneList.map((z) => ({ zone: z, tables: byName.get(z.name) ?? [] })),
+      orphans: [...orphan.entries()] as [string, FloorTable[]][],
+      unzoned,
+    };
+  }, [tables, zoneList]);
+  // Every managed group's label (entities + any transient orphans).
+  const groupNames = useMemo(
+    () => [...grouped.groups.map((g) => g.zone.name), ...grouped.orphans.map(([n]) => n)],
+    [grouped],
+  );
 
-  // If the filtered zone stops existing (its last table was re-zoned or
-  // deleted), drop the filter — otherwise the zone-tab bar hides at ≤1 zone,
-  // the stale filter matches nothing, and the floor strands empty with no
-  // in-page way to reset.
+  // If the filtered zone stops existing (deleted / renamed), drop the filter.
   useEffect(() => {
-    if (zoneFilter && tables && !zones.some(([z]) => z === zoneFilter)) setZoneFilter(null);
-  }, [zoneFilter, zones, tables]);
+    if (zoneFilter && tables && !groupNames.includes(zoneFilter)) setZoneFilter(null);
+  }, [zoneFilter, groupNames, tables]);
 
-  // Every figure is derived live from the table catalogue (Rule #1): how many
-  // tables, total seats, distinct zones, and how many are available / out of
-  // service / carry an accessibility feature.
+  // Live figures from the catalogue (Rule #1); zone count is the entity/managed
+  // groups (so an empty zone still counts).
   const stats = useMemo(() => {
     const list = tables ?? [];
     let seats = 0, available = 0, oos = 0, accessible = 0;
@@ -119,8 +146,8 @@ export function CoreTables() {
       if (t.status === "out-of-service") oos++;
       if (t.features && t.features.length) accessible++;
     }
-    return { count: list.length, seats, zones: zones.length, available, oos, accessible };
-  }, [tables, zones]);
+    return { count: list.length, seats, zones: groupNames.length, available, oos, accessible };
+  }, [tables, groupNames]);
 
   const statusOf = (s: TableStatus): { cls: string; label: string } => {
     if (s === "out-of-service") return { cls: "oos", label: "out of service" };
@@ -129,21 +156,20 @@ export function CoreTables() {
     return { cls: "free", label: "available" };
   };
 
-  // ── Zone management: drag a table between zone groups, or rename a zone ────
-  // Zones are derived from each table's `zone` field (no separate entity), so
-  // moving a table = rewriting its `zone`, and renaming a zone = rewriting the
-  // `zone` of every table in it. The label a null/empty zone is grouped under.
-  const DEFAULT_ZONE = "Floor";
-  const zoneToWrite = (label: string): string | undefined => (label === DEFAULT_ZONE ? undefined : label);
+  // ── Zone management ── drag tables between zones, and add / rename / delete
+  // ZONES (first-class entities via /api/admin/floor/zones, so an empty zone
+  // persists). A table references its zone by NAME: moving rewrites `table.zone`;
+  // renaming/deleting act on the entity (the API cascades / frees member tables).
   const [dragId, setDragId] = useState<string | null>(null);
-  const [dropZone, setDropZone] = useState<string | null>(null);
-  const [renamingZone, setRenamingZone] = useState<string | null>(null);
+  const [dropKey, setDropKey] = useState<string | null>(null); // group key hovered while dragging
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const [zoneBusy, setZoneBusy] = useState(false);
+  const UNZONED = "__unzoned__";
 
-  // Persist a table's whole row with `patch`, preserving its LIVE status: the
-  // route overwrites the row, and this surface only polls every 20s, so re-read
-  // the current status right before writing — a zone move must never clobber a
-  // seating transition that happened in Book/POS (same guard as the editor).
+  // Persist a table's whole row with a new zone, preserving its LIVE status
+  // (re-read right before writing so a move can't clobber a seating transition
+  // that happened in Book/POS — the same guard the editor uses).
   const persistTableZone = async (t: FloorTable, zone: string | undefined): Promise<boolean> => {
     let status = t.status;
     try {
@@ -162,27 +188,137 @@ export function CoreTables() {
     return res.ok;
   };
 
-  const reassignZone = async (t: FloorTable, targetLabel: string) => {
-    const zone = zoneToWrite(targetLabel);
+  // Move a table into a zone (`targetName` = the zone's name, or "" for unzoned).
+  const reassignZone = async (t: FloorTable, targetName: string) => {
+    const zone = targetName || undefined;
     if ((t.zone || undefined) === zone) return;
     applyChange({ table: { ...t, zone } }); // optimistic
     const ok = await persistTableZone(t, zone);
-    toast(ok ? `${tLabel(t.number)} → ${targetLabel}` : "Could not move table", ok ? "success" : "danger");
+    toast(ok ? `${tLabel(t.number)} → ${targetName || "Unzoned"}` : "Could not move table", ok ? "success" : "danger");
     await load();
   };
 
+  const addZone = async () => {
+    if (zoneBusy) return;
+    setZoneBusy(true);
+    try {
+      const res = await fetch(`/api/admin/floor/zones?location=${encodeURIComponent(loc)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "New zone" }),
+      });
+      if (res.ok) {
+        const z = (await res.json().catch(() => null)) as Zone | null;
+        if (z) { setZoneList((prev) => [...prev, z]); setRenamingId(z.id); setRenameVal(z.name); } // jump straight into naming it
+        await load();
+      } else toast("Could not add zone", "danger");
+    } finally { setZoneBusy(false); }
+  };
+
   const commitRename = async () => {
-    const from = renamingZone;
-    const to = renameVal.trim();
-    setRenamingZone(null);
-    if (!from || !to || to === from) return;
-    const zone = zoneToWrite(to);
-    const inZone = (tables ?? []).filter((t) => (t.zone || DEFAULT_ZONE) === from);
-    inZone.forEach((t) => applyChange({ table: { ...t, zone } })); // optimistic
-    const results = await Promise.all(inZone.map((t) => persistTableZone(t, zone)));
-    const ok = results.every(Boolean);
-    toast(ok ? `Zone renamed → ${to}` : "Some tables could not move", ok ? "success" : "danger");
+    const id = renamingId;
+    const name = renameVal.trim();
+    setRenamingId(null);
+    const zone = zoneList.find((z) => z.id === id);
+    if (!id || !zone || !name || name === zone.name) return;
+    setZoneList((prev) => prev.map((z) => (z.id === id ? { ...z, name } : z))); // optimistic
+    const res = await fetch(`/api/admin/floor/zones?location=${encodeURIComponent(loc)}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name }),
+    });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toast(j.error || "Could not rename zone", "danger"); }
     await load();
+  };
+
+  const removeZone = async (zone: Zone, count: number) => {
+    if (zoneBusy) return;
+    if (count > 0 && !window.confirm(`Delete “${zone.name}”? Its ${count} table${count === 1 ? "" : "s"} will become unzoned.`)) return;
+    setZoneBusy(true);
+    setZoneList((prev) => prev.filter((z) => z.id !== zone.id)); // optimistic
+    try {
+      const res = await fetch(`/api/admin/floor/zones?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(zone.id)}`, { method: "DELETE" });
+      toast(res.ok ? `Zone “${zone.name}” deleted` : "Could not delete zone", res.ok ? "success" : "danger");
+      await load();
+    } finally { setZoneBusy(false); }
+  };
+
+  const renderTile = (t: FloorTable) => {
+    const st = statusOf(t.status);
+    const feats = t.features ?? [];
+    return (
+      <div key={t.id} className="core-tbl2-wrap">
+        <div
+          role="button"
+          tabIndex={0}
+          draggable
+          className={`core-tbl2 ${st.cls}${dragId === t.id ? " is-dragging" : ""}`}
+          onClick={() => setEditing(t)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(t); } }}
+          onDragStart={(e) => { setDragId(t.id); e.dataTransfer.effectAllowed = "move"; }}
+          onDragEnd={() => { setDragId(null); setDropKey(null); }}
+          title={`Table ${t.number} — click to edit · drag to move zone`}
+        >
+          <span className="thead">
+            <span className="tnum">{tLabel(t.number)}</span>
+            <span className="tstat"><span className="dot" /><span className="tst">{st.label}</span></span>
+          </span>
+          <span className="tcap">{t.seats} seat{t.seats === 1 ? "" : "s"}</span>
+          <span className="tdwell">{feats.length ? feats.map((f) => FEATURE_GLYPH[f]).join(" · ") : `${t.seats}-top`}</span>
+          {t.notes && <span className="core-tnote-chip" title={t.notes}>📝 {t.notes}</span>}
+        </div>
+        <button type="button" className="core-tbl2-edit" onClick={() => setEditing(t)} title="Edit table" aria-label={`Edit table ${t.number}`}>⋯</button>
+      </div>
+    );
+  };
+
+  // One zone group: a drop target (its label used as the write value) with an
+  // optional rename/delete tool cluster when it's a managed entity.
+  const renderGroup = (key: string, label: string, tbls: FloorTable[], entity?: Zone) => {
+    const zSeats = tbls.reduce((a, t) => a + t.seats, 0);
+    const dropName = entity ? entity.name : key === UNZONED ? "" : label;
+    const isDrop = dragId != null && dropKey === key;
+    return (
+      <div
+        key={key}
+        className={isDrop ? "core-zone-group drop-target" : "core-zone-group"}
+        onDragOver={(e) => { if (dragId) { e.preventDefault(); if (dropKey !== key) setDropKey(key); } }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const t = (tables ?? []).find((x) => x.id === dragId);
+          if (t) void reassignZone(t, dropName);
+          setDragId(null);
+          setDropKey(null);
+        }}
+      >
+        <div className="core-zone-h">
+          {entity && renamingId === entity.id ? (
+            <input
+              className="core-zone-rename-inp"
+              value={renameVal}
+              autoFocus
+              onChange={(e) => setRenameVal(e.target.value)}
+              onBlur={() => void commitRename()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); void commitRename(); }
+                else if (e.key === "Escape") { e.preventDefault(); setRenamingId(null); }
+              }}
+              aria-label={`Rename zone ${label}`}
+            />
+          ) : (
+            <>
+              <span className="zt">{label}</span>
+              {entity && (
+                <span className="core-zone-tools">
+                  <button type="button" className="core-zone-tool" title="Rename zone" aria-label={`Rename zone ${label}`} onClick={() => { setRenamingId(entity.id); setRenameVal(entity.name); }}>✎</button>
+                  <button type="button" className="core-zone-tool del" title="Delete zone" aria-label={`Delete zone ${label}`} onClick={() => void removeZone(entity, tbls.length)}>×</button>
+                </span>
+              )}
+            </>
+          )}
+          <span className="core-cust-sub">{tbls.length} table{tbls.length === 1 ? "" : "s"} · {zSeats} seats</span>
+        </div>
+        <div className="core-tables">
+          {tbls.length ? tbls.map(renderTile) : <div className="core-zone-empty">Drop a table here</div>}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -196,23 +332,27 @@ export function CoreTables() {
         <CoreSurfToolbar
           ariaLabel="Table controls"
           left={
-            zones.length > 1 ? (
-              /* Zone scope switch — the view/scope toggle. */
+            groupNames.length > 1 ? (
+              /* Zone scope switch — the view/scope toggle across managed zones. */
               <div className="core-seg" role="tablist" aria-label="Zone">
                 <button type="button" role="tab" aria-selected={!zoneFilter} className={!zoneFilter ? "on" : undefined} onClick={() => setZoneFilter(null)}>
-                  All zones<span className="c">{zones.reduce((a, [, ts]) => a + ts.length, 0)}</span>
+                  All zones<span className="c">{stats.count}</span>
                 </button>
-                {zones.map(([z, ts]) => (
-                  <button key={z} type="button" role="tab" aria-selected={zoneFilter === z} className={zoneFilter === z ? "on" : undefined} onClick={() => setZoneFilter(z)}>
-                    {z}<span className="c">{ts.length}</span>
-                  </button>
-                ))}
+                {groupNames.map((z) => {
+                  const n = (tables ?? []).filter((t) => (t.zone ?? "").trim() === z).length;
+                  return (
+                    <button key={z} type="button" role="tab" aria-selected={zoneFilter === z} className={zoneFilter === z ? "on" : undefined} onClick={() => setZoneFilter(z)}>
+                      {z}<span className="c">{n}</span>
+                    </button>
+                  );
+                })}
               </div>
             ) : undefined
           }
           right={
             <>
               <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={() => void load()}><RefreshIcon /></button>
+              <button type="button" className="core-btn ghost" onClick={() => void addZone()} disabled={zoneBusy}><PlusIcon />Add zone</button>
               <button type="button" className="cm-primary" onClick={() => setEditing("new")}><PlusIcon />Add table</button>
             </>
           }
@@ -235,7 +375,7 @@ export function CoreTables() {
           <div className="cell">
             <span className="lab">Zones</span>
             <span className="val">{tables ? stats.zones : "—"}</span>
-            <span className="delta">{zones.length ? zones.map(([z]) => z.toLowerCase()).join(" · ") : ""}</span>
+            <span className="delta">{groupNames.length ? groupNames.map((z) => z.toLowerCase()).join(" · ") : ""}</span>
           </div>
           <div className="cell">
             <span className="lab">Available</span>
@@ -262,100 +402,25 @@ export function CoreTables() {
             </div>
           ) : !tables ? (
             <div className="core-ctx-empty pad">Loading tables…</div>
-          ) : zones.length === 0 ? (
-            <div className="core-ctx-empty pad">No tables yet — add one to start building the floor plan.</div>
+          ) : grouped.groups.length === 0 && grouped.orphans.length === 0 && grouped.unzoned.length === 0 ? (
+            <div className="core-ctx-empty pad">
+              No zones yet — add a zone (or a table) to start building the floor plan.{" "}
+              <button type="button" className="core-btn ghost sm" onClick={() => void addZone()} disabled={zoneBusy}>Add zone</button>
+            </div>
           ) : (
-            // Defensive: if the active filter's zone has vanished, show all
-            // zones rather than an empty list (the effect above also clears it).
-            (zoneFilter && zones.some(([z]) => z === zoneFilter) ? zones.filter(([z]) => z === zoneFilter) : zones).map(([zone, tbls]) => {
-              const zSeats = tbls.reduce((a, t) => a + t.seats, 0);
-              const isDrop = dragId != null && dropZone === zone;
-              return (
-                <div
-                  key={zone}
-                  className={isDrop ? "core-zone-group drop-target" : "core-zone-group"}
-                  onDragOver={(e) => { if (dragId) { e.preventDefault(); if (dropZone !== zone) setDropZone(zone); } }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const t = (tables ?? []).find((x) => x.id === dragId);
-                    if (t) void reassignZone(t, zone);
-                    setDragId(null);
-                    setDropZone(null);
-                  }}
-                >
-                  <div className="core-zone-h">
-                    {renamingZone === zone ? (
-                      <input
-                        className="core-zone-rename-inp"
-                        value={renameVal}
-                        autoFocus
-                        onChange={(e) => setRenameVal(e.target.value)}
-                        onBlur={() => void commitRename()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); void commitRename(); }
-                          else if (e.key === "Escape") { e.preventDefault(); setRenamingZone(null); }
-                        }}
-                        aria-label={`Rename zone ${zone}`}
-                      />
-                    ) : (
-                      <>
-                        <span className="zt">{zone}</span>
-                        <button
-                          type="button"
-                          className="core-zone-rename"
-                          title="Rename zone"
-                          aria-label={`Rename zone ${zone}`}
-                          onClick={() => { setRenamingZone(zone); setRenameVal(zone); }}
-                        >
-                          ✎
-                        </button>
-                      </>
-                    )}
-                    <span className="core-cust-sub">{tbls.length} table{tbls.length === 1 ? "" : "s"} · {zSeats} seats</span>
-                  </div>
-                  <div className="core-tables">
-                    {tbls.map((t) => {
-                      const st = statusOf(t.status);
-                      const feats = t.features ?? [];
-                      return (
-                        <div key={t.id} className="core-tbl2-wrap">
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            draggable
-                            className={`core-tbl2 ${st.cls}${dragId === t.id ? " is-dragging" : ""}`}
-                            onClick={() => setEditing(t)}
-                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(t); } }}
-                            onDragStart={(e) => { setDragId(t.id); e.dataTransfer.effectAllowed = "move"; }}
-                            onDragEnd={() => { setDragId(null); setDropZone(null); }}
-                            title={`Table ${t.number} — click to edit · drag to move zone`}
-                          >
-                            <span className="thead">
-                              <span className="tnum">{tLabel(t.number)}</span>
-                              <span className="tstat"><span className="dot" /><span className="tst">{st.label}</span></span>
-                            </span>
-                            <span className="tcap">{t.seats} seat{t.seats === 1 ? "" : "s"}</span>
-                            <span className="tdwell">
-                              {feats.length ? feats.map((f) => FEATURE_GLYPH[f]).join(" · ") : `${t.seats}-top`}
-                            </span>
-                            {t.notes && <span className="core-tnote-chip" title={t.notes}>📝 {t.notes}</span>}
-                          </div>
-                          <button
-                            type="button"
-                            className="core-tbl2-edit"
-                            onClick={() => setEditing(t)}
-                            title="Edit table"
-                            aria-label={`Edit table ${t.number}`}
-                          >
-                            ⋯
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
+            <>
+              {/* Managed zone entities (ordered) — an empty zone renders as an
+                  empty drop target so it persists visibly. Filter, when set,
+                  narrows to a single named group/orphan; unzoned hides under a
+                  filter since it has no name to match. */}
+              {grouped.groups
+                .filter((g) => !zoneFilter || g.zone.name === zoneFilter)
+                .map((g) => renderGroup(g.zone.id, g.zone.name, g.tables, g.zone))}
+              {grouped.orphans
+                .filter(([name]) => !zoneFilter || name === zoneFilter)
+                .map(([name, tbls]) => renderGroup(`o:${name}`, name, tbls))}
+              {!zoneFilter && grouped.unzoned.length > 0 && renderGroup(UNZONED, "Unzoned", grouped.unzoned)}
+            </>
           )}
         </div>
       </div>
