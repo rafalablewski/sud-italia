@@ -91,18 +91,39 @@
 .core .core-bk-blk.conflict.bot { top: auto; bottom: 3px; }
 
 /* ── New-reservation right rail ─────────────────────────────────────────── */
+/* A sticky rail that must NEVER outgrow the screen: `align-self: start` stops
+   the grid from stretching it to the (often taller) timeline row, and the
+   max-height caps it to the space below its own start position so the body
+   scrolls internally instead of clipping the Book button off-screen with no way
+   to reach it. The rail begins below the shell topbar + the Book header rows
+   (ActionBar + stat strip) — a stable ~186px that doesn't vary with viewport
+   height — so capping against that offset means every field is reachable in a
+   single scroll over the body, no page scroll required. (When the page IS
+   scrolled and the rail sticks higher, the extra bottom gap is harmless.) */
 .core .core-book-form {
+  --book-rail-top: 186px; /* shell topbar (42) + ActionBar + stat-strip rows */
   padding: 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   overflow: hidden;
   position: sticky; top: 4px;
+  align-self: start;
+  display: flex; flex-direction: column;
+  max-height: calc(100dvh - var(--book-rail-top) - 8px);
 }
-.core .core-bk-resvh { padding: 11px 12px; border-bottom: 1px solid var(--line); }
+.core .core-bk-resvh { flex: none; padding: 11px 12px; border-bottom: 1px solid var(--line); }
 .core .core-bk-resvh .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
 .core .core-bk-resvh .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
-.core .core-bk-resvb { padding: 11px 12px; display: flex; flex-direction: column; gap: 12px; }
+/* the scrolling region — min-height:0 lets it shrink inside the flex column */
+.core .core-bk-resvb { flex: 1; min-height: 0; overflow-y: auto; padding: 11px 12px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Stacked (narrow) layout: the rail is no longer a side column, so let it flow
+   with the page instead of pinning + inner-scrolling. */
+@media (max-width: 1000px) {
+  .core .core-book-form { position: static; max-height: none; }
+  .core .core-bk-resvb { overflow-y: visible; }
+}
 .core .core-bk-field { display: flex; flex-direction: column; }
 .core .core-bk-flab {
   font-family: var(--mono); font-size: 9px; color: var(--ink-3);
