@@ -240,7 +240,12 @@ recommendation, + the recommended pick's dominant signal) to
 `/api/admin/seating/decisions` when Learn-from-overrides or Shadow mode is on, so
 the override rate and the tuning nudge are measured numbers, not a guess.
 **Today's bookings** (`.core-bk-blist`) is a
-**full-width list below**, with cancel. A **lens toggle** in the section-head
+**full-width chronological list below**, with per-row seat / no-show / complete /
+cancel — rendered **only on the Floor lens** (`viewMode === "floor"`). It's
+redundant on the other two: the Timeline grid already *is* the chronological
+booking view, and Arrivals has its own Expected/Seated queue; Floor is spatial-
+only, so a time-ordered list adds value there (and on Timeline the tall
+reservation rail pushed it off-screen anyway). A **lens toggle** in the section-head
 right (the unified-header `.core-seg` view switch — `View` · timeline / floor /
 arrivals) switches the surface between three views over **one shared
 occupancy truth** — the **TableSession spine** (`src/lib/table-session.ts`,

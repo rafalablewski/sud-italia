@@ -1170,8 +1170,12 @@ export function CoreBook({
           </section>
         )}
 
-        {/* today's bookings — full-width blist */}
-        <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to open on the timeline</div>
+        {/* today's bookings — full-width blist, ONLY on the Floor tab. It's
+            redundant everywhere else: the Timeline grid already IS the
+            chronological booking view, and Arrivals has its own Expected/Seated
+            queue. Floor is spatial-only, so a time-ordered list adds value there. */}
+        {viewMode === "floor" && (<>
+        <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to select it</div>
         <section className="core-bk-blist">
           <div className="core-bk-blisth">
             <span className="t">Today&apos;s bookings</span>
@@ -1207,6 +1211,7 @@ export function CoreBook({
             })
           )}
         </section>
+        </>)}
 
         {/* Walk-in — engine-guarded seating for a party with no booking */}
         <CoreDialog open={walkOpen} onClose={() => setWalkOpen(false)} title="Seat a walk-in">
