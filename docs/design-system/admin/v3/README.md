@@ -1436,7 +1436,15 @@ auth canvas's signature lighting and the sign-in lockup:
   override) to `repeat(auto-fit, minmax(240px, 1fr))` with `min-width: 0` on
   `.av3-scn-card`, so the three scenario cards **wrap** instead of overflowing a
   narrow container — fixing the long-złoty-figure overflow and covering the
-  Scenario-comparison card too.
+  Scenario-comparison card too. The card also gained a collapsible **“How this
+  is calculated”** `<details>` panel (the per-mode capital table + IRR-vs-edge +
+  caveats, in prose) and a **blended “Rent + invest the freed capital in the
+  S&P”** callout: `computePremisesInvestment` now returns a `blended:
+  PremisesBlended | null` that deploys the cash-buy's full capital as rent's small
+  restaurant outlay + the freed remainder compounded in the S&P, reuses the rent
+  pass's captured per-month cash-flow stream for the combined IRR, and reports the
+  head-to-head `vsBuy` / `vsMortgage` deltas — the fairest equal-capital rival to
+  owning. Rendered as a green/red-accented callout below the three scenario cards.
   `src/lib/simulation-engine.ts`,
   `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`,
   `src/app/themes/admin-v3/index.css`.

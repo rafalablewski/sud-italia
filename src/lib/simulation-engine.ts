@@ -323,6 +323,38 @@ export interface PremisesInvestmentScenario {
   benchmarks: PremisesInvestmentBenchmark[];
 }
 
+/** The "rent the unit AND invest the capital you *didn't* sink into a building"
+ *  strategy — the fairest rival to buying, because it deploys the SAME total
+ *  capital as a cash purchase (rent's small outlay in the restaurant, the rest
+ *  in the S&P 500). Answers: is owning the building actually worth locking up
+ *  the money, or would renting + indexing the difference end up richer? */
+export interface PremisesBlended {
+  label: string;
+  /** S&P rate the freed capital is invested at, as a percent. */
+  spRatePct: number;
+  /** Total capital deployed — equal to the cash-buy upfront, for a like-for-like. */
+  totalCapitalGrosze: number;
+  /** Portion put to work running the rented restaurant (rent's upfront). */
+  restaurantCapitalGrosze: number;
+  /** The rest — freed by NOT buying — parked in the S&P 500. */
+  freedCapitalGrosze: number;
+  /** Rented restaurant's 10-yr wealth (Σ free cash flow + deposit back). */
+  restaurantWealthGrosze: number;
+  /** Freed capital compounded in the S&P over the horizon. */
+  freedTerminalGrosze: number;
+  /** restaurantWealth + freedTerminal. */
+  terminalWealthGrosze: number;
+  netGainGrosze: number;
+  moneyMultiple: number;
+  /** IRR of [−total capital, rent's monthly cash flow…, +deposit + S&P pot]. */
+  annualizedReturnPct: number | null;
+  /** terminalWealth − the cash-buy's terminal wealth (>0 → rent+invest wins). */
+  vsBuyGrosze: number;
+  /** terminalWealth − the mortgage's terminal wealth. */
+  vsMortgageGrosze: number;
+  vsBuyWins: boolean;
+}
+
 export interface PremisesInvestment {
   horizonYears: number;
   horizonMonths: number;
@@ -330,6 +362,9 @@ export interface PremisesInvestment {
   benchmarkRates: { sp500: number; nasdaq100: number; bond: number };
   /** rent, mortgage, buy — in that order. */
   scenarios: PremisesInvestmentScenario[];
+  /** The "rent + invest the freed capital in the S&P" blended strategy, or null
+   *  when renting doesn't free any capital (its upfront ≥ the cash-buy's). */
+  blended: PremisesBlended | null;
 }
 
 /** Remaining balance of an `n`-month annuity loan after `k` payments (grosze). */
@@ -403,6 +438,10 @@ export function computePremisesInvestment(
     { mode: "buy", label: "Buy (cash)" },
   ];
 
+  // Captured from the rent pass so the blended strategy can reuse its exact
+  // per-month cash-flow stream (no re-projection).
+  let rentFcfByMonth: number[] = [];
+
   const scenarios = modes.map(({ mode, label }): PremisesInvestmentScenario => {
     const varied = applyPremises({ ...base, premises: { ...p, mode } });
     const prem = computePremises({ ...p, mode });
@@ -429,6 +468,7 @@ export function computePremisesInvestment(
     // the flat non-cash depreciation added back and the flat principal removed.
     const fcfByMonth = rows.map((r) => r.netProfit + deprFlat - principalFlat);
     const totalCashFlow = fcfByMonth.reduce((sum, v) => sum + v, 0);
+    if (mode === "rent") rentFcfByMonth = fcfByMonth;
 
     // Terminal asset — what you still hold at the end of the horizon.
     let propertyValue = 0, loanBalance = 0, terminalAsset = 0;
@@ -492,7 +532,46 @@ export function computePremisesInvestment(
     };
   });
 
-  return { horizonYears, horizonMonths: H, benchmarkRates: rates, scenarios };
+  // ── blended: rent the unit + invest the capital you didn't sink into a
+  // building. Deploys the SAME total as the cash-buy (equal-capital rival) so
+  // "own vs rent-and-index" is a fair, like-for-like comparison. ─────────────
+  const rentScn = scenarios[0];
+  const mortgageScn = scenarios[1];
+  const buyScn = scenarios[2];
+  let blended: PremisesBlended | null = null;
+  const freed = buyScn.upfrontCapitalGrosze - rentScn.upfrontCapitalGrosze;
+  if (freed > 0) {
+    const spRate = rates.sp500 / 100;
+    const totalCapital = buyScn.upfrontCapitalGrosze;
+    const freedTerminal = Math.round(freed * Math.pow(1 + spRate, horizonYears));
+    const restaurantWealth = rentScn.terminalWealthGrosze; // Σ rent FCF + deposit
+    const terminalWealth = restaurantWealth + freedTerminal;
+    // IRR of the combined stream: outlay the full capital, collect the rented
+    // restaurant's monthly cash flow, cash out the deposit + grown S&P pot at end.
+    const flows = new Array(H + 1).fill(0);
+    flows[0] = -totalCapital;
+    for (let m = 1; m <= H; m++) flows[m] = rentFcfByMonth[m - 1] ?? 0;
+    flows[H] += rentScn.terminalAssetGrosze + freedTerminal;
+    const vsBuy = terminalWealth - buyScn.terminalWealthGrosze;
+    blended = {
+      label: "Rent + invest the freed capital in the S&P",
+      spRatePct: rates.sp500,
+      totalCapitalGrosze: totalCapital,
+      restaurantCapitalGrosze: rentScn.upfrontCapitalGrosze,
+      freedCapitalGrosze: freed,
+      restaurantWealthGrosze: restaurantWealth,
+      freedTerminalGrosze: freedTerminal,
+      terminalWealthGrosze: terminalWealth,
+      netGainGrosze: terminalWealth - totalCapital,
+      moneyMultiple: totalCapital > 0 ? terminalWealth / totalCapital : 0,
+      annualizedReturnPct: totalCapital > 0 ? irrAnnualOfStream(flows) : null,
+      vsBuyGrosze: vsBuy,
+      vsMortgageGrosze: terminalWealth - mortgageScn.terminalWealthGrosze,
+      vsBuyWins: vsBuy >= 0,
+    };
+  }
+
+  return { horizonYears, horizonMonths: H, benchmarkRates: rates, scenarios, blended };
 }
 
 /**
