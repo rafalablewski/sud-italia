@@ -1430,7 +1430,15 @@ auth canvas's signature lighting and the sign-in lockup:
   switched from `mode === "buy"` to the mortgage/owned check accordingly. Store
   defaults + `hydratePremises` carry the new fields (appreciation 4%, horizon 10y,
   menu-price inflation 5%, 10/13/5% benchmarks) and accept the `mortgage` mode.
+  The **Premises ROI vs markets** card lives in the **inputs** column directly
+  under Premises (not the narrow outputs column) so the decision and its ROI read
+  together. `.av3-scn` switched from a fixed `repeat(3, 1fr)` (+ a 720px 1-col
+  override) to `repeat(auto-fit, minmax(240px, 1fr))` with `min-width: 0` on
+  `.av3-scn-card`, so the three scenario cards **wrap** instead of overflowing a
+  narrow container — fixing the long-złoty-figure overflow and covering the
+  Scenario-comparison card too.
   `src/lib/simulation-engine.ts`,
-  `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`.
+  `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`,
+  `src/app/themes/admin-v3/index.css`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
