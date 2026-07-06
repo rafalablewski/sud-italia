@@ -162,12 +162,15 @@ live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
 upsert with `override`). The timeline sits **left**; the **new-reservation form
 is the right rail** (`.core-book-form`, grid col 2). The rail is `position:
-sticky` but `align-self: start` (so the grid never stretches it to the taller
-timeline row) and viewport-capped (`max-height: calc(100dvh - var(--book-rail-top)
-- 8px)`, `--book-rail-top` = the shell topbar + Book header rows), so its body
-(`.core-bk-resvb`) **scrolls internally** — every field down to the Book button is
-reachable in one scroll, never clipped off-screen. Below 1000px the rail unstacks
-into normal page flow (`position: static`, no cap). To fill it: pick a capacity-tinted
+sticky` + `align-self: start` (so the grid never stretches it to the taller
+timeline row) but carries **no `max-height` / internal body scroll**: a tall form
+(the taller day-summary strip pushing it down + a long table list) **flows and
+scrolls with the `.core-book` panel**, so the Book button is always reachable —
+sticky still pins the rail for the common short case, and when the form outgrows
+the viewport it scrolls into view with the panel. (This replaced an earlier
+`max-height: calc(100dvh - <hardcoded strip height> …)` cap that stranded the Book
+button below the fold once the summary strip grew.) Below 1000px the rail unstacks
+into normal page flow (`position: static`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**) + party size, then a table — ranked by the **Seating
 Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
