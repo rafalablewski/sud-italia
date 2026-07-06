@@ -1,0 +1,235 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<title>Service · Book — iMac 27" (2560×1440)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+.core{--font-core-display:'Bricolage Grotesque';--font-core-ui:'Inter';--font-core-mono:'JetBrains Mono';
+  --display:var(--font-core-display),ui-sans-serif,system-ui,sans-serif;--ui:var(--font-core-ui),ui-sans-serif,system-ui,sans-serif;--mono:var(--font-core-mono),ui-monospace,monospace;
+  --on-accent:#2a160b;--on-basil:#0c1a0f;--r-sm:7px;--r-md:10px;--r-lg:14px;--pill:999px;--sh-1:0 2px 8px rgba(0,0,0,.4)}
+.core,.core[data-theme="dark"]{--bg:#15110d;--panel:#1f1a14;--panel-2:#28211a;--panel-3:#322a21;--hover:#3a3026;--ink:#f8f1e7;--ink-2:#c9bba9;--ink-3:#908172;--line:rgba(255,247,235,.10);--line-2:rgba(255,247,235,.18);--brand:#e86b3e;--brand-bright:#ff905e;--brand-wash:rgba(232,107,62,.16);--basil:#6fb155;--basil-wash:rgba(111,177,85,.16);--amber:#e8a23c;--amber-wash:rgba(232,162,60,.16);--info:#3fa7ce;--info-wash:rgba(63,167,206,.18);--danger:#e5484a;--danger-wash:rgba(229,72,74,.18)}
+.core[data-skin="liquid-glass"]{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;--panel:rgba(255,255,255,.075);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--hover:rgba(255,255,255,.15);--line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);--brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.18);--amber:#f0ad46;--amber-wash:rgba(240,173,70,.18);--info:#54bce0;--info-wash:rgba(84,188,224,.2);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.2);
+  --lg-blur:blur(22px) saturate(175%);--lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));--lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);--lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);--lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);--sh-1:0 2px 8px rgba(0,0,0,.4);
+  background:radial-gradient(70% 55% at 10% 4%,rgba(232,107,62,.34),transparent 62%),radial-gradient(65% 60% at 92% 96%,rgba(84,188,224,.27),transparent 62%),radial-gradient(55% 45% at 80% 12%,rgba(240,173,70,.22),transparent 58%),radial-gradient(60% 55% at 20% 92%,rgba(125,196,100,.18),transparent 60%),radial-gradient(95% 80% at 50% 42%,rgba(232,107,62,.11),transparent 72%),var(--bg);background-attachment:fixed}
+*{box-sizing:border-box}
+body.core{margin:0;min-height:1440px;color:var(--ink);font-family:var(--ui);overflow:hidden}
+.shell{padding:0 24px 24px}
+/* shell head */
+.shead{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 14px}
+.sey{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.sey b{color:var(--ink);font-family:var(--display);font-size:20px;letter-spacing:0;text-transform:none;display:block;margin-top:3px;font-weight:700}
+.core-seg{display:inline-flex;align-items:center;padding:3px;gap:2px;border-radius:var(--pill);background:var(--panel-2);border:1px solid var(--line)}
+.core-seg button{padding:6px 14px;border-radius:var(--pill);font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-3);background:transparent;border:0;cursor:pointer;white-space:nowrap}
+.core-seg button.on{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px rgba(232,107,62,.4)}
+/* surf toolbar */
+.surf{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 2px 12px}
+.surf .l,.surf .r{display:flex;align-items:center;gap:10px}
+.chip{font-family:var(--mono);font-size:12px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--pill);padding:7px 13px}
+.tbtn{font-family:var(--mono);font-size:12px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);padding:7px 14px;border-radius:var(--pill);cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+.tbtn.walk{color:var(--basil);border-color:rgba(125,196,100,.4);background:var(--basil-wash)}
+.tbtn.new{color:var(--brand-bright);background:var(--brand-wash);border-color:rgba(232,107,62,.4)}
+/* stat strip */
+.core-statstrip{display:flex;align-items:stretch;margin:0 0 12px;background:var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.core-statstrip .cell{flex:1;min-width:0;min-height:74px;padding:11px 18px;display:flex;flex-direction:column;justify-content:center;gap:3px;position:relative}
+.core-statstrip .cell+.cell::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1px;background:var(--line)}
+.core-statstrip .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.core-statstrip .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:21px;font-weight:600;color:var(--ink);line-height:1.02}
+.core-statstrip .val small{font-size:12px;color:var(--ink-3);font-weight:400}
+.core-statstrip .val.basil{color:var(--basil)}.core-statstrip .val.info{color:var(--info)}.core-statstrip .val.amber{color:var(--amber)}.core-statstrip .val.brand{color:var(--brand-bright)}
+.core-statstrip .delta{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.core-statstrip .delta.up{color:var(--basil)}.core-statstrip .delta.dn{color:var(--danger)}
+/* deck layout */
+.core-book-tlform{display:grid;grid-template-columns:1fr;row-gap:12px;align-items:start}
+.core-book-tlpanel{background:var(--lg-sheen),var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.core-book-tlbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.core-book-tlbar .t{font-family:var(--display);font-weight:700;font-size:15px}
+.core-tl-legend{display:flex;gap:14px;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.core-tl-legend span{display:flex;align-items:center;gap:5px}
+.core-tl-legend i{width:9px;height:9px;border-radius:3px;display:block}
+.core-tl-legend i.cf{background:var(--basil-wash);box-shadow:inset 0 0 0 1px rgba(125,196,100,.6)}
+.core-tl-legend i.se{background:var(--info-wash);box-shadow:inset 0 0 0 1px rgba(84,188,224,.6)}
+.core-tl-legend i.pe{background:var(--amber-wash);box-shadow:inset 0 0 0 1px rgba(240,173,70,.6)}
+.core-tl-legend i.cx{background:rgba(255,90,92,.25);box-shadow:inset 0 0 0 1px rgba(255,90,92,.7)}
+.core-bk-tlscroll{overflow-x:auto}
+.core-bk-tlcols{--lblw:48px;--tick:64px;min-width:calc(var(--lblw) + var(--cols,13)*var(--tick))}
+.core-bk-hours{display:grid;grid-template-columns:var(--lblw) repeat(var(--cols,13),var(--tick));border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;background:rgba(10,8,6,.35)}
+.core-bk-hours .hc{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);padding:6px 0 6px 6px;border-left:1px solid var(--line)}
+.core-bk-hours .hc:first-child{border-left:0}.core-bk-hours .hc.hh{color:var(--ink-2)}
+.core-bk-tlbody{position:relative}
+.core-bk-row{display:grid;grid-template-columns:var(--lblw) repeat(var(--cols,13),var(--tick));position:relative;height:34px;border-bottom:1px solid var(--line)}
+.core-bk-row:last-child{border-bottom:0}
+.core-bk-row .lbl{font-family:var(--mono);font-size:10px;color:var(--ink-2);display:flex;align-items:center;padding-left:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);position:sticky;left:0;z-index:6}
+.core-bk-row .tick{border-left:1px solid var(--line)}.core-bk-row .tick.hh{border-left-color:var(--line-2)}
+.core-bk-blk{position:absolute;top:4px;bottom:4px;border-radius:var(--r-sm);padding:0 8px;display:flex;flex-direction:column;justify-content:center;gap:1px;font-family:var(--mono);overflow:hidden;z-index:3;box-shadow:var(--lg-rim)}
+.core-bk-blk .bn{font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.core-bk-blk .bm{font-size:8.5px;color:var(--ink-3);white-space:nowrap}
+.core-bk-blk.seated{background:var(--info-wash);box-shadow:inset 0 0 0 1px rgba(84,188,224,.5)}.core-bk-blk.seated .bm{color:var(--info)}
+.core-bk-blk.pending{background:var(--amber-wash);box-shadow:inset 0 0 0 1px rgba(240,173,70,.5)}.core-bk-blk.pending .bm{color:var(--amber)}
+.core-bk-now{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--danger);z-index:5}
+.core-bk-now::before{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.core-bk-now-lbl{position:absolute;top:1px;left:5px;font-family:var(--mono);font-size:8.5px;font-weight:700;color:#fff;background:var(--danger);padding:1px 4px;border-radius:3px;white-space:nowrap}
+.core-book-deck{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.core-book-deckhead{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:2px 2px 0}
+.core-book-deckhead .t{font-family:var(--display);font-weight:700;font-size:16px;color:var(--ink)}
+.core-book-deckhead .s{font-family:var(--mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.core-book-pane{min-width:0;background:var(--lg-sheen),var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);padding:15px;display:flex;flex-direction:column;gap:13px}
+.core-book-panelab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.core-book-panelab .mut{color:var(--ink-3);font-size:9px}
+.core-bk-field{display:flex;flex-direction:column}
+.core-bk-flab{font-family:var(--mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;display:flex;justify-content:space-between}
+.core-bk-flab .mut{color:var(--ink-3)}
+.core-bk-slotchips{display:flex;flex-wrap:wrap;gap:6px}
+.core-bk-slotchip{font-family:var(--mono);font-size:11px;padding:6px 9px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px}
+.core-bk-slotchip small{font-size:8px;color:var(--ink-3)}
+.core-bk-slotchip.ok{background:var(--basil-wash);color:var(--basil);box-shadow:inset 0 0 0 1px rgba(125,196,100,.4);border-color:transparent}.core-bk-slotchip.ok small{color:var(--basil)}
+.core-bk-slotchip.mid{background:var(--amber-wash);color:var(--amber);box-shadow:inset 0 0 0 1px rgba(240,173,70,.4);border-color:transparent}.core-bk-slotchip.mid small{color:var(--amber)}
+.core-bk-slotchip.warm{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px rgba(232,107,62,.4);border-color:transparent}.core-bk-slotchip.warm small{color:var(--brand-bright)}
+.core-bk-slotchip.full{color:var(--danger);box-shadow:inset 0 0 0 1px rgba(255,90,92,.4);border-color:transparent;opacity:.6}.core-bk-slotchip.full small{color:var(--danger)}
+.core-bk-slotchip.on{background:var(--brand-wash);color:var(--brand-bright);border-color:transparent;box-shadow:inset 0 0 0 1px rgba(232,107,62,.6),0 0 14px -5px var(--brand)}.core-bk-slotchip.on small{color:var(--brand-bright)}
+.core-bk-partyrow{display:flex;align-items:center;gap:10px}.core-bk-partyrow .hint{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.core-covers{display:inline-flex;align-items:center;gap:4px;background:var(--panel-3);border:1px solid var(--line);border-radius:var(--pill);padding:2px}
+.core-covers button{width:26px;height:26px;border-radius:50%;color:var(--ink-2);font-size:15px;border:0;background:transparent;cursor:pointer}
+.core-covers .mono{min-width:18px;text-align:center;font-weight:600;font-size:13px;font-family:var(--mono)}
+.core-bk-needs{display:flex;flex-wrap:wrap;gap:6px}
+.core-bk-need{font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+.core-bk-need.on{color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));border-color:transparent}
+.core-inp{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink);padding:9px 11px;font-family:var(--mono);font-size:12px;margin-bottom:7px}
+.core-bk-guestmatch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 10px;border-radius:9px;background:var(--info-wash);border:1px solid rgba(84,188,224,.35);margin-bottom:7px}
+.core-bk-guestmatch .gm-vip{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--on-accent);background:linear-gradient(180deg,#f4c064,var(--amber));border-radius:4px;padding:1px 6px}
+.core-bk-guestmatch .gm-txt{font-family:var(--mono);font-size:10.5px;color:var(--ink-2)}
+.core-bk-tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:8px}
+.core-bk-tcard{position:relative;text-align:left;display:flex;flex-direction:column;gap:3px;min-height:74px;padding:10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel-2);cursor:pointer}
+.core-bk-tcard .tn{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink)}
+.core-bk-tcard .tc{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.core-bk-tcard .tfit{align-self:flex-start;margin-top:auto;font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:var(--basil);background:var(--basil-wash)}
+.core-bk-tcard .pick{position:absolute;top:9px;right:9px;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-2)}
+.core-bk-tcard.rec{background:var(--brand-wash);box-shadow:inset 0 0 0 1px rgba(232,107,62,.5),0 0 16px -6px var(--brand)}.core-bk-tcard.rec .tfit{color:var(--brand-bright);background:rgba(232,107,62,.25)}
+.core-bk-tcard.on{box-shadow:inset 0 0 0 2px var(--brand);border-color:var(--brand)}.core-bk-tcard.on .pick{background:var(--brand);border-color:var(--brand)}
+.core-bk-tcard.rec.on{box-shadow:inset 0 0 0 2px var(--brand),0 0 16px -6px var(--brand)}
+.core-bk-tcard.dim{opacity:.45}.core-bk-tcard.dim .tfit{color:var(--ink-3);background:var(--panel-2)}
+.core-bk-whytoggle{display:flex;align-items:center;gap:8px;width:100%;margin-top:2px;cursor:pointer;font-family:var(--mono);padding:9px 11px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.core-bk-whytoggle .wt-t{font-size:11px;font-weight:600;color:var(--ink)}
+.core-bk-whytoggle .wt-score{margin-left:auto;font-size:13px;font-weight:600;color:var(--brand-bright)}.core-bk-whytoggle .wt-score small{font-size:9px;color:var(--ink-3)}
+.core-bk-whytoggle .wt-chev{font-size:10px;color:var(--ink-3)}
+.core-bk-bookbtn{height:46px;width:100%;margin-top:2px;border-radius:var(--r-md);border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));box-shadow:0 8px 24px -6px rgba(125,196,100,.6),var(--lg-rim);display:flex;align-items:center;justify-content:center;gap:8px}
+.core-ov{display:flex;gap:9px;align-items:center;font-family:var(--mono);font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.core-ov input{width:15px;height:15px;accent-color:var(--brand)}
+/* today's bookings */
+.core-bk-blist{margin-top:14px;background:var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.core-bk-blisth{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.core-bk-blisth .t{font-family:var(--display);font-weight:700;font-size:15px}
+.core-bk-blisth .badge{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-3)}
+.core-bk-brow{display:grid;grid-template-columns:70px 1.4fr 70px 60px 90px 1fr;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.core-bk-brow:last-child{border-bottom:0}
+.core-bk-brow .btm{font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600}
+.core-bk-brow .bnm{font-size:13px;color:var(--ink-2)}
+.core-bk-brow .bcov,.core-bk-brow .btbl{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.core-bk-brow .bstat{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:99px;text-align:center;justify-self:start}
+.core-bk-brow .bstat.confirmed{color:var(--basil);background:var(--basil-wash)}
+.core-bk-brow .bstat.seated{color:var(--info);background:var(--info-wash)}
+.core-bk-brow .bstat.pending{color:var(--amber);background:var(--amber-wash)}
+.core-bk-brow .bacts{display:flex;gap:6px;justify-content:flex-end}
+.core-bk-brow .bact{font-family:var(--mono);font-size:9.5px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);cursor:pointer}
+.core-bk-brow .bact.seat{color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));border-color:transparent}
+</style></head>
+<body class="core" data-skin="liquid-glass" data-theme="dark">
+<div class="shell">
+  <div class="shead">
+    <div class="sey">Service · Tables &amp; Slots<b>Book</b></div>
+    <div class="core-seg"><button class="on">Book</button><button>Tables</button><button>Slots</button><button>Dispatch</button></div>
+  </div>
+  <div class="surf">
+    <div class="l">
+      <span class="chip">📅 Mon 6 Jul 2026</span>
+      <div class="core-seg"><button class="on">Timeline</button><button>Floor</button><button>Arrivals</button></div>
+    </div>
+    <div class="r">
+      <button class="tbtn">⚙ Seating policy</button>
+      <button class="tbtn walk">＋ Walk-in</button>
+      <button class="tbtn new">＋ New reservation</button>
+    </div>
+  </div>
+
+  <div class="core-statstrip">
+    <div class="cell"><span class="lab">Reservations</span><span class="val">28</span><span class="delta">21 tables held</span></div>
+    <div class="cell"><span class="lab">Covers</span><span class="val info">92</span><span class="delta">avg 3.3 / table</span></div>
+    <div class="cell"><span class="lab">Seated now</span><span class="val basil">7</span><span class="delta up">on the floor</span></div>
+    <div class="cell"><span class="lab">Upcoming</span><span class="val">19</span><span class="delta">next 18:00 · Nowak</span></div>
+    <div class="cell"><span class="lab">Walk-ins</span><span class="val">4</span><span class="delta">today</span></div>
+    <div class="cell"><span class="lab">Orders</span><span class="val">36</span><span class="delta">dine-in</span></div>
+    <div class="cell"><span class="lab">Avg / table</span><span class="val amber">184<small>zł</small></span><span class="delta">ticket</span></div>
+    <div class="cell"><span class="lab">Fill</span><span class="val basil">64<small>%</small></span><span class="delta">of seats</span></div>
+    <div class="cell"><span class="lab">Peak window</span><span class="val">19:00</span><span class="delta dn">92% full</span></div>
+    <div class="cell"><span class="lab">No-shows</span><span class="val">1</span><span class="delta">flagged</span></div>
+    <div class="cell"><span class="lab">Turn</span><span class="val">96<small>m</small></span><span class="delta">measured</span></div>
+    <div class="cell"><span class="lab">Waitlist</span><span class="val">2</span><span class="delta">quoted ~25m</span></div>
+  </div>
+
+  <div class="core-book-tlform">
+    <div class="core-book-tlpanel">
+      <div class="core-book-tlbar"><span class="t">Reservations timeline</span>
+        <div class="core-tl-legend"><span><i class="cf"></i> confirmed</span><span><i class="se"></i> seated</span><span><i class="pe"></i> pending</span><span><i class="cx"></i> conflict</span></div>
+      </div>
+      <div class="core-book-tlpanel-inner" id="tl"></div>
+    </div>
+
+    <div class="core-book-deck">
+      <div class="core-book-deckhead"><div class="t">New reservation</div><div class="s">MON 6 JUL · KRAKÓW</div></div>
+      <section class="core-book-pane">
+        <div class="core-book-panelab"><span>When</span><span class="mut">open / total tables</span></div>
+        <div class="core-bk-field"><div class="core-bk-slotchips" id="slots"></div></div>
+      </section>
+      <section class="core-book-pane">
+        <div class="core-book-panelab"><span>Who</span><span class="mut">party · needs · guest</span></div>
+        <div class="core-bk-field"><div class="core-bk-flab"><span>Party size</span></div><div class="core-bk-partyrow"><div class="core-covers"><button>−</button><span class="mono">2</span><button>+</button></div><span class="hint">seats 2 · needs 2-top+</span></div></div>
+        <div class="core-bk-field"><div class="core-bk-flab"><span>Guest needs</span><span class="mut">filters tables</span></div><div class="core-bk-needs"><span class="core-bk-need on">♿ accessible</span><span class="core-bk-need">🍼 high-chair</span><span class="core-bk-need">▭ step-free</span></div></div>
+        <div class="core-bk-field"><div class="core-bk-flab"><span>Guest</span></div>
+          <input class="core-inp" placeholder="Guest surname — e.g. Kowalski"/>
+          <input class="core-inp" placeholder="Phone — e.g. +48 512 340 118"/>
+          <div class="core-bk-guestmatch"><span class="gm-vip">★ VIP</span><span class="gm-txt">Kowalski · 6 prior visits · usual T4</span></div>
+          <input class="core-inp" placeholder="High chair, window…"/></div>
+      </section>
+      <section class="core-book-pane">
+        <div class="core-book-panelab"><span>Where</span><span class="mut">live fit for 2 · tap a card</span></div>
+        <div class="core-bk-field"><div class="core-bk-tgrid" id="tables"></div></div>
+        <button class="core-bk-whytoggle"><span class="wt-t">Why T1?</span><span class="wt-score">92<small>/100</small></span><span class="wt-chev">▸</span></button>
+        <label class="core-ov"><input type="checkbox"/> Override conflicts &amp; capacity</label>
+        <button class="core-bk-bookbtn">✓ Book table · 14:45 · T1 · 2</button>
+      </section>
+    </div>
+
+    <div class="core-bk-blist">
+      <div class="core-bk-blisth"><span class="t">Today's bookings</span><span class="badge">28 · 92 covers</span></div>
+      <div id="blist"></div>
+    </div>
+  </div>
+</div>
+<script>
+const LBLW=48,TICKW=64,TICK=30,OPEN=720,CLOSE=1260,fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0');
+const COLS=(CLOSE-OPEN)/TICK+1;
+const rows=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11'];
+const bk=[
+ {r:'T5',c:'seated',s:720,e:810,n:'Kamiński · 4/4',m:'seated · 2h17m'},
+ {r:'T1',c:'seated',s:750,e:840,n:'Rossi · 2/2',m:'seated · 1h47m'},
+ {r:'T2',c:'seated',s:780,e:870,n:'Kowalski · 4/4',m:'seated · 1h17m'},
+ {r:'T9',c:'seated',s:810,e:900,n:'Dąbrowski · 4/4',m:'seated · 47m'},
+ {r:'T3',c:'pending',s:840,e:930,n:'Lewandowski · 4/4',m:'pending'},
+ {r:'T1',c:'pending',s:1080,e:1170,n:'Nowak · 2/2',m:'pending'},
+ {r:'T6',c:'pending',s:1140,e:1230,n:'Szymański · 6/6',m:'pending'},
+ {r:'T2',c:'pending',s:1170,e:1260,n:'Zieliński · 4/4',m:'pending'},
+ {r:'T4',c:'pending',s:1200,e:1260,n:'Wójcik · 4/4',m:'pending'},
+ {r:'T8',c:'pending',s:1110,e:1200,n:'Mazur · 4/4',m:'pending'},
+];
+let hours='<div class="hc"></div>';for(let i=0;i<COLS;i++){const m=OPEN+i*TICK;hours+=`<div class="hc${m%60===0?' hh':''}">${fmt(m)}</div>`}
+let body=`<div class="core-bk-now" style="left:${LBLW+((877-OPEN)/TICK)*TICKW}px"><span class="core-bk-now-lbl">14:37</span></div>`;
+rows.forEach(tn=>{let t='';for(let i=0;i<COLS;i++)t+=`<div class="tick${(OPEN+i*TICK)%60===0?' hh':''}"></div>`;let b='';bk.filter(x=>x.r===tn).forEach(x=>{const left=LBLW+((x.s-OPEN)/TICK)*TICKW;const w=((x.e-x.s)/TICK)*TICKW-4;b+=`<div class="core-bk-blk ${x.c}" style="left:${left}px;width:${w}px"><span class="bn">${x.n}</span><span class="bm">${x.m}</span></div>`});body+=`<div class="core-bk-row"><div class="lbl">${tn}</div>${t}${b}</div>`});
+document.getElementById('tl').innerHTML=`<div class="core-bk-tlscroll"><div class="core-bk-tlcols" style="--cols:${COLS}"><div class="core-bk-hours">${hours}</div><div class="core-bk-tlbody">${body}</div></div></div>`;
+// slots 12:00-21:00 every 15
+let sl='';for(let m=OPEN;m<=CLOSE;m+=15){const busy=[900,915,1140,1155,1170].includes(m);const full=m===1140;const on=m===885;const cls=on?'on':full?'full':busy?'mid':'ok';const open=full?0:busy?9:13;sl+=`<button class="core-bk-slotchip ${cls}">${fmt(m)}<small>${open}/13</small></button>`}
+document.getElementById('slots').innerHTML=sl;
+// table cards
+const tb=[['T1','2-top · Floor','✨ Recommend','rec on'],['T2','2-top · Floor','fits',''],['T3','4-top · Floor','fits · 2 spare',''],['T4','4-top · Window','fits · 2 spare',''],['T5','4-top · Window','booked','dim'],['T6','6-top · Window','fits · 4 spare',''],['T7','2-top · Terrace','fits',''],['T8','4-top · Terrace','booked','dim'],['T9','4-top · Floor','booked','dim'],['T10','6-top · Terrace','fits · 4 spare',''],['T11','2-top · Floor','fits','']];
+document.getElementById('tables').innerHTML=tb.map(([n,c,f,k])=>`<button class="core-bk-tcard ${k}"><span class="pick"></span><span class="tn">${n}</span><span class="tc">${c}</span><span class="tfit">${f}</span></button>`).join('');
+// bookings list
+const bl=[['12:30','Rossi','2','T1','seated','Seated'],['13:00','Kowalski ★','4','T2','seated','Seated'],['13:30','Dąbrowski','4','T9','seated','Seated'],['14:00','Lewandowski','4','T3','pending','Pending'],['18:00','Nowak','2','T1','confirmed','Confirmed'],['19:00','Szymański','6','T6','confirmed','Confirmed'],['19:30','Zieliński','4','T2','confirmed','Confirmed']];
+document.getElementById('blist').innerHTML=bl.map(([tm,nm,cov,tbl,st,stl])=>`<div class="core-bk-brow"><span class="btm">${tm}</span><span class="bnm">${nm}</span><span class="bcov">${cov} covers</span><span class="btbl">${tbl}</span><span class="bstat ${st}">${stl}</span><span class="bacts">${st==='seated'?'<button class="bact">Complete</button>':st==='pending'?'<button class="bact seat">Seat</button><button class="bact">No-show</button>':'<button class="bact seat">Seat</button>'}</span></div>`).join('');
+</script>
+</body></html>
