@@ -139,6 +139,15 @@ export function CoreDateField({
     };
   }, [open]);
 
+  // Keep the grid on the selected date's month when the value moves — e.g. the
+  // header day-step arrows crossing a month boundary while the sheet is open.
+  // Month-only browsing (the `.core-df-mbtn` arrows change `month`, not `value`)
+  // doesn't trip this, so a browse is never yanked back.
+  useEffect(() => {
+    const d = parseIso(value);
+    if (d) setMonth(startOfMonth(d));
+  }, [value]);
+
   // 6×7 grid, Monday-first, for the shown month.
   const cells = useMemo(() => {
     const first = startOfMonth(month);
