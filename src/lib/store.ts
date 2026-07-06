@@ -13308,8 +13308,14 @@ function hydratePremises(
   legacySetupGrosze?: number,
 ): SimulationPremises {
   if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "mortgage" || saved.mode === "buy")) {
+    // Legacy migration: before the mortgage/buy split, "buy" meant a FINANCED
+    // purchase (down payment + mortgage). Those states predate
+    // propertyAppreciationPct, so a "buy" without that field is an old financed
+    // scenario — load it as "mortgage", not as the new all-cash "buy", which
+    // would silently zero out the loan the operator actually modelled.
+    const mode = saved.mode === "buy" && saved.propertyAppreciationPct === undefined ? "mortgage" : saved.mode;
     return {
-      mode: saved.mode,
+      mode,
       monthlyRentGrosze: clampNonNeg(saved.monthlyRentGrosze, def.monthlyRentGrosze),
       depositMonths: clampNonNeg(saved.depositMonths, def.depositMonths),
       serviceChargeMonthlyGrosze: clampNonNeg(saved.serviceChargeMonthlyGrosze, def.serviceChargeMonthlyGrosze),

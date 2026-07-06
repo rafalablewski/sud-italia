@@ -374,13 +374,16 @@ export interface PremisesInvestment {
   blended: PremisesBlended[];
 }
 
-/** Remaining balance of an `n`-month annuity loan after `k` payments (grosze). */
-function remainingLoanBalance(loan: number, monthlyRate: number, n: number, k: number): number {
+/** Remaining loan balance after `k` payments (grosze). Uses the SAME leveled
+ *  straight-line principal (`round(loan / n)` per month) that `computePremises`
+ *  subtracts from the monthly cash flows, so principal-paid + balance-owed
+ *  reconcile to the original loan. A true annuity curve here would back-load
+ *  principal and leave a higher balance than the flat cash-flow reduction
+ *  implies — double-counting principal and under-stating terminal equity. */
+function remainingLoanBalance(loan: number, n: number, k: number): number {
   if (loan <= 0 || k >= n) return 0;
-  if (monthlyRate <= 0) return Math.round(loan * (n - k) / n);
-  const g = Math.pow(1 + monthlyRate, n);
-  const gk = Math.pow(1 + monthlyRate, k);
-  return Math.max(0, Math.round(loan * (g - gk) / (g - 1)));
+  const principalMonthly = Math.round(loan / n);
+  return Math.max(0, loan - k * principalMonthly);
 }
 
 /** IRR (annual, as a percent) of a monthly cash-flow stream `flows` where
@@ -487,7 +490,7 @@ export function computePremisesInvestment(
       propertyValue = Math.round(price * Math.pow(1 + Math.max(0, p.propertyAppreciationPct ?? 0), horizonYears));
       const n = Math.max(1, Math.round((p.mortgageTermYears ?? 0) * 12));
       loanBalance = mode === "mortgage"
-        ? remainingLoanBalance(prem.loanAmountGrosze, Math.max(0, p.mortgageRatePct ?? 0) / 12, n, H)
+        ? remainingLoanBalance(prem.loanAmountGrosze, n, H)
         : 0;
       terminalAsset = Math.max(0, propertyValue - loanBalance);
     }
