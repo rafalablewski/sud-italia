@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dineInGridTimes, dineInSlotId } from "@/lib/store";
+import { dineInGridTimes, dineInSlotId, isWithinDineInHorizon } from "@/lib/store";
 
 // 2026-07-06 is a Monday; 2026-07-11 is a Saturday; 2026-07-12 is a Sunday.
 const MON = "2026-07-06";
@@ -47,6 +47,17 @@ test("dineInGridTimes: falls back to 12:00–23:00 when hours are missing", () =
   const t = dineInGridTimes(undefined, MON);
   assert.equal(t[0], "12:00");
   assert.equal(t.at(-1), "23:00");
+});
+
+test("isWithinDineInHorizon: today through +6 days is open, the rest is closed", () => {
+  const today = "2026-07-06";
+  assert.equal(isWithinDineInHorizon(today, "2026-07-05"), false); // yesterday
+  assert.equal(isWithinDineInHorizon(today, "2026-07-06"), true); // today
+  assert.equal(isWithinDineInHorizon(today, "2026-07-07"), true); // +1
+  assert.equal(isWithinDineInHorizon(today, "2026-07-12"), true); // +6 (last day)
+  assert.equal(isWithinDineInHorizon(today, "2026-07-13"), false); // +7 (out)
+  assert.equal(isWithinDineInHorizon(today, "2026-07-23"), false); // +17 (out)
+  assert.equal(isWithinDineInHorizon(today, "not-a-date"), false); // malformed
 });
 
 test("dineInSlotId: deterministic + collision-free per window", () => {

@@ -680,7 +680,27 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
 // never by deleting it (ensure would just recreate it). This keeps the model
 // "everything's open unless you close it".
 const DINE_IN_SLOT_STEP_MIN = 30;
+// Rolling booking window: the grid only opens today + the next 6 days (7 days
+// total). Beyond that, no dine-in windows are generated (and any left over are
+// pruned), so reservations can't be taken further out than a week.
+const DINE_IN_BOOKING_HORIZON_DAYS = 7;
 const WEEKDAYS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Whole days from `fromIso` to `toIso` (both YYYY-MM-DD), UTC-anchored so DST
+// never shifts the count. Negative = toIso is in the past.
+function daysBetweenIso(fromIso: string, toIso: string): number {
+  const a = Date.parse(`${fromIso}T00:00:00Z`);
+  const b = Date.parse(`${toIso}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return NaN;
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** Pure: is `dateIso` inside the rolling dine-in booking window relative to
+ *  `todayIso` — today through +6 days (7 days). Past and >6-days-out are out. */
+export function isWithinDineInHorizon(todayIso: string, dateIso: string): boolean {
+  const d = daysBetweenIso(todayIso, dateIso);
+  return Number.isFinite(d) && d >= 0 && d < DINE_IN_BOOKING_HORIZON_DAYS;
+}
 
 function hhmmToMin(s: string): number {
   const [h, m] = s.split(":").map(Number);
@@ -737,12 +757,14 @@ export function dineInGridTimes(
 /**
  * Idempotently materialise the default dine-in grid for one location/day:
  * a slot every 30 minutes across the full open window (open through close
- * inclusive), capacity = the number of tables on the floor. Only *missing*
- * created — existing slots (including ones an operator flipped to "draft" =
- * unavailable) are left as-is, so availability edits persist, while auto slots'
- * capacity is kept in sync with the live table count so the board never lies.
- * Stale auto windows left outside the hours after an opening-hours change are
- * pruned (only the empty ones — a booked slot is never removed).
+ * inclusive), capacity = the number of tables on the floor. Only for dates
+ * inside the rolling 7-day booking window (today … +6) — beyond it no windows
+ * are opened. Only *missing* windows are created — existing slots (including
+ * ones an operator flipped to "draft" = unavailable) are left as-is, so
+ * availability edits persist, while auto slots' capacity is kept in sync with
+ * the live table count so the board never lies. Stale auto windows left outside
+ * the current hours OR outside the 7-day horizon are pruned (only the empty
+ * ones — a booked slot is never removed).
  * Returns the day's full dine-in slot list (auto + any manual).
  */
 export async function ensureDineInSlots(locationSlug: string, date: string): Promise<TimeSlot[]> {
@@ -760,7 +782,10 @@ export async function ensureDineInSlots(locationSlug: string, date: string): Pro
     (await getLocationAsync(locationSlug))?.hours;
   const tables = await getTables(locationSlug);
   const capacity = Math.max(1, tables.length);
-  const gridTimes = dineInGridTimes(hours, date);
+  // Only open the grid inside the rolling 7-day window (today … +6). Outside it
+  // there are no windows, so the prune below clears any empty auto slots that
+  // were generated before the horizon existed (or as the window rolls forward).
+  const gridTimes = isWithinDineInHorizon(warsawToday(), date) ? dineInGridTimes(hours, date) : [];
   const gridTimeSet = new Set(gridTimes);
   const autoPrefix = `dine-${locationSlug}-${date}-`;
   // slotIds carrying an active reservation must never be pruned (would orphan
