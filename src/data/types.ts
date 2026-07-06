@@ -1449,6 +1449,11 @@ export interface SimulationPremises {
   /** Horizon in years for the "run the business vs invest the capital" model
    *  (`computePremisesInvestment`). Default 10. */
   investHorizonYears: number;
+  /** Annual menu-price inflation (0–1) applied across the horizon simulation so
+   *  the ticket keeps pace with cost inflation instead of margins collapsing
+   *  over a decade of frozen prices. Default ≈ 0.05. Rising rent (rent mode),
+   *  wage CPI and ingredient CPI still squeeze the real margin around it. */
+  menuPriceInflationPct: number;
   /** Assumed annual total return of an S&P 500 index fund (0–1) — the capital's
    *  opportunity cost if parked in US large-caps instead. Default ≈ 0.10. */
   sp500RatePct: number;

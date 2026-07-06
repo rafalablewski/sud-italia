@@ -12850,6 +12850,8 @@ export function defaultSimulationScenario(): SimulationScenario {
       fitoutGrosze: 83_400_000,
       // Opportunity-cost benchmarks for the "run it vs invest the capital" model.
       investHorizonYears: 10,
+      menuPriceInflationPct: 0.05, // menu repricing keeps pace with cost CPI
+
       sp500RatePct: 0.10,     // S&P 500 long-run nominal total return
       nasdaq100RatePct: 0.13, // Nasdaq-100 long-run nominal total return
       bondRatePct: 0.05,      // a 5% fixed-income coupon
@@ -13128,6 +13130,7 @@ function hydratePremises(
       propertyAppreciationPct: clamp01(saved.propertyAppreciationPct, def.propertyAppreciationPct),
       fitoutGrosze: clampNonNeg(saved.fitoutGrosze, def.fitoutGrosze),
       investHorizonYears: clampNonNeg(saved.investHorizonYears, def.investHorizonYears),
+      menuPriceInflationPct: clamp01(saved.menuPriceInflationPct, def.menuPriceInflationPct),
       sp500RatePct: clamp01(saved.sp500RatePct, def.sp500RatePct),
       nasdaq100RatePct: clamp01(saved.nasdaq100RatePct, def.nasdaq100RatePct),
       bondRatePct: clamp01(saved.bondRatePct, def.bondRatePct),

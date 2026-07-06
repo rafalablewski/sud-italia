@@ -362,21 +362,30 @@ function irrAnnualOfStream(flows: number[]): number | null {
  * Score all three premises scenarios (rent / mortgage / cash-buy) over the
  * horizon and pit each against the S&P 500, the Nasdaq-100 and a bond.
  *
+ * This runs a REAL month-by-month simulation of the whole horizon — not a flat
+ * steady-state figure multiplied out. For each mode it re-applies premises,
+ * folds the behaviour levers, then `projectMonths(H)` composes seasonality,
+ * weather and compounding inflation every month: labour + fixed costs (incl.
+ * rent, which therefore indexes up over the decade) grow at wage CPI, COGS at
+ * ingredient CPI, and menu prices at `menuPriceInflationPct` — so a rising-rent
+ * lease genuinely looks worse over 10 years while a fixed-nominal mortgage
+ * payment is eroded by inflation. The property appreciates at
+ * `propertyAppreciationPct` (owned modes only). Every figure is engine output.
+ *
  * `base` must be the scenario as the engine sees it *before* `applyPremises`
  * (rent line still flat, no folded mortgage interest / building depreciation) —
- * the function re-applies premises per mode itself. `fold` composes any other
- * transforms the caller applies to the headline scenario (assumptions, annual
- * weather) so each mode's net profit matches the displayed P&L. Returns null
- * when the scenario has no premises decision attached.
+ * the function re-applies premises per mode itself, and folds assumptions +
+ * annual weather internally so each mode's headline net profit matches the
+ * displayed P&L. Returns null when there's no premises decision attached.
  */
 export function computePremisesInvestment(
   base: SimulationScenario,
-  fold: (s: SimulationScenario) => SimulationScenario = (s) => s,
 ): PremisesInvestment | null {
   const p = base.premises;
   if (!p) return null;
   const horizonYears = Math.max(1, Math.round(p.investHorizonYears ?? 10));
   const H = horizonYears * 12;
+  const menuInflation = Math.max(0, p.menuPriceInflationPct ?? 0);
   const rates = {
     sp500: (p.sp500RatePct ?? 0.1) * 100,
     nasdaq100: (p.nasdaq100RatePct ?? 0.13) * 100,
@@ -395,16 +404,31 @@ export function computePremisesInvestment(
   ];
 
   const scenarios = modes.map(({ mode, label }): PremisesInvestmentScenario => {
-    const variant = fold(applyPremises({ ...base, premises: { ...p, mode } }));
-    const comp = computeScenario(variant);
+    const varied = applyPremises({ ...base, premises: { ...p, mode } });
     const prem = computePremises({ ...p, mode });
 
+    // Headline steady-state month (annual-average weather) — matches the P&L /
+    // Investor-returns cards, used for the display "Net profit / mo" + viability.
+    const headline = computeScenario(applyAnnualWeather(applyAssumptions(varied)));
+    const netProfit = headline.netProfit;
+
     const capital = Math.max(0, prem.upfrontCashGrosze);
-    const netProfit = comp.netProfit;
-    // Free cash flow: add back non-cash depreciation, subtract the mortgage
-    // principal (real cash out that the accrual P&L never charged).
-    const fcf = netProfit + comp.depreciation - prem.mortgagePrincipalMonthlyGrosze;
-    const totalCashFlow = fcf * H;
+    // Steady-state cash view (for the readout): net profit + non-cash
+    // depreciation add-back − mortgage principal (real cash out the P&L omits).
+    const monthlyCashFlow = netProfit + headline.depreciation - prem.mortgagePrincipalMonthlyGrosze;
+
+    // ── the actual 10-year simulation ──────────────────────────────────────
+    // projectMonths applies weather per-month itself, so fold ONLY assumptions
+    // (not annual weather — that would double-count). Menu prices inflate at
+    // menuPriceInflationPct; labour/fixed at wage CPI, COGS at ingredient CPI.
+    const projScn = applyAssumptions(varied);
+    const rows = projectMonths(projScn, H, 0, 0, menuInflation);
+    const deprFlat = projScn.depreciationMonthlyGrosze ?? 0;
+    const principalFlat = prem.mortgagePrincipalMonthlyGrosze;
+    // Per-month free cash flow: the projected (inflation-aware) net profit, with
+    // the flat non-cash depreciation added back and the flat principal removed.
+    const fcfByMonth = rows.map((r) => r.netProfit + deprFlat - principalFlat);
+    const totalCashFlow = fcfByMonth.reduce((sum, v) => sum + v, 0);
 
     // Terminal asset — what you still hold at the end of the horizon.
     let propertyValue = 0, loanBalance = 0, terminalAsset = 0;
@@ -425,21 +449,21 @@ export function computePremisesInvestment(
     const netGain = terminalWealth - capital;
     const moneyMultiple = capital > 0 ? terminalWealth / capital : 0;
 
-    // Annualised return — IRR of the whole cash-flow stream (outlay, monthly
-    // free cash flow, terminal asset landed in the final month).
+    // Annualised return — IRR of the whole cash-flow stream (outlay, the real
+    // per-month free cash flow, terminal asset landed in the final month).
     const flows = new Array(H + 1).fill(0);
     flows[0] = -capital;
-    for (let m = 1; m <= H; m++) flows[m] = fcf;
+    for (let m = 1; m <= H; m++) flows[m] = fcfByMonth[m - 1];
     flows[H] += terminalAsset;
     const annualizedReturnPct = capital > 0 ? irrAnnualOfStream(flows) : null;
 
-    // Per-benchmark: compound the capital vs sweeping the business's cash flow
-    // into the same instrument, so the edge is a true like-for-like.
+    // Per-benchmark: compound the capital vs sweeping the business's (real,
+    // per-month) cash flow into the same instrument, so the edge is like-for-like.
     const benchmarks = benchDefs.map(({ key, label: blabel, annualPct }): PremisesInvestmentBenchmark => {
       const r = annualPct / 100;
       const terminalCapital = Math.round(capital * Math.pow(1 + r, horizonYears));
       let swept = terminalAsset;
-      for (let m = 1; m <= H; m++) swept += fcf * Math.pow(1 + r, (H - m) / 12);
+      for (let m = 1; m <= H; m++) swept += fcfByMonth[m - 1] * Math.pow(1 + r, (H - m) / 12);
       const edge = Math.round(swept - terminalCapital);
       return {
         key, label: blabel, annualRatePct: annualPct,
@@ -455,7 +479,7 @@ export function computePremisesInvestment(
       viable: netProfit > 0,
       upfrontCapitalGrosze: capital,
       monthlyNetProfitGrosze: netProfit,
-      monthlyCashFlowGrosze: fcf,
+      monthlyCashFlowGrosze: monthlyCashFlow,
       totalCashFlowGrosze: totalCashFlow,
       terminalPropertyValueGrosze: propertyValue,
       terminalLoanBalanceGrosze: loanBalance,
@@ -533,11 +557,16 @@ export function projectMonths(
   monthsCount: number,
   startMonth = 0,
   rampMonths = 0,
+  ticketInflationPct = 0,
 ): ProjectionRow[] {
   const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
   const w = s.weather;
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
   const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
+  // Menu-price inflation — 0 for the steady-state 12/24-month charts (revenue
+  // frozen), positive for the long-horizon premises sim so prices track cost CPI
+  // instead of margins collapsing over a decade.
+  const ticketMonthly = (1 + ticketInflationPct) ** (1 / 12) - 1;
   const baseLaborMonthly = s.labor.reduce(
     (sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze,
     0,
@@ -582,8 +611,12 @@ export function projectMonths(
     const volumeFlex = anchor > 0 ? Math.max(0, 1 + variablePct * (s.ordersPerDay / anchor - 1)) : 1;
     const seasonalFlex = 1 + variablePct * (seasonMult * rampFactor - 1);
     const laborFlex = volumeFlex * Math.max(0, seasonalFlex);
-    const revenue = Math.round(orders * s.avgTicketGrosze);
-    const cogs = Math.round(revenue * s.cogsPct * cogsMult);
+    const ticketMult = (1 + ticketMonthly) ** i;
+    const revenue = Math.round(orders * s.avgTicketGrosze * ticketMult);
+    // COGS tracks volume × unit food cost × ingredient CPI — off the PRE-inflation
+    // ticket, so raising menu prices doesn't inflate ingredient cost (no
+    // double-count). Identical to before when ticketInflationPct = 0.
+    const cogs = Math.round(orders * s.avgTicketGrosze * s.cogsPct * cogsMult);
     const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
     const fixed = Math.round(baseFixed * wageMult);
     const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
