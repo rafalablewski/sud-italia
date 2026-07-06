@@ -3,7 +3,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationPremises, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
-import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { getActiveLocationsAsync, getLocationAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
 import { resolvePolicy, buildTurnModel, summariseDecisions, summariseTurnAccuracy, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type TurnAccuracy, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
@@ -667,6 +667,131 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
       }
     }
     return deletedCount;
+  });
+}
+
+// --- Dine-in reservation grid (default 30-min slots for the whole floor) ---
+//
+// A dine-in slot is a *seating window*, not an online-order throughput cap: it
+// holds one reservation per table (capacity = table count — see booking.ts).
+// Operators shouldn't have to hand-build the grid; by default every service
+// day carries a slot every 30 minutes across the open window, and a specific
+// window is made unavailable by flipping its status to "draft" (persisted),
+// never by deleting it (ensure would just recreate it). This keeps the model
+// "everything's open unless you close it".
+const DINE_IN_SLOT_STEP_MIN = 30;
+const WEEKDAYS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function hhmmToMin(s: string): number {
+  const [h, m] = s.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+function minToHhmm(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+// Mon=0 … Sun=6 for a YYYY-MM-DD date (local midnight).
+function dayIndexMonFirst(date: string): number {
+  return (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
+}
+// Resolve a location's open window for a given date from its hours table.
+// hours entries are day tokens or ranges ("Mon-Thu", "Fri-Sat", "Sun",
+// "Mon-Sun"); falls back to 12:00–23:00 when nothing matches.
+function serviceWindowForDate(
+  hours: { day: string; open: string; close: string }[] | undefined,
+  date: string,
+): { openMin: number; closeMin: number } {
+  const wd = dayIndexMonFirst(date);
+  for (const h of hours ?? []) {
+    const parts = h.day.split("-").map((p) => p.trim());
+    const start = WEEKDAYS_MON_FIRST.indexOf(parts[0]);
+    const end = WEEKDAYS_MON_FIRST.indexOf(parts[parts.length - 1]);
+    if (start === -1 || end === -1) continue;
+    if (wd >= start && wd <= end) {
+      const openMin = hhmmToMin(h.open);
+      const closeMin = hhmmToMin(h.close);
+      if (closeMin > openMin) return { openMin, closeMin };
+    }
+  }
+  return { openMin: 12 * 60, closeMin: 23 * 60 };
+}
+
+/** Deterministic id for an auto-generated dine-in grid slot, so ensure is
+ *  idempotent and a booking can attach to the same window across reloads. */
+export function dineInSlotId(locationSlug: string, date: string, time: string): string {
+  return `dine-${locationSlug}-${date}-${time.replace(":", "")}`;
+}
+
+/** Pure: the "HH:MM" seating windows for one day — every 30 min from open to
+ *  the last seating (30 min before close). Falls back to 12:00–23:00. */
+export function dineInGridTimes(
+  hours: { day: string; open: string; close: string }[] | undefined,
+  date: string,
+): string[] {
+  const { openMin, closeMin } = serviceWindowForDate(hours, date);
+  const lastSeatMin = Math.max(openMin, closeMin - DINE_IN_SLOT_STEP_MIN);
+  const times: string[] = [];
+  for (let m = openMin; m <= lastSeatMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
+  return times;
+}
+
+/**
+ * Idempotently materialise the default dine-in grid for one location/day:
+ * a slot every 30 minutes from open to the last seating (30 min before close),
+ * capacity = the number of tables on the floor. Only *missing* windows are
+ * created — existing slots (including ones an operator flipped to "draft" =
+ * unavailable) are left as-is, so availability edits persist. Auto slots'ted
+ * capacity is kept in sync with the live table count so the board never lies.
+ * Returns the day's full dine-in slot list (auto + any manual).
+ */
+export async function ensureDineInSlots(locationSlug: string, date: string): Promise<TimeSlot[]> {
+  const loc = await getLocationAsync(locationSlug);
+  const tables = await getTables(locationSlug);
+  const capacity = Math.max(1, tables.length);
+  const gridTimes = dineInGridTimes(loc?.hours, date);
+
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const byId = new Map(slots.map((s) => [s.id, s] as const));
+    // Times already covered by ANY dine-in slot on this day (manual or auto) —
+    // never lay a duplicate window on top of a hand-made one.
+    const coveredTimes = new Set(
+      slots
+        .filter((s) => s.locationSlug === locationSlug && s.date === date && s.fulfillmentTypes.includes("dine-in"))
+        .map((s) => s.time),
+    );
+    const touched: TimeSlot[] = [];
+    for (const time of gridTimes) {
+      const id = dineInSlotId(locationSlug, date, time);
+      const existing = byId.get(id);
+      if (existing) {
+        // Keep an auto slot's capacity aligned with the current floor size.
+        if (existing.maxOrders !== capacity) {
+          existing.maxOrders = capacity;
+          touched.push(existing);
+        }
+        continue;
+      }
+      if (coveredTimes.has(time)) continue;
+      const slot: TimeSlot = {
+        id,
+        locationSlug,
+        date,
+        time,
+        maxOrders: capacity,
+        currentOrders: 0,
+        fulfillmentTypes: ["dine-in"],
+        status: "active",
+      };
+      slots.push(slot);
+      touched.push(slot);
+    }
+    if (touched.length) {
+      await writeJSON("slots.json", slots);
+      await Promise.all(touched.map((s) => dualWriteSlot(s)));
+    }
+    return slots.filter(
+      (s) => s.locationSlug === locationSlug && s.date === date && s.fulfillmentTypes.includes("dine-in"),
+    );
   });
 }
 

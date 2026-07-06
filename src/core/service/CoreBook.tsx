@@ -154,7 +154,7 @@ export function CoreBook({
     setLoading(true);
     try {
       const [s, t, r, pol, tm, dec, wl, ord] = await Promise.all([
-        fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
+        fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}&ensureDineIn=1`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),

@@ -1479,7 +1479,8 @@ export default async function CapabilitiesPage() {
           name: "Slots",
           status: "live",
           href: "/core/service/slots",
-          summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
+          summary:
+            "Atomic increment (no overselling). Auto-close past slots via cron. Dine-in seating windows are open by default: ensureDineInSlots (src/lib/store.ts) materialises a slot every 30 min across the location's open hours for the whole floor (capacity = live table count, deterministic dineInSlotId ids so it's idempotent and bookings attach across reloads), pulled via GET /api/admin/slots?ensureDineIn=1 by both Slots and Book. Operators don't build the grid — they close windows: each row has an Available↔Unavailable toggle (persists as active/draft, hidden from Book when closed), or Select mode marks several unavailable in one PUT (block an evening for a private event). Grid windows are never deleted (they'd just regenerate); only manual slots keep a delete affordance.",
         },
         {
           name: "Demand Exchange — per-slot yield",

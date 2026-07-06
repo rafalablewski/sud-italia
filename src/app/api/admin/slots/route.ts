@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { hasLocationAccess } from "@/lib/admin-auth";
-import { getSlots, createSlot, createSlotsBulk, updateSlot, updateSlotsBulk, deleteSlot, deleteSlotsBulk, getOrders, getSlotById } from "@/lib/store";
+import { getSlots, createSlot, createSlotsBulk, updateSlot, updateSlotsBulk, deleteSlot, deleteSlotsBulk, getOrders, getSlotById, ensureDineInSlots } from "@/lib/store";
 import { parseBody, slotCreateSchema, slotUpdateSchema } from "@/lib/api-schemas";
 import type { SlotStatus, Order } from "@/data/types";
 
@@ -11,6 +11,14 @@ export const GET = withAdmin(
     const locationSlug = scoped ?? undefined;
     const date = req.nextUrl.searchParams.get("date") || undefined;
     const includeOrders = req.nextUrl.searchParams.get("includeOrders") === "true";
+    // Materialise the default dine-in seating grid (a slot every 30 min for the
+    // whole floor) before reading, so Book/Slots always show a full day of
+    // reservable windows without anyone hand-building them. Idempotent; needs a
+    // concrete location + date.
+    const ensureDineIn = req.nextUrl.searchParams.get("ensureDineIn") === "1";
+    if (ensureDineIn && locationSlug && date) {
+      await ensureDineInSlots(locationSlug, date);
+    }
 
     const slots = await getSlots(locationSlug, date);
 
