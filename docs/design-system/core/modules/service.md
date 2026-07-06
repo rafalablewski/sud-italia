@@ -142,10 +142,18 @@ in one move) is the **Book** view — see below.
 eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
 `/core/book` and `/core/guest/book` redirect here. Rendered in the
 **dense-console** language (mockup 11-book): the `.core-surf-toolbar` ActionBar
-(its `left` led by the View switch — timeline/floor/arrivals), then a **6-up
-`.core-statstrip`** — **bookings today ·
-covers · seated · upcoming · no-shows · fill** (all from the day's reservations
-— Rule #1; fill = booked covers ÷ total seats). A `.core-book-tlbar` gives the
+(its `left` led by the View switch — timeline/floor/arrivals), then a **12-cell
+`.core-statstrip.is-wrap`** day summary — **tables · reservations · walk-ins ·
+covers · seated · upcoming · no-shows · orders · avg/table · avg order · revenue ·
+fill**. Reservations vs walk-ins split on `Reservation.source`; covers carries
+avg party; tables shows in-service + total seats. The **orders / avg-per-table /
+avg-check / revenue** cells come from the day's real **dine-in orders** (fetched
+from `/api/admin/orders`, filtered to `fulfillmentType === "dine-in"` on the
+selected `slotDate`, cancelled excluded) — Rule #1, no mock figures. The `is-wrap`
+variant lays the cells out as a wrapping CSS grid (`repeat(auto-fit, minmax(132px,
+1fr))`, 1px gap over a line-tinted container for hairline gridlines) so all twelve
+stay readable — 2-up on a phone, filling out on wider screens — instead of the
+single-row flex squishing them. `fill` = booked covers ÷ total seats. A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
 The **timeline-over-tables grid** (`.core-book-tlpanel`, 17:00→23:00 in 30-min
 ticks): reservation **blocks** are positioned by time/duration and **toned by

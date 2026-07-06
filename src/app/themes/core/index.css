@@ -366,6 +366,12 @@
 .core .core-statstrip .delta { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core .core-statstrip .delta.up { color: var(--basil); } .core .core-statstrip .delta.dn { color: var(--danger); } .core .core-statstrip .delta.warn { color: var(--amber); }
 @media (max-width: 900px) { .core .core-statstrip { flex-wrap: wrap; } .core .core-statstrip .cell { flex: 1 0 33%; } }
+/* .is-wrap — for strips carrying many cells (Book summary). A wrapping grid at
+   every width (the single-row flex squishes >6 cells); 1px gap over a line-tinted
+   container paints clean hairline gridlines, cells restore the panel fill. */
+.core .core-statstrip.is-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 1px; background: var(--line); }
+.core .core-statstrip.is-wrap .cell { background: var(--panel); }
+.core .core-statstrip.is-wrap .cell + .cell::before { display: none; }
 
 /* ============================================================
    POS surface

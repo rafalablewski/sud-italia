@@ -32,7 +32,7 @@ import {
   type SeatingDecisionSummary,
   type ServiceSimulation,
 } from "@/lib/seating";
-import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem, type Order } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 import { tLabel } from "./tableLabel";
@@ -51,6 +51,12 @@ function byTableNumber(a: FloorTable, b: FloorTable): number {
 function todayLocal(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Grosze → a compact "1 234 zł" string (space thousands, no decimals) for the
+ *  summary strip. */
+function zl(grosze: number): string {
+  return `${Math.round(grosze / 100).toLocaleString("en-US").replace(/,/g, " ")} zł`;
 }
 
 /**
@@ -84,6 +90,8 @@ export function CoreBook({
   const [tables, setTables] = useCoreCache<FloorTable[]>(`core:book-tables:${loc}`, []);
   const [reservations, setReservations] = useCoreCache<Reservation[]>(`core:book-res:${loc}`, []);
   const [waitlist, setWaitlist] = useCoreCache<WaitlistEntry[]>(`core:book-wait:${loc}`, []);
+  // Day's orders — feeds the summary strip's real order/revenue figures (Rule #1).
+  const [orders, setOrders] = useCoreCache<Order[]>(`core:book-orders:${loc}`, []);
   const [loading, setLoading] = useState(() => peekCoreCache<Reservation[]>(`core:book-res:${loc}`) === undefined);
   const [waitName, setWaitName] = useState("");
   const [waitPartyN, setWaitPartyN] = useState(2);
@@ -145,7 +153,7 @@ export function CoreBook({
     if (!date) return;
     setLoading(true);
     try {
-      const [s, t, r, pol, tm, dec, wl] = await Promise.all([
+      const [s, t, r, pol, tm, dec, wl, ord] = await Promise.all([
         fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
@@ -153,11 +161,13 @@ export function CoreBook({
         fetch(`/api/admin/seating/turn-model?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+        fetch(`/api/admin/orders?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])).catch(() => []),
       ]);
       setSlots(Array.isArray(s) ? s : s.slots ?? []);
       setTables(Array.isArray(t) ? t : t.tables ?? []);
       setReservations(Array.isArray(r) ? r : r.reservations ?? []);
       setWaitlist(Array.isArray(wl?.waitlist) ? wl.waitlist : []);
+      setOrders(Array.isArray(ord) ? ord : []);
       if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
       setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
       setTurnAccuracy(tm && tm.accuracy && typeof tm.accuracy.n === "number" ? tm.accuracy : null);
@@ -256,18 +266,42 @@ export function CoreBook({
     const seated = reservations.filter((r) => r.status === "seated").length;
     const upcoming = reservations.filter((r) => r.status === "booked").length;
     const noShows = reservations.filter((r) => r.status === "no-show").length;
+    // Reservations proper (source "booking") vs walk-ins (seated on arrival).
+    const walkIns = active.filter((r) => r.source === "walk-in").length;
+    const resProper = active.length - walkIns;
     const totalSeats = tables.reduce((s, t) => s + (t.seats || 0), 0);
+    const inService = tables.filter((t) => t.status !== "out-of-service").length;
     const nextUp = reservations.filter((r) => r.status === "booked").map((r) => r.time).sort()[0];
     return {
       bookings: active.length,
+      reservations: resProper,
+      walkIns,
       covers,
       seated,
       upcoming,
       noShows,
       nextUp,
+      tables: tables.length,
+      inService,
+      totalSeats,
+      avgParty: active.length ? covers / active.length : 0,
       fill: totalSeats ? Math.round((covers / totalSeats) * 100) : 0,
     };
   }, [reservations, tables]);
+  // Order + revenue figures for the day — real dine-in orders on the floor (Rule #1).
+  const orderStat = useMemo(() => {
+    const dineIn = orders.filter((o) => o.fulfillmentType === "dine-in" && o.slotDate === date && o.status !== "cancelled");
+    const count = dineIn.length;
+    const revenue = dineIn.reduce((s, o) => s + (o.totalAmount || 0), 0);
+    const tablesWithOrders = new Set(dineIn.map((o) => o.tableId).filter(Boolean)).size;
+    return {
+      count,
+      revenue,
+      avgCheck: count ? Math.round(revenue / count) : 0,
+      perTable: tablesWithOrders ? Math.round(revenue / tablesWithOrders) : 0,
+      tablesWithOrders,
+    };
+  }, [orders, date]);
   const conflictIds = useMemo(() => {
     const s = new Set<string>();
     for (const r of dayRes) if (findReservationConflicts(reservations, r).length) s.add(r.id);
@@ -624,17 +658,29 @@ export function CoreBook({
             </>
           }
         />
-        {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
-        <div className="core-statstrip" role="group" aria-label="Booking metrics">
+        {/* dense-console summary — every figure from the day's real reservations,
+            walk-ins, tables + dine-in orders (Rule #1). Wraps to a grid so the
+            full set stays readable on a phone. */}
+        <div className="core-statstrip is-wrap" role="group" aria-label="Booking summary">
           <div className="cell">
-            <span className="lab">Bookings today</span>
-            <span className="val">{bookStat.bookings}</span>
+            <span className="lab">Tables</span>
+            <span className="val">{bookStat.tables}</span>
+            <span className="delta">{bookStat.inService} in service · {bookStat.totalSeats} seats</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Reservations</span>
+            <span className="val">{bookStat.reservations}</span>
             <span className="delta">{dineInSlots.length} slot{dineInSlots.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Walk-ins</span>
+            <span className="val">{bookStat.walkIns}</span>
+            <span className="delta">seated on arrival</span>
           </div>
           <div className="cell">
             <span className="lab">Covers</span>
             <span className="val brand">{bookStat.covers}</span>
-            <span className="delta">booked</span>
+            <span className="delta">avg {bookStat.avgParty.toFixed(1)}/party</span>
           </div>
           <div className="cell">
             <span className="lab">Seated</span>
@@ -650,6 +696,26 @@ export function CoreBook({
             <span className="lab">No-shows</span>
             <span className={bookStat.noShows > 0 ? "val danger" : "val"}>{bookStat.noShows}</span>
             <span className={bookStat.noShows > 0 ? "delta dn" : "delta"}>{bookStat.noShows > 0 ? "today" : "clean"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Orders</span>
+            <span className="val">{orderStat.count}</span>
+            <span className="delta">dine-in today</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg / table</span>
+            <span className="val basil">{orderStat.perTable ? zl(orderStat.perTable) : "—"}</span>
+            <span className="delta">{orderStat.tablesWithOrders} table{orderStat.tablesWithOrders === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg order</span>
+            <span className="val">{orderStat.avgCheck ? zl(orderStat.avgCheck) : "—"}</span>
+            <span className="delta">per check</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Revenue</span>
+            <span className="val brand">{orderStat.revenue ? zl(orderStat.revenue) : "—"}</span>
+            <span className="delta">dine-in</span>
           </div>
           <div className="cell">
             <span className="lab">Fill</span>
