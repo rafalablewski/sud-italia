@@ -14,10 +14,15 @@ import { findReservationConflicts } from "@/lib/floor";
  * the table supplies the seat. See docs/strategy/restaurant-os-blueprint.md §4
  * and the Operations docs (Floor / Slots).
  *
- * Capacity model: a dine-in reservation consumes the slot's capacity by COUNT
- * (active reservations on the slot < maxOrders) — it does NOT touch
- * `slot.currentOrders` (which tracks online/POS orders), so a guest who books
- * then orders isn't double-counted. Two booking lenses on one slot.
+ * Capacity model: a dine-in slot is "full" for reservations only when there are
+ * as many active reservations on it as there are TABLES on the floor — the
+ * physical limit (you can't seat more parties at once than you have tables; a
+ * specific table is separately protected by the table-conflict gate). It is NOT
+ * capped by `slot.maxOrders`, which is an ONLINE/POS order-throughput cap (paired
+ * with `slot.currentOrders`) — a wholly separate lens. Using maxOrders as the
+ * reservation cap made a slot read "full" after a handful of bookings even with
+ * most of the floor empty. Bookings never touch `currentOrders`, so a guest who
+ * books then orders isn't double-counted.
  */
 
 const RESERVATION_HOLDS: Reservation["status"][] = ["booked", "seated"];
@@ -33,7 +38,10 @@ export type BookingReason =
 export interface BookingValidationInput {
   slotActive: boolean;
   slotSupportsDineIn: boolean;
-  slotMaxOrders: number;
+  /** Physical dine-in capacity of the slot = the number of tables on the floor.
+   *  A slot is reservation-"full" only once every table could be taken; NOT the
+   *  online-order `maxOrders` cap. */
+  dineInCapacity: number;
   /** Active (booked/seated) reservations already on this slot. */
   reservationsOnSlot: number;
   tableSeats: number;
@@ -51,7 +59,7 @@ export function validateBooking(
   if (!Number.isFinite(i.partySize) || i.partySize < 1) return { ok: false, reason: "invalid_party" };
   if (i.tableSeats < i.partySize) return { ok: false, reason: "table_too_small" };
   if (i.tableConflictCount > 0) return { ok: false, reason: "table_conflict" };
-  if (i.reservationsOnSlot >= i.slotMaxOrders) return { ok: false, reason: "slot_full" };
+  if (i.reservationsOnSlot >= i.dineInCapacity) return { ok: false, reason: "slot_full" };
   return { ok: true };
 }
 
@@ -86,7 +94,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const slot = await getSlotById(input.slotId);
   if (!slot || slot.locationSlug !== input.locationSlug) return { ok: false, reason: "slot_not_found" };
 
-  const table = (await getTables(input.locationSlug)).find((t) => t.id === input.tableId);
+  const allTables = await getTables(input.locationSlug);
+  const table = allTables.find((t) => t.id === input.tableId);
   if (!table) return { ok: false, reason: "table_not_found" };
 
   const durationMin = input.durationMin ?? 90;
@@ -106,7 +115,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const verdict = validateBooking({
     slotActive: slot.status === "active",
     slotSupportsDineIn: slot.fulfillmentTypes.includes("dine-in"),
-    slotMaxOrders: slot.maxOrders,
+    // Physical cap = tables on the floor, not the online-order maxOrders.
+    dineInCapacity: Math.max(1, allTables.length),
     reservationsOnSlot: input.override ? 0 : reservationsOnSlot,
     tableSeats: table.seats,
     partySize: input.partySize,

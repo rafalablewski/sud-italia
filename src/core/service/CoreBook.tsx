@@ -780,7 +780,13 @@ export function CoreBook({
                       const conflict = conflictIds.has(r.id);
                       const tone = r.status === "seated" ? "seated" : "pending";
                       const elapsed = isToday && r.status === "seated" ? Math.max(0, nowMin - toMin(r.time)) : null;
-                      const context = r.status === "seated" ? (elapsed != null ? `seated · ${elapsed}m` : "seated") : "pending confirm";
+                      // Seat fit — party vs the table's seats (combined for a join).
+                      // Spare seats flag a table that could take a bigger party.
+                      const seats = t.seats + (r.joinedTableIds ?? []).reduce((sum, id) => sum + (tables.find((x) => x.id === id)?.seats ?? 0), 0);
+                      const spare = Math.max(0, seats - r.partySize);
+                      const context = r.status === "seated"
+                        ? `${elapsed != null ? `seated · ${elapsed}m` : "seated"}${spare > 0 ? ` · ${spare} spare` : ""}`
+                        : `pending${spare > 0 ? ` · ${spare} spare` : ""}`;
                       const stackCls = conflict ? (clashing.indexOf(r) % 2 === 0 ? " conflict top" : " conflict bot") : ` ${tone}`;
                       return (
                         <div
@@ -789,13 +795,13 @@ export function CoreBook({
                           className={`core-bk-blk${stackCls}`}
                           style={{ left: `${left}px`, width: `${width}px` }}
                           onDragStart={() => setDragId(r.id)}
-                          title={`${r.customerName} · ${r.partySize} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
+                          title={`${r.customerName} · ${r.partySize}/${seats} seats${spare > 0 ? ` · ${spare} spare` : ""} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
                         >
                           {conflict ? (
-                            <span className="bn">{r.customerName} · {r.partySize} · ⚠ clash</span>
+                            <span className="bn">{r.customerName} · {r.partySize}/{seats} · ⚠ clash</span>
                           ) : (
                             <>
-                              <span className="bn">{r.customerName} · {r.partySize}</span>
+                              <span className="bn">{r.customerName} · {r.partySize}/{seats}</span>
                               <span className="bm">{context}</span>
                             </>
                           )}
@@ -827,12 +833,18 @@ export function CoreBook({
               ) : (
                 <div className="core-bk-slotchips">
                   {dineInSlots.map((s) => {
-                    const fill = s.maxOrders > 0 ? s.currentOrders / s.maxOrders : 0;
+                    // Dine-in fill = tables booked at this slot ÷ tables on the
+                    // floor (real occupancy), NOT the online-order maxOrders cap —
+                    // which made a slot read "full" after a few bookings with the
+                    // floor mostly empty.
+                    const bookedTables = reservations.filter((r) => r.slotId === s.id && RES_HOLDS.has(r.status)).length;
+                    const capacity = Math.max(1, tables.length);
+                    const fill = bookedTables / capacity;
                     const tier = fill >= 1 ? "full" : fill >= 0.85 ? "warm" : fill >= 0.6 ? "mid" : "ok";
                     const on = slotId === s.id;
                     return (
-                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${s.currentOrders}/${s.maxOrders} booked`}>
-                        {s.time}<small>{s.currentOrders}/{s.maxOrders}</small>
+                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${bookedTables}/${capacity} tables booked`}>
+                        {s.time}<small>{bookedTables}/{capacity}</small>
                       </button>
                     );
                   })}
