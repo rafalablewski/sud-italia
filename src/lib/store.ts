@@ -721,23 +721,23 @@ export function dineInSlotId(locationSlug: string, date: string, time: string): 
   return `dine-${locationSlug}-${date}-${time.replace(":", "")}`;
 }
 
-/** Pure: the "HH:MM" seating windows for one day — every 30 min from open to
- *  the last seating (30 min before close). Falls back to 12:00–23:00. */
+/** Pure: the "HH:MM" seating windows for one day — every 30 min across the
+ *  full open window, open through close inclusive (12:00–23:00 → 12:00…23:00).
+ *  Falls back to 12:00–23:00 when hours are missing. */
 export function dineInGridTimes(
   hours: { day: string; open: string; close: string }[] | undefined,
   date: string,
 ): string[] {
   const { openMin, closeMin } = serviceWindowForDate(hours, date);
-  const lastSeatMin = Math.max(openMin, closeMin - DINE_IN_SLOT_STEP_MIN);
   const times: string[] = [];
-  for (let m = openMin; m <= lastSeatMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
+  for (let m = openMin; m <= closeMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
   return times;
 }
 
 /**
  * Idempotently materialise the default dine-in grid for one location/day:
- * a slot every 30 minutes from open to the last seating (30 min before close),
- * capacity = the number of tables on the floor. Only *missing* windows are
+ * a slot every 30 minutes across the full open window (open through close
+ * inclusive), capacity = the number of tables on the floor. Only *missing*
  * created — existing slots (including ones an operator flipped to "draft" =
  * unavailable) are left as-is, so availability edits persist, while auto slots'
  * capacity is kept in sync with the live table count so the board never lies.
