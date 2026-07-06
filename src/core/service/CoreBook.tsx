@@ -248,17 +248,25 @@ export function CoreBook({
     }
   };
 
-  // --- Timeline (tables × 30-min ticks, 17:00→23:00 dinner window) ------
-  // Mockup axis: 13 tick marks (17:00, 17:30 … 23:00) laid on a fixed-width
-  // grid (48px label + 64px/tick) so real blocks fill the grid, and the panel
-  // scrolls horizontally rather than squishing an 11:00-start day to the right.
-  const OPEN = 17 * 60, CLOSE = 23 * 60;
+  // --- Timeline (tables × 30-min ticks) -----------------------------------
+  // Fixed-width grid (48px label + 64px/tick); the panel scrolls horizontally
+  // rather than squishing the day. The tick axis (below) is derived from the
+  // day's real service window, not a hardcoded band.
   const TICK_MIN = 30, LBL_W = 48, TICK_W = 64;
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
   const fmtHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
-  const COLS = ticks.length; // 13
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
+  // Service window derived from the day's REAL dine-in slots + reservations, so a
+  // lunch service (12:00) or a late night actually shows — instead of the old
+  // hardcoded 17:00→23:00 dinner band that hid every earlier/later booking. Open
+  // is floored to the hour, close ceiled to the next 30-min tick; a lunch→dinner
+  // default (12:00→23:00) covers a day with no slots/bookings yet.
+  const svcStarts = [...dineInSlots.map((s) => toMin(s.time)), ...dayRes.map((r) => toMin(r.time))];
+  const svcEnds = [...dineInSlots.map((s) => toMin(s.time) + DURATION_MIN), ...dayRes.map((r) => toMin(r.time) + (r.durationMin ?? DURATION_MIN))];
+  const OPEN = Math.floor((svcStarts.length ? Math.min(...svcStarts) : 12 * 60) / 60) * 60;
+  const CLOSE = Math.max(OPEN + TICK_MIN, Math.ceil((svcEnds.length ? Math.max(...svcEnds) : 23 * 60) / TICK_MIN) * TICK_MIN);
+  const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
+  const COLS = ticks.length;
   // Dense-console stat strip — every figure from the day's reservations (Rule #1).
   const bookStat = useMemo(() => {
     const active = reservations.filter((r) => r.status !== "cancelled");

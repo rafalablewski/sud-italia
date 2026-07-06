@@ -155,9 +155,12 @@ variant lays the cells out as a wrapping CSS grid (`repeat(auto-fit, minmax(132p
 stay readable — 2-up on a phone, filling out on wider screens — instead of the
 single-row flex squishing them. `fill` = booked covers ÷ total seats. A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
-The **timeline-over-tables grid** (`.core-book-tlpanel`, 17:00→23:00 in 30-min
-ticks): reservation **blocks** are positioned by time/duration and **toned by
-status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
+The **timeline-over-tables grid** (`.core-book-tlpanel`, 30-min ticks over a
+service window **derived from the day's real dine-in slots + reservations** —
+open floored to the hour, close ceiled to the next tick, a 12:00→23:00
+lunch→dinner default when the day is empty; this replaced a hardcoded 17:00→23:00
+band that hid every lunch/afternoon booking): reservation **blocks** are
+positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
 upsert with `override`). The timeline sits **left**; the **new-reservation form
