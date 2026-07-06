@@ -205,7 +205,9 @@ viewport, so the full-width bookings list scrolled up and painted *over* it.
 Below 1000px the sub-grid collapses to one column (`.core-book-tlform:
 grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
-**brand-wash**) + party size, then a table — ranked by the **Seating
+**brand-wash**; the chip counts **open/total** tables at that time — occupancy
+includes each booking's duration + the 15-min turnaround — so staff read "how
+many can I seat now", and it stays tinted by fill) + party size, then a table — ranked by the **Seating
 Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
 a seating time, every table is hard-filtered (fit · free-for-the-turn ·
 availability) then scored (right-size · runway · guest · pacing · yield), so the

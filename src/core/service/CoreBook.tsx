@@ -866,12 +866,15 @@ export function CoreBook({
                     }
                     const capacity = Math.max(1, tables.length);
                     const bookedTables = Math.min(occupied.size, capacity);
+                    // Show OPEN tables, not occupied — staff read "how many can I
+                    // seat now", not "how many are taken". Tint still by fill.
+                    const openTables = capacity - bookedTables;
                     const fill = bookedTables / capacity;
                     const tier = fill >= 1 ? "full" : fill >= 0.85 ? "warm" : fill >= 0.6 ? "mid" : "ok";
                     const on = slotId === s.id;
                     return (
-                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${bookedTables}/${capacity} tables booked`}>
-                        {s.time}<small>{bookedTables}/{capacity}</small>
+                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${openTables} of ${capacity} tables open`}>
+                        {s.time}<small>{openTables}/{capacity}</small>
                       </button>
                     );
                   })}
