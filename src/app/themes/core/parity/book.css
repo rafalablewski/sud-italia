@@ -150,7 +150,10 @@
 .core .core-bk-partyrow .hint { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
 
 /* table — fit-tagged vertical list */
-.core .core-bk-tpicks { display: flex; flex-direction: column; gap: 4px; }
+/* Cap the table list so a big floor (10+ tables) doesn't make the whole rail
+   tower over the viewport and push Today's bookings far below the fold — the
+   recommended table sits at the top, the rest scroll within this box. */
+.core .core-bk-tpicks { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
 .core .core-bk-tpick {
   display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: var(--r-sm);
   border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; text-align: left; width: 100%;
