@@ -1631,10 +1631,22 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    live in their OWN 2-col sub-grid (`.core-book-tlform`) so the full-width
    bookings list below is unambiguously beneath them — a tall form can never
    interleave with, or be overlapped by, the list. */
-.core .core-book-tlform { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 340px; column-gap: 10px; align-items: start; }
-.core .core-book-tlpanel { grid-column: 1; min-width: 0; }
-.core .core-book-form { grid-column: 2; }
+/* Book "New reservation" = the three-pane DECK: the timeline runs full width on
+   top, then the form sits beneath it as When · Who · Where — wide-and-short so
+   every choice stays on screen (replaces the tall right rail). */
+.core .core-book-tlform { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; row-gap: 10px; align-items: start; }
+.core .core-book-tlpanel { grid-column: 1 / -1; min-width: 0; }
+.core .core-book-form { grid-column: 1 / -1; } /* legacy right-rail hook — the deck replaces it */
 .core .core-book-side { grid-column: 1 / -1; }
+.core .core-book-deck { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.core .core-book-deckhead { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; padding: 2px 2px 0; }
+.core .core-book-deckhead .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
+.core .core-book-deckhead .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.core .core-book-pane { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px; display: flex; flex-direction: column; gap: 12px; }
+.core .core-book-panelab { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+.core .core-book-panelab .mut { color: var(--ink-3); letter-spacing: .04em; font-size: 9px; }
+/* tablet portrait / phone — the three panes stack to one column */
+@media (max-width: 1000px) { .core .core-book-deck { grid-template-columns: 1fr; } }
 /* dense-console header rows span the full width above the form/side row */
 .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 /* Book renders its header inside the padded timeline GRID (0 14px). Pull the

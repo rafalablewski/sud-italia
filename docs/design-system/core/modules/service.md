@@ -190,19 +190,18 @@ relative `.core-bk-tlbody`) runs down the grid at the current clock position —
 a red rule with a top dot + `.core-bk-now-lbl` time pill, drawn above the blocks
 (z 5) but under the sticky Tn labels (z 6); shown only when the viewed date is
 today and the clock sits inside the window, and it re-seeds client-side (0 until
-mounted, so no SSR mismatch) and ticks with the shared 30s clock. The timeline sits **left**; the **new-reservation form
-is the right rail**. The timeline + form live in their **own 2-col sub-grid**
-(`.core-book-tlform`, `1fr 340px`) that spans the outer `.core-book` grid
-(`grid-column: 1 / -1`), so the full-width **Today's bookings** list below is
-*unambiguously beneath them* and can never interleave with or overlap the form.
-The rail (`.core-book-form`, sub-grid col 2) simply **flows** — `align-self:
-start`, no `position: sticky`, no `max-height`, no internal body scroll — so the
-whole `.core-book` panel scrolls through it, Book button included. Two earlier
-bugs forced this: a `max-height: calc(100dvh - <hardcoded strip height> …)` cap
-stranded the button below the fold once the day-summary strip grew taller; and
-keeping `position: sticky` after dropping the cap left the rail taller than the
-viewport, so the full-width bookings list scrolled up and painted *over* it.
-Below 1000px the sub-grid collapses to one column (`.core-book-tlform:
+mounted, so no SSR mismatch) and ticks with the shared 30s clock. The
+new-reservation form is the **three-pane deck** below the timeline — not a right
+rail. `.core-book-tlform` is now a single-column grid that stacks the full-width
+`.core-book-tlpanel` (timeline) over `.core-book-deck`, a `repeat(3, minmax(0,
+1fr))` row of glass **`.core-book-pane`** cards — **When · Who · Where** — headed
+by a full-width `.core-book-deckhead` ("New reservation · date · loc") and each
+labelled by a `.core-book-panelab`. This trades the old tall rail for a wide,
+short layout so every choice stays on screen; **Today's bookings** still flows
+full-width beneath the whole deck. Panes: **When** = the slot chips; **Who** =
+party stepper + guest-needs chips + guest name/phone/notes (+ CRM match); **Where**
+= the ranked table list + joins + signals + min-spend + override + Book button.
+Below 1000px the deck collapses to one column (`.core-book-deck:
 grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**; the chip counts **open/total** tables at that time — occupancy

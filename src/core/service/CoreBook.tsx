@@ -829,16 +829,19 @@ export function CoreBook({
         </div>
         </div>{/* /core-book-tlpanel */}
 
-        {/* new reservation — right rail (mockup) */}
-        <div className="core-book-form">
-          <div className="core-bk-resvh">
+        {/* new reservation — three-pane deck below the timeline (When · Who ·
+            Where). Trades the tall right rail for a wide, short layout: every
+            choice stays on screen and the flow reads left→right. */}
+        <div className="core-book-deck">
+          <div className="core-book-deckhead">
             <div className="t">New reservation</div>
             <div className="s">{daySub} · {loc}</div>
           </div>
-          <div className="core-bk-resvb">
 
+          {/* WHEN — pick a seating time */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>When</span><span className="mut">open / total tables</span></div>
             <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Slot</span><span className="mut">tinted by capacity</span></div>
               {loading && slots.length === 0 ? (
                 <div className="core-ctx-empty">Loading slots…</div>
               ) : dineInSlots.length === 0 ? (
@@ -881,6 +884,11 @@ export function CoreBook({
                 </div>
               )}
             </div>
+          </section>
+
+          {/* WHO — party, accessibility needs, guest identity */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>Who</span><span className="mut">party · needs · guest</span></div>
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Party size</span></div>
@@ -906,7 +914,30 @@ export function CoreBook({
             </div>
 
             <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Table</span><span className="mut">{selectedSlot ? `live fit for ${partyN}` : `needs ${partyN}-top+`}</span></div>
+              <div className="core-bk-flab"><span>Guest</span></div>
+              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
+              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
+              {guestProfile && (
+                <div className="core-bk-guestmatch">
+                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
+                  <span className="gm-txt">
+                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
+                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
+                  </span>
+                  {name.trim() === "" && guestProfile.name && (
+                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
+                  )}
+                </div>
+              )}
+              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
+            </div>
+          </section>
+
+          {/* WHERE — the engine-ranked table, then confirm */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>Where</span><span className="mut">{selectedSlot ? `live fit for ${partyN}` : `needs ${partyN}-top+`}</span></div>
+
+            <div className="core-bk-field">
               {tables.length === 0 ? (
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
@@ -1006,25 +1037,6 @@ export function CoreBook({
               )}
             </div>
 
-            <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Guest</span></div>
-              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
-              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
-              {guestProfile && (
-                <div className="core-bk-guestmatch">
-                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
-                  <span className="gm-txt">
-                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
-                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
-                  </span>
-                  {name.trim() === "" && guestProfile.name && (
-                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
-                  )}
-                </div>
-              )}
-              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
-            </div>
-
             {selectedSlot?.minSpendGrosze ? (
               <div className="core-bk-minspend">
                 <span>Slot minimum: <b>{Math.round(selectedSlot.minSpendGrosze / 100)} zł</b> to book this slot.</span>
@@ -1054,7 +1066,7 @@ export function CoreBook({
             <button className="core-bk-bookbtn" disabled={!canBook} onClick={() => void book()}>
               {canBook && selectedSlot ? `✓ Book table · ${selectedSlot.time} · ${tableLabel(tableId)} · ${partyN}` : "✓ Book slot + table"}
             </button>
-          </div>
+          </section>
         </div>
         </div>
         )}
