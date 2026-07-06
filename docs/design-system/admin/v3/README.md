@@ -1447,7 +1447,10 @@ auth canvas's signature lighting and the sign-in lockup:
   put rent's small restaurant outlay + the freed remainder into the S&P / a bond /
   the Nasdaq-100 / a 60-40 portfolio / **more rented units** (replicate the unit
   economics per extra site — flagged as an upside ceiling, before fleet
-  cannibalisation/HQ overhead). A shared `build(units, principal, rate)` closure
+  cannibalisation/HQ overhead). The two bond strategies model coupons differently
+  per their intent: *Bond only* sweeps its 2×/yr coupons into the S&P (compounding),
+  while *Rent + 10y bond* is plain saving — coupons held as cash, so simple
+  interest (`freed × (1 + rate × years)`) — both via `investedTerminalOverride`. A shared `build(units, principal, rate)` closure
   reuses the rent pass's captured per-month cash-flow stream for each combined
   IRR and reports the head-to-head `vsBuy` / `vsMortgage` deltas. Rendered as
   compact cards in the responsive `.av3-scn` grid (leading with total wealth,

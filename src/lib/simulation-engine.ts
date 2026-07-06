@@ -616,7 +616,10 @@ export function computePremisesInvestment(
       build("sp500-only", "S&P 500 only — no restaurant", `full ${zl(totalCapital)} → S&P today @ ${rates.sp500.toFixed(0)}%, no restaurant`, 0, totalCapital, rates.sp500 / 100),
       // Rent + deploy the freed capital.
       build("sp500", "Rent + S&P 500", `freed ${zl(freed)} → S&P @ ${rates.sp500.toFixed(0)}%`, 1, freed, rates.sp500 / 100),
-      build("bond", "Rent + 10y bond", `freed ${zl(freed)} → bond @ ${rates.bond.toFixed(0)}%`, 1, freed, rates.bond / 100),
+      // Plain saving: the bond's coupons (2×/yr) are just held as cash — not
+      // reinvested — so it's simple interest, principal back at par at maturity:
+      // terminal = freed × (1 + rate × years).
+      build("bond", "Rent + 10y bond", `freed ${zl(freed)} → bond @ ${rates.bond.toFixed(0)}%; coupons (2×/yr) saved as cash, not reinvested`, 1, freed, rates.bond / 100, Math.round(freed * (1 + (rates.bond / 100) * horizonYears))),
       build("nasdaq100", "Rent + Nasdaq-100", `freed ${zl(freed)} → Nasdaq @ ${rates.nasdaq100.toFixed(0)}%`, 1, freed, rates.nasdaq100 / 100),
       build("balanced", "Rent + 60/40 portfolio", `freed ${zl(freed)} → 60% S&P / 40% bond ≈ ${(balancedRate * 100).toFixed(0)}%`, 1, freed, balancedRate),
       build(
