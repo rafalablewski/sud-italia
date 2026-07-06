@@ -10,17 +10,18 @@ const SUN = "2026-07-12";
 // The active locations open 12:00–21:00 every day (src/data/locations.ts).
 const OPEN_HOURS = [{ day: "Mon-Sun", open: "12:00", close: "21:00" }];
 
-test("dineInGridTimes: 30-min windows across the full open window (12:00–21:00)", () => {
+test("dineInGridTimes: 15-min windows across the full open window (12:00–21:00)", () => {
   const t = dineInGridTimes(OPEN_HOURS, MON);
-  // 12:00 → 21:00 inclusive, every 30 min (19 windows).
+  // 12:00 → 21:00 inclusive, every 15 min ((540/15)+1 = 37 windows).
   assert.equal(t[0], "12:00");
   assert.equal(t[t.length - 1], "21:00");
-  assert.equal(t.length, 19);
-  // Strictly 30-minute separation, no gaps or dupes.
+  assert.equal(t.length, 37);
+  assert.ok(t.includes("13:45"), "offers the :45 window a 90-min turn frees");
+  // Strictly 15-minute separation, no gaps or dupes.
   for (let i = 1; i < t.length; i++) {
     const a = Number(t[i - 1].slice(0, 2)) * 60 + Number(t[i - 1].slice(3));
     const b = Number(t[i].slice(0, 2)) * 60 + Number(t[i].slice(3));
-    assert.equal(b - a, 30);
+    assert.equal(b - a, 15);
   }
 });
 

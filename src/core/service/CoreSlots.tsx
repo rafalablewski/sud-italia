@@ -99,7 +99,7 @@ export function CoreSlots() {
   const [cTime, setCTime] = useState("18:00");
   const [cStart, setCStart] = useState("18:00");
   const [cEnd, setCEnd] = useState("21:00");
-  const [cInterval, setCInterval] = useState("30");
+  const [cInterval, setCInterval] = useState("15");
   const [cMax, setCMax] = useState("16");
   const [cFulfil, setCFulfil] = useState<Set<FulfillmentType>>(new Set(["dine-in"]));
   // Multi-select — pick several windows and close/open them in one go
@@ -118,7 +118,7 @@ export function CoreSlots() {
     if (!date) return;
     // Week view pulls the whole location (all dates) and slices client-side;
     // day view scopes to the date server-side and materialises the default
-    // dine-in seating grid (a window every 30 min for the whole floor) so the
+    // dine-in seating grid (a window every 15 min for the whole floor) so the
     // day is always fully reservable without hand-building it.
     const qs = range === "week" ? `?location=${encodeURIComponent(loc)}` : `?location=${encodeURIComponent(loc)}&date=${date}&ensureDineIn=1`;
     const r = await fetch(`/api/admin/slots${qs}`);

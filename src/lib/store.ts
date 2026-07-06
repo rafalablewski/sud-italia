@@ -670,16 +670,20 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
   });
 }
 
-// --- Dine-in reservation grid (default 30-min slots for the whole floor) ---
+// --- Dine-in reservation grid (default 15-min slots for the whole floor) ---
 //
 // A dine-in slot is a *seating window*, not an online-order throughput cap: it
 // holds one reservation per table (capacity = table count — see booking.ts).
 // Operators shouldn't have to hand-build the grid; by default every service
-// day carries a slot every 30 minutes across the open window, and a specific
+// day carries a slot every 15 minutes across the open window, and a specific
 // window is made unavailable by flipping its status to "draft" (persisted),
 // never by deleting it (ensure would just recreate it). This keeps the model
 // "everything's open unless you close it".
-const DINE_IN_SLOT_STEP_MIN = 30;
+//
+// Step is 15 min to match the table turnaround (TABLE_TURNAROUND_MIN): a
+// 90-min booking frees its table at :45 past the next hour, so the grid needs a
+// :45 window to offer it — a 30-min grid would strand that freed seating.
+const DINE_IN_SLOT_STEP_MIN = 15;
 // Rolling booking window: the grid only opens today + the next 6 days (7 days
 // total). Beyond that, no dine-in windows are generated (and any left over are
 // pruned), so reservations can't be taken further out than a week.
@@ -741,7 +745,7 @@ export function dineInSlotId(locationSlug: string, date: string, time: string): 
   return `dine-${locationSlug}-${date}-${time.replace(":", "")}`;
 }
 
-/** Pure: the "HH:MM" seating windows for one day — every 30 min across the
+/** Pure: the "HH:MM" seating windows for one day — every 15 min across the
  *  full open window, open through close inclusive (12:00–23:00 → 12:00…23:00).
  *  Falls back to 12:00–23:00 when hours are missing. */
 export function dineInGridTimes(
@@ -756,7 +760,7 @@ export function dineInGridTimes(
 
 /**
  * Idempotently materialise the default dine-in grid for one location/day:
- * a slot every 30 minutes across the full open window (open through close
+ * a slot every 15 minutes across the full open window (open through close
  * inclusive), capacity = the number of tables on the floor. Only for dates
  * inside the rolling 7-day booking window (today … +6) — beyond it no windows
  * are opened. Only *missing* windows are created — existing slots (including
