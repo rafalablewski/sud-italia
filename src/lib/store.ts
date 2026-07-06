@@ -746,10 +746,21 @@ export function dineInGridTimes(
  * Returns the day's full dine-in slot list (auto + any manual).
  */
 export async function ensureDineInSlots(locationSlug: string, date: string): Promise<TimeSlot[]> {
-  const loc = await getLocationAsync(locationSlug);
+  // Resolve the seating window from the CODE-defined opening hours (the
+  // authoritative seed in src/data/locations.ts), NOT the DB copy. The DB's
+  // marketing `hours` can drift from the intended service window — a seed
+  // captured at first deploy survives later redeploys and silently pinned the
+  // grid to old hours (e.g. 11:00). The grid is regenerated on every load, so
+  // deriving it from code keeps every day's windows correct and deployable
+  // without a DB migration. Locations that exist only in the DB (admin-added,
+  // not in code) still fall back to their stored hours.
+  const { locations: codeLocations } = await import("@/data/locations");
+  const hours =
+    codeLocations.find((l) => l.slug === locationSlug)?.hours ??
+    (await getLocationAsync(locationSlug))?.hours;
   const tables = await getTables(locationSlug);
   const capacity = Math.max(1, tables.length);
-  const gridTimes = dineInGridTimes(loc?.hours, date);
+  const gridTimes = dineInGridTimes(hours, date);
   const gridTimeSet = new Set(gridTimes);
   const autoPrefix = `dine-${locationSlug}-${date}-`;
   // slotIds carrying an active reservation must never be pruned (would orphan
