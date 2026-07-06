@@ -846,12 +846,25 @@ export function CoreBook({
               ) : (
                 <div className="core-bk-slotchips">
                   {dineInSlots.map((s) => {
-                    // Dine-in fill = tables booked at this slot ÷ tables on the
-                    // floor (real occupancy), NOT the online-order maxOrders cap —
-                    // which made a slot read "full" after a few bookings with the
-                    // floor mostly empty.
-                    const bookedTables = reservations.filter((r) => r.slotId === s.id && RES_HOLDS.has(r.status)).length;
+                    // Dine-in fill = tables physically OCCUPIED at this time ÷
+                    // tables on the floor (real occupancy), NOT the online-order
+                    // maxOrders cap. A reservation holds its table(s) for its full
+                    // duration, so a 12:00 · 2h booking blocks T1 through 14:00 —
+                    // count every active reservation whose window covers this slot,
+                    // not just the ones that START on it (which read 0 at 12:30).
+                    // Joined tables count too; dedupe by table id.
+                    const slotMin = toMin(s.time);
+                    const occupied = new Set<string>();
+                    for (const r of reservations) {
+                      if (!RES_HOLDS.has(r.status)) continue;
+                      const start = toMin(r.time);
+                      if (slotMin >= start && slotMin < start + (r.durationMin ?? DURATION_MIN)) {
+                        if (r.tableId) occupied.add(r.tableId);
+                        for (const id of r.joinedTableIds ?? []) occupied.add(id);
+                      }
+                    }
                     const capacity = Math.max(1, tables.length);
+                    const bookedTables = Math.min(occupied.size, capacity);
                     const fill = bookedTables / capacity;
                     const tier = fill >= 1 ? "full" : fill >= 0.85 ? "warm" : fill >= 0.6 ? "mid" : "ok";
                     const on = slotId === s.id;
