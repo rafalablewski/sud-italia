@@ -67,15 +67,17 @@ export function CoreDateField({
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [root, setRoot] = useState<Element | null>(null);
   // `today` is timezone-dependent, so seed it on the client only — a server
-  // (UTC) value would mismatch the first client render and trip hydration.
-  const [todayIso, setTodayIso] = useState("");
+  // (UTC) value would mismatch the first client render and trip hydration. Held
+  // as a Date (with the ISO derived) so the handlers don't re-parse a string.
+  const [today, setToday] = useState<Date | null>(null);
+  const todayIso = useMemo(() => (today ? toIso(today) : ""), [today]);
   // The month the grid shows; re-seeded from the value each time the sheet opens.
   const [month, setMonth] = useState<Date>(() => startOfMonth(parseIso(value) ?? new Date(2000, 0, 1)));
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setRoot(document.querySelector(".core") ?? document.body);
-    setTodayIso(toIso(new Date()));
+    setToday(new Date());
   }, []);
 
   const sel = parseIso(value);
@@ -97,7 +99,7 @@ export function CoreDateField({
   const marked = useMemo(() => new Set(markedDates ?? []), [markedDates]);
 
   const step = (n: number) => {
-    const base = sel ?? parseIso(todayIso) ?? new Date();
+    const base = sel ?? today ?? new Date();
     onChange(toIso(addDays(base, n)));
   };
   const pick = (iso: string) => {
@@ -105,7 +107,7 @@ export function CoreDateField({
     setOpen(false);
   };
   const jump = (offset: number) => {
-    const base = parseIso(todayIso) ?? new Date();
+    const base = today ?? new Date();
     pick(toIso(addDays(base, offset)));
   };
 
@@ -118,7 +120,7 @@ export function CoreDateField({
   }, []);
   const toggle = () => {
     if (!open) {
-      setMonth(startOfMonth(sel ?? parseIso(todayIso) ?? new Date()));
+      setMonth(startOfMonth(sel ?? today ?? new Date()));
       place();
     }
     setOpen((o) => !o);
@@ -208,7 +210,7 @@ export function CoreDateField({
               {/* quick chips */}
               <div className="core-df-chips">
                 {QUICK.map((q) => {
-                  const on = todayIso && value === toIso(addDays(parseIso(todayIso)!, q.off));
+                  const on = today && value === toIso(addDays(today, q.off));
                   return (
                     <button key={q.label} type="button" className={on ? "core-df-chip on" : "core-df-chip"} onClick={() => jump(q.off)}>
                       {q.label}
