@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" class="core" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service · Book — Stepper + quick chips + full calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CORE tokens — verbatim from src/app/themes/core/tokens.css
+   ============================================================ */
+.core {
+  --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --ui: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --on-accent: #2a160b; --on-basil: #0c1a0f; --on-danger: #fff4f0;
+  --r-sm: 7px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --pill: 999px;
+  --fast: 130ms cubic-bezier(.3, .7, 0, 1);
+  --base: 200ms cubic-bezier(.3, .7, 0, 1);
+}
+.core, .core[data-theme="dark"] {
+  --bg: #15110d; --panel: #1f1a14; --panel-2: #28211a; --panel-3: #322a21;
+  --hover: #3a3026; --ink: #f8f1e7; --ink-2: #c9bba9; --ink-3: #908172;
+  --line: rgba(255,247,235,.10); --line-2: rgba(255,247,235,.18);
+  --brand: #e86b3e; --brand-bright: #ff905e; --brand-wash: rgba(232,107,62,.16);
+  --basil: #6fb155; --basil-wash: rgba(111,177,85,.16);
+  --amber: #e8a23c; --amber-wash: rgba(232,162,60,.16);
+  --info: #3fa7ce; --info-wash: rgba(63,167,206,.18);
+  --danger: #e5484a; --danger-wash: rgba(229,72,74,.18);
+  --sh-1: 0 1px 2px rgba(0,0,0,.4); --sh-2: 0 6px 18px rgba(0,0,0,.5);
+  --sh-pop: 0 20px 50px rgba(0,0,0,.6);
+}
+.core[data-theme="light"] {
+  --bg: #fbf5ec; --panel: #ffffff; --panel-2: #f7f0e6; --panel-3: #efe6d9;
+  --hover: #f3eadc; --ink: #241a12; --ink-2: #5e5040; --ink-3: #8c7c69;
+  --line: rgba(40,26,16,.10); --line-2: rgba(40,26,16,.17);
+  --brand: #d85f2e; --brand-bright: #e86b3e; --brand-wash: #fbede3;
+  --basil: #46934f; --basil-wash: #eaf3e1;
+  --amber: #c2841c; --amber-wash: #faf0da;
+  --info: #2e86ae; --info-wash: #e6f2f7;
+  --danger: #d23b3d; --danger-wash: #fbe9e6;
+  --sh-1: 0 1px 2px rgba(40,26,16,.07);
+  --sh-2: 0 4px 14px rgba(40,26,16,.10), 0 1px 3px rgba(40,26,16,.08);
+  --sh-pop: 0 18px 48px rgba(40,26,16,.18);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; min-height: 100vh; }
+.page { max-width: 980px; margin: 0 auto; padding: 40px 28px 96px; }
+
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 34px; }
+.masthead .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); margin: 0 0 6px; }
+.masthead h1 { font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: -.02em; margin: 0; }
+.masthead p { color: var(--ink-2); font-size: 14px; margin: 8px 0 0; max-width: 560px; line-height: 1.5; }
+.themetoggle { display: flex; gap: 4px; padding: 4px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); }
+.themetoggle button { font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; border: 0; padding: 7px 14px; border-radius: var(--pill); cursor: pointer; transition: var(--fast); }
+.themetoggle button.on { background: var(--brand); color: var(--on-accent); }
+
+.sectlab { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 40px 0 14px; display: flex; align-items: center; gap: 10px; }
+.sectlab::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.sectlab:first-of-type { margin-top: 0; }
+
+/* ---- faux Book toolbar (in-context, collapsed) ---- */
+.bookbar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-1); flex-wrap: wrap; }
+.bookbar .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
+.seg { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+.seg button { font-family: var(--ui); font-size: 12.5px; font-weight: 600; text-transform: capitalize; color: var(--ink-3); background: transparent; border: 0; padding: 8px 14px; cursor: pointer; transition: var(--fast); border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--brand); color: var(--on-accent); }
+.bookbar .spacer { flex: 1; }
+.bookbar .ghostpill { font-family: var(--ui); font-size: 12.5px; font-weight: 600; color: var(--on-accent); background: var(--brand); border: 0; border-radius: var(--r-sm); padding: 8px 14px; }
+
+/* ============================================================
+   THE CONTROL — collapsed toolbar trigger
+   ============================================================ */
+.dsx { position: relative; font-family: var(--ui); }
+.dsx-trigger {
+  display: inline-flex; align-items: center; gap: 4px; height: 38px; padding: 0 4px 0 6px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+}
+.dsx-step {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 30px;
+  color: var(--ink-3); background: transparent; border: 0; border-radius: var(--r-sm); cursor: pointer; transition: var(--fast);
+}
+.dsx-step:hover { background: var(--hover); color: var(--ink); }
+.dsx-step svg { width: 14px; height: 14px; }
+.dsx-face {
+  display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 10px; margin: 0 1px;
+  background: transparent; border: 0; border-radius: var(--r-sm); cursor: pointer; transition: var(--fast);
+}
+.dsx-face:hover { background: var(--hover); }
+.dsx-face .cal { color: var(--brand); display: inline-flex; }
+.dsx-face .cal svg { width: 14px; height: 14px; }
+.dsx-face .dv { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--ink); letter-spacing: .01em; }
+.dsx-face .rel { font-family: var(--mono); font-size: 10px; color: var(--ink-3); border-left: 1px solid var(--line); padding-left: 9px; }
+.dsx-face .chev { color: var(--ink-3); display: inline-flex; transition: var(--fast); }
+.dsx-face .chev svg { width: 12px; height: 12px; }
+.dsx[data-open="true"] .dsx-face .chev { transform: rotate(180deg); }
+
+/* ============================================================
+   THE SHEET — stepper header + quick chips + full month grid
+   ============================================================ */
+.dsx-sheet {
+  width: 320px; background: var(--panel); border: 1px solid var(--line-2);
+  border-radius: var(--r-lg); box-shadow: var(--sh-pop); padding: 16px;
+}
+/* as a popover under the collapsed trigger */
+.dsx-pop {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 40;
+  transform: scale(.97); transform-origin: top left; opacity: 0; pointer-events: none; transition: var(--fast);
+}
+.dsx[data-open="true"] .dsx-pop { opacity: 1; pointer-events: auto; transform: scale(1); }
+
+/* stepper header */
+.dsx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dsx-nav {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; transition: var(--fast); flex: none;
+}
+.dsx-nav:hover { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
+.dsx-nav:active { transform: translateY(1px); }
+.dsx-nav svg { width: 18px; height: 18px; }
+.dsx-disp { text-align: center; flex: 1; min-width: 0; }
+.dsx-disp .dow { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); }
+.dsx-disp .num { font-family: var(--display); font-weight: 800; font-size: 46px; line-height: .95; letter-spacing: -.03em; margin: 1px 0 2px; }
+.dsx-disp .mon { font-family: var(--ui); font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+
+/* quick chips */
+.dsx-chips { display: flex; gap: 6px; margin-top: 14px; }
+.dsx-chip {
+  flex: 1; font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill);
+  padding: 8px 6px; cursor: pointer; transition: var(--fast); white-space: nowrap;
+}
+.dsx-chip:hover { background: var(--hover); color: var(--ink); }
+.dsx-chip.on { background: var(--brand-wash); color: var(--brand); border-color: var(--brand); }
+
+/* divider */
+.dsx-rule { height: 1px; background: var(--line); margin: 14px -16px; }
+
+/* month calendar */
+.dsx-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dsx-cal-head .mlabel { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.dsx-mnav { display: flex; gap: 4px; }
+.dsx-mbtn {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm);
+  background: transparent; border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; transition: var(--fast);
+}
+.dsx-mbtn:hover { background: var(--panel-2); color: var(--ink); border-color: var(--line-2); }
+.dsx-mbtn svg { width: 13px; height: 13px; }
+.dsx-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dsx-grid .wd { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); text-align: center; padding: 3px 0 6px; }
+.dsx-grid .cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;
+  font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); border-radius: var(--r-sm);
+  border: 1px solid transparent; cursor: pointer; transition: var(--fast);
+}
+.dsx-grid .cell:hover { background: var(--panel-2); color: var(--ink); }
+.dsx-grid .cell.out { color: var(--ink-3); opacity: .34; }
+.dsx-grid .cell.today { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+.dsx-grid .cell.sel { background: var(--brand); color: var(--on-accent); border-color: var(--brand); font-weight: 600; }
+.dsx-grid .cell.sel.today { border-color: var(--brand-bright); }
+/* a small dot for days that carry bookings (illustrative, ties it to Book) */
+.dsx-grid .cell .bk { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--basil); }
+.dsx-grid .cell.sel .bk { background: var(--on-accent); opacity: .7; }
+
+.readout { margin-top: 16px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.readout b { color: var(--basil); font-weight: 600; }
+
+.note { margin-top: 12px; color: var(--ink-3); font-size: 12.5px; line-height: 1.55; max-width: 560px; }
+.note b { color: var(--ink-2); }
+
+.footnote { margin-top: 44px; color: var(--ink-3); font-size: 12px; line-height: 1.6; font-family: var(--mono); text-align: center; }
+.footnote b { color: var(--ink-2); }
+
+.stage { display: flex; align-items: flex-start; gap: 40px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Service · Book</p>
+      <h1>Stepper + quick chips + full calendar</h1>
+      <p>The chosen day picker: a big <b style="color:var(--ink)">stepper</b> (weekday · date · month with ‹ › day arrows), <b style="color:var(--ink)">Today / Tomorrow / +1 week</b> quick chips, and the <b style="color:var(--ink)">full month calendar</b> right below — one control, all interactive.</p>
+    </div>
+    <div class="themetoggle" role="group" aria-label="Theme">
+      <button data-theme-set="dark" class="on">Dark</button>
+      <button data-theme-set="light">Light</button>
+    </div>
+  </header>
+
+  <!-- ============ IN CONTEXT ============ -->
+  <div class="sectlab">In the Book toolbar — collapsed</div>
+  <div class="bookbar">
+    <span class="eyebrow">Service · Book</span>
+    <div class="seg" role="tablist" aria-label="View">
+      <button class="on">timeline</button>
+      <button>floor</button>
+      <button>arrivals</button>
+    </div>
+
+    <!-- the control, collapsed trigger; opens the sheet as a popover -->
+    <div class="dsx" id="ctlBar" data-open="false">
+      <div class="dsx-trigger">
+        <button class="dsx-step" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="dsx-face" data-toggle aria-label="Open calendar">
+          <span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4M16 2v4M3 8h18M4 6h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></span>
+          <span class="dv" data-role="dv">—</span>
+          <span class="rel" data-role="rel">—</span>
+          <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></span>
+        </button>
+        <button class="dsx-step" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+
+      <div class="dsx-pop">
+        <div class="dsx-sheet" data-sheet></div>
+      </div>
+    </div>
+
+    <span class="spacer"></span>
+    <span class="ghostpill">+ New reservation</span>
+  </div>
+  <p class="note"><b>How it behaves:</b> the arrows step a day without opening anything. Tapping the date (or chevron) drops the full sheet — chips + month grid — as a popover. Pick a day and it closes; the readout stays in sync across every surface below.</p>
+
+  <!-- ============ THE FULL CALENDAR, OPEN ============ -->
+  <div class="sectlab">The full calendar — expanded</div>
+  <div class="stage">
+    <div class="dsx-sheet" data-sheet style="box-shadow: var(--sh-2)"></div>
+    <div>
+      <p class="note" style="margin-top:0"><b>Top:</b> the stepper — oversized date numeral with the weekday above and month below; round ‹ › arrows step one day and fill ember on hover.</p>
+      <p class="note"><b>Middle:</b> Today / Tomorrow / +1 week chips — one tap for the days a host books most; the matching chip lights up when you land on it.</p>
+      <p class="note"><b>Bottom:</b> the full month grid — today is ember-outlined, the selected day is filled, and days already carrying bookings wear a basil dot (wired to real reservations in the live build). Month arrows jump ahead without changing the selected day until you click one.</p>
+      <div class="readout">selected · <b data-role="iso">—</b></div>
+    </div>
+  </div>
+
+  <p class="footnote">Built on <b>src/app/themes/core/tokens.css</b> · replaces <b>CoreDateField</b> in <b>Service · Book</b> · both sheets are one component, one shared date · toggle Dark/Light above.</p>
+</div>
+
+<script>
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONFULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const today = new Date(2026, 6, 6);      // Mon 6 Jul 2026 — matches the screenshot
+let cur = new Date(2026, 6, 6);          // selected day (shared across all instances)
+let month = new Date(cur.getFullYear(), cur.getMonth(), 1); // month the grid is showing
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const same = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const fmtShort = d => `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`;
+function relLabel(d) {
+  const days = Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - new Date(today.getFullYear(),today.getMonth(),today.getDate())) / 86400000);
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "yesterday";
+  if (days > 1) return `+${days}d`;
+  return `${days}d`;
+}
+/* illustrative "has bookings" set — a few days near today, so the basil dots read
+   like the real thing (live build reads reservations per day). */
+const BOOKED = new Set([2,4,6,7,9,11,14,18,21].map(n => iso(new Date(2026,6,n))));
+
+const CHIPS = [
+  { label: "Today", off: 0 },
+  { label: "Tomorrow", off: 1 },
+  { label: "+1 week", off: 7 },
+];
+
+function sheetHTML() {
+  return `
+    <div class="dsx-head">
+      <button class="dsx-nav" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="dsx-disp">
+        <div class="dow" data-role="dow"></div>
+        <div class="num" data-role="num"></div>
+        <div class="mon" data-role="mon"></div>
+      </div>
+      <button class="dsx-nav" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <div class="dsx-chips">
+      ${CHIPS.map((c,i) => `<button class="dsx-chip" data-chip="${i}">${c.label}</button>`).join("")}
+    </div>
+    <div class="dsx-rule"></div>
+    <div class="dsx-cal-head">
+      <span class="mlabel" data-role="mlabel"></span>
+      <div class="dsx-mnav">
+        <button class="dsx-mbtn" data-mnav="-1" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="dsx-mbtn" data-mnav="1" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
+    <div class="dsx-grid" data-role="grid"></div>`;
+}
+
+function paint() {
+  document.querySelectorAll("[data-sheet]").forEach(sheet => {
+    if (!sheet.dataset.built) { sheet.innerHTML = sheetHTML(); sheet.dataset.built = "1"; wireSheet(sheet); }
+    sheet.querySelector('[data-role="dow"]').textContent = DOW[cur.getDay()];
+    sheet.querySelector('[data-role="num"]').textContent = cur.getDate();
+    sheet.querySelector('[data-role="mon"]').textContent = MONFULL[cur.getMonth()] + " " + cur.getFullYear();
+    sheet.querySelector('[data-role="mlabel"]').textContent = MONFULL[month.getMonth()] + " " + month.getFullYear();
+    sheet.querySelectorAll("[data-chip]").forEach(ch => {
+      const d = addDays(today, CHIPS[+ch.dataset.chip].off);
+      ch.classList.toggle("on", same(d, cur));
+    });
+    buildGrid(sheet.querySelector('[data-role="grid"]'));
+  });
+  // collapsed toolbar trigger
+  document.querySelectorAll('#ctlBar [data-role="dv"]').forEach(e => e.textContent = fmtShort(cur));
+  document.querySelectorAll('#ctlBar [data-role="rel"]').forEach(e => e.textContent = relLabel(cur));
+  // readouts
+  document.querySelectorAll('[data-role="iso"]').forEach(e => e.textContent = fmtShort(cur) + "  ·  " + iso(cur));
+}
+
+function buildGrid(grid) {
+  const y = month.getFullYear(), m = month.getMonth();
+  const first = new Date(y, m, 1);
+  const startPad = (first.getDay() + 6) % 7; // Monday-first
+  const gridStart = addDays(first, -startPad);
+  const wds = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  let html = wds.map(w => `<div class="wd">${w}</div>`).join("");
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(gridStart, i);
+    const out = d.getMonth() !== m;
+    const cls = ["cell"];
+    if (out) cls.push("out");
+    if (same(d, today)) cls.push("today");
+    if (same(d, cur)) cls.push("sel");
+    const dot = BOOKED.has(iso(d)) && !out ? '<span class="bk"></span>' : "";
+    html += `<div class="${cls.join(" ")}" data-d="${iso(d)}">${d.getDate()}${dot}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function setCur(d) { cur = d; month = new Date(d.getFullYear(), d.getMonth(), 1); paint(); }
+
+function wireSheet(sheet) {
+  sheet.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => setCur(addDays(cur, +b.dataset.nav))));
+  sheet.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => setCur(addDays(today, CHIPS[+b.dataset.chip].off))));
+  sheet.querySelectorAll("[data-mnav]").forEach(b => b.addEventListener("click", () => { month = new Date(month.getFullYear(), month.getMonth() + (+b.dataset.mnav), 1); paint(); }));
+  sheet.addEventListener("click", e => {
+    const cell = e.target.closest(".cell"); if (!cell) return;
+    const [Y,M,D] = cell.dataset.d.split("-").map(Number);
+    setCur(new Date(Y, M-1, D));
+    // if this sheet is inside the popover, close it after a pick
+    const dsx = sheet.closest(".dsx"); if (dsx) dsx.dataset.open = "false";
+  });
+}
+
+/* collapsed toolbar control: arrows + open/close */
+const ctl = document.getElementById("ctlBar");
+ctl.querySelectorAll(".dsx-trigger [data-nav]").forEach(b => b.addEventListener("click", () => setCur(addDays(cur, +b.dataset.nav))));
+ctl.querySelector("[data-toggle]").addEventListener("click", e => { e.stopPropagation(); ctl.dataset.open = ctl.dataset.open === "true" ? "false" : "true"; });
+document.addEventListener("click", e => { if (!ctl.contains(e.target)) ctl.dataset.open = "false"; });
+
+/* theme toggle */
+document.querySelectorAll("[data-theme-set]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.setAttribute("data-theme", b.dataset.themeSet);
+  document.querySelectorAll("[data-theme-set]").forEach(x => x.classList.toggle("on", x === b));
+}));
+
+paint();
+</script>
+</body>
+</html>
