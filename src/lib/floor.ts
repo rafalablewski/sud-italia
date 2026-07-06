@@ -31,9 +31,17 @@ export function windowsOverlap(
  *  no-show bookings free it, so they never clash. */
 const HOLDS_TABLE: Reservation["status"][] = ["booked", "seated"];
 
+/** Minutes a table is held AFTER a booking ends before the next party can be
+ *  seated: staff need to clear + reset, and a too-tight turn cascades delays.
+ *  So two bookings on the same table must sit at least this far apart — a
+ *  booking effectively occupies its table for `durationMin + turnaround`. */
+export const TABLE_TURNAROUND_MIN = 15;
+
 /**
  * Other active reservations on the same table + date whose time window overlaps
- * `candidate` — i.e. a double-booking. An unassigned booking (no tableId) can't
+ * `candidate` — i.e. a double-booking OR a turnaround too tight for staff to
+ * clean between them (each booking reserves its slot + a 15-min cleanup tail,
+ * so back-to-back bookings clash). An unassigned booking (no tableId) can't
  * clash a table, so it returns none.
  */
 export function findReservationConflicts(
@@ -54,6 +62,13 @@ export function findReservationConflicts(
       r.locationSlug === candidate.locationSlug &&
       r.date === candidate.date &&
       HOLDS_TABLE.includes(r.status) &&
-      windowsOverlap(start, candidate.durationMin, timeToMinutes(r.time), r.durationMin),
+      // Each side carries its cleanup tail, so a 15-min gap is required between
+      // consecutive bookings, not just non-overlap.
+      windowsOverlap(
+        start,
+        candidate.durationMin + TABLE_TURNAROUND_MIN,
+        timeToMinutes(r.time),
+        r.durationMin + TABLE_TURNAROUND_MIN,
+      ),
   );
 }

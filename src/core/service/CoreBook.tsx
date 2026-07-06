@@ -12,7 +12,7 @@ import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useLocation } from "@/shared/LocationContext";
-import { findReservationConflicts } from "@/lib/floor";
+import { findReservationConflicts, TABLE_TURNAROUND_MIN } from "@/lib/floor";
 import { buildTableSessions } from "@/lib/table-session";
 import {
   suggestTables,
@@ -849,16 +849,17 @@ export function CoreBook({
                     // Dine-in fill = tables physically OCCUPIED at this time ÷
                     // tables on the floor (real occupancy), NOT the online-order
                     // maxOrders cap. A reservation holds its table(s) for its full
-                    // duration, so a 12:00 · 2h booking blocks T1 through 14:00 —
-                    // count every active reservation whose window covers this slot,
-                    // not just the ones that START on it (which read 0 at 12:30).
-                    // Joined tables count too; dedupe by table id.
+                    // duration PLUS a 15-min cleanup turnaround, so a 12:00 · 90m
+                    // booking blocks T1 through 13:45 (unseatable at 13:30) — count
+                    // every active reservation whose window+turnaround covers this
+                    // slot, not just the ones that START on it (which read 0 at
+                    // 12:30). Joined tables count too; dedupe by table id.
                     const slotMin = toMin(s.time);
                     const occupied = new Set<string>();
                     for (const r of reservations) {
                       if (!RES_HOLDS.has(r.status)) continue;
                       const start = toMin(r.time);
-                      if (slotMin >= start && slotMin < start + (r.durationMin ?? DURATION_MIN)) {
+                      if (slotMin >= start && slotMin < start + (r.durationMin ?? DURATION_MIN) + TABLE_TURNAROUND_MIN) {
                         if (r.tableId) occupied.add(r.tableId);
                         for (const id of r.joinedTableIds ?? []) occupied.add(id);
                       }

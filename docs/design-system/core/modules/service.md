@@ -180,7 +180,10 @@ open floored to the hour, close ceiled to the next tick, a 12:00→23:00
 lunch→dinner default when the day is empty; this replaced a hardcoded 17:00→23:00
 band that hid every lunch/afternoon booking): reservation **blocks** are
 positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
-live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
+live (`.conflict`, one `findReservationConflicts` pass per booking — which also
+flags a **too-tight turnaround**: same-table bookings must sit ≥`TABLE_TURNAROUND_MIN`
+(15 min) apart so staff can clear + reset, so back-to-back bookings clash even
+without overlapping), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
 upsert with `override`). A live **"now" line** (`.core-bk-now` inside the
 relative `.core-bk-tlbody`) runs down the grid at the current clock position —
