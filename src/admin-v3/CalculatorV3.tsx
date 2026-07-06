@@ -1329,7 +1329,15 @@ export function CalculatorV3() {
                           <span style={{ color: "var(--av3-muted)" }}>Upfront capital</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.upfrontCapitalGrosze)}</span>
                           <span style={{ color: "var(--av3-muted)" }}>Net profit / mo</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: sc.monthlyNetProfitGrosze >= 0 ? "var(--av3-fg)" : "var(--av3-bad)" }}>{money(sc.monthlyNetProfitGrosze)}</span>
                           <span style={{ color: "var(--av3-muted)" }}>{premInvest.horizonYears}-yr cash flow</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.totalCashFlowGrosze)}</span>
-                          <span style={{ color: "var(--av3-muted)" }} title="Building equity (appreciated price − remaining loan) or the refundable deposit for rent.">Terminal asset</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.terminalAssetGrosze)}</span>
+                          {sc.mode === "rent" ? (
+                            <><span style={{ color: "var(--av3-muted)" }} title="No property is owned when renting — only the refundable deposit comes back. No appreciation accrues to you.">Deposit back (no property)</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.terminalAssetGrosze)}</span></>
+                          ) : (
+                            <>
+                              <span style={{ color: "var(--av3-muted)" }} title={`Purchase price grown at the appreciation rate for ${premInvest.horizonYears} years — the market value of the building you own at the end.`}>Property @ yr {premInvest.horizonYears} (appreciated)</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-ok)" }}>{money(sc.terminalPropertyValueGrosze)}</span>
+                              {sc.terminalLoanBalanceGrosze > 0 && <><span style={{ color: "var(--av3-muted)" }} title="Mortgage still outstanding at the end of the horizon — subtracted from the property value to give your equity.">− loan still owed</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-bad)" }}>{money(sc.terminalLoanBalanceGrosze)}</span></>}
+                              <span style={{ color: "var(--av3-muted)" }} title="Building equity you walk away with = appreciated property value − remaining loan.">= Terminal equity</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.terminalAssetGrosze)}</span>
+                            </>
+                          )}
                           <span style={{ color: "var(--av3-fg)", fontWeight: 600 }}>Total wealth</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", fontWeight: 600 }}>{money(sc.terminalWealthGrosze)}</span>
                           <span style={{ color: "var(--av3-muted)" }}>Money multiple</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{sc.moneyMultiple > 0 ? `${sc.moneyMultiple.toFixed(2)}×` : "—"}</span>
                         </div>

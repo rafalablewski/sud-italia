@@ -1412,7 +1412,12 @@ auth canvas's signature lighting and the sign-in lockup:
   benchmark compounds the same upfront capital and sweeps the business's cash flow
   into that instrument so the green/red **edge** is like-for-like. Three scenario
   cards reuse the `av3-scn` grid (the live mode gets the `live` badge, a
-  loss-making mode a `bad` badge) with a five-section ⓘ (Rule #12). The Investor-
+  loss-making mode a `bad` badge) with a five-section ⓘ (Rule #12). Each card
+  breaks the terminal asset out line-by-line so the appreciation is visible: the
+  owned modes show **Property @ yr N (appreciated)** → **− loan still owed**
+  (mortgage only) → **= Terminal equity**, while rent shows **Deposit back (no
+  property)** — making explicit that only buyers capture the unit's appreciation.
+  The Investor-
   returns principal-netting and the detailed-P&L building-deprec./interest rows
   switched from `mode === "buy"` to the mortgage/owned check accordingly. Store
   defaults + `hydratePremises` carry the new fields (appreciation 4%, horizon 10y,
