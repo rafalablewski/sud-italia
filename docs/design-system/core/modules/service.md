@@ -1,11 +1,17 @@
 # Core · Service
 
 The merged Tables + Slots surface. `/core/service` (redirects to Tables).
-Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Tables · Slots · Dispatch**. (Book moved here from the top-level Lens Rail / the Guest hub — it is a Service view, reached from the Tables lens, and is no longer its own lens.)
+Three nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book · Slots · Dispatch**. The **Tables** tab was retired — its floor-plan manager is now **embedded inside Book, below the timeline** (`<CoreTables embedded />`), and its stat KPIs (zones · out-of-service · seats) fold into Book's summary strip. `/core/service/tables` redirects to Book; `ServiceView` keeps the `"tables"` key only so the legacy standalone render path still type-checks.
 
-## Tables (`/core/service/tables`) — wired
+## Tables — the floor-plan manager (embedded in Book)
 
-- **Live code:** `src/core/service/CoreTables.tsx`.
+- **Live code:** `src/core/service/CoreTables.tsx` — `CoreTables({ embedded })`.
+  With `embedded` it returns just the management body (a `.core-bk-tablesmgr`
+  section: divlabel + the `.core-surf-toolbar` actions + `.core-floor` grid +
+  `TableDialog`, **no CoreShell, no stat strip** — those KPIs live in Book's
+  summary strip). Without the prop it still renders a standalone page (used only
+  by the now-redirecting route). Book imports it and drops `<CoreTables embedded />`
+  full-width (`grid-column: 1 / -1`) after the timeline sub-grid on the Timeline lens.
 - **Theme:** `.core-surf-toolbar` ActionBar (with the **`Zone` scope switch** as
   a `.core-seg` in its `left`) ·
   `.core-surf-toolbar` (Refresh · Add zone · Add table, right) · `.core-statstrip` ·
@@ -142,10 +148,11 @@ in one move) is the **Book** view — see below.
 eyebrow `Service · Book`), alongside Floor · Slots · Dispatch. Legacy
 `/core/book` and `/core/guest/book` redirect here. Rendered in the
 **dense-console** language (mockup 11-book): the `.core-surf-toolbar` ActionBar
-(its `left` led by the View switch — timeline/floor/arrivals), then a **12-cell
-`.core-statstrip.is-wrap`** day summary — **tables · reservations · walk-ins ·
+(its `left` led by the View switch — timeline/floor/arrivals), then a **13-cell
+`.core-statstrip.is-wrap`** day summary — **tables · zones · reservations · walk-ins ·
 covers · seated · upcoming · no-shows · orders · avg/table · avg order · revenue ·
-fill**. Reservations vs walk-ins split on `Reservation.source`; covers carries
+fill** (zones + the out-of-service count fold in from the retired Tables tab).
+Reservations vs walk-ins split on `Reservation.source`; covers carries
 avg party; tables shows in-service + total seats. The **orders / avg-per-table /
 avg-check / revenue** cells come from the day's real **dine-in orders** (fetched
 from `/api/admin/orders`, filtered to `fulfillmentType === "dine-in"` on the

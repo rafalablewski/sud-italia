@@ -36,6 +36,7 @@ import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type 
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 import { tLabel } from "./tableLabel";
+import { CoreTables } from "./CoreTables";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
@@ -279,6 +280,9 @@ export function CoreBook({
     const resProper = active.length - walkIns;
     const totalSeats = tables.reduce((s, t) => s + (t.seats || 0), 0);
     const inService = tables.filter((t) => t.status !== "out-of-service").length;
+    const oos = tables.length - inService;
+    // Table-plan KPIs folded in from the (retired) Tables tab.
+    const zones = new Set(tables.map((t) => (t.zone ?? "").trim()).filter(Boolean)).size;
     const nextUp = reservations.filter((r) => r.status === "booked").map((r) => r.time).sort()[0];
     return {
       bookings: active.length,
@@ -291,6 +295,8 @@ export function CoreBook({
       nextUp,
       tables: tables.length,
       inService,
+      oos,
+      zones,
       totalSeats,
       avgParty: active.length ? covers / active.length : 0,
       fill: totalSeats ? Math.round((covers / totalSeats) * 100) : 0,
@@ -676,6 +682,11 @@ export function CoreBook({
             <span className="delta">{bookStat.inService} in service · {bookStat.totalSeats} seats</span>
           </div>
           <div className="cell">
+            <span className="lab">Zones</span>
+            <span className="val">{bookStat.zones}</span>
+            <span className="delta">{bookStat.oos > 0 ? `${bookStat.oos} out of service` : "all in service"}</span>
+          </div>
+          <div className="cell">
             <span className="lab">Reservations</span>
             <span className="val">{bookStat.reservations}</span>
             <span className="delta">{dineInSlots.length} slot{dineInSlots.length === 1 ? "" : "s"}</span>
@@ -732,9 +743,10 @@ export function CoreBook({
           </div>
         </div>
         {viewMode === "timeline" && (
-        // timeline + form in their OWN 2-col sub-grid, so the full-width
-        // "Today's bookings" list below is unambiguously beneath them and can
-        // never interleave / overlap the tall reservation form.
+        <>
+        {/* timeline + form in their OWN 2-col sub-grid, so what's below them (the
+            full-width table-plan manager) is unambiguously beneath and can never
+            interleave / overlap the tall reservation form. */}
         <div className="core-book-tlform">
         {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
@@ -1027,6 +1039,10 @@ export function CoreBook({
           </div>
         </div>
         </div>
+        {/* the floor-plan manager (moved from the retired Tables tab) — full-width
+            below the timeline; its stat KPIs are folded into the summary strip. */}
+        <CoreTables embedded />
+        </>
         )}
 
         {/* FLOOR lens — spatial live occupancy from the shared TableSession

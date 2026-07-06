@@ -45,7 +45,10 @@ const FEATURE_GLYPH: Record<TableFeature, string> = {
 // Tables still reference a zone by NAME (`FloorTable.zone`).
 type Zone = { id: string; name: string; position: number };
 
-export function CoreTables() {
+/** `embedded` renders just the management body (no CoreShell, no stat strip) so
+ *  it can live inside Book below the timeline — the strip's table KPIs are folded
+ *  into Book's summary strip instead. Standalone (no prop) keeps its own page. */
+export function CoreTables({ embedded = false }: { embedded?: boolean } = {}) {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
@@ -320,12 +323,10 @@ export function CoreTables() {
     );
   };
 
-  return (
-    <CoreShell
-      eyebrow="Service · Tables"
-      tabs={serviceTabs("tables")}
-    >
-      <div className="core-guest-inbox">
+  const body = (
+    <>
+      <div className={embedded ? "core-bk-tablesmgr" : "core-guest-inbox"}>
+        {embedded && <div className="core-bk-divlabel">Tables — the floor plan · zones · seats · accessibility</div>}
         {/* Unified ActionBar — identity (Service · Tables) · the Zone scope
             switch (when >1 zone) on the left · actions (Refresh · Add table). */}
         <CoreSurfToolbar
@@ -359,8 +360,9 @@ export function CoreTables() {
 
         {/* dense-console stat strip — every figure from the table catalogue
             (Rule #1): Tables · Seats · Zones · Available · Out of service ·
-            Accessible. No live occupancy — this is the plan, not the room. */}
-        <div className="core-statstrip" role="group" aria-label="Table plan">
+            Accessible. No live occupancy — this is the plan, not the room.
+            Hidden when embedded in Book: those KPIs fold into Book's summary strip. */}
+        {!embedded && <div className="core-statstrip" role="group" aria-label="Table plan">
           <div className="cell">
             <span className="lab">Tables</span>
             <span className="val info">{tables ? stats.count : "—"}</span>
@@ -391,7 +393,7 @@ export function CoreTables() {
             <span className="val brand">{tables ? stats.accessible : "—"}</span>
             <span className="delta">{tables ? "with features" : ""}</span>
           </div>
-        </div>
+        </div>}
 
         <div className="core-floor">
           {!tables && error ? (
@@ -435,6 +437,13 @@ export function CoreTables() {
           void load();
         }}
       />
+    </>
+  );
+
+  if (embedded) return body;
+  return (
+    <CoreShell eyebrow="Service · Tables" tabs={serviceTabs("tables")}>
+      {body}
     </CoreShell>
   );
 }
