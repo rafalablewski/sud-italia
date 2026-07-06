@@ -410,6 +410,12 @@ export function CoreBook({
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, []);
+  // "Now" marker — a live line down the timeline at the current clock position.
+  // Only when viewing today and the clock sits inside the drawn window; nowMin
+  // is 0 until the client clock seeds above (< OPEN), so it stays hidden through
+  // SSR + first paint (no hydration mismatch).
+  const showNow = isToday && nowMin >= OPEN && nowMin <= CLOSE;
+  const nowLeft = LBL_W + ((nowMin - OPEN) / TICK_MIN) * TICK_W;
 
   // ── Seating actions — transition a booking through its lifecycle. The route
   // stamps seatedAt/completedAt; we resend the full record so nothing is lost.
@@ -754,6 +760,12 @@ export function CoreBook({
               <div className="hc" />
               {ticks.map((m, i) => <div key={m} className={`hc${i % 2 === 0 ? " hh" : ""}`}>{fmtHM(m)}</div>)}
             </div>
+            <div className="core-bk-tlbody">
+            {showNow && (
+              <div className="core-bk-now" style={{ left: `${nowLeft}px` }} aria-hidden>
+                <span className="core-bk-now-lbl">{fmtHM(nowMin)}</span>
+              </div>
+            )}
             {tables.length === 0 ? (
               <div className="core-ctx-empty pad">No tables configured.</div>
             ) : (
@@ -812,6 +824,7 @@ export function CoreBook({
                 );
               })
             )}
+            </div>{/* /core-bk-tlbody */}
           </div>
         </div>
         </div>{/* /core-book-tlpanel */}

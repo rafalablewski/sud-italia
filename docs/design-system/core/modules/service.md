@@ -182,7 +182,12 @@ band that hid every lunch/afternoon booking): reservation **blocks** are
 positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
-upsert with `override`). The timeline sits **left**; the **new-reservation form
+upsert with `override`). A live **"now" line** (`.core-bk-now` inside the
+relative `.core-bk-tlbody`) runs down the grid at the current clock position —
+a red rule with a top dot + `.core-bk-now-lbl` time pill, drawn above the blocks
+(z 5) but under the sticky Tn labels (z 6); shown only when the viewed date is
+today and the clock sits inside the window, and it re-seeds client-side (0 until
+mounted, so no SSR mismatch) and ticks with the shared 30s clock. The timeline sits **left**; the **new-reservation form
 is the right rail**. The timeline + form live in their **own 2-col sub-grid**
 (`.core-book-tlform`, `1fr 340px`) that spans the outer `.core-book` grid
 (`grid-column: 1 / -1`), so the full-width **Today's bookings** list below is
