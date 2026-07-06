@@ -838,21 +838,21 @@ export function CalculatorV3() {
                 const order: BusinessCostPayrollRole[] = [];
                 const byRole = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
                 scn.labor.forEach((l, i) => { if (!byRole.has(l.role)) { byRole.set(l.role, []); order.push(l.role); } byRole.get(l.role)!.push({ l, i }); });
-                const hdr: CSSProperties = { fontSize: 9.5, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, textAlign: "right", paddingBottom: 2 };
-                const cellInput: CSSProperties = { textAlign: "right", fontFamily: "var(--av3-mono)" };
                 return (
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(120px, 1.3fr) minmax(80px, 1fr) 72px minmax(104px, 1.1fr) 30px", columnGap: 10, rowGap: 5, alignItems: "center" }}>
-                    <div />
-                    <div style={hdr}>Rate/hr</div>
-                    <div style={hdr}>Hrs/wk</div>
-                    <div style={hdr}>Weekly salary</div>
-                    <div />
+                  <div className="av3-lab-grid">
+                    <div className="av3-lab-head">
+                      <span className="av3-lab-name" />
+                      <span className="av3-lab-hdr av3-lab-rate">Rate/hr</span>
+                      <span className="av3-lab-hdr av3-lab-hrs">Hrs/wk</span>
+                      <span className="av3-lab-hdr av3-lab-sal">Weekly salary</span>
+                      <span className="av3-lab-x" />
+                    </div>
                     {order.map((role, ri) => {
                       const workers = byRole.get(role)!;
                       const roleWeekly = workers.reduce((sum, { l }) => sum + laborHoursPerWeek(l, openH, closeH) * l.hourlyRateGrosze, 0);
                       return (
                         <Fragment key={role}>
-                          <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, marginTop: ri === 0 ? 4 : 6, paddingTop: ri === 0 ? 0 : 8, borderTop: ri === 0 ? "none" : "1px solid var(--av3-line)" }}>
+                          <div className="av3-lab-role" style={{ marginTop: ri === 0 ? 4 : 6, paddingTop: ri === 0 ? 0 : 8, borderTop: ri === 0 ? "none" : "1px solid var(--av3-line)" }}>
                             <span style={{ fontSize: 12.5, fontWeight: 700 }}>{ROLE_LABEL[role]}</span>
                             <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>×{workers.length} · {money(Math.round(roleWeekly))}/wk</span>
                             <Button variant="ghost" size="sm" style={{ marginLeft: "auto" }} onClick={() => addWorker(role)} title={`Add another ${ROLE_LABEL[role].toLowerCase()}`}><Plus className="av3-btn-ico" /> add</Button>
@@ -861,13 +861,13 @@ export function CalculatorV3() {
                             const hrs = laborHoursPerWeek(l, openH, closeH);
                             const weekly = Math.round(hrs * l.hourlyRateGrosze);
                             return (
-                              <Fragment key={l.id}>
-                                <span style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 4 }}>{ROLE_LABEL[role]} {wi + 1}</span>
-                                <input className="av3-input" type="number" step="0.01" style={cellInput} value={+convertFromGrosze(l.hourlyRateGrosze, cur).toFixed(2)} onChange={(e) => patchLabor(i, { hourlyRateGrosze: convertToGrosze(Number(e.target.value) || 0, cur) })} title="Gross pay rate per hour" />
-                                <input className="av3-input" type="number" readOnly disabled style={cellInput} value={hrs} title="Weekly hours = shift length × days/wk — set the shift in Shift plan & coverage" />
-                                <input className="av3-input" readOnly disabled style={cellInput} value={money(weekly)} />
-                                <button type="button" className="av3-iconbtn-sm" aria-label={`Remove ${ROLE_LABEL[role]} ${wi + 1}`} onClick={() => rmLabor(i)}><X /></button>
-                              </Fragment>
+                              <div className="av3-lab-row" key={l.id}>
+                                <span className="av3-lab-name" style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 4 }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                                <input className="av3-input av3-lab-rate" type="number" step="0.01" value={+convertFromGrosze(l.hourlyRateGrosze, cur).toFixed(2)} onChange={(e) => patchLabor(i, { hourlyRateGrosze: convertToGrosze(Number(e.target.value) || 0, cur) })} title="Gross pay rate per hour" />
+                                <input className="av3-input av3-lab-hrs" type="number" readOnly disabled value={hrs} title="Weekly hours = shift length × days/wk — set the shift in Shift plan & coverage" />
+                                <input className="av3-input av3-lab-sal" readOnly disabled value={money(weekly)} title="Weekly salary = hrs/wk × rate/hr" />
+                                <button type="button" className="av3-iconbtn-sm av3-lab-x" aria-label={`Remove ${ROLE_LABEL[role]} ${wi + 1}`} onClick={() => rmLabor(i)}><X /></button>
+                              </div>
                             );
                           })}
                         </Fragment>

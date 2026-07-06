@@ -1448,5 +1448,16 @@ auth canvas's signature lighting and the sign-in lockup:
   `src/lib/simulation-engine.ts`,
   `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`,
   `src/app/themes/admin-v3/index.css`.
+  **Part 3u shipped — Labour roster is mobile-responsive:** the Labour card's
+  per-person rows used a fixed inline 5-column grid (`minmax(120px…) … 30px`,
+  ≈446px min) that overflowed a phone — the Weekly-salary column and the ✕ delete
+  button bled off the right edge. The inline grid became CSS classes
+  (`.av3-lab-grid` / `.av3-lab-head` / `.av3-lab-row` + `grid-template-areas:
+  "name rate hrs sal x"`) so the *same markup* restyles at a breakpoint: ≤560px
+  the header row hides and each row stacks to two lines (`"name name name name" /
+  "rate hrs sal x"`) with fr-based columns, so it always fits the viewport;
+  `.av3-lab-row input { min-width: 0 }` stops the number inputs forcing overflow.
+  Desktop is byte-identical (single row + headers). `src/admin-v3/CalculatorV3.tsx`,
+  `src/app/themes/admin-v3/index.css`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

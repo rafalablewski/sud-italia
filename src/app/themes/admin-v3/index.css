@@ -1311,6 +1311,39 @@
 .av3-scn-line .v { font-family: var(--av3-mono); color: var(--av3-muted); }
 /* auto-fit (above) already collapses to a single column on narrow viewports */
 
+/* Labour roster — per-person rows. grid-areas so the same markup restyles from a
+   single desktop row to a name-over-inputs stack on mobile without overflowing. */
+.av3-lab-grid { display: flex; flex-direction: column; }
+.av3-lab-head, .av3-lab-row {
+  display: grid;
+  grid-template-columns: minmax(104px, 1.3fr) minmax(70px, 1fr) 60px minmax(94px, 1.1fr) 28px;
+  grid-template-areas: "name rate hrs sal x";
+  column-gap: 10px;
+  align-items: center;
+}
+.av3-lab-row { margin-top: 5px; }
+.av3-lab-row input { min-width: 0; text-align: right; font-family: var(--av3-mono); }
+.av3-lab-name { grid-area: name; min-width: 0; }
+.av3-lab-rate { grid-area: rate; }
+.av3-lab-hrs  { grid-area: hrs; }
+.av3-lab-sal  { grid-area: sal; }
+.av3-lab-x    { grid-area: x; justify-self: end; }
+.av3-lab-hdr  { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--av3-subtle); font-weight: 600; text-align: right; padding-bottom: 2px; }
+.av3-lab-role { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 560px) {
+  .av3-lab-head { display: none; }
+  .av3-lab-row {
+    grid-template-columns: 1fr 1fr 1.4fr 26px;
+    grid-template-areas:
+      "name name name name"
+      "rate hrs  sal  x";
+    row-gap: 6px;
+    margin-top: 12px;
+  }
+  .av3-lab-name { padding-left: 0 !important; font-weight: 600; color: var(--av3-fg) !important; }
+}
+
 /* ==========================================================================
    23. Auth — the login door (/login + /admin/login)
    The one av3 surface that renders OUTSIDE the shell. "Spotlight minimal": a
