@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" class="core" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service · Book — Calendar redesigns (×10)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CORE tokens — lifted verbatim from
+   src/app/themes/core/tokens.css so these sketches read exactly
+   like the live Service · Book surface. Dark is default.
+   ============================================================ */
+.core {
+  --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --ui: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --brand-ink: #6e2a12;
+  --on-accent: #2a160b; --on-basil: #0c1a0f; --on-danger: #fff4f0;
+  --r-sm: 7px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --pill: 999px;
+  --fast: 130ms cubic-bezier(.3, .7, 0, 1);
+  --base: 200ms cubic-bezier(.3, .7, 0, 1);
+}
+.core, .core[data-theme="dark"] {
+  --bg: #15110d; --panel: #1f1a14; --panel-2: #28211a; --panel-3: #322a21;
+  --hover: #3a3026; --ink: #f8f1e7; --ink-2: #c9bba9; --ink-3: #908172;
+  --line: rgba(255,247,235,.10); --line-2: rgba(255,247,235,.18);
+  --brand: #e86b3e; --brand-bright: #ff905e; --brand-wash: rgba(232,107,62,.16);
+  --basil: #6fb155; --basil-wash: rgba(111,177,85,.16);
+  --amber: #e8a23c; --amber-wash: rgba(232,162,60,.16);
+  --info: #3fa7ce; --info-wash: rgba(63,167,206,.18);
+  --danger: #e5484a; --danger-wash: rgba(229,72,74,.18);
+  --sh-1: 0 1px 2px rgba(0,0,0,.4); --sh-2: 0 6px 18px rgba(0,0,0,.5);
+  --sh-pop: 0 20px 50px rgba(0,0,0,.6);
+}
+.core[data-theme="light"] {
+  --bg: #fbf5ec; --panel: #ffffff; --panel-2: #f7f0e6; --panel-3: #efe6d9;
+  --hover: #f3eadc; --ink: #241a12; --ink-2: #5e5040; --ink-3: #8c7c69;
+  --line: rgba(40,26,16,.10); --line-2: rgba(40,26,16,.17);
+  --brand: #d85f2e; --brand-bright: #e86b3e; --brand-wash: #fbede3;
+  --basil: #46934f; --basil-wash: #eaf3e1;
+  --amber: #c2841c; --amber-wash: #faf0da;
+  --info: #2e86ae; --info-wash: #e6f2f7;
+  --danger: #d23b3d; --danger-wash: #fbe9e6;
+  --sh-1: 0 1px 2px rgba(40,26,16,.07);
+  --sh-2: 0 4px 14px rgba(40,26,16,.10), 0 1px 3px rgba(40,26,16,.08);
+  --sh-pop: 0 18px 48px rgba(40,26,16,.18);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* ---- page chrome ---- */
+.page { max-width: 1200px; margin: 0 auto; padding: 40px 28px 96px; }
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 8px; }
+.masthead h1 { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -.02em; margin: 0; }
+.masthead .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); margin: 0 0 6px; }
+.masthead p { color: var(--ink-2); font-size: 14px; margin: 8px 0 0; max-width: 620px; line-height: 1.5; }
+.themetoggle { display: flex; gap: 4px; padding: 4px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); }
+.themetoggle button { font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--ink-3); background: transparent; border: 0; padding: 7px 14px; border-radius: var(--pill); cursor: pointer; transition: var(--fast); }
+.themetoggle button.on { background: var(--brand); color: var(--on-accent); }
+
+.currentctx { margin: 22px 0 34px; padding: 12px 16px; border-left: 3px solid var(--brand); background: var(--panel); border-radius: 0 var(--r-md) var(--r-md) 0; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.currentctx b { color: var(--ink); font-weight: 600; }
+
+/* ---- concept grid ---- */
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+.concept {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 20px; box-shadow: var(--sh-1);
+  display: flex; flex-direction: column; min-height: 220px;
+}
+.concept-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.concept-num { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--brand); background: var(--brand-wash); border-radius: var(--r-sm); padding: 2px 7px; }
+.concept-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+.concept-desc { color: var(--ink-3); font-size: 12.5px; line-height: 1.5; margin: 0 0 20px; }
+.concept-stage {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 22px 12px; border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(255,255,255,.015), rgba(0,0,0,.06));
+  border: 1px solid var(--line); position: relative;
+}
+.core[data-theme="light"] .concept-stage { background: linear-gradient(180deg, rgba(0,0,0,.012), rgba(0,0,0,.03)); }
+.concept-out { margin-top: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; }
+.concept-out b { color: var(--basil); font-weight: 600; }
+
+/* ============================================================
+   Shared primitives
+   ============================================================ */
+.ico { flex: none; }
+.navbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: var(--r-sm);
+  background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--ink-2); cursor: pointer; transition: var(--fast);
+}
+.navbtn:hover { background: var(--hover); color: var(--ink); border-color: var(--line-2); }
+.navbtn:active { transform: translateY(1px); }
+.navbtn svg { width: 15px; height: 15px; }
+
+/* ============================================================
+   1 — Pill + arrows  (closest to the live control, cleaned up)
+   ============================================================ */
+.c1 { display: flex; align-items: center; gap: 8px; }
+.c1 .pill {
+  display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px;
+  background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--pill);
+  cursor: pointer; transition: var(--fast); min-width: 172px; justify-content: center;
+}
+.c1 .pill:hover { background: var(--hover); }
+.c1 .pill .cal { color: var(--brand); }
+.c1 .pill .dv { font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--ink); letter-spacing: .01em; }
+.c1 .pill .chev { color: var(--ink-3); }
+.c1 .navbtn { border-radius: var(--pill); }
+
+/* ============================================================
+   2 — Week strip  (day-of-week rail, shift by week)
+   ============================================================ */
+.c2 { display: flex; align-items: stretch; gap: 8px; width: 100%; max-width: 460px; }
+.c2 .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; flex: 1; }
+.c2 .day {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 0; border-radius: var(--r-md); background: transparent;
+  border: 1px solid transparent; cursor: pointer; transition: var(--fast);
+}
+.c2 .day:hover { background: var(--panel-2); }
+.c2 .day .dow { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.c2 .day .num { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink-2); line-height: 1; }
+.c2 .day.today .num { color: var(--brand); }
+.c2 .day.today::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--brand); margin-top: 1px; }
+.c2 .day.sel { background: var(--brand); border-color: var(--brand); }
+.c2 .day.sel .dow { color: var(--on-accent); opacity: .8; }
+.c2 .day.sel .num { color: var(--on-accent); }
+.c2 .day.sel.today::after { background: var(--on-accent); }
+
+/* ============================================================
+   3 — Stepper card  (weekday · big number · month, Today reset)
+   ============================================================ */
+.c3 { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.c3 .row { display: flex; align-items: center; gap: 18px; }
+.c3 .disp { text-align: center; min-width: 120px; }
+.c3 .disp .dow { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); }
+.c3 .disp .num { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: .95; letter-spacing: -.03em; margin: 2px 0; }
+.c3 .disp .mon { font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.c3 .navbtn { width: 42px; height: 42px; border-radius: 50%; }
+.c3 .navbtn svg { width: 18px; height: 18px; }
+.c3 .today {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .05em;
+  color: var(--ink-3); background: transparent; border: 1px solid var(--line);
+  border-radius: var(--pill); padding: 5px 14px; cursor: pointer; transition: var(--fast);
+}
+.c3 .today:hover { color: var(--ink); border-color: var(--line-2); background: var(--panel-2); }
+
+/* ============================================================
+   4 — Popover month  (pill toggles a month grid dropdown)
+   ============================================================ */
+.c4 { position: relative; }
+.c4 .trigger {
+  display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px;
+  background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--r-md);
+  cursor: pointer; transition: var(--fast);
+}
+.c4 .trigger:hover { background: var(--hover); }
+.c4 .trigger .cal { color: var(--brand); }
+.c4 .trigger .dv { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+.c4 .trigger .chev { color: var(--ink-3); transition: var(--fast); }
+.c4 .trigger[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.pop {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(.96);
+  transform-origin: top center; opacity: 0; pointer-events: none;
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r-lg);
+  box-shadow: var(--sh-pop); padding: 14px; width: 264px; z-index: 20; transition: var(--fast);
+}
+.pop.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
+.pop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pop-head .mlabel { font-family: var(--display); font-weight: 700; font-size: 14px; }
+.pop-head .navbtn { width: 28px; height: 28px; }
+.pop-head .navbtn svg { width: 13px; height: 13px; }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mgrid .wd { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); text-align: center; padding: 4px 0; }
+.mgrid .cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); border-radius: var(--r-sm);
+  border: 1px solid transparent; cursor: pointer; transition: var(--fast);
+}
+.mgrid .cell:hover { background: var(--panel-2); color: var(--ink); }
+.mgrid .cell.out { color: var(--ink-3); opacity: .38; }
+.mgrid .cell.today { border-color: var(--brand); color: var(--brand); }
+.mgrid .cell.sel { background: var(--brand); color: var(--on-accent); border-color: var(--brand); font-weight: 600; }
+
+/* ============================================================
+   5 — Inline month  (always-open calendar card + arrows on header)
+   ============================================================ */
+.c5 { width: 100%; max-width: 300px; }
+.c5 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.c5 .cal-head .mlabel { font-family: var(--display); font-weight: 700; font-size: 15px; }
+.c5 .cal-head .grp { display: flex; gap: 6px; }
+.c5 .navbtn { width: 30px; height: 30px; }
+.c5 .navbtn svg { width: 14px; height: 14px; }
+/* reuses .mgrid */
+
+/* ============================================================
+   6 — Date rail  (horizontal scroller of date tiles)
+   ============================================================ */
+.c6 { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 460px; }
+.c6 .rail { flex: 1; display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; scroll-behavior: smooth; scrollbar-width: none; }
+.c6 .rail::-webkit-scrollbar { display: none; }
+.c6 .tile {
+  flex: 0 0 auto; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 9px 0; border-radius: var(--r-md); background: var(--panel-2);
+  border: 1px solid var(--line); cursor: pointer; transition: var(--fast);
+}
+.c6 .tile:hover { border-color: var(--line-2); background: var(--hover); }
+.c6 .tile .dow { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.c6 .tile .num { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--ink); line-height: 1; }
+.c6 .tile .mo { font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; color: var(--ink-3); }
+.c6 .tile.today { border-color: var(--brand); }
+.c6 .tile.today .num { color: var(--brand); }
+.c6 .tile.sel { background: var(--brand); border-color: var(--brand); }
+.c6 .tile.sel .dow, .c6 .tile.sel .num, .c6 .tile.sel .mo { color: var(--on-accent); }
+
+/* ============================================================
+   7 — Quick chips  (Today / Tomorrow presets + arrows + readout)
+   ============================================================ */
+.c7 { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.c7 .bar { display: flex; align-items: center; gap: 10px; }
+.c7 .readout {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+  background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--r-md); min-width: 176px; justify-content: center;
+}
+.c7 .readout .rel { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--brand); }
+.c7 .readout .dv { font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--ink); }
+.c7 .chips { display: flex; gap: 6px; }
+.c7 .chip {
+  font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--ink-2);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill);
+  padding: 6px 14px; cursor: pointer; transition: var(--fast);
+}
+.c7 .chip:hover { background: var(--hover); color: var(--ink); }
+.c7 .chip.on { background: var(--brand-wash); color: var(--brand); border-color: var(--brand); }
+
+/* ============================================================
+   8 — Hero date  (big display + relative + round nav)
+   ============================================================ */
+.c8 { display: flex; align-items: center; gap: 22px; }
+.c8 .navbtn { width: 48px; height: 48px; border-radius: 50%; background: var(--panel-2); }
+.c8 .navbtn svg { width: 20px; height: 20px; }
+.c8 .navbtn:hover { background: var(--brand); color: var(--on-accent); border-color: var(--brand); }
+.c8 .hero { text-align: center; min-width: 150px; }
+.c8 .hero .rel {
+  display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--brand); background: var(--brand-wash); border-radius: var(--pill); padding: 3px 10px; margin-bottom: 8px;
+}
+.c8 .hero .big { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -.02em; line-height: 1; }
+.c8 .hero .sub { font-family: var(--ui); font-size: 13px; color: var(--ink-3); margin-top: 5px; }
+
+/* ============================================================
+   9 — Split-flap ticker  (departure-board flaps)
+   ============================================================ */
+.c9 { display: flex; align-items: center; gap: 12px; }
+.c9 .flaps { display: flex; gap: 5px; }
+.c9 .flap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 46px; padding: 8px 6px; border-radius: var(--r-sm);
+  background: #0e0b07; border: 1px solid var(--line-2); position: relative;
+  box-shadow: inset 0 -8px 14px rgba(0,0,0,.5);
+}
+.core[data-theme="light"] .c9 .flap { background: #2a1f16; }
+.c9 .flap::after { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; height: 1px; background: rgba(0,0,0,.6); }
+.c9 .flap .fv { font-family: var(--mono); font-weight: 700; font-size: 22px; color: var(--amber); letter-spacing: .02em; line-height: 1; text-shadow: 0 0 12px rgba(232,162,60,.35); }
+.c9 .flap .fk { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-top: 5px; }
+.c9 .navbtn { width: 40px; height: 40px; }
+.c9 .navbtn svg { width: 17px; height: 17px; }
+
+/* ============================================================
+   10 — Toolbar combo  (compact, true drop-in footprint)
+   ============================================================ */
+.c10 {
+  display: inline-flex; align-items: center; height: 36px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden;
+}
+.c10 .seg { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 100%; color: var(--ink-3); cursor: pointer; transition: var(--fast); }
+.c10 .seg:hover { background: var(--hover); color: var(--ink); }
+.c10 .seg svg { width: 14px; height: 14px; }
+.c10 .mid {
+  display: flex; align-items: center; gap: 8px; height: 100%; padding: 0 14px; cursor: pointer;
+  border-left: 1px solid var(--line); border-right: 1px solid var(--line); transition: var(--fast);
+}
+.c10 .mid:hover { background: var(--hover); }
+.c10 .mid .cal { color: var(--brand); }
+.c10 .mid .dv { font-family: var(--mono); font-weight: 600; font-size: 12.5px; color: var(--ink); }
+.c10 .mid .rel { font-family: var(--mono); font-size: 10px; color: var(--ink-3); border-left: 1px solid var(--line); padding-left: 8px; }
+
+.footnote { margin-top: 40px; color: var(--ink-3); font-size: 12px; line-height: 1.6; font-family: var(--mono); text-align: center; }
+.footnote b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Service · Book</p>
+      <h1>Calendar redesigns</h1>
+      <p>Ten takes on the day picker that sits in the Book toolbar — each fully interactive with <b style="color:var(--ink)">previous&nbsp;day / next&nbsp;day</b> navigation, built on the live Core theme tokens. Click through them; the readout under each shows the selected ISO date.</p>
+    </div>
+    <div class="themetoggle" role="group" aria-label="Theme">
+      <button data-theme-set="dark" class="on">Dark</button>
+      <button data-theme-set="light">Light</button>
+    </div>
+  </header>
+
+  <div class="currentctx">CURRENT &nbsp;·&nbsp; a native <b>&lt;input type="date"&gt;</b> behind a static pill — no day-step arrows, OS-native popup, breaks the warm Core look. The concepts below fix all three.</div>
+
+  <div class="grid">
+
+    <!-- 1 -->
+    <div class="concept" data-widget="1">
+      <div class="concept-head"><span class="concept-num">01</span><span class="concept-name">Pill + arrows</span></div>
+      <p class="concept-desc">The current pill, kept — but flanked by ‹ › day-steppers and rounded to match Core’s brand buttons. Smallest change, biggest win: the arrows people were missing.</p>
+      <div class="concept-stage">
+        <div class="c1">
+          <button class="navbtn" data-nav="-1" aria-label="Previous day">‹</button>
+          <button class="pill" data-role="pill">
+            <span class="cal" aria-hidden>📅</span>
+            <span class="dv" data-role="dv">—</span>
+            <span class="chev" aria-hidden>▾</span>
+          </button>
+          <button class="navbtn" data-nav="1" aria-label="Next day">›</button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 2 -->
+    <div class="concept" data-widget="2">
+      <div class="concept-head"><span class="concept-num">02</span><span class="concept-name">Week strip</span></div>
+      <p class="concept-desc">A seven-day rail so the whole service week is one glance. Today wears a dot, selection fills ember; the arrows shift a week at a time.</p>
+      <div class="concept-stage">
+        <div class="c2">
+          <button class="navbtn" data-nav="-7" aria-label="Previous week">‹</button>
+          <div class="days" data-role="days"></div>
+          <button class="navbtn" data-nav="7" aria-label="Next week">›</button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 3 -->
+    <div class="concept" data-widget="3">
+      <div class="concept-head"><span class="concept-num">03</span><span class="concept-name">Stepper</span></div>
+      <p class="concept-desc">A calendar-page feel: weekday, an oversized date numeral, the month — round chevrons either side and a one-tap <em>Today</em> reset.</p>
+      <div class="concept-stage">
+        <div class="c3">
+          <div class="row">
+            <button class="navbtn" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div class="disp">
+              <div class="dow" data-role="dow">—</div>
+              <div class="num" data-role="num">—</div>
+              <div class="mon" data-role="mon">—</div>
+            </div>
+            <button class="navbtn" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <button class="today" data-today>Today</button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 4 -->
+    <div class="concept" data-widget="4">
+      <div class="concept-head"><span class="concept-num">04</span><span class="concept-name">Popover month</span></div>
+      <p class="concept-desc">Compact pill in the bar; a tap drops a full month grid. Best of both — tiny footprint, real calendar when you need to jump far.</p>
+      <div class="concept-stage" style="overflow:visible">
+        <div class="c4">
+          <button class="trigger" data-role="trigger" aria-expanded="false">
+            <span class="cal" aria-hidden>📅</span>
+            <span class="dv" data-role="dv">—</span>
+            <span class="chev" aria-hidden>▾</span>
+          </button>
+          <div class="pop" data-role="pop">
+            <div class="pop-head">
+              <button class="navbtn" data-mnav="-1" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+              <span class="mlabel" data-role="mlabel">—</span>
+              <button class="navbtn" data-mnav="1" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+            <div class="mgrid" data-role="mgrid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 5 -->
+    <div class="concept" data-widget="5">
+      <div class="concept-head"><span class="concept-num">05</span><span class="concept-name">Inline month</span></div>
+      <p class="concept-desc">The month always on show — for a host who lives in the book. Header carries prev/next month; every day cell is a direct pick.</p>
+      <div class="concept-stage">
+        <div class="c5">
+          <div class="cal-head">
+            <span class="mlabel" data-role="mlabel">—</span>
+            <div class="grp">
+              <button class="navbtn" data-mnav="-1" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button class="navbtn" data-mnav="1" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+          </div>
+          <div class="mgrid" data-role="mgrid"></div>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 6 -->
+    <div class="concept" data-widget="6">
+      <div class="concept-head"><span class="concept-num">06</span><span class="concept-name">Date rail</span></div>
+      <p class="concept-desc">A scrollable film-strip of days, each a tile with weekday·date·month. Swipe or use the arrows to roll a day at a time; the selected tile centres itself.</p>
+      <div class="concept-stage">
+        <div class="c6">
+          <button class="navbtn" data-nav="-1" aria-label="Previous day">‹</button>
+          <div class="rail" data-role="rail"></div>
+          <button class="navbtn" data-nav="1" aria-label="Next day">›</button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 7 -->
+    <div class="concept" data-widget="7">
+      <div class="concept-head"><span class="concept-num">07</span><span class="concept-name">Quick chips</span></div>
+      <p class="concept-desc">Presets for the days a host actually books — Today, Tomorrow, +1 week — plus arrows and a relative-label readout. Fastest path to the common cases.</p>
+      <div class="concept-stage">
+        <div class="c7">
+          <div class="bar">
+            <button class="navbtn" data-nav="-1" aria-label="Previous day">‹</button>
+            <div class="readout">
+              <span class="rel" data-role="rel">—</span>
+              <span class="dv" data-role="dv">—</span>
+            </div>
+            <button class="navbtn" data-nav="1" aria-label="Next day">›</button>
+          </div>
+          <div class="chips">
+            <button class="chip" data-offset="0">Today</button>
+            <button class="chip" data-offset="1">Tomorrow</button>
+            <button class="chip" data-offset="7">+1 week</button>
+          </div>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 8 -->
+    <div class="concept" data-widget="8">
+      <div class="concept-head"><span class="concept-num">08</span><span class="concept-name">Hero date</span></div>
+      <p class="concept-desc">When the date is the headline of the screen. A relative tag (“Today”, “in 3 days”), the date big and typographic, big round nav that fills ember on hover.</p>
+      <div class="concept-stage">
+        <div class="c8">
+          <button class="navbtn" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div class="hero">
+            <span class="rel" data-role="rel">—</span>
+            <div class="big" data-role="big">—</div>
+            <div class="sub" data-role="sub">—</div>
+          </div>
+          <button class="navbtn" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 9 -->
+    <div class="concept" data-widget="9">
+      <div class="concept-head"><span class="concept-num">09</span><span class="concept-name">Split-flap ticker</span></div>
+      <p class="concept-desc">A departure-board flourish — day / date / month on amber flaps. Pure personality for a service that runs like a station; arrows flip the boards.</p>
+      <div class="concept-stage">
+        <div class="c9">
+          <button class="navbtn" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div class="flaps">
+            <div class="flap"><span class="fv" data-role="f-dow">—</span><span class="fk">day</span></div>
+            <div class="flap"><span class="fv" data-role="f-num">—</span><span class="fk">date</span></div>
+            <div class="flap"><span class="fv" data-role="f-mon">—</span><span class="fk">mon</span></div>
+          </div>
+          <button class="navbtn" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+    <!-- 10 -->
+    <div class="concept" data-widget="10">
+      <div class="concept-head"><span class="concept-num">10</span><span class="concept-name">Toolbar combo</span></div>
+      <p class="concept-desc">The literal drop-in: one welded control, arrows fused to a date readout with its relative label. Same height and weight as the segmented View switch it sits beside.</p>
+      <div class="concept-stage">
+        <div class="c10">
+          <span class="seg" data-nav="-1" aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></span>
+          <span class="mid" data-role="mid">
+            <span class="cal" aria-hidden>📅</span>
+            <span class="dv" data-role="dv">—</span>
+            <span class="rel" data-role="rel">—</span>
+          </span>
+          <span class="seg" data-nav="1" aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></span>
+        </div>
+      </div>
+      <div class="concept-out">selected · <b data-role="iso">—</b></div>
+    </div>
+
+  </div>
+
+  <p class="footnote">Built on <b>src/app/themes/core/tokens.css</b> · replaces <b>CoreDateField</b> in <b>src/core/shell/CoreShell → Service · Book</b> · toggle Dark/Light above to check both modes.</p>
+</div>
+
+<script>
+/* ---------- date helpers ---------- */
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONFULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const startDate = new Date(2026, 6, 6); // Mon 6 Jul 2026 — matches the screenshot
+const today = new Date(2026, 6, 6);     // treat that day as "today" for the demo
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const same = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const fmtShort = d => `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`;
+function relLabel(d) {
+  const days = Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - new Date(today.getFullYear(),today.getMonth(),today.getDate())) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days === -1) return "Yesterday";
+  if (days > 1) return `in ${days} days`;
+  return `${-days} days ago`;
+}
+
+/* ---------- widget factory ---------- */
+function makeWidget(root, render) {
+  let cur = new Date(startDate);
+  let month = new Date(cur.getFullYear(), cur.getMonth(), 1); // for month-grid concepts
+  const api = {
+    get cur() { return cur; },
+    set cur(d) { cur = d; month = new Date(d.getFullYear(), d.getMonth(), 1); paint(); },
+    get month() { return month; },
+    set month(m) { month = m; paint(); },
+  };
+  function paint() {
+    render(root, api);
+    const isoEl = root.querySelector('[data-role="iso"]');
+    if (isoEl) isoEl.textContent = fmtShort(cur) + "  ·  " + iso(cur);
+  }
+  // generic day-step arrows
+  root.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => { api.cur = addDays(cur, +b.dataset.nav); }));
+  paint();
+  return api;
+}
+
+/* month grid builder (shared by 4 & 5) */
+function buildMonthGrid(container, month, cur, onPick) {
+  const y = month.getFullYear(), m = month.getMonth();
+  const first = new Date(y, m, 1);
+  const startPad = (first.getDay() + 6) % 7; // Monday-first
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const wds = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  let html = wds.map(w => `<div class="wd">${w}</div>`).join("");
+  const gridStart = addDays(first, -startPad);
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(gridStart, i);
+    const out = d.getMonth() !== m;
+    const cls = ["cell"];
+    if (out) cls.push("out");
+    if (same(d, today)) cls.push("today");
+    if (same(d, cur)) cls.push("sel");
+    html += `<div class="${cls.join(" ")}" data-d="${iso(d)}">${d.getDate()}</div>`;
+  }
+  container.innerHTML = html;
+  container.querySelectorAll(".cell").forEach(c => c.addEventListener("click", () => {
+    const [Y,M,D] = c.dataset.d.split("-").map(Number);
+    onPick(new Date(Y, M-1, D));
+  }));
+}
+
+/* ---------- per-concept renderers ---------- */
+const R = {};
+
+R[1] = (root, api) => {
+  root.querySelector('[data-role="dv"]').textContent = fmtShort(api.cur);
+};
+
+R[2] = (root, api) => {
+  const box = root.querySelector('[data-role="days"]');
+  // week containing cur, Monday-first
+  const monday = addDays(api.cur, -((api.cur.getDay()+6)%7));
+  box.innerHTML = "";
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(monday, i);
+    const b = document.createElement("button");
+    b.className = "day" + (same(d, api.cur) ? " sel" : "") + (same(d, today) ? " today" : "");
+    b.innerHTML = `<span class="dow">${DOW[d.getDay()]}</span><span class="num">${d.getDate()}</span>`;
+    b.addEventListener("click", () => { api.cur = d; });
+    box.appendChild(b);
+  }
+};
+
+R[3] = (root, api) => {
+  root.querySelector('[data-role="dow"]').textContent = DOW[api.cur.getDay()];
+  root.querySelector('[data-role="num"]').textContent = api.cur.getDate();
+  root.querySelector('[data-role="mon"]').textContent = MONFULL[api.cur.getMonth()] + " " + api.cur.getFullYear();
+};
+
+R[4] = (root, api) => {
+  root.querySelector('[data-role="dv"]').textContent = fmtShort(api.cur);
+  root.querySelector('[data-role="mlabel"]').textContent = MONFULL[api.month.getMonth()] + " " + api.month.getFullYear();
+  buildMonthGrid(root.querySelector('[data-role="mgrid"]'), api.month, api.cur, d => { api.cur = d; root.querySelector('[data-role="pop"]').classList.remove("open"); root.querySelector('[data-role="trigger"]').setAttribute("aria-expanded","false"); });
+};
+
+R[5] = (root, api) => {
+  root.querySelector('[data-role="mlabel"]').textContent = MONFULL[api.month.getMonth()] + " " + api.month.getFullYear();
+  buildMonthGrid(root.querySelector('[data-role="mgrid"]'), api.month, api.cur, d => { api.cur = d; });
+};
+
+R[6] = (root, api) => {
+  const rail = root.querySelector('[data-role="rail"]');
+  rail.innerHTML = "";
+  let selEl = null;
+  for (let i = -14; i <= 14; i++) {
+    const d = addDays(api.cur, i);
+    const t = document.createElement("button");
+    t.className = "tile" + (same(d, api.cur) ? " sel" : "") + (same(d, today) ? " today" : "");
+    t.innerHTML = `<span class="dow">${DOW[d.getDay()]}</span><span class="num">${d.getDate()}</span><span class="mo">${MON[d.getMonth()]}</span>`;
+    t.addEventListener("click", () => { api.cur = d; });
+    if (same(d, api.cur)) selEl = t;
+    rail.appendChild(t);
+  }
+  if (selEl) selEl.scrollIntoView({ inline: "center", block: "nearest" });
+};
+
+R[7] = (root, api) => {
+  root.querySelector('[data-role="dv"]').textContent = fmtShort(api.cur);
+  root.querySelector('[data-role="rel"]').textContent = relLabel(api.cur);
+  root.querySelectorAll(".chip").forEach(c => {
+    const d = addDays(today, +c.dataset.offset);
+    c.classList.toggle("on", same(d, api.cur));
+  });
+};
+
+R[8] = (root, api) => {
+  root.querySelector('[data-role="rel"]').textContent = relLabel(api.cur);
+  root.querySelector('[data-role="big"]').textContent = `${api.cur.getDate()} ${MON[api.cur.getMonth()]}`;
+  root.querySelector('[data-role="sub"]').textContent = `${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][api.cur.getDay()]} · ${api.cur.getFullYear()}`;
+};
+
+R[9] = (root, api) => {
+  root.querySelector('[data-role="f-dow"]').textContent = DOW[api.cur.getDay()].toUpperCase();
+  root.querySelector('[data-role="f-num"]').textContent = String(api.cur.getDate()).padStart(2,"0");
+  root.querySelector('[data-role="f-mon"]').textContent = MON[api.cur.getMonth()].toUpperCase();
+};
+
+R[10] = (root, api) => {
+  root.querySelector('[data-role="dv"]').textContent = fmtShort(api.cur);
+  root.querySelector('[data-role="rel"]').textContent = relLabel(api.cur);
+};
+
+/* ---------- boot ---------- */
+document.querySelectorAll(".concept").forEach(c => {
+  const n = +c.dataset.widget;
+  const api = makeWidget(c, R[n]);
+
+  // concept-specific wiring
+  if (n === 3) c.querySelector("[data-today]").addEventListener("click", () => { api.cur = new Date(today); });
+  if (n === 7) c.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => { api.cur = addDays(today, +ch.dataset.offset); }));
+
+  if (n === 4) {
+    const trig = c.querySelector('[data-role="trigger"]');
+    const pop = c.querySelector('[data-role="pop"]');
+    trig.addEventListener("click", e => { e.stopPropagation(); const open = pop.classList.toggle("open"); trig.setAttribute("aria-expanded", open); });
+    document.addEventListener("click", e => { if (!c.contains(e.target)) { pop.classList.remove("open"); trig.setAttribute("aria-expanded","false"); } });
+  }
+  if (n === 4 || n === 5) {
+    c.querySelectorAll("[data-mnav]").forEach(b => b.addEventListener("click", () => {
+      const m = api.month; api.month = new Date(m.getFullYear(), m.getMonth() + (+b.dataset.mnav), 1);
+    }));
+  }
+});
+
+/* ---------- theme toggle ---------- */
+const rootEl = document.documentElement;
+document.querySelectorAll("[data-theme-set]").forEach(b => b.addEventListener("click", () => {
+  rootEl.setAttribute("data-theme", b.dataset.themeSet);
+  document.querySelectorAll("[data-theme-set]").forEach(x => x.classList.toggle("on", x === b));
+}));
+</script>
+</body>
+</html>
