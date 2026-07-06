@@ -941,7 +941,7 @@ export function CoreBook({
               {tables.length === 0 ? (
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
-                <div className="core-bk-tpicks">
+                <div className="core-bk-tgrid">
                   {sortedTables.map((t) => {
                     const sug = suggByTable.get(t.id);
                     const isRec = t.id === recTableId;
@@ -967,11 +967,12 @@ export function CoreBook({
                     return (
                       <button
                         key={t.id}
-                        className={`core-bk-tpick${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
+                        className={`core-bk-tcard${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
                         disabled={dim && !override}
                         onClick={() => pickTable(t.id)}
                         title={title}
                       >
+                        <span className="pick" aria-hidden />
                         <span className="tn">{tLabel(t.number)}</span>
                         <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
                         <span className="tfit">{tag}</span>

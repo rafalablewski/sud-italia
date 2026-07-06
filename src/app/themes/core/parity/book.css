@@ -195,6 +195,34 @@
 .core .core-bk-tpick.on { box-shadow: inset 0 0 0 1px var(--brand); border-color: var(--brand); }
 .core .core-bk-tpick.is-focus { border-color: var(--brand); }
 
+/* New-reservation table picker — card GRID (the whole floor fits at a glance,
+   so you never scroll a vertical list to reach Book). Cards are fit-tinted; the
+   recommended one glows, the picked one gets a ring + filled radio, unavailable
+   dims. (The walk-in dialog keeps the compact vertical `.core-bk-tpicks` list.) */
+.core .core-bk-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
+.core .core-bk-tcard {
+  position: relative; text-align: left; display: flex; flex-direction: column; gap: 3px;
+  min-height: 74px; padding: 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--panel-2); cursor: pointer;
+}
+.core .core-bk-tcard:hover:not(:disabled) { background: var(--panel-3); }
+.core .core-bk-tcard .tn { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); }
+.core .core-bk-tcard .tc { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); }
+.core .core-bk-tcard .tfit {
+  align-self: flex-start; margin-top: auto;
+  font-family: var(--mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 99px; color: var(--basil); background: var(--basil-wash);
+}
+.core .core-bk-tcard .pick { position: absolute; top: 9px; right: 9px; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--line-2); }
+.core .core-bk-tcard.rec { background: var(--brand-wash); box-shadow: inset 0 0 0 1px rgba(232, 107, 62, .5), 0 0 16px -6px var(--brand); }
+.core .core-bk-tcard.rec .tfit { color: var(--brand-bright); background: rgba(232, 107, 62, .25); }
+.core .core-bk-tcard.on { box-shadow: inset 0 0 0 2px var(--brand); border-color: var(--brand); }
+.core .core-bk-tcard.on .pick { background: var(--brand); border-color: var(--brand); }
+.core .core-bk-tcard.rec.on { box-shadow: inset 0 0 0 2px var(--brand), 0 0 16px -6px var(--brand); }
+.core .core-bk-tcard.dim { opacity: .45; cursor: not-allowed; }
+.core .core-bk-tcard.dim .tfit { color: var(--ink-3); background: var(--panel-2); }
+.core .core-bk-tcard.is-focus { border-color: var(--brand); }
+
 /* guest — stacked full-width inputs */
 .core .core-bk-input { width: 100%; }
 

@@ -200,7 +200,7 @@ labelled by a `.core-book-panelab`. This trades the old tall rail for a wide,
 short layout so every choice stays on screen; **Today's bookings** still flows
 full-width beneath the whole deck. Panes: **When** = the slot chips; **Who** =
 party stepper + guest-needs chips + guest name/phone/notes (+ CRM match); **Where**
-= the ranked table list + joins + signals + min-spend + override + Book button.
+= the ranked table **card grid** (`.core-bk-tgrid` of `.core-bk-tcard`) + joins + signals + min-spend + override + Book button.
 Below 1000px the deck collapses to one column (`.core-book-deck:
 grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
@@ -210,9 +210,15 @@ many can I seat now", and it stays tinted by fill) + party size, then a table �
 Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives
 a seating time, every table is hard-filtered (fit · free-for-the-turn ·
 availability) then scored (right-size · runway · guest · pacing · yield), so the
-✨ Recommend row is the engine's top pick and each row's tag + tooltip is its
+✨ Recommend card is the engine's top pick and each card's tag + tooltip is its
 reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
-`patio full this window`, `89 pts · exact fit`). Excluded tables dim. Entering a returning guest's **phone** pulls their CRM seating profile
+`patio full this window`, `89 pts · exact fit`). The Where pane lays every table
+out as a **card grid** (`.core-bk-tgrid`, `repeat(auto-fill, minmax(116px, 1fr))`
+of `.core-bk-tcard` — big `Tn`, seats·zone, a fit `.tfit` badge + a `.pick`
+radio; rec glows, the picked card rings + fills its radio) so the whole floor is
+visible at a glance and Book is always in reach — no scrolling a vertical list.
+Excluded tables dim. (The walk-in seating dialog keeps the compact vertical
+`.core-bk-tpicks` list.) Entering a returning guest's **phone** pulls their CRM seating profile
 (`.core-bk-guestmatch`, GET `/api/admin/floor/guest-prefs` → `getGuestSeatingProfile`
 — VIP standing from spend/visits/loyalty, usual table + zone from reservation
 history) and feeds it into the engine's `guest` signal, so a regular is nudged
