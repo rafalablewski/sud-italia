@@ -236,12 +236,25 @@ in the surface ActionBar.
   dot); a **Reset filters** row appears when anything is set. Same portal/dismiss
   discipline as the overflow menu. Guest CRM uses it for Segment · Tier · Sort;
   Orders for the Channel filter; Slots for the Fulfillment filter.
-- **`.core-datefield` / `.core-datefield-pick`** — the date control. Base
-  `.core-datefield` is a read-only "today" chip (Orders). **`CoreDateField`**
-  (`src/core/shell/CoreDateField.tsx`) is the shared interactive picker
-  (`.core-datefield-pick`): a styled pill (calendar glyph · formatted date ·
-  chevron) with a full-bleed transparent native `<input type=date>` driving it —
-  ONE date picker across Book + Slots (they had two bespoke fields).
+- **`.core-datefield` / `.core-datefield-pick` / `.core-df-*`** — the date
+  control. Base `.core-datefield` is a read-only "today" chip (Orders).
+  **`CoreDateField`** (`src/core/shell/CoreDateField.tsx`) is the shared
+  interactive picker — ONE date picker across Book + Slots. The collapsed control
+  (`.core-datefield-pick`) is a **day stepper**: a `.core-df-step` ‹ prev-day
+  button · a `.core-df-face` (calendar glyph · formatted date · a `.rel` relative
+  label like `today`/`+2d` · chevron) · a `.core-df-step` next-day ›. Tapping the
+  face opens a **portaled sheet** (`.core-df-pop`, rendered into the `.core` root
+  under a `.core-ovf-scrim` — same portal/dismiss discipline as the overflow
+  menu; dismiss on select · outside-click · Escape · scroll/resize): a
+  `.core-df-head` stepper display (`.dow` eyebrow · oversized `.num` numeral ·
+  `.mon`, flanked by round `.core-df-nav` day arrows), a `.core-df-chips` row of
+  **Today / Tomorrow / +1 week** `.core-df-chip`s (`.on` = brand-ember when the
+  value matches), a `.core-df-rule` divider, then the month grid
+  (`.core-df-calhead` label + `.core-df-mbtn` month arrows, `.core-df-grid` of
+  Monday-first `.cell`s — `.today` ember-outlined, `.sel` ember-filled, `.out`
+  dimmed adjacent months, an optional `.bk` basil dot for days passed in the
+  `markedDates` prop). No native `<input type=date>` — the OS popup is gone.
+  `--core-df-w` keeps the sheet width in sync with the component's `place()`.
 - **`.core-switch`** — the segmented pill switcher (`.sm` = compact; Orders
   scope tabs). `.on` = active.
 - **`.core-tabs a/button`** — the shell's view tabs; `.on` = active. In the
