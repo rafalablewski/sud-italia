@@ -739,8 +739,10 @@ export function dineInGridTimes(
  * a slot every 30 minutes from open to the last seating (30 min before close),
  * capacity = the number of tables on the floor. Only *missing* windows are
  * created — existing slots (including ones an operator flipped to "draft" =
- * unavailable) are left as-is, so availability edits persist. Auto slots'ted
+ * unavailable) are left as-is, so availability edits persist, while auto slots'
  * capacity is kept in sync with the live table count so the board never lies.
+ * Stale auto windows left outside the hours after an opening-hours change are
+ * pruned (only the empty ones — a booked slot is never removed).
  * Returns the day's full dine-in slot list (auto + any manual).
  */
 export async function ensureDineInSlots(locationSlug: string, date: string): Promise<TimeSlot[]> {
@@ -748,6 +750,12 @@ export async function ensureDineInSlots(locationSlug: string, date: string): Pro
   const tables = await getTables(locationSlug);
   const capacity = Math.max(1, tables.length);
   const gridTimes = dineInGridTimes(loc?.hours, date);
+  const gridTimeSet = new Set(gridTimes);
+  const autoPrefix = `dine-${locationSlug}-${date}-`;
+  // slotIds carrying an active reservation must never be pruned (would orphan
+  // the booking) even if opening hours moved out from under them.
+  const dayRes = await getReservations(locationSlug, date);
+  const bookedSlotIds = new Set(dayRes.filter((r) => r.status !== "cancelled").map((r) => r.slotId));
 
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
@@ -785,11 +793,35 @@ export async function ensureDineInSlots(locationSlug: string, date: string): Pro
       slots.push(slot);
       touched.push(slot);
     }
-    if (touched.length) {
-      await writeJSON("slots.json", slots);
+    // Prune stale auto-grid windows that fall OUTSIDE the current opening hours
+    // (e.g. after the hours change) — but only the empty ones, so a booking is
+    // never orphaned. Manual slots (non-`dine-` ids) are always left alone.
+    const pruned: string[] = [];
+    const kept = slots.filter((s) => {
+      const isStaleAuto =
+        s.id.startsWith(autoPrefix) &&
+        !gridTimeSet.has(s.time) &&
+        !bookedSlotIds.has(s.id);
+      if (isStaleAuto) pruned.push(s.id);
+      return !isStaleAuto;
+    });
+    const changed = touched.length > 0 || pruned.length > 0;
+    if (changed) {
+      await writeJSON("slots.json", kept);
       await Promise.all(touched.map((s) => dualWriteSlot(s)));
+      if (pruned.length) {
+        const db = await getDomainDb();
+        if (db) {
+          try {
+            await ensureSlotsTable();
+            await db.delete(slotsTable).where(inArray(slotsTable.id, pruned));
+          } catch (err) {
+            logger.warn("ensureDineInSlots prune DB delete failed", { pruned, layer: "store.slots" }, err);
+          }
+        }
+      }
     }
-    return slots.filter(
+    return kept.filter(
       (s) => s.locationSlug === locationSlug && s.date === date && s.fulfillmentTypes.includes("dine-in"),
     );
   });
