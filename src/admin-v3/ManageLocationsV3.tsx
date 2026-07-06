@@ -83,7 +83,7 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
   const [code, setCode] = useState(location?.code ?? "");
   const [district, setDistrict] = useState(location?.district ?? "");
   const [heroImage, setHeroImage] = useState(location?.heroImage ?? "");
-  const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(location?.hours?.length ? location.hours : [{ day: "Mon-Sun", open: "11:00", close: "21:00" }]);
+  const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(location?.hours?.length ? location.hours : [{ day: "Mon-Sun", open: "12:00", close: "21:00" }]);
   const [saving, setSaving] = useState(false);
 
   const setHour = (i: number, patch: Partial<{ day: string; open: string; close: string }>) => setHours((a) => a.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
@@ -156,7 +156,7 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
           <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => setHours((a) => a.filter((_, idx) => idx !== i))}><X /></button>
         </div>
       ))}
-      <div style={{ marginTop: 8 }}><Button variant="secondary" size="sm" onClick={() => setHours((a) => [...a, { day: DAYS[0], open: "11:00", close: "21:00" }])}><Plus className="av3-btn-ico" /> Add hours row</Button></div>
+      <div style={{ marginTop: 8 }}><Button variant="secondary" size="sm" onClick={() => setHours((a) => [...a, { day: DAYS[0], open: "12:00", close: "21:00" }])}><Plus className="av3-btn-ico" /> Add hours row</Button></div>
     </Dialog>
   );
 }

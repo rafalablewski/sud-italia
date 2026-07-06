@@ -10,7 +10,7 @@ import { PlusIcon, RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
-import type { FulfillmentType, TimeSlot } from "@/data/types";
+import type { FulfillmentType, SlotStatus, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
 const FULFIL: { key: FulfillmentType; label: string }[] = [
@@ -99,15 +99,28 @@ export function CoreSlots() {
   const [cTime, setCTime] = useState("18:00");
   const [cStart, setCStart] = useState("18:00");
   const [cEnd, setCEnd] = useState("21:00");
-  const [cInterval, setCInterval] = useState("30");
+  const [cInterval, setCInterval] = useState("15");
   const [cMax, setCMax] = useState("16");
   const [cFulfil, setCFulfil] = useState<Set<FulfillmentType>>(new Set(["dine-in"]));
+  // Multi-select — pick several windows and close/open them in one go
+  // (e.g. block a whole evening for a private event).
+  const [selMode, setSelMode] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSel((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const loadSlots = useCallback(async () => {
     if (!date) return;
     // Week view pulls the whole location (all dates) and slices client-side;
-    // day view scopes to the date server-side.
-    const qs = range === "week" ? `?location=${encodeURIComponent(loc)}` : `?location=${encodeURIComponent(loc)}&date=${date}`;
+    // day view scopes to the date server-side and materialises the default
+    // dine-in seating grid (a window every 15 min for the whole floor) so the
+    // day is always fully reservable without hand-building it.
+    const qs = range === "week" ? `?location=${encodeURIComponent(loc)}` : `?location=${encodeURIComponent(loc)}&date=${date}&ensureDineIn=1`;
     const r = await fetch(`/api/admin/slots${qs}`);
     const d = r.ok ? await r.json() : [];
     setSlots(Array.isArray(d) ? d : d.slots ?? []);
@@ -172,6 +185,30 @@ export function CoreSlots() {
       if (r.ok) {
         setSlots((xs) => xs.map((x) => (x.id === slot.id ? { ...x, status: next } : x)));
       } else toast("Could not update slot", "danger");
+    } finally {
+      setActing(false);
+    }
+  };
+
+  // Bulk availability — flip every selected window active↔draft in one PUT.
+  // "Unavailable" (draft) windows persist and vanish from Book's bookable list;
+  // the default grid never deletes, it just closes.
+  const bulkSetAvailability = async (available: boolean) => {
+    const ids = [...sel];
+    if (ids.length === 0 || acting) return;
+    const next: SlotStatus = available ? "active" : "draft";
+    setActing(true);
+    try {
+      const r = await fetch("/api/admin/slots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, status: next }),
+      });
+      if (r.ok) {
+        setSlots((xs) => xs.map((x) => (sel.has(x.id) ? { ...x, status: next } : x)));
+        toast(`${ids.length} window${ids.length === 1 ? "" : "s"} ${available ? "available" : "unavailable"}`, "success");
+        setSel(new Set());
+      } else toast("Could not update windows", "danger");
     } finally {
       setActing(false);
     }
@@ -297,8 +334,21 @@ export function CoreSlots() {
     const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
     const tier = pct >= 100 ? "full" : pct >= 70 ? "tight" : "healthy";
     const statusText = pct >= 100 ? "full" : pct >= 85 ? "filling fast" : `seats to ${s.maxOrders}`;
+    const available = s.status === "active";
+    const selected = sel.has(s.id);
+    // Auto dine-in grid windows are recreated on load — closing them = mark
+    // unavailable, never delete (a stray delete just comes back). Manual slots
+    // keep the delete affordance.
+    const isAuto = s.id.startsWith("dine-");
     return (
-      <div key={s.id} className={`core-mslot ${s.status === "draft" ? "draft" : ""}`}>
+      <div
+        key={s.id}
+        className={`core-mslot ${available ? "" : "draft"} ${selMode ? "selectable" : ""} ${selected ? "sel" : ""}`}
+        onClick={selMode ? () => toggleSel(s.id) : undefined}
+        role={selMode ? "checkbox" : undefined}
+        aria-checked={selMode ? selected : undefined}
+      >
+        {selMode && <span className={`mslot-check ${selected ? "on" : ""}`} aria-hidden>{selected ? "✓" : ""}</span>}
         <span className="tm">{s.time}</span>
         <div className="barwrap">
           <div className="mbar"><i className={tier} style={{ width: `${Math.min(100, pct)}%` }} /></div>
@@ -307,9 +357,20 @@ export function CoreSlots() {
             <span>{statusText}</span>
           </div>
         </div>
-        <button className={`core-tchip ${tier}`} title={`${s.status} — tap to ${s.status === "active" ? "unpublish" : "publish"}`} onClick={() => void toggleSlot(s)}>{tier}</button>
+        <span className={`core-tchip ${tier}`}>{tier}</span>
         <span className="mcap">{s.currentOrders} / {s.maxOrders}</span>
-        <button className="mslot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
+        {!selMode && (
+          <button
+            className={`core-avail ${available ? "on" : "off"}`}
+            title={available ? "Available — tap to make unavailable" : "Unavailable — tap to make available"}
+            onClick={() => void toggleSlot(s)}
+          >
+            {available ? "Available" : "Unavailable"}
+          </button>
+        )}
+        {!selMode && !isAuto && (
+          <button className="mslot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
+        )}
       </div>
     );
   };
@@ -358,6 +419,15 @@ export function CoreSlots() {
                   },
                 ]}
               />
+              <button
+                type="button"
+                className={`core-iconbtn core-slot-selbtn ${selMode ? "on" : ""}`}
+                aria-pressed={selMode}
+                title={selMode ? "Done selecting" : "Select windows to open/close"}
+                onClick={() => { setSelMode((v) => !v); setSel(new Set()); }}
+              >
+                {selMode ? "Done" : "Select"}
+              </button>
               <button type="button" className="core-iconbtn" title="Refresh" aria-label="Refresh" onClick={refresh}><RefreshIcon /></button>
               <button type="button" className="core-slot-add" onClick={() => setCreateOpen(true)}><PlusIcon />New slot</button>
             </>
@@ -409,6 +479,17 @@ export function CoreSlots() {
             </span>
             {changeCount > 0 && <button type="button" className="sb-act" disabled={acting} onClick={() => void applyAll()}>Apply surge levers</button>}
             <button type="button" className="sb-x" onClick={() => setSurgeDismissed(true)} aria-label="Dismiss">✕</button>
+          </div>
+        )}
+
+        {selMode && (
+          <div className="core-slot-bulkbar" role="group" aria-label="Bulk availability">
+            <span className="bb-txt">
+              {sel.size > 0 ? `${sel.size} window${sel.size === 1 ? "" : "s"} selected` : "Tap windows to select"}
+            </span>
+            <button type="button" className="bb-btn off" disabled={acting || sel.size === 0} onClick={() => void bulkSetAvailability(false)}>Mark unavailable</button>
+            <button type="button" className="bb-btn on" disabled={acting || sel.size === 0} onClick={() => void bulkSetAvailability(true)}>Mark available</button>
+            {sel.size > 0 && <button type="button" className="bb-clear" onClick={() => setSel(new Set())}>Clear</button>}
           </div>
         )}
 

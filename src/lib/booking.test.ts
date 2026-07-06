@@ -10,7 +10,7 @@ function base(over: Partial<BookingValidationInput> = {}): BookingValidationInpu
   return {
     slotActive: true,
     slotSupportsDineIn: true,
-    slotMaxOrders: 4,
+    dineInCapacity: 4,
     reservationsOnSlot: 0,
     tableSeats: 4,
     partySize: 2,
@@ -29,7 +29,7 @@ test("validateBooking: gates fire in priority order", () => {
   assert.deepEqual(validateBooking(base({ partySize: 0 })), { ok: false, reason: "invalid_party" });
   assert.deepEqual(validateBooking(base({ tableSeats: 2, partySize: 4 })), { ok: false, reason: "table_too_small" });
   assert.deepEqual(validateBooking(base({ tableConflictCount: 1 })), { ok: false, reason: "table_conflict" });
-  assert.deepEqual(validateBooking(base({ reservationsOnSlot: 4, slotMaxOrders: 4 })), { ok: false, reason: "slot_full" });
+  assert.deepEqual(validateBooking(base({ reservationsOnSlot: 4, dineInCapacity: 4 })), { ok: false, reason: "slot_full" });
 });
 
 test("validateBooking: table conflict outranks slot-full (most specific first)", () => {

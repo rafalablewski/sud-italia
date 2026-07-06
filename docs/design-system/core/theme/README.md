@@ -173,7 +173,13 @@ in the surface ActionBar.
     colour-coded `.delta` sub-line (`.up` basil / `.dn` danger / `.warn` amber).
     The cells carry **no divider** — the panel border frames them and the cell
     padding sets the rhythm. Every figure MUST be real surface data (Rule #1).
-    Matches the mockup's `.statstrip`.
+    Matches the mockup's `.statstrip`. Add **`.is-wrap`** when a strip carries
+    more than ~6 cells (e.g. Book's 12-cell day summary): the flex row wraps
+    (`flex-wrap: wrap` + cells `flex: 1 1 132px`, `overflow: visible`) so the cells
+    stay legible at every width — 2-up on a phone — instead of the single-row flex
+    squishing them. It must stay FLEX + `overflow: visible`: a nested `display:grid`
+    OR the base `overflow: hidden` collapses the wrapped strip to 0-height rows when
+    it's a grid item inside `.core-book` (`align-content: start`), clipping the cells.
 - **`.core-surf-toolbar`** — the **unified ActionBar**: the ONE header row every
   surface renders under the command bar, over the stat strip. It **collapses the
   old three-row header** (a `.core-crumb` breadcrumb + a `.core-sectionhead`

@@ -3,7 +3,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationPremises, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
-import { getActiveLocationsAsync } from "@/lib/locations-store";
+import { getActiveLocationsAsync, getLocationAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
 import { resolvePolicy, buildTurnModel, summariseDecisions, summariseTurnAccuracy, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type TurnAccuracy, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
@@ -667,6 +667,203 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
       }
     }
     return deletedCount;
+  });
+}
+
+// --- Dine-in reservation grid (default 15-min slots for the whole floor) ---
+//
+// A dine-in slot is a *seating window*, not an online-order throughput cap: it
+// holds one reservation per table (capacity = table count — see booking.ts).
+// Operators shouldn't have to hand-build the grid; by default every service
+// day carries a slot every 15 minutes across the open window, and a specific
+// window is made unavailable by flipping its status to "draft" (persisted),
+// never by deleting it (ensure would just recreate it). This keeps the model
+// "everything's open unless you close it".
+//
+// Step is 15 min to match the table turnaround (TABLE_TURNAROUND_MIN): a
+// 90-min booking frees its table at :45 past the next hour, so the grid needs a
+// :45 window to offer it — a 30-min grid would strand that freed seating.
+const DINE_IN_SLOT_STEP_MIN = 15;
+// Rolling booking window: the grid only opens today + the next 6 days (7 days
+// total). Beyond that, no dine-in windows are generated (and any left over are
+// pruned), so reservations can't be taken further out than a week.
+const DINE_IN_BOOKING_HORIZON_DAYS = 7;
+const WEEKDAYS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Whole days from `fromIso` to `toIso` (both YYYY-MM-DD), UTC-anchored so DST
+// never shifts the count. Negative = toIso is in the past.
+function daysBetweenIso(fromIso: string, toIso: string): number {
+  const a = Date.parse(`${fromIso}T00:00:00Z`);
+  const b = Date.parse(`${toIso}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return NaN;
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** Pure: is `dateIso` inside the rolling dine-in booking window relative to
+ *  `todayIso` — today through +6 days (7 days). Past and >6-days-out are out. */
+export function isWithinDineInHorizon(todayIso: string, dateIso: string): boolean {
+  const d = daysBetweenIso(todayIso, dateIso);
+  return Number.isFinite(d) && d >= 0 && d < DINE_IN_BOOKING_HORIZON_DAYS;
+}
+
+function hhmmToMin(s: string): number {
+  const [h, m] = s.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+function minToHhmm(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+// Mon=0 … Sun=6 for a YYYY-MM-DD date (local midnight).
+function dayIndexMonFirst(date: string): number {
+  return (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
+}
+// Resolve a location's open window for a given date from its hours table.
+// hours entries are day tokens or ranges ("Mon-Thu", "Fri-Sat", "Sun",
+// "Mon-Sun"); falls back to 12:00–23:00 when nothing matches.
+function serviceWindowForDate(
+  hours: { day: string; open: string; close: string }[] | undefined,
+  date: string,
+): { openMin: number; closeMin: number } {
+  const wd = dayIndexMonFirst(date);
+  for (const h of hours ?? []) {
+    const parts = h.day.split("-").map((p) => p.trim());
+    const start = WEEKDAYS_MON_FIRST.indexOf(parts[0]);
+    const end = WEEKDAYS_MON_FIRST.indexOf(parts[parts.length - 1]);
+    if (start === -1 || end === -1) continue;
+    if (wd >= start && wd <= end) {
+      const openMin = hhmmToMin(h.open);
+      const closeMin = hhmmToMin(h.close);
+      if (closeMin > openMin) return { openMin, closeMin };
+    }
+  }
+  return { openMin: 12 * 60, closeMin: 23 * 60 };
+}
+
+/** Deterministic id for an auto-generated dine-in grid slot, so ensure is
+ *  idempotent and a booking can attach to the same window across reloads. */
+export function dineInSlotId(locationSlug: string, date: string, time: string): string {
+  return `dine-${locationSlug}-${date}-${time.replace(":", "")}`;
+}
+
+/** Pure: the "HH:MM" seating windows for one day — every 15 min across the
+ *  full open window, open through close inclusive (12:00–23:00 → 12:00…23:00).
+ *  Falls back to 12:00–23:00 when hours are missing. */
+export function dineInGridTimes(
+  hours: { day: string; open: string; close: string }[] | undefined,
+  date: string,
+): string[] {
+  const { openMin, closeMin } = serviceWindowForDate(hours, date);
+  const times: string[] = [];
+  for (let m = openMin; m <= closeMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
+  return times;
+}
+
+/**
+ * Idempotently materialise the default dine-in grid for one location/day:
+ * a slot every 15 minutes across the full open window (open through close
+ * inclusive), capacity = the number of tables on the floor. Only for dates
+ * inside the rolling 7-day booking window (today … +6) — beyond it no windows
+ * are opened. Only *missing* windows are created — existing slots (including
+ * ones an operator flipped to "draft" = unavailable) are left as-is, so
+ * availability edits persist, while auto slots' capacity is kept in sync with
+ * the live table count so the board never lies. Stale auto windows left outside
+ * the current hours OR outside the 7-day horizon are pruned (only the empty
+ * ones — a booked slot is never removed).
+ * Returns the day's full dine-in slot list (auto + any manual).
+ */
+export async function ensureDineInSlots(locationSlug: string, date: string): Promise<TimeSlot[]> {
+  // Resolve the seating window from the CODE-defined opening hours (the
+  // authoritative seed in src/data/locations.ts), NOT the DB copy. The DB's
+  // marketing `hours` can drift from the intended service window — a seed
+  // captured at first deploy survives later redeploys and silently pinned the
+  // grid to old hours (e.g. 11:00). The grid is regenerated on every load, so
+  // deriving it from code keeps every day's windows correct and deployable
+  // without a DB migration. Locations that exist only in the DB (admin-added,
+  // not in code) still fall back to their stored hours.
+  const { locations: codeLocations } = await import("@/data/locations");
+  const hours =
+    codeLocations.find((l) => l.slug === locationSlug)?.hours ??
+    (await getLocationAsync(locationSlug))?.hours;
+  const tables = await getTables(locationSlug);
+  const capacity = Math.max(1, tables.length);
+  // Only open the grid inside the rolling 7-day window (today … +6). Outside it
+  // there are no windows, so the prune below clears any empty auto slots that
+  // were generated before the horizon existed (or as the window rolls forward).
+  const gridTimes = isWithinDineInHorizon(warsawToday(), date) ? dineInGridTimes(hours, date) : [];
+  const gridTimeSet = new Set(gridTimes);
+  const autoPrefix = `dine-${locationSlug}-${date}-`;
+  // slotIds carrying an active reservation must never be pruned (would orphan
+  // the booking) even if opening hours moved out from under them.
+  const dayRes = await getReservations(locationSlug, date);
+  const bookedSlotIds = new Set(dayRes.filter((r) => r.status !== "cancelled").map((r) => r.slotId));
+
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const byId = new Map(slots.map((s) => [s.id, s] as const));
+    // Times already covered by ANY dine-in slot on this day (manual or auto) —
+    // never lay a duplicate window on top of a hand-made one.
+    const coveredTimes = new Set(
+      slots
+        .filter((s) => s.locationSlug === locationSlug && s.date === date && s.fulfillmentTypes.includes("dine-in"))
+        .map((s) => s.time),
+    );
+    const touched: TimeSlot[] = [];
+    for (const time of gridTimes) {
+      const id = dineInSlotId(locationSlug, date, time);
+      const existing = byId.get(id);
+      if (existing) {
+        // Keep an auto slot's capacity aligned with the current floor size.
+        if (existing.maxOrders !== capacity) {
+          existing.maxOrders = capacity;
+          touched.push(existing);
+        }
+        continue;
+      }
+      if (coveredTimes.has(time)) continue;
+      const slot: TimeSlot = {
+        id,
+        locationSlug,
+        date,
+        time,
+        maxOrders: capacity,
+        currentOrders: 0,
+        fulfillmentTypes: ["dine-in"],
+        status: "active",
+      };
+      slots.push(slot);
+      touched.push(slot);
+    }
+    // Prune stale auto-grid windows that fall OUTSIDE the current opening hours
+    // (e.g. after the hours change) — but only the empty ones, so a booking is
+    // never orphaned. Manual slots (non-`dine-` ids) are always left alone.
+    const pruned: string[] = [];
+    const kept = slots.filter((s) => {
+      const isStaleAuto =
+        s.id.startsWith(autoPrefix) &&
+        !gridTimeSet.has(s.time) &&
+        !bookedSlotIds.has(s.id);
+      if (isStaleAuto) pruned.push(s.id);
+      return !isStaleAuto;
+    });
+    const changed = touched.length > 0 || pruned.length > 0;
+    if (changed) {
+      await writeJSON("slots.json", kept);
+      await Promise.all(touched.map((s) => dualWriteSlot(s)));
+      if (pruned.length) {
+        const db = await getDomainDb();
+        if (db) {
+          try {
+            await ensureSlotsTable();
+            await db.delete(slotsTable).where(inArray(slotsTable.id, pruned));
+          } catch (err) {
+            logger.warn("ensureDineInSlots prune DB delete failed", { pruned, layer: "store.slots" }, err);
+          }
+        }
+      }
+    }
+    return kept.filter(
+      (s) => s.locationSlug === locationSlug && s.date === date && s.fulfillmentTypes.includes("dine-in"),
+    );
   });
 }
 
@@ -12846,7 +13043,15 @@ export function defaultSimulationScenario(): SimulationScenario {
       propertyTaxAnnualGrosze: 600_000,
       buildingMaintenanceMonthlyGrosze: 150_000,
       buildingDepreciationPct: 0.025,
+      propertyAppreciationPct: 0.04, // ≈ Polish prime-commercial long-run appreciation
       fitoutGrosze: 83_400_000,
+      // Opportunity-cost benchmarks for the "run it vs invest the capital" model.
+      investHorizonYears: 10,
+      menuPriceInflationPct: 0.05, // menu repricing keeps pace with cost CPI
+
+      sp500RatePct: 0.10,     // S&P 500 long-run nominal total return
+      nasdaq100RatePct: 0.13, // Nasdaq-100 long-run nominal total return
+      bondRatePct: 0.05,      // a 5% fixed-income coupon
     },
     seasonality: {
       // Indoor dining is far less weather-elastic than an outdoor truck.
@@ -13106,9 +13311,15 @@ function hydratePremises(
   legacyRentGrosze?: number,
   legacySetupGrosze?: number,
 ): SimulationPremises {
-  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "buy")) {
+  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "mortgage" || saved.mode === "buy")) {
+    // Legacy migration: before the mortgage/buy split, "buy" meant a FINANCED
+    // purchase (down payment + mortgage). Those states predate
+    // propertyAppreciationPct, so a "buy" without that field is an old financed
+    // scenario — load it as "mortgage", not as the new all-cash "buy", which
+    // would silently zero out the loan the operator actually modelled.
+    const mode = saved.mode === "buy" && saved.propertyAppreciationPct === undefined ? "mortgage" : saved.mode;
     return {
-      mode: saved.mode,
+      mode,
       monthlyRentGrosze: clampNonNeg(saved.monthlyRentGrosze, def.monthlyRentGrosze),
       depositMonths: clampNonNeg(saved.depositMonths, def.depositMonths),
       serviceChargeMonthlyGrosze: clampNonNeg(saved.serviceChargeMonthlyGrosze, def.serviceChargeMonthlyGrosze),
@@ -13119,7 +13330,13 @@ function hydratePremises(
       propertyTaxAnnualGrosze: clampNonNeg(saved.propertyTaxAnnualGrosze, def.propertyTaxAnnualGrosze),
       buildingMaintenanceMonthlyGrosze: clampNonNeg(saved.buildingMaintenanceMonthlyGrosze, def.buildingMaintenanceMonthlyGrosze),
       buildingDepreciationPct: clamp01(saved.buildingDepreciationPct, def.buildingDepreciationPct),
+      propertyAppreciationPct: clamp01(saved.propertyAppreciationPct, def.propertyAppreciationPct),
       fitoutGrosze: clampNonNeg(saved.fitoutGrosze, def.fitoutGrosze),
+      investHorizonYears: clampNonNeg(saved.investHorizonYears, def.investHorizonYears),
+      menuPriceInflationPct: clamp01(saved.menuPriceInflationPct, def.menuPriceInflationPct),
+      sp500RatePct: clamp01(saved.sp500RatePct, def.sp500RatePct),
+      nasdaq100RatePct: clamp01(saved.nasdaq100RatePct, def.nasdaq100RatePct),
+      bondRatePct: clamp01(saved.bondRatePct, def.bondRatePct),
     };
   }
   const rent = typeof legacyRentGrosze === "number" && legacyRentGrosze >= 0 ? legacyRentGrosze : def.monthlyRentGrosze;

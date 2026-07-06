@@ -1299,15 +1299,50 @@
 .av3-heat-cell { padding: 7px 4px; text-align: center; font-family: var(--av3-mono); font-size: 10.5px; border-radius: 3px; color: var(--av3-fg); font-variant-numeric: tabular-nums; }
 .av3-heat-cell.is-center { outline: 1.5px solid var(--av3-platinum); outline-offset: -1px; font-weight: 700; }
 .av3-heat-axis { font-size: 10px; color: var(--av3-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
-.av3-scn { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--av3-gap-3); }
-.av3-scn-card { padding: 12px 14px; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); }
+/* auto-fit so scenario cards wrap instead of overflowing a narrow column
+   (e.g. the Premises ROI card's three modes with long złoty figures) */
+.av3-scn { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--av3-gap-3); }
+.av3-scn-card { min-width: 0; padding: 12px 14px; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); }
 .av3-scn-card[data-base="true"] { border-color: color-mix(in oklab, var(--av3-platinum) 45%, var(--av3-line-strong)); }
 .av3-scn-name { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
 .av3-scn-net { font-family: var(--av3-mono); font-size: 20px; font-weight: 600; margin-top: 5px; }
 .av3-scn-line { display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; padding: 4px 0; border-top: 1px solid var(--av3-line); margin-top: 6px; }
 .av3-scn-line:first-of-type { border-top: none; margin-top: 8px; }
 .av3-scn-line .v { font-family: var(--av3-mono); color: var(--av3-muted); }
-@media (max-width: 720px) { .av3-scn { grid-template-columns: 1fr; } }
+/* auto-fit (above) already collapses to a single column on narrow viewports */
+
+/* Labour roster — per-person rows. grid-areas so the same markup restyles from a
+   single desktop row to a name-over-inputs stack on mobile without overflowing. */
+.av3-lab-grid { display: flex; flex-direction: column; }
+.av3-lab-head, .av3-lab-row {
+  display: grid;
+  grid-template-columns: minmax(104px, 1.3fr) minmax(70px, 1fr) 60px minmax(94px, 1.1fr) 28px;
+  grid-template-areas: "name rate hrs sal x";
+  column-gap: 10px;
+  align-items: center;
+}
+.av3-lab-row { margin-top: 5px; }
+.av3-lab-row input { min-width: 0; text-align: right; font-family: var(--av3-mono); }
+.av3-lab-name { grid-area: name; min-width: 0; }
+.av3-lab-rate { grid-area: rate; }
+.av3-lab-hrs  { grid-area: hrs; }
+.av3-lab-sal  { grid-area: sal; }
+.av3-lab-x    { grid-area: x; justify-self: end; }
+.av3-lab-hdr  { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--av3-subtle); font-weight: 600; text-align: right; padding-bottom: 2px; }
+.av3-lab-role { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 560px) {
+  .av3-lab-head { display: none; }
+  .av3-lab-row {
+    grid-template-columns: 1fr 1fr 1.4fr 26px;
+    grid-template-areas:
+      "name name name name"
+      "rate hrs  sal  x";
+    row-gap: 6px;
+    margin-top: 12px;
+  }
+  .av3-lab-name { padding-left: 0 !important; font-weight: 600; color: var(--av3-fg) !important; }
+}
 
 /* ==========================================================================
    23. Auth — the login door (/login + /admin/login)

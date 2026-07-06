@@ -1389,5 +1389,85 @@ auth canvas's signature lighting and the sign-in lockup:
   per channel, and a **Fleet economics** card (shown at >1 unit) gives fleet
   revenue/EBITDA, avg EBITDA per unit, HQ absorption and a per-unit table. With
   this the v3 Calculator is at functional parity with the v2 `AdminSimulation`.
+  **Part 3t shipped — premises: rent / mortgage / buy + ROI-vs-markets:** the
+  **Premises** card's two-way *Rent / Buy* toggle became a three-way **Rent ·
+  Mortgage · Buy (cash)** segmented control. `SimulationPremises.mode` widened to
+  `"rent" | "mortgage" | "buy"`: *mortgage* is the old financed purchase (down
+  payment + loan), *buy* is an all-cash purchase (loan 0, no mortgage
+  interest, whole price upfront). `computePremises` folds both owned modes'
+  building depreciation + property tax + upkeep but only mortgage's interest;
+  `applyPremises` keys off `mode !== "rent"`. The buy/mortgage input set is now
+  gated — down payment / rate / term show only for *mortgage* — and a
+  **Appreciation %/yr** field (`propertyAppreciationPct`) was added to both owned
+  modes. A new **Premises ROI vs markets** output card (below Investor returns)
+  answers "is it viable to run this vs invest the capital?": `computePremisesInvestment`
+  runs a **real month-by-month simulation of the whole horizon** for **all three**
+  modes — not a flat steady-state figure multiplied out. Per mode it `applyPremises`
+  then `projectMonths(horizon×12)`, composing seasonality, weather and *compounding*
+  inflation each month: labour + fixed (incl. **rent, which therefore indexes up**
+  over the decade) at wage CPI, COGS at ingredient CPI, and **menu prices** at a
+  new `menuPriceInflationPct` lever — so a rising-rent lease genuinely looks worse
+  the longer it's held while a fixed-nominal mortgage payment is eroded by inflation
+  (`projectMonths` gained an optional `ticketInflationPct` param, defaulting to 0 so
+  the 12/24-month charts are byte-identical; COGS stays off the pre-inflation ticket
+  to avoid a double-count). It derives each mode's per-month free cash flow (projected
+  net profit + non-cash depreciation − mortgage principal), terminal equity (appreciated
+  price − remaining loan, or the refundable deposit for rent) and an annualised return
+  (IRR of the `[−capital, the 120 monthly cash flows…, +terminal]` stream), then scores
+  each against the **S&P 500**, **Nasdaq-100** and a **5% bond** over a configurable
+  horizon (new `investHorizonYears` / `menuPriceInflationPct` / `sp500RatePct` /
+  `nasdaq100RatePct` / `bondRatePct` fields, edited inline on the card). Each benchmark
+  compounds the same upfront capital and sweeps the per-month cash flow into that
+  instrument so the green/red **edge** is like-for-like. Three scenario
+  cards reuse the `av3-scn` grid (the live mode gets the `live` badge, a
+  loss-making mode a `bad` badge) with a five-section ⓘ (Rule #12). Each card
+  breaks the terminal asset out line-by-line so the appreciation is visible: the
+  owned modes show **Property @ yr N (appreciated)** → **− loan still owed**
+  (mortgage only) → **= Terminal equity**, while rent shows **Deposit back (no
+  property)** — making explicit that only buyers capture the unit's appreciation.
+  The Investor-
+  returns principal-netting and the detailed-P&L building-deprec./interest rows
+  switched from `mode === "buy"` to the mortgage/owned check accordingly. Store
+  defaults + `hydratePremises` carry the new fields (appreciation 4%, horizon 10y,
+  menu-price inflation 5%, 10/13/5% benchmarks) and accept the `mortgage` mode.
+  The **Premises ROI vs markets** card lives in the **inputs** column directly
+  under Premises (not the narrow outputs column) so the decision and its ROI read
+  together. `.av3-scn` switched from a fixed `repeat(3, 1fr)` (+ a 720px 1-col
+  override) to `repeat(auto-fit, minmax(240px, 1fr))` with `min-width: 0` on
+  `.av3-scn-card`, so the three scenario cards **wrap** instead of overflowing a
+  narrow container — fixing the long-złoty-figure overflow and covering the
+  Scenario-comparison card too. The card also gained a collapsible **“How this
+  is calculated”** `<details>` panel (the per-mode capital table + IRR-vs-edge +
+  caveats, in prose) and an **“Alternatives — same capital, deployed differently”**
+  set: `computePremisesInvestment` returns `blended: PremisesBlended[]` — seven
+  strategies all deploying the cash-buy's full capital, **ranked by 10-yr total
+  wealth**. Two pure-passive baselines (skip the restaurant: whole cheque into a
+  10y bond — coupons paid 2×/yr swept into the S&P, principal back at par via a
+  per-coupon `investedTerminalOverride` — or into the S&P today) sit at the floor; five rent-and-deploy plays
+  put rent's small restaurant outlay + the freed remainder into the S&P / a bond /
+  the Nasdaq-100 / a 60-40 portfolio / **more rented units** (replicate the unit
+  economics per extra site — flagged as an upside ceiling, before fleet
+  cannibalisation/HQ overhead). The two bond strategies model coupons differently
+  per their intent: *Bond only* sweeps its 2×/yr coupons into the S&P (compounding),
+  while *Rent + 10y bond* is plain saving — coupons held as cash, so simple
+  interest (`freed × (1 + rate × years)`) — both via `investedTerminalOverride`. A shared `build(units, principal, rate)` closure
+  reuses the rent pass's captured per-month cash-flow stream for each combined
+  IRR and reports the head-to-head `vsBuy` / `vsMortgage` deltas. Rendered as
+  compact cards in the responsive `.av3-scn` grid (leading with total wealth,
+  `best` badge on the winner) below the three scenario cards.
+  `src/lib/simulation-engine.ts`,
+  `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`,
+  `src/app/themes/admin-v3/index.css`.
+  **Part 3u shipped — Labour roster is mobile-responsive:** the Labour card's
+  per-person rows used a fixed inline 5-column grid (`minmax(120px…) … 30px`,
+  ≈446px min) that overflowed a phone — the Weekly-salary column and the ✕ delete
+  button bled off the right edge. The inline grid became CSS classes
+  (`.av3-lab-grid` / `.av3-lab-head` / `.av3-lab-row` + `grid-template-areas:
+  "name rate hrs sal x"`) so the *same markup* restyles at a breakpoint: ≤560px
+  the header row hides and each row stacks to two lines (`"name name name name" /
+  "rate hrs sal x"`) with fr-based columns, so it always fits the viewport;
+  `.av3-lab-row input { min-width: 0 }` stops the number inputs forcing overflow.
+  Desktop is byte-identical (single row + headers). `src/admin-v3/CalculatorV3.tsx`,
+  `src/app/themes/admin-v3/index.css`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

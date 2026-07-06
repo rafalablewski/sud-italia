@@ -12,7 +12,7 @@ import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useLocation } from "@/shared/LocationContext";
-import { findReservationConflicts } from "@/lib/floor";
+import { findReservationConflicts, TABLE_TURNAROUND_MIN } from "@/lib/floor";
 import { buildTableSessions } from "@/lib/table-session";
 import {
   suggestTables,
@@ -32,7 +32,7 @@ import {
   type SeatingDecisionSummary,
   type ServiceSimulation,
 } from "@/lib/seating";
-import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem } from "@/data/types";
+import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type TableFeature, type WaitlistEntry, type MenuItem, type Order } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 import { tLabel } from "./tableLabel";
@@ -51,6 +51,12 @@ function byTableNumber(a: FloorTable, b: FloorTable): number {
 function todayLocal(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Grosze → a compact "1 234 zł" string (space thousands, no decimals) for the
+ *  summary strip. */
+function zl(grosze: number): string {
+  return `${Math.round(grosze / 100).toLocaleString("en-US").replace(/,/g, " ")} zł`;
 }
 
 /**
@@ -84,6 +90,8 @@ export function CoreBook({
   const [tables, setTables] = useCoreCache<FloorTable[]>(`core:book-tables:${loc}`, []);
   const [reservations, setReservations] = useCoreCache<Reservation[]>(`core:book-res:${loc}`, []);
   const [waitlist, setWaitlist] = useCoreCache<WaitlistEntry[]>(`core:book-wait:${loc}`, []);
+  // Day's orders — feeds the summary strip's real order/revenue figures (Rule #1).
+  const [orders, setOrders] = useCoreCache<Order[]>(`core:book-orders:${loc}`, []);
   const [loading, setLoading] = useState(() => peekCoreCache<Reservation[]>(`core:book-res:${loc}`) === undefined);
   const [waitName, setWaitName] = useState("");
   const [waitPartyN, setWaitPartyN] = useState(2);
@@ -145,19 +153,21 @@ export function CoreBook({
     if (!date) return;
     setLoading(true);
     try {
-      const [s, t, r, pol, tm, dec, wl] = await Promise.all([
-        fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
+      const [s, t, r, pol, tm, dec, wl, ord] = await Promise.all([
+        fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}&ensureDineIn=1`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
         fetch(`/api/admin/seating/policy?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/turn-model?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/seating/decisions?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
         fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+        fetch(`/api/admin/orders?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])).catch(() => []),
       ]);
       setSlots(Array.isArray(s) ? s : s.slots ?? []);
       setTables(Array.isArray(t) ? t : t.tables ?? []);
       setReservations(Array.isArray(r) ? r : r.reservations ?? []);
       setWaitlist(Array.isArray(wl?.waitlist) ? wl.waitlist : []);
+      setOrders(Array.isArray(ord) ? ord : []);
       if (pol?.policy) { setPolicy(pol.policy); setStoredPolicy(pol.stored); }
       setTurnModel(tm && tm.cells ? (tm as TurnModel) : undefined);
       setTurnAccuracy(tm && tm.accuracy && typeof tm.accuracy.n === "number" ? tm.accuracy : null);
@@ -238,17 +248,25 @@ export function CoreBook({
     }
   };
 
-  // --- Timeline (tables × 30-min ticks, 17:00→23:00 dinner window) ------
-  // Mockup axis: 13 tick marks (17:00, 17:30 … 23:00) laid on a fixed-width
-  // grid (48px label + 64px/tick) so real blocks fill the grid, and the panel
-  // scrolls horizontally rather than squishing an 11:00-start day to the right.
-  const OPEN = 17 * 60, CLOSE = 23 * 60;
+  // --- Timeline (tables × 30-min ticks) -----------------------------------
+  // Fixed-width grid (48px label + 64px/tick); the panel scrolls horizontally
+  // rather than squishing the day. The tick axis (below) is derived from the
+  // day's real service window, not a hardcoded band.
   const TICK_MIN = 30, LBL_W = 48, TICK_W = 64;
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
   const fmtHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
-  const COLS = ticks.length; // 13
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
+  // Service window derived from the day's REAL dine-in slots + reservations, so a
+  // lunch service (12:00) or a late night actually shows — instead of the old
+  // hardcoded 17:00→23:00 dinner band that hid every earlier/later booking. Open
+  // is floored to the hour, close ceiled to the next 30-min tick; a lunch→dinner
+  // default (12:00→23:00) covers a day with no slots/bookings yet.
+  const svcStarts = [...dineInSlots.map((s) => toMin(s.time)), ...dayRes.map((r) => toMin(r.time))];
+  const svcEnds = [...dineInSlots.map((s) => toMin(s.time) + DURATION_MIN), ...dayRes.map((r) => toMin(r.time) + (r.durationMin ?? DURATION_MIN))];
+  const OPEN = Math.floor((svcStarts.length ? Math.min(...svcStarts) : 12 * 60) / 60) * 60;
+  const CLOSE = Math.max(OPEN + TICK_MIN, Math.ceil((svcEnds.length ? Math.max(...svcEnds) : 23 * 60) / TICK_MIN) * TICK_MIN);
+  const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
+  const COLS = ticks.length;
   // Dense-console stat strip — every figure from the day's reservations (Rule #1).
   const bookStat = useMemo(() => {
     const active = reservations.filter((r) => r.status !== "cancelled");
@@ -256,18 +274,42 @@ export function CoreBook({
     const seated = reservations.filter((r) => r.status === "seated").length;
     const upcoming = reservations.filter((r) => r.status === "booked").length;
     const noShows = reservations.filter((r) => r.status === "no-show").length;
+    // Reservations proper (source "booking") vs walk-ins (seated on arrival).
+    const walkIns = active.filter((r) => r.source === "walk-in").length;
+    const resProper = active.length - walkIns;
     const totalSeats = tables.reduce((s, t) => s + (t.seats || 0), 0);
+    const inService = tables.filter((t) => t.status !== "out-of-service").length;
     const nextUp = reservations.filter((r) => r.status === "booked").map((r) => r.time).sort()[0];
     return {
       bookings: active.length,
+      reservations: resProper,
+      walkIns,
       covers,
       seated,
       upcoming,
       noShows,
       nextUp,
+      tables: tables.length,
+      inService,
+      totalSeats,
+      avgParty: active.length ? covers / active.length : 0,
       fill: totalSeats ? Math.round((covers / totalSeats) * 100) : 0,
     };
   }, [reservations, tables]);
+  // Order + revenue figures for the day — real dine-in orders on the floor (Rule #1).
+  const orderStat = useMemo(() => {
+    const dineIn = orders.filter((o) => o.fulfillmentType === "dine-in" && o.slotDate === date && o.status !== "cancelled");
+    const count = dineIn.length;
+    const revenue = dineIn.reduce((s, o) => s + (o.totalAmount || 0), 0);
+    const tablesWithOrders = new Set(dineIn.map((o) => o.tableId).filter(Boolean)).size;
+    return {
+      count,
+      revenue,
+      avgCheck: count ? Math.round(revenue / count) : 0,
+      perTable: tablesWithOrders ? Math.round(revenue / tablesWithOrders) : 0,
+      tablesWithOrders,
+    };
+  }, [orders, date]);
   const conflictIds = useMemo(() => {
     const s = new Set<string>();
     for (const r of dayRes) if (findReservationConflicts(reservations, r).length) s.add(r.id);
@@ -368,6 +410,12 @@ export function CoreBook({
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, []);
+  // "Now" marker — a live line down the timeline at the current clock position.
+  // Only when viewing today and the clock sits inside the drawn window; nowMin
+  // is 0 until the client clock seeds above (< OPEN), so it stays hidden through
+  // SSR + first paint (no hydration mismatch).
+  const showNow = isToday && nowMin >= OPEN && nowMin <= CLOSE;
+  const nowLeft = LBL_W + ((nowMin - OPEN) / TICK_MIN) * TICK_W;
 
   // ── Seating actions — transition a booking through its lifecycle. The route
   // stamps seatedAt/completedAt; we resend the full record so nothing is lost.
@@ -624,17 +672,29 @@ export function CoreBook({
             </>
           }
         />
-        {/* dense-console 6-up stat strip — every figure from the day's reservations (Rule #1). */}
-        <div className="core-statstrip" role="group" aria-label="Booking metrics">
+        {/* dense-console summary — every figure from the day's real reservations,
+            walk-ins, tables + dine-in orders (Rule #1). Wraps to a grid so the
+            full set stays readable on a phone. */}
+        <div className="core-statstrip is-wrap" role="group" aria-label="Booking summary">
           <div className="cell">
-            <span className="lab">Bookings today</span>
-            <span className="val">{bookStat.bookings}</span>
+            <span className="lab">Tables</span>
+            <span className="val">{bookStat.tables}</span>
+            <span className="delta">{bookStat.inService} in service · {bookStat.totalSeats} seats</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Reservations</span>
+            <span className="val">{bookStat.reservations}</span>
             <span className="delta">{dineInSlots.length} slot{dineInSlots.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Walk-ins</span>
+            <span className="val">{bookStat.walkIns}</span>
+            <span className="delta">seated on arrival</span>
           </div>
           <div className="cell">
             <span className="lab">Covers</span>
             <span className="val brand">{bookStat.covers}</span>
-            <span className="delta">booked</span>
+            <span className="delta">avg {bookStat.avgParty.toFixed(1)}/party</span>
           </div>
           <div className="cell">
             <span className="lab">Seated</span>
@@ -652,13 +712,36 @@ export function CoreBook({
             <span className={bookStat.noShows > 0 ? "delta dn" : "delta"}>{bookStat.noShows > 0 ? "today" : "clean"}</span>
           </div>
           <div className="cell">
+            <span className="lab">Orders</span>
+            <span className="val">{orderStat.count}</span>
+            <span className="delta">dine-in today</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg / table</span>
+            <span className="val basil">{orderStat.perTable ? zl(orderStat.perTable) : "—"}</span>
+            <span className="delta">{orderStat.tablesWithOrders} table{orderStat.tablesWithOrders === 1 ? "" : "s"}</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Avg order</span>
+            <span className="val">{orderStat.avgCheck ? zl(orderStat.avgCheck) : "—"}</span>
+            <span className="delta">per check</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Revenue</span>
+            <span className="val brand">{orderStat.revenue ? zl(orderStat.revenue) : "—"}</span>
+            <span className="delta">dine-in</span>
+          </div>
+          <div className="cell">
             <span className="lab">Fill</span>
             <span className="val basil">{bookStat.fill}<small>%</small></span>
             <span className="delta">of seats</span>
           </div>
         </div>
         {viewMode === "timeline" && (
-        <>
+        // timeline + form in their OWN 2-col sub-grid, so the full-width
+        // "Today's bookings" list below is unambiguously beneath them and can
+        // never interleave / overlap the tall reservation form.
+        <div className="core-book-tlform">
         {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
         <div className="core-book-tlpanel">
@@ -677,6 +760,12 @@ export function CoreBook({
               <div className="hc" />
               {ticks.map((m, i) => <div key={m} className={`hc${i % 2 === 0 ? " hh" : ""}`}>{fmtHM(m)}</div>)}
             </div>
+            <div className="core-bk-tlbody">
+            {showNow && (
+              <div className="core-bk-now" style={{ left: `${nowLeft}px` }} aria-hidden>
+                <span className="core-bk-now-lbl">{fmtHM(nowMin)}</span>
+              </div>
+            )}
             {tables.length === 0 ? (
               <div className="core-ctx-empty pad">No tables configured.</div>
             ) : (
@@ -703,7 +792,13 @@ export function CoreBook({
                       const conflict = conflictIds.has(r.id);
                       const tone = r.status === "seated" ? "seated" : "pending";
                       const elapsed = isToday && r.status === "seated" ? Math.max(0, nowMin - toMin(r.time)) : null;
-                      const context = r.status === "seated" ? (elapsed != null ? `seated · ${elapsed}m` : "seated") : "pending confirm";
+                      // Seat fit — party vs the table's seats (combined for a join).
+                      // Spare seats flag a table that could take a bigger party.
+                      const seats = t.seats + (r.joinedTableIds ?? []).reduce((sum, id) => sum + (tables.find((x) => x.id === id)?.seats ?? 0), 0);
+                      const spare = Math.max(0, seats - r.partySize);
+                      const context = r.status === "seated"
+                        ? `${elapsed != null ? `seated · ${elapsed}m` : "seated"}${spare > 0 ? ` · ${spare} spare` : ""}`
+                        : `pending${spare > 0 ? ` · ${spare} spare` : ""}`;
                       const stackCls = conflict ? (clashing.indexOf(r) % 2 === 0 ? " conflict top" : " conflict bot") : ` ${tone}`;
                       return (
                         <div
@@ -712,13 +807,13 @@ export function CoreBook({
                           className={`core-bk-blk${stackCls}`}
                           style={{ left: `${left}px`, width: `${width}px` }}
                           onDragStart={() => setDragId(r.id)}
-                          title={`${r.customerName} · ${r.partySize} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
+                          title={`${r.customerName} · ${r.partySize}/${seats} seats${spare > 0 ? ` · ${spare} spare` : ""} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
                         >
                           {conflict ? (
-                            <span className="bn">{r.customerName} · {r.partySize} · ⚠ clash</span>
+                            <span className="bn">{r.customerName} · {r.partySize}/{seats} · ⚠ clash</span>
                           ) : (
                             <>
-                              <span className="bn">{r.customerName} · {r.partySize}</span>
+                              <span className="bn">{r.customerName} · {r.partySize}/{seats}</span>
                               <span className="bm">{context}</span>
                             </>
                           )}
@@ -729,20 +824,24 @@ export function CoreBook({
                 );
               })
             )}
+            </div>{/* /core-bk-tlbody */}
           </div>
         </div>
         </div>{/* /core-book-tlpanel */}
 
-        {/* new reservation — right rail (mockup) */}
-        <div className="core-book-form">
-          <div className="core-bk-resvh">
+        {/* new reservation — three-pane deck below the timeline (When · Who ·
+            Where). Trades the tall right rail for a wide, short layout: every
+            choice stays on screen and the flow reads left→right. */}
+        <div className="core-book-deck">
+          <div className="core-book-deckhead">
             <div className="t">New reservation</div>
             <div className="s">{daySub} · {loc}</div>
           </div>
-          <div className="core-bk-resvb">
 
+          {/* WHEN — pick a seating time */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>When</span><span className="mut">open / total tables</span></div>
             <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Slot</span><span className="mut">tinted by capacity</span></div>
               {loading && slots.length === 0 ? (
                 <div className="core-ctx-empty">Loading slots…</div>
               ) : dineInSlots.length === 0 ? (
@@ -750,18 +849,46 @@ export function CoreBook({
               ) : (
                 <div className="core-bk-slotchips">
                   {dineInSlots.map((s) => {
-                    const fill = s.maxOrders > 0 ? s.currentOrders / s.maxOrders : 0;
+                    // Dine-in fill = tables physically OCCUPIED at this time ÷
+                    // tables on the floor (real occupancy), NOT the online-order
+                    // maxOrders cap. A reservation holds its table(s) for its full
+                    // duration PLUS a 15-min cleanup turnaround, so a 12:00 · 90m
+                    // booking blocks T1 through 13:45 (unseatable at 13:30) — count
+                    // every active reservation whose window+turnaround covers this
+                    // slot, not just the ones that START on it (which read 0 at
+                    // 12:30). Joined tables count too; dedupe by table id.
+                    const slotMin = toMin(s.time);
+                    const occupied = new Set<string>();
+                    for (const r of reservations) {
+                      if (!RES_HOLDS.has(r.status)) continue;
+                      const start = toMin(r.time);
+                      if (slotMin >= start && slotMin < start + (r.durationMin ?? DURATION_MIN) + TABLE_TURNAROUND_MIN) {
+                        if (r.tableId) occupied.add(r.tableId);
+                        for (const id of r.joinedTableIds ?? []) occupied.add(id);
+                      }
+                    }
+                    const capacity = Math.max(1, tables.length);
+                    const bookedTables = Math.min(occupied.size, capacity);
+                    // Show OPEN tables, not occupied — staff read "how many can I
+                    // seat now", not "how many are taken". Tint still by fill.
+                    const openTables = capacity - bookedTables;
+                    const fill = bookedTables / capacity;
                     const tier = fill >= 1 ? "full" : fill >= 0.85 ? "warm" : fill >= 0.6 ? "mid" : "ok";
                     const on = slotId === s.id;
                     return (
-                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${s.currentOrders}/${s.maxOrders} booked`}>
-                        {s.time}<small>{s.currentOrders}/{s.maxOrders}</small>
+                      <button key={s.id} className={`core-bk-slotchip ${on ? "on" : tier}`} onClick={() => setSlotId(s.id)} title={`${openTables} of ${capacity} tables open`}>
+                        {s.time}<small>{openTables}/{capacity}</small>
                       </button>
                     );
                   })}
                 </div>
               )}
             </div>
+          </section>
+
+          {/* WHO — party, accessibility needs, guest identity */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>Who</span><span className="mut">party · needs · guest</span></div>
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Party size</span></div>
@@ -787,7 +914,30 @@ export function CoreBook({
             </div>
 
             <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Table</span><span className="mut">{selectedSlot ? `live fit for ${partyN}` : `needs ${partyN}-top+`}</span></div>
+              <div className="core-bk-flab"><span>Guest</span></div>
+              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
+              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
+              {guestProfile && (
+                <div className="core-bk-guestmatch">
+                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
+                  <span className="gm-txt">
+                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
+                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
+                  </span>
+                  {name.trim() === "" && guestProfile.name && (
+                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
+                  )}
+                </div>
+              )}
+              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
+            </div>
+          </section>
+
+          {/* WHERE — the engine-ranked table, then confirm */}
+          <section className="core-book-pane">
+            <div className="core-book-panelab"><span>Where</span><span className="mut">{selectedSlot ? `live fit for ${partyN}` : `needs ${partyN}-top+`}</span></div>
+
+            <div className="core-bk-field">
               {tables.length === 0 ? (
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
@@ -887,25 +1037,6 @@ export function CoreBook({
               )}
             </div>
 
-            <div className="core-bk-field">
-              <div className="core-bk-flab"><span>Guest</span></div>
-              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
-              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
-              {guestProfile && (
-                <div className="core-bk-guestmatch">
-                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
-                  <span className="gm-txt">
-                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
-                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
-                  </span>
-                  {name.trim() === "" && guestProfile.name && (
-                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
-                  )}
-                </div>
-              )}
-              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
-            </div>
-
             {selectedSlot?.minSpendGrosze ? (
               <div className="core-bk-minspend">
                 <span>Slot minimum: <b>{Math.round(selectedSlot.minSpendGrosze / 100)} zł</b> to book this slot.</span>
@@ -935,9 +1066,9 @@ export function CoreBook({
             <button className="core-bk-bookbtn" disabled={!canBook} onClick={() => void book()}>
               {canBook && selectedSlot ? `✓ Book table · ${selectedSlot.time} · ${tableLabel(tableId)} · ${partyN}` : "✓ Book slot + table"}
             </button>
-          </div>
+          </section>
         </div>
-        </>
+        </div>
         )}
 
         {/* FLOOR lens — spatial live occupancy from the shared TableSession
@@ -1093,8 +1224,12 @@ export function CoreBook({
           </section>
         )}
 
-        {/* today's bookings — full-width blist */}
-        <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to open on the timeline</div>
+        {/* today's bookings — full-width blist, ONLY on the Floor tab. It's
+            redundant everywhere else: the Timeline grid already IS the
+            chronological booking view, and Arrivals has its own Expected/Seated
+            queue. Floor is spatial-only, so a time-ordered list adds value there. */}
+        {viewMode === "floor" && (<>
+        <div className="core-bk-divlabel">Today&apos;s bookings — chronological · tap a row to select it</div>
         <section className="core-bk-blist">
           <div className="core-bk-blisth">
             <span className="t">Today&apos;s bookings</span>
@@ -1130,6 +1265,7 @@ export function CoreBook({
             })
           )}
         </section>
+        </>)}
 
         {/* Walk-in — engine-guarded seating for a party with no booking */}
         <CoreDialog open={walkOpen} onClose={() => setWalkOpen(false)} title="Seat a walk-in">

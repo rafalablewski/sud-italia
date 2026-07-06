@@ -45,12 +45,24 @@ test("double-booking the same table+window is a conflict", () => {
   assert.equal(clash[0].id, "a");
 });
 
-test("non-overlapping times on one table are fine", () => {
+test("a table needs a 15-min turnaround gap between bookings", () => {
   const existing = [res({ id: "a", tableId: "t1", time: "18:00", durationMin: 90 })]; // ends 19:30
-  const ok = findReservationConflicts(existing, {
-    id: "b", locationSlug: "krakow", tableId: "t1", date: "2026-05-26", time: "19:30", durationMin: 90,
-  });
-  assert.equal(ok.length, 0);
+  // Back-to-back (starts exactly when the last ends) leaves no cleanup → clash.
+  assert.equal(
+    findReservationConflicts(existing, {
+      id: "b", locationSlug: "krakow", tableId: "t1", date: "2026-05-26", time: "19:30", durationMin: 90,
+    }).length,
+    1,
+    "0-min gap clashes (no time to clean)",
+  );
+  // A 15-min gap (19:45) clears the turnaround → fine.
+  assert.equal(
+    findReservationConflicts(existing, {
+      id: "b", locationSlug: "krakow", tableId: "t1", date: "2026-05-26", time: "19:45", durationMin: 90,
+    }).length,
+    0,
+    "15-min gap is enough",
+  );
 });
 
 test("different table, different date, cancelled, and self are not conflicts", () => {

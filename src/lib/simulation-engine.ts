@@ -263,6 +263,385 @@ export function computeReturns(monthlyNetProfitGrosze: number, setupGrosze: numb
   return { npv, irrAnnualPct, paybackMonth, cumulative };
 }
 
+/* ── premises ROI vs the markets ─────────────────────────────────────────────
+ * "Is it viable to run this business, or would the capital do better in the
+ * S&P 500 / Nasdaq-100 / a 5% bond?" — answered per occupancy scenario over a
+ * multi-year horizon. Every number is real engine output: each mode (rent /
+ * mortgage / cash-buy) re-runs the full P&L, so its net profit reflects that
+ * mode's rent-vs-interest-vs-nothing occupancy structure. No mocked figures. */
+
+/** One benchmark (index fund / bond) scored against one premises scenario. */
+export interface PremisesInvestmentBenchmark {
+  key: "sp500" | "nasdaq100" | "bond";
+  label: string;
+  /** Assumed annual return, as a percent (e.g. 10 = 10%/yr). */
+  annualRatePct: number;
+  /** The upfront capital compounded at this rate for the horizon — what you'd
+   *  have if you skipped the restaurant and bought the index/bond instead. */
+  terminalCapitalGrosze: number;
+  /** terminalCapital − upfront capital (pure market gain). */
+  gainGrosze: number;
+  /** Business terminal wealth when its free cash flow is swept into THIS same
+   *  instrument each month, minus the pure-market terminal — the złoty the
+   *  business adds over just buying the index. Positive → running it wins. */
+  edgeGrosze: number;
+  businessWins: boolean;
+}
+
+/** A full 10-year (configurable) return picture for one occupancy mode. */
+export interface PremisesInvestmentScenario {
+  mode: "rent" | "mortgage" | "buy";
+  label: string;
+  /** Operating net profit > 0 — the business at least makes money to begin with. */
+  viable: boolean;
+  /** Cash committed on day one (deposit / down payment / full price + fit-out). */
+  upfrontCapitalGrosze: number;
+  /** Accrual net profit / month under this mode (after tax, D&A, interest). */
+  monthlyNetProfitGrosze: number;
+  /** Free cash flow / month: net profit + non-cash depreciation − mortgage
+   *  principal (the true cash the unit throws off). */
+  monthlyCashFlowGrosze: number;
+  /** Σ free cash flow across the horizon (flat, un-reinvested). */
+  totalCashFlowGrosze: number;
+  /** Market value of the building at the end of the horizon (0 when renting). */
+  terminalPropertyValueGrosze: number;
+  /** Mortgage still outstanding at the end of the horizon (0 rent / cash-buy). */
+  terminalLoanBalanceGrosze: number;
+  /** Equity you walk away holding: property − loan (owned modes) or the
+   *  refundable deposit (rent). */
+  terminalAssetGrosze: number;
+  /** Everything you end with: Σ cash flow + terminal asset. */
+  terminalWealthGrosze: number;
+  /** terminalWealth − upfront capital. */
+  netGainGrosze: number;
+  /** terminalWealth ÷ upfront capital (e.g. 2.4 = you 2.4×'d your money). */
+  moneyMultiple: number;
+  /** Annualised return (IRR of the [−capital, cashflows…, +terminal] stream),
+   *  as a percent — the number to compare head-to-head with the benchmark rates.
+   *  null when undefined (no capital, or the stream never turns positive). */
+  annualizedReturnPct: number | null;
+  benchmarks: PremisesInvestmentBenchmark[];
+}
+
+/** A "rent the unit AND deploy the capital you *didn't* sink into a building"
+ *  strategy — the fairest rival to buying, because each one puts the SAME total
+ *  capital to work as a cash purchase (rent's small outlay in the restaurant, the
+ *  freed remainder deployed some other way: an index, a bond, a balanced
+ *  portfolio, or more restaurants). Answers: is owning the building actually
+ *  worth locking up the money, or would renting + doing X with the rest be richer? */
+export interface PremisesBlended {
+  /** Stable id: "bond-only" | "sp500-only" (pure passive, no restaurant) |
+   *  "sp500" | "bond" | "nasdaq100" | "balanced" | "units" (rent + deploy). */
+  key: string;
+  label: string;
+  /** One-liner: what the freed capital does. */
+  detail: string;
+  /** Total capital deployed — equal to the cash-buy upfront, for a like-for-like. */
+  totalCapitalGrosze: number;
+  /** Portion running the primary rented restaurant (one unit's upfront). */
+  restaurantCapitalGrosze: number;
+  /** The rest — freed by NOT buying — deployed per the strategy. */
+  freedCapitalGrosze: number;
+  /** Extra rented units the freed capital opens (>0 only for the "units" play). */
+  extraUnits: number;
+  /** Every rented unit's combined 10-yr wealth (Σ free cash flow + deposits). */
+  restaurantWealthGrosze: number;
+  /** The invested / reserve portion's value at the horizon. */
+  investedTerminalGrosze: number;
+  /** restaurantWealth + investedTerminal. */
+  terminalWealthGrosze: number;
+  netGainGrosze: number;
+  moneyMultiple: number;
+  /** IRR of [−total capital, the rented units' monthly cash flow…, +terminal]. */
+  annualizedReturnPct: number | null;
+  /** terminalWealth − the cash-buy's terminal wealth (>0 → this beats owning). */
+  vsBuyGrosze: number;
+  /** terminalWealth − the mortgage's terminal wealth. */
+  vsMortgageGrosze: number;
+  vsBuyWins: boolean;
+}
+
+export interface PremisesInvestment {
+  horizonYears: number;
+  horizonMonths: number;
+  /** Benchmark rates actually used, as percents. */
+  benchmarkRates: { sp500: number; nasdaq100: number; bond: number };
+  /** rent, mortgage, buy — in that order. */
+  scenarios: PremisesInvestmentScenario[];
+  /** "Rent + deploy the freed capital" strategies (S&P / bond / Nasdaq / 60-40 /
+   *  more units), each at the cash-buy's total capital. Empty when renting frees
+   *  no capital (its upfront ≥ the cash-buy's). */
+  blended: PremisesBlended[];
+}
+
+/** Remaining loan balance after `k` payments (grosze). Uses the SAME leveled
+ *  straight-line principal (`round(loan / n)` per month) that `computePremises`
+ *  subtracts from the monthly cash flows, so principal-paid + balance-owed
+ *  reconcile to the original loan. A true annuity curve here would back-load
+ *  principal and leave a higher balance than the flat cash-flow reduction
+ *  implies — double-counting principal and under-stating terminal equity. */
+function remainingLoanBalance(loan: number, n: number, k: number): number {
+  if (loan <= 0 || k >= n) return 0;
+  const principalMonthly = Math.round(loan / n);
+  return Math.max(0, loan - k * principalMonthly);
+}
+
+/** IRR (annual, as a percent) of a monthly cash-flow stream `flows` where
+ *  flows[0] is the day-one outlay (negative) and flows[m] is month m. Bisected
+ *  on the annual rate; null when it never crosses zero in the search band. */
+function irrAnnualOfStream(flows: number[]): number | null {
+  const npvAt = (annual: number) => {
+    const d = Math.pow(1 + annual, 1 / 12);
+    let v = 0;
+    for (let m = 0; m < flows.length; m++) v += flows[m] / Math.pow(d, m);
+    return v;
+  };
+  let lo = -0.9, hi = 5;
+  const nlo = npvAt(lo), nhi = npvAt(hi);
+  if (nlo * nhi > 0) return nhi > 0 ? hi * 100 : null;
+  for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (npvAt(mid) > 0) lo = mid; else hi = mid; }
+  return ((lo + hi) / 2) * 100;
+}
+
+/**
+ * Score all three premises scenarios (rent / mortgage / cash-buy) over the
+ * horizon and pit each against the S&P 500, the Nasdaq-100 and a bond.
+ *
+ * This runs a REAL month-by-month simulation of the whole horizon — not a flat
+ * steady-state figure multiplied out. For each mode it re-applies premises,
+ * folds the behaviour levers, then `projectMonths(H)` composes seasonality,
+ * weather and compounding inflation every month: labour + fixed costs (incl.
+ * rent, which therefore indexes up over the decade) grow at wage CPI, COGS at
+ * ingredient CPI, and menu prices at `menuPriceInflationPct` — so a rising-rent
+ * lease genuinely looks worse over 10 years while a fixed-nominal mortgage
+ * payment is eroded by inflation. The property appreciates at
+ * `propertyAppreciationPct` (owned modes only). Every figure is engine output.
+ *
+ * `base` must be the scenario as the engine sees it *before* `applyPremises`
+ * (rent line still flat, no folded mortgage interest / building depreciation) —
+ * the function re-applies premises per mode itself, and folds assumptions +
+ * annual weather internally so each mode's headline net profit matches the
+ * displayed P&L. Returns null when there's no premises decision attached.
+ */
+export function computePremisesInvestment(
+  base: SimulationScenario,
+): PremisesInvestment | null {
+  const p = base.premises;
+  if (!p) return null;
+  const horizonYears = Math.max(1, Math.round(p.investHorizonYears ?? 10));
+  const H = horizonYears * 12;
+  const menuInflation = Math.max(0, p.menuPriceInflationPct ?? 0);
+  const rates = {
+    sp500: (p.sp500RatePct ?? 0.1) * 100,
+    nasdaq100: (p.nasdaq100RatePct ?? 0.13) * 100,
+    bond: (p.bondRatePct ?? 0.05) * 100,
+  };
+  const benchDefs: { key: PremisesInvestmentBenchmark["key"]; label: string; annualPct: number }[] = [
+    { key: "sp500", label: "S&P 500", annualPct: rates.sp500 },
+    { key: "nasdaq100", label: "Nasdaq-100", annualPct: rates.nasdaq100 },
+    { key: "bond", label: "5% bond", annualPct: rates.bond },
+  ];
+
+  const modes: { mode: "rent" | "mortgage" | "buy"; label: string }[] = [
+    { mode: "rent", label: "Rent" },
+    { mode: "mortgage", label: "Mortgage" },
+    { mode: "buy", label: "Buy (cash)" },
+  ];
+
+  // Captured from the rent pass so the blended strategy can reuse its exact
+  // per-month cash-flow stream (no re-projection).
+  let rentFcfByMonth: number[] = [];
+
+  const scenarios = modes.map(({ mode, label }): PremisesInvestmentScenario => {
+    const varied = applyPremises({ ...base, premises: { ...p, mode } });
+    const prem = computePremises({ ...p, mode });
+
+    // Headline steady-state month (annual-average weather) — matches the P&L /
+    // Investor-returns cards, used for the display "Net profit / mo" + viability.
+    const headline = computeScenario(applyAnnualWeather(applyAssumptions(varied)));
+    const netProfit = headline.netProfit;
+
+    const capital = Math.max(0, prem.upfrontCashGrosze);
+    // Steady-state cash view (for the readout): net profit + non-cash
+    // depreciation add-back − mortgage principal (real cash out the P&L omits).
+    const monthlyCashFlow = netProfit + headline.depreciation - prem.mortgagePrincipalMonthlyGrosze;
+
+    // ── the actual 10-year simulation ──────────────────────────────────────
+    // projectMonths applies weather per-month itself, so fold ONLY assumptions
+    // (not annual weather — that would double-count). Menu prices inflate at
+    // menuPriceInflationPct; labour/fixed at wage CPI, COGS at ingredient CPI.
+    const projScn = applyAssumptions(varied);
+    const rows = projectMonths(projScn, H, 0, 0, menuInflation);
+    const deprFlat = projScn.depreciationMonthlyGrosze ?? 0;
+    const principalFlat = prem.mortgagePrincipalMonthlyGrosze;
+    // Per-month free cash flow: the projected (inflation-aware) net profit, with
+    // the flat non-cash depreciation added back and the flat principal removed.
+    const fcfByMonth = rows.map((r) => r.netProfit + deprFlat - principalFlat);
+    const totalCashFlow = fcfByMonth.reduce((sum, v) => sum + v, 0);
+    if (mode === "rent") rentFcfByMonth = fcfByMonth;
+
+    // Terminal asset — what you still hold at the end of the horizon.
+    let propertyValue = 0, loanBalance = 0, terminalAsset = 0;
+    if (mode === "rent") {
+      // The refundable deposit comes back; the fit-out is sunk.
+      terminalAsset = Math.round(Math.max(0, p.monthlyRentGrosze ?? 0) * Math.max(0, p.depositMonths ?? 0));
+    } else {
+      const price = Math.max(0, p.purchasePriceGrosze ?? 0);
+      propertyValue = Math.round(price * Math.pow(1 + Math.max(0, p.propertyAppreciationPct ?? 0), horizonYears));
+      const n = Math.max(1, Math.round((p.mortgageTermYears ?? 0) * 12));
+      loanBalance = mode === "mortgage"
+        ? remainingLoanBalance(prem.loanAmountGrosze, n, H)
+        : 0;
+      terminalAsset = Math.max(0, propertyValue - loanBalance);
+    }
+
+    const terminalWealth = totalCashFlow + terminalAsset;
+    const netGain = terminalWealth - capital;
+    const moneyMultiple = capital > 0 ? terminalWealth / capital : 0;
+
+    // Annualised return — IRR of the whole cash-flow stream (outlay, the real
+    // per-month free cash flow, terminal asset landed in the final month).
+    const flows = new Array(H + 1).fill(0);
+    flows[0] = -capital;
+    for (let m = 1; m <= H; m++) flows[m] = fcfByMonth[m - 1];
+    flows[H] += terminalAsset;
+    const annualizedReturnPct = capital > 0 ? irrAnnualOfStream(flows) : null;
+
+    // Per-benchmark: compound the capital vs sweeping the business's (real,
+    // per-month) cash flow into the same instrument, so the edge is like-for-like.
+    const benchmarks = benchDefs.map(({ key, label: blabel, annualPct }): PremisesInvestmentBenchmark => {
+      const r = annualPct / 100;
+      const terminalCapital = Math.round(capital * Math.pow(1 + r, horizonYears));
+      let swept = terminalAsset;
+      for (let m = 1; m <= H; m++) swept += fcfByMonth[m - 1] * Math.pow(1 + r, (H - m) / 12);
+      const edge = Math.round(swept - terminalCapital);
+      return {
+        key, label: blabel, annualRatePct: annualPct,
+        terminalCapitalGrosze: terminalCapital,
+        gainGrosze: terminalCapital - capital,
+        edgeGrosze: edge,
+        businessWins: edge >= 0,
+      };
+    });
+
+    return {
+      mode, label,
+      viable: netProfit > 0,
+      upfrontCapitalGrosze: capital,
+      monthlyNetProfitGrosze: netProfit,
+      monthlyCashFlowGrosze: monthlyCashFlow,
+      totalCashFlowGrosze: totalCashFlow,
+      terminalPropertyValueGrosze: propertyValue,
+      terminalLoanBalanceGrosze: loanBalance,
+      terminalAssetGrosze: terminalAsset,
+      terminalWealthGrosze: terminalWealth,
+      netGainGrosze: netGain,
+      moneyMultiple,
+      annualizedReturnPct,
+      benchmarks,
+    };
+  });
+
+  // ── blended: rent the unit + deploy the capital you didn't sink into a
+  // building. Every strategy puts the SAME total to work as the cash-buy
+  // (equal-capital rival) so "own vs rent-and-do-X" is a fair comparison. ─────
+  const rentScn = scenarios[0];
+  const mortgageScn = scenarios[1];
+  const buyScn = scenarios[2];
+  const totalCapital = buyScn.upfrontCapitalGrosze;
+  const perUnitCapital = rentScn.upfrontCapitalGrosze;
+  const freed = totalCapital - perUnitCapital;
+  const blended: PremisesBlended[] = [];
+  if (freed > 0) {
+    const rentWealth1 = rentScn.terminalWealthGrosze; // one rented unit's 10-yr wealth
+    const rentDeposit1 = rentScn.terminalAssetGrosze;
+
+    // Assemble a blended row from N rented units + a lump grown at `investRate`.
+    // `investedTerminalOverride` lets a strategy supply a custom terminal value
+    // for the deployed capital (e.g. a bond whose coupons are swept elsewhere).
+    const build = (
+      key: string, label: string, detail: string,
+      units: number, investPrincipal: number, investRate: number,
+      investedTerminalOverride?: number,
+    ): PremisesBlended => {
+      const investedTerminal = investedTerminalOverride ?? Math.round(investPrincipal * Math.pow(1 + investRate, horizonYears));
+      const restaurantWealth = units * rentWealth1;
+      const terminalWealth = restaurantWealth + investedTerminal;
+      // Combined stream: outlay the full capital, collect every unit's monthly
+      // cash flow, cash out every deposit + the grown lump at the horizon.
+      const flows = new Array(H + 1).fill(0);
+      flows[0] = -totalCapital;
+      for (let m = 1; m <= H; m++) flows[m] = units * (rentFcfByMonth[m - 1] ?? 0);
+      flows[H] += units * rentDeposit1 + investedTerminal;
+      const vsBuy = terminalWealth - buyScn.terminalWealthGrosze;
+      return {
+        key, label, detail,
+        totalCapitalGrosze: totalCapital,
+        restaurantCapitalGrosze: perUnitCapital,
+        freedCapitalGrosze: freed,
+        extraUnits: Math.max(0, units - 1),
+        restaurantWealthGrosze: restaurantWealth,
+        investedTerminalGrosze: investedTerminal,
+        terminalWealthGrosze: terminalWealth,
+        netGainGrosze: terminalWealth - totalCapital,
+        moneyMultiple: totalCapital > 0 ? terminalWealth / totalCapital : 0,
+        annualizedReturnPct: totalCapital > 0 ? irrAnnualOfStream(flows) : null,
+        vsBuyGrosze: vsBuy,
+        vsMortgageGrosze: terminalWealth - mortgageScn.terminalWealthGrosze,
+        vsBuyWins: vsBuy >= 0,
+      };
+    };
+
+    const zl = (g: number) => `${Math.round(g / 100).toLocaleString("en-US")} zł`;
+    const balancedRate = 0.6 * (rates.sp500 / 100) + 0.4 * (rates.bond / 100);
+    // 5. more rented units — replicate the concept; park the remainder (too small
+    //    for another fit-out) at the bond rate as a reserve toward the next site.
+    const extraUnits = perUnitCapital > 0 ? Math.floor(freed / perUnitCapital) : 0;
+    const reserve = freed - extraUnits * perUnitCapital;
+
+    // Bond-only, realistic: a 10y bond bought at par pays a coupon TWICE a year;
+    // each coupon is swept into the S&P (not compounded back into the bond), and
+    // the principal returns at face value at maturity. So terminal = principal +
+    // Σ coupons each grown in the S&P from its pay date to the horizon.
+    const couponsPerYear = 2;
+    const couponPerPayment = (totalCapital * (rates.bond / 100)) / couponsPerYear;
+    let couponPot = 0;
+    for (let k = 1; k <= couponsPerYear * horizonYears; k++) {
+      const yearsRemaining = horizonYears - k / couponsPerYear;
+      couponPot += couponPerPayment * Math.pow(1 + rates.sp500 / 100, yearsRemaining);
+    }
+    const bondOnlyTerminal = Math.round(totalCapital + couponPot);
+
+    blended.push(
+      // Pure-passive baselines — no restaurant at all, the whole cheque into one
+      // instrument. The floor every restaurant strategy is measured against.
+      build("bond-only", "Bond only — no restaurant", `full ${zl(totalCapital)} → 10y bond @ ${rates.bond.toFixed(0)}%; coupons paid 2×/yr, reinvested in the S&P`, 0, totalCapital, rates.bond / 100, bondOnlyTerminal),
+      build("sp500-only", "S&P 500 only — no restaurant", `full ${zl(totalCapital)} → S&P today @ ${rates.sp500.toFixed(0)}%, no restaurant`, 0, totalCapital, rates.sp500 / 100),
+      // Rent + deploy the freed capital.
+      build("sp500", "Rent + S&P 500", `freed ${zl(freed)} → S&P @ ${rates.sp500.toFixed(0)}%`, 1, freed, rates.sp500 / 100),
+      // Plain saving: the bond's coupons (2×/yr) are just held as cash — not
+      // reinvested — so it's simple interest, principal back at par at maturity:
+      // terminal = freed × (1 + rate × years).
+      build("bond", "Rent + 10y bond", `freed ${zl(freed)} → bond @ ${rates.bond.toFixed(0)}%; coupons (2×/yr) saved as cash, not reinvested`, 1, freed, rates.bond / 100, Math.round(freed * (1 + (rates.bond / 100) * horizonYears))),
+      build("nasdaq100", "Rent + Nasdaq-100", `freed ${zl(freed)} → Nasdaq @ ${rates.nasdaq100.toFixed(0)}%`, 1, freed, rates.nasdaq100 / 100),
+      build("balanced", "Rent + 60/40 portfolio", `freed ${zl(freed)} → 60% S&P / 40% bond ≈ ${(balancedRate * 100).toFixed(0)}%`, 1, freed, balancedRate),
+      build(
+        "units",
+        "Rent + open more units",
+        extraUnits > 0
+          ? `${extraUnits} more rented unit${extraUnits > 1 ? "s" : ""}${reserve > 0 ? ` + ${zl(reserve)} reserve` : ""}`
+          : `freed ${zl(freed)} < one unit's setup — reserve @ ${rates.bond.toFixed(0)}%`,
+        1 + extraUnits, reserve, rates.bond / 100,
+      ),
+    );
+    // Rank by 10-yr total wealth (best first) so the strongest use of the capital
+    // leads and the pure-passive floors sit at the bottom.
+    blended.sort((a, b) => b.terminalWealthGrosze - a.terminalWealthGrosze);
+  }
+
+  return { horizonYears, horizonMonths: H, benchmarkRates: rates, scenarios, blended };
+}
+
 /**
  * Volume multiplier for a single month (0=Jan, 11=Dec). Rain applies
  * year-round; heatwaves fire only in Jun–Aug; the school-holiday lunch dip
@@ -325,11 +704,16 @@ export function projectMonths(
   monthsCount: number,
   startMonth = 0,
   rampMonths = 0,
+  ticketInflationPct = 0,
 ): ProjectionRow[] {
   const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
   const w = s.weather;
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
   const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
+  // Menu-price inflation — 0 for the steady-state 12/24-month charts (revenue
+  // frozen), positive for the long-horizon premises sim so prices track cost CPI
+  // instead of margins collapsing over a decade.
+  const ticketMonthly = (1 + ticketInflationPct) ** (1 / 12) - 1;
   const baseLaborMonthly = s.labor.reduce(
     (sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze,
     0,
@@ -374,8 +758,12 @@ export function projectMonths(
     const volumeFlex = anchor > 0 ? Math.max(0, 1 + variablePct * (s.ordersPerDay / anchor - 1)) : 1;
     const seasonalFlex = 1 + variablePct * (seasonMult * rampFactor - 1);
     const laborFlex = volumeFlex * Math.max(0, seasonalFlex);
-    const revenue = Math.round(orders * s.avgTicketGrosze);
-    const cogs = Math.round(revenue * s.cogsPct * cogsMult);
+    const ticketMult = (1 + ticketMonthly) ** i;
+    const revenue = Math.round(orders * s.avgTicketGrosze * ticketMult);
+    // COGS tracks volume × unit food cost × ingredient CPI — off the PRE-inflation
+    // ticket, so raising menu prices doesn't inflate ingredient cost (no
+    // double-count). Identical to before when ticketInflationPct = 0.
+    const cogs = Math.round(orders * s.avgTicketGrosze * s.cogsPct * cogsMult);
     const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
     const fixed = Math.round(baseFixed * wageMult);
     const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
@@ -477,9 +865,10 @@ export function applyAssumptions(s: SimulationScenario): SimulationScenario {
  *  interest ÷ months) so a single steady-state monthly figure is honest for a
  *  simulator, rather than the front-loaded first-period interest. */
 export interface PremisesComputed {
-  mode: "rent" | "buy";
-  /** All premises cost hitting the monthly P&L (rent + service, or mortgage
-   *  payment + property tax + building upkeep). */
+  mode: "rent" | "mortgage" | "buy";
+  /** All premises cash leaving the account each month (rent + service, or
+   *  mortgage payment + property tax + building upkeep, or — cash-buy — just
+   *  property tax + upkeep). */
   monthlyOccupancyGrosze: number;
   /** Lease cost incl. service charge (0 when buying) — feeds the rent line. */
   rentMonthlyGrosze: number;
@@ -497,21 +886,23 @@ export interface PremisesComputed {
 
 export function computePremises(p: SimulationPremises): PremisesComputed {
   const fitout = Math.max(0, p.fitoutGrosze ?? 0);
-  if (p.mode === "buy") {
+  if (p.mode === "mortgage" || p.mode === "buy") {
     const price = Math.max(0, p.purchasePriceGrosze ?? 0);
-    const down = price * Math.max(0, Math.min(1, p.downPaymentPct ?? 0));
-    const loan = Math.max(0, price - down);
+    // Cash-buy finances the whole price upfront: down payment = 100%, loan = 0.
+    const cash = p.mode === "buy";
+    const down = cash ? price : price * Math.max(0, Math.min(1, p.downPaymentPct ?? 0));
+    const loan = cash ? 0 : Math.max(0, price - down);
     const n = Math.max(1, Math.round((p.mortgageTermYears ?? 0) * 12));
     const r = Math.max(0, p.mortgageRatePct ?? 0) / 12;
     // Standard annuity payment; r=0 degenerates to straight-line repayment.
-    const payment = r > 0 ? (loan * r) / (1 - Math.pow(1 + r, -n)) : loan / n;
-    const interestMonthly = Math.round((payment * n - loan) / n);
-    const principalMonthly = Math.round(loan / n);
+    const payment = loan > 0 ? (r > 0 ? (loan * r) / (1 - Math.pow(1 + r, -n)) : loan / n) : 0;
+    const interestMonthly = loan > 0 ? Math.round((payment * n - loan) / n) : 0;
+    const principalMonthly = loan > 0 ? Math.round(loan / n) : 0;
     const propertyTaxMonthly = Math.round(Math.max(0, p.propertyTaxAnnualGrosze ?? 0) / 12);
     const buildingMaint = Math.max(0, p.buildingMaintenanceMonthlyGrosze ?? 0);
     const buildingDeprMonthly = Math.round((price * Math.max(0, p.buildingDepreciationPct ?? 0)) / 12);
     return {
-      mode: "buy",
+      mode: p.mode,
       monthlyOccupancyGrosze: Math.round(payment) + propertyTaxMonthly + buildingMaint,
       rentMonthlyGrosze: 0,
       mortgagePaymentGrosze: Math.round(payment),
@@ -552,12 +943,13 @@ export function applyPremises(s: SimulationScenario): SimulationScenario {
   if (!p) return s;
   const c = computePremises(p);
   const fixedCosts = { ...s.fixedCosts };
-  if (p.mode === "buy") {
+  if (p.mode === "rent") {
+    fixedCosts.rent = c.rentMonthlyGrosze;
+  } else {
+    // mortgage or cash-buy: no rent line; the owner carries property tax + upkeep.
     fixedCosts.rent = 0;
     fixedCosts.tax = (fixedCosts.tax ?? 0) + c.propertyTaxMonthlyGrosze;
     fixedCosts.maintenance = (fixedCosts.maintenance ?? 0) + c.buildingMaintenanceMonthlyGrosze;
-  } else {
-    fixedCosts.rent = c.rentMonthlyGrosze;
   }
   return {
     ...s,
