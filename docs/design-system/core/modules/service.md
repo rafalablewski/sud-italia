@@ -161,16 +161,19 @@ status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking), and a block
 **drags to another table row to reassign** (HTML5 drag → the reservations `POST`
 upsert with `override`). The timeline sits **left**; the **new-reservation form
-is the right rail** (`.core-book-form`, grid col 2). The rail is `position:
-sticky` + `align-self: start` (so the grid never stretches it to the taller
-timeline row) but carries **no `max-height` / internal body scroll**: a tall form
-(the taller day-summary strip pushing it down + a long table list) **flows and
-scrolls with the `.core-book` panel**, so the Book button is always reachable —
-sticky still pins the rail for the common short case, and when the form outgrows
-the viewport it scrolls into view with the panel. (This replaced an earlier
-`max-height: calc(100dvh - <hardcoded strip height> …)` cap that stranded the Book
-button below the fold once the summary strip grew.) Below 1000px the rail unstacks
-into normal page flow (`position: static`). To fill it: pick a capacity-tinted
+is the right rail**. The timeline + form live in their **own 2-col sub-grid**
+(`.core-book-tlform`, `1fr 340px`) that spans the outer `.core-book` grid
+(`grid-column: 1 / -1`), so the full-width **Today's bookings** list below is
+*unambiguously beneath them* and can never interleave with or overlap the form.
+The rail (`.core-book-form`, sub-grid col 2) simply **flows** — `align-self:
+start`, no `position: sticky`, no `max-height`, no internal body scroll — so the
+whole `.core-book` panel scrolls through it, Book button included. Two earlier
+bugs forced this: a `max-height: calc(100dvh - <hardcoded strip height> …)` cap
+stranded the button below the fold once the day-summary strip grew taller; and
+keeping `position: sticky` after dropping the cap left the rail taller than the
+viewport, so the full-width bookings list scrolled up and painted *over* it.
+Below 1000px the sub-grid collapses to one column (`.core-book-tlform:
+grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**) + party size, then a table — ranked by the **Seating
 Intelligence Engine** (`src/lib/seating.ts`, `suggestTables`): once a slot gives

@@ -724,7 +724,10 @@ export function CoreBook({
           </div>
         </div>
         {viewMode === "timeline" && (
-        <>
+        // timeline + form in their OWN 2-col sub-grid, so the full-width
+        // "Today's bookings" list below is unambiguously beneath them and can
+        // never interleave / overlap the tall reservation form.
+        <div className="core-book-tlform">
         {/* timeline panel (left) — the tlbar header + the tables×ticks grid,
             grouped so the new-reservation form can sit as a right rail. */}
         <div className="core-book-tlpanel">
@@ -1003,7 +1006,7 @@ export function CoreBook({
             </button>
           </div>
         </div>
-        </>
+        </div>
         )}
 
         {/* FLOOR lens — spatial live occupancy from the shared TableSession

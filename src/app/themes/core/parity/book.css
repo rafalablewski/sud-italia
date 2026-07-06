@@ -91,41 +91,28 @@
 .core .core-bk-blk.conflict.bot { top: auto; bottom: 3px; }
 
 /* ── New-reservation right rail ─────────────────────────────────────────── */
-/* A sticky rail that pins to the top of the `.core-book` scroll panel
-   (`align-self: start` stops the grid from stretching it to the taller timeline
-   row). It carries NO max-height and NO internal body scroll — a tall form
-   flows and scrolls with the panel so the Book button is always reachable. An
-   earlier version capped the rail with `max-height: calc(100dvh - <hardcoded
-   strip height>)` and scrolled the body internally; that hardcoded offset broke
-   the moment the day-summary strip grew taller, stranding the Book button below
-   the fold. Letting it flow removes the magic number entirely. */
+/* The rail flows in the `.core-book-tlform` sub-grid (col 2) and simply scrolls
+   with the `.core-book` panel — no `position: sticky`, no `max-height`, no
+   internal body scroll. Two earlier bugs made this necessary: (1) a `max-height:
+   calc(100dvh - <hardcoded strip height>)` cap stranded the Book button below the
+   fold once the day-summary strip grew taller; (2) removing only the cap but
+   keeping `position: sticky` left the rail taller than the viewport, so the
+   full-width "Today's bookings" list scrolled up and painted OVER it. Flowing in
+   its own sub-grid row guarantees the list stays beneath the form and every
+   field — Book button included — is reachable by scrolling the panel. */
 .core .core-book-form {
   padding: 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   overflow: hidden;
-  position: sticky; top: 4px;
   align-self: start;
   display: flex; flex-direction: column;
-  /* No max-height / internal body scroll. A tall form (the many-cell summary
-     strip pushing it down + a long table list) must flow and SCROLL WITH the
-     `.core-book` panel so the Book button is always reachable. Sticky still pins
-     the rail for the common short case; when the form is taller than the
-     viewport it simply scrolls into view with the panel. This replaces a fragile
-     `max-height: calc(100dvh - <hardcoded 186px strip height> …)` cap that
-     stranded the Book button below the fold once the stat strip grew taller. */
 }
 .core .core-bk-resvh { flex: none; padding: 11px 12px; border-bottom: 1px solid var(--line); }
 .core .core-bk-resvh .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
 .core .core-bk-resvh .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
 .core .core-bk-resvb { padding: 11px 12px; display: flex; flex-direction: column; gap: 12px; }
-
-/* Stacked (narrow) layout: the rail is no longer a side column, so it flows with
-   the page instead of pinning. */
-@media (max-width: 1000px) {
-  .core .core-book-form { position: static; }
-}
 .core .core-bk-field { display: flex; flex-direction: column; }
 .core .core-bk-flab {
   font-family: var(--mono); font-size: 9px; color: var(--ink-3);

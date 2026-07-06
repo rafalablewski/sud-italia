@@ -1623,7 +1623,11 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    surfaces, so zero it inside Book to align it with the columns. */
 .core .core-book > .core-statstrip { margin-left: 0; margin-right: 0; }
 /* dense-console Book layout (mockup 11-book): timeline left, new-reservation
-   form as the right rail, today's bookings full-width below. */
+   form as the right rail, today's bookings full-width below. The timeline + form
+   live in their OWN 2-col sub-grid (`.core-book-tlform`) so the full-width
+   bookings list below is unambiguously beneath them — a tall form can never
+   interleave with, or be overlapped by, the list. */
+.core .core-book-tlform { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 340px; column-gap: 10px; align-items: start; }
 .core .core-book-tlpanel { grid-column: 1; min-width: 0; }
 .core .core-book-form { grid-column: 2; }
 .core .core-book-side { grid-column: 1 / -1; }
@@ -1689,8 +1693,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 
 @media (max-width: 1000px) {
   .core .core-book { grid-template-columns: 1fr; }
-  /* stack: the explicit grid-column: 2 on the form would otherwise force an
-     implicit second column and spill the rail off-screen on narrow viewports. */
+  /* stack: the timeline + form drop to a single column (the sub-grid too), and
+     the explicit grid-column: 2 on the form would otherwise force an implicit
+     second column and spill the rail off-screen on narrow viewports. */
+  .core .core-book-tlform { grid-template-columns: 1fr; }
   .core .core-book-tlpanel, .core .core-book-form, .core .core-book-side { grid-column: 1 / -1; }
   .core .core-book-side { border-left: 0; border-top: 1px solid var(--line); }
 }
