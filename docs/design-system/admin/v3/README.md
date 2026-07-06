@@ -1438,13 +1438,19 @@ auth canvas's signature lighting and the sign-in lockup:
   narrow container — fixing the long-złoty-figure overflow and covering the
   Scenario-comparison card too. The card also gained a collapsible **“How this
   is calculated”** `<details>` panel (the per-mode capital table + IRR-vs-edge +
-  caveats, in prose) and a **blended “Rent + invest the freed capital in the
-  S&P”** callout: `computePremisesInvestment` now returns a `blended:
-  PremisesBlended | null` that deploys the cash-buy's full capital as rent's small
-  restaurant outlay + the freed remainder compounded in the S&P, reuses the rent
-  pass's captured per-month cash-flow stream for the combined IRR, and reports the
-  head-to-head `vsBuy` / `vsMortgage` deltas — the fairest equal-capital rival to
-  owning. Rendered as a green/red-accented callout below the three scenario cards.
+  caveats, in prose) and an **“Alternatives — same capital, deployed differently”**
+  set: `computePremisesInvestment` returns `blended: PremisesBlended[]` — seven
+  strategies all deploying the cash-buy's full capital, **ranked by 10-yr total
+  wealth**. Two pure-passive baselines (skip the restaurant: whole cheque into a
+  10y bond, or into the S&P today) sit at the floor; five rent-and-deploy plays
+  put rent's small restaurant outlay + the freed remainder into the S&P / a bond /
+  the Nasdaq-100 / a 60-40 portfolio / **more rented units** (replicate the unit
+  economics per extra site — flagged as an upside ceiling, before fleet
+  cannibalisation/HQ overhead). A shared `build(units, principal, rate)` closure
+  reuses the rent pass's captured per-month cash-flow stream for each combined
+  IRR and reports the head-to-head `vsBuy` / `vsMortgage` deltas. Rendered as
+  compact cards in the responsive `.av3-scn` grid (leading with total wealth,
+  `best` badge on the winner) below the three scenario cards.
   `src/lib/simulation-engine.ts`,
   `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`,
   `src/app/themes/admin-v3/index.css`.

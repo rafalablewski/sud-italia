@@ -1062,7 +1062,7 @@ export function CalculatorV3() {
                   institutional="This is the opportunity-cost gate every disciplined investor applies before sinking capital into an operating business. The relevant hurdle is not zero — it is the risk-adjusted return of liquid alternatives. Historically the S&P 500 has compounded ≈10%/yr nominal and the Nasdaq-100 ≈13%, so an illiquid, operationally-intensive single restaurant should clear a meaningful premium over those to compensate for its concentration and execution risk; merely beating the 5% bond is table stakes. The gate: the scenario's annualised return (IRR of the full cash-flow stream including the terminal building equity) must beat your chosen benchmark, and the more capital a mode ties up (cash-buy > mortgage > rent), the higher the bar it must clear because more money is exposed to that opportunity cost."
                   plain="Say renting needs ~900 000 zł upfront and throws off ~40 000 zł/mo — that's a high annualised return because little capital is tied up. Buying the building for cash needs ~4.3 M zł upfront: the monthly margin is fatter (no rent, no interest) and you own an appreciating asset at the end, but that 4.3 M zł would have grown to ~11 M zł in the S&P 500 over 10 years untouched — so the cash-buy has to work hard to justify itself. Critically this is a real decade-long simulation: rent indexes up ~7%/yr so the lease gets heavier every year, while a fixed mortgage payment stays flat and inflation quietly shrinks it — which is why owning often pulls ahead of renting the longer you hold. The card shows what your money becomes running the business versus parked in each market, and flags green when the business wins."
                   tips="If a mode trails the S&P/Nasdaq, don't sink the capital there: rent instead and deploy the freed cash into a second unit (or the index). Push a losing scenario over the line by lifting net profit (ticket, attach, labour efficiency), negotiating a lower purchase price, or — for the mortgage — a bigger down payment only if it still clears the hurdle. Watch the menu-price-inflation lever: if you can't reprice with cost inflation, every mode's decade looks worse and rent worst of all. Lower the benchmark rates if you have a house view that markets will underperform; raise them to stress-test."
-                  methodology="Per mode: applyPremises → projectMonths(horizon×12) runs a real month-by-month P&L composing seasonality, weather and compounding inflation — labour + fixed (incl. rent, which indexes up) at wage CPI, COGS at ingredient CPI, menu prices at the menu-inflation lever. Monthly free cash flow = projected net profit + non-cash depreciation − mortgage principal. Terminal equity = appreciated price − remaining loan (owned), or the refundable deposit (rent). Annualised return = IRR of [−upfront capital, the 120 monthly cash flows…, +terminal equity]. Each benchmark compounds the same capital and sweeps the per-month cash flow into that instrument, so the edge is like-for-like. The blended card deploys the cash-buy's full capital as rent's small outlay in the restaurant + the freed remainder compounded in the S&P, then compares that combined wealth to buying/mortgaging outright. computePremisesInvestment() + projectMonths(), src/lib/simulation-engine.ts." />
+                  methodology="Per mode: applyPremises → projectMonths(horizon×12) runs a real month-by-month P&L composing seasonality, weather and compounding inflation — labour + fixed (incl. rent, which indexes up) at wage CPI, COGS at ingredient CPI, menu prices at the menu-inflation lever. Monthly free cash flow = projected net profit + non-cash depreciation − mortgage principal. Terminal equity = appreciated price − remaining loan (owned), or the refundable deposit (rent). Annualised return = IRR of [−upfront capital, the 120 monthly cash flows…, +terminal equity]. Each benchmark compounds the same capital and sweeps the per-month cash flow into that instrument, so the edge is like-for-like. The blended strategies each deploy the cash-buy's full capital as rent's small restaurant outlay + the freed remainder deployed a different way (S&P, 10y bond, Nasdaq-100, a 60/40 portfolio, or more rented units), then rank the combined 10-yr wealth against buying/mortgaging outright. The 'more units' option replicates the rented unit's economics per extra site (before fleet cannibalisation/HQ overhead). computePremisesInvestment() + projectMonths(), src/lib/simulation-engine.ts." />
               } />
               <CardBody>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid var(--av3-line)" }}>
@@ -1085,7 +1085,7 @@ export function CalculatorV3() {
                     </table>
                     <p style={{ margin: "8px 0" }}><b style={{ color: "var(--av3-fg)" }}>What the unit returns:</b> each month&apos;s free cash flow = net profit + non-cash depreciation added back − mortgage principal. Summed over the real {premInvest.horizonYears}-year month-by-month simulation, <i>plus</i> what you still hold at the end — the appreciated building minus any loan left (owned modes), or the deposit back (rent).</p>
                     <p style={{ margin: "8px 0" }}><b style={{ color: "var(--av3-fg)" }}>The two numbers per card:</b> <b>/yr ROI</b> is the annualised return (IRR) of the whole stream <span style={{ fontFamily: "var(--av3-mono)", fontSize: 11 }}>[−capital, 120 monthly cash flows, +terminal asset]</span> — compare it head-to-head with 10% / 13% / 5%. The green/red <b>edge</b> vs each market is a like-for-like: the same capital compounded in the index, versus running the unit and sweeping its cash flow into that same index. Green ⇒ the restaurant wins.</p>
-                    <p style={{ margin: "8px 0" }}><b style={{ color: "var(--av3-fg)" }}>Why Rent shows the highest %:</b> it risks the least capital for nearly the same profit stream, so the <i>rate</i> is highest even though its <i>total wealth</i> is lowest. Buying makes the most absolute wealth but on far more capital. The blended card below settles it: rent the unit and put the freed capital in the S&P — the fairest rival to owning, at equal total capital.</p>
+                    <p style={{ margin: "8px 0" }}><b style={{ color: "var(--av3-fg)" }}>Why Rent shows the highest %:</b> it risks the least capital for nearly the same profit stream, so the <i>rate</i> is highest even though its <i>total wealth</i> is lowest. Buying makes the most absolute wealth but on far more capital. The <b>blended alternatives</b> below settle it: rent the unit and deploy the freed capital a different way (S&P, bond, Nasdaq, a 60/40 portfolio, or more rented units) — each at the same total capital buying needs, so total wealth is a fair head-to-head.</p>
                     <p style={{ margin: "8px 0 0", color: "var(--av3-subtle)" }}><b>Caveats:</b> returns are raw nominal — no risk adjustment, and one restaurant is illiquid and concentrated vs a diversified index, so a real underwriter demands a premium over the market, not just a win. Mortgage interest is levelled (flat monthly), not true declining-balance.</p>
                   </div>
                 </details>
@@ -1138,41 +1138,49 @@ export function CalculatorV3() {
                     );
                   })}
                 </div>
-                {premInvest.blended && (() => {
+                <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 10, lineHeight: 1.5 }}>
+                  Edge = business total wealth (its cash flow swept into that instrument + terminal equity) − the same capital compounded in the instrument. Green = running the restaurant beats parking the capital there; red = the market wins.
+                </div>
+                {premInvest.blended.length > 0 && (() => {
                   const bl = premInvest.blended;
-                  const win = bl.vsBuyWins;
-                  const accent = win ? "var(--av3-ok)" : "var(--av3-bad)";
+                  const bestWealth = Math.max(...bl.map((b) => b.terminalWealthGrosze));
+                  const buyWealth = premInvest.scenarios[2].terminalWealthGrosze;
+                  const freed = bl[0].freedCapitalGrosze;
                   return (
-                    <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 10, border: `1px solid color-mix(in oklab, ${accent} 40%, var(--av3-line))`, background: `color-mix(in oklab, ${accent} 6%, var(--av3-s1))` }}>
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--av3-fg)" }}>{bl.label}</div>
-                        <div style={{ fontFamily: "var(--av3-mono)", fontSize: 20, fontWeight: 600, color: accent }}>{bl.annualizedReturnPct != null ? `${bl.annualizedReturnPct.toFixed(1)}%` : "—"}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /yr ROI</span></div>
+                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--av3-line-strong)" }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--av3-fg)" }}>Alternatives — the same {money(bl[0].totalCapitalGrosze)}, deployed differently</div>
+                      <div style={{ fontSize: 11.5, color: "var(--av3-muted)", margin: "4px 0 12px", lineHeight: 1.5 }}>
+                        What else the <b>{money(bl[0].totalCapitalGrosze)} a cash purchase needs</b> could do over {premInvest.horizonYears} years — from pure passive (skip the restaurant entirely, just buy a bond or the S&P today) to renting the unit and deploying the freed {money(freed)}. Ranked by 10-yr total wealth; green = beats buying the building outright ({money(buyWealth)}).
                       </div>
-                      <div style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 4, lineHeight: 1.5 }}>The same {money(bl.totalCapitalGrosze)} a cash purchase needs — but split: run the rented unit and put the rest in the S&P instead of locking it in a building.</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 3, columnGap: 8, fontSize: 11.5, margin: "10px 0 4px" }}>
-                        <span style={{ color: "var(--av3-muted)" }}>Total capital deployed</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(bl.totalCapitalGrosze)}</span>
-                        <span style={{ color: "var(--av3-subtle)", paddingLeft: 12 }}>→ into the rented restaurant</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-muted)" }}>{money(bl.restaurantCapitalGrosze)}</span>
-                        <span style={{ color: "var(--av3-subtle)", paddingLeft: 12 }}>→ freed, into the S&P @ {bl.spRatePct.toFixed(0)}%</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-muted)" }}>{money(bl.freedCapitalGrosze)}</span>
-                        <span style={{ color: "var(--av3-muted)" }}>Restaurant wealth ({premInvest.horizonYears}-yr)</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(bl.restaurantWealthGrosze)}</span>
-                        <span style={{ color: "var(--av3-muted)" }}>S&amp;P pot @ yr {premInvest.horizonYears}</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-ok)" }}>{money(bl.freedTerminalGrosze)}</span>
-                        <span style={{ color: "var(--av3-fg)", fontWeight: 600 }}>Total wealth</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", fontWeight: 600 }}>{money(bl.terminalWealthGrosze)}</span>
-                        <span style={{ color: "var(--av3-muted)" }}>Money multiple</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{bl.moneyMultiple > 0 ? `${bl.moneyMultiple.toFixed(2)}×` : "—"}</span>
+                      <div className="av3-scn">
+                        {bl.map((b) => {
+                          const best = b.terminalWealthGrosze === bestWealth;
+                          const tone = b.vsBuyWins ? "var(--av3-ok)" : "var(--av3-fg)";
+                          return (
+                            <div key={b.key} className="av3-scn-card" data-base={best}>
+                              <div className="av3-scn-name">{b.label}{best && <Badge tone="brand">best</Badge>}</div>
+                              <div className="av3-scn-net" style={{ color: tone }}>{money(b.terminalWealthGrosze)}</div>
+                              <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 2, lineHeight: 1.4 }}>{b.detail}</div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 3, columnGap: 8, fontSize: 11.5, margin: "8px 0 0" }}>
+                                <span style={{ color: "var(--av3-muted)" }}>/yr ROI</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{b.annualizedReturnPct != null ? `${b.annualizedReturnPct.toFixed(1)}%` : "—"}</span>
+                                <span style={{ color: "var(--av3-muted)" }} title="Wealth from the rented restaurant(s) over the horizon (Σ free cash flow + deposits).">Restaurant wealth</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(b.restaurantWealthGrosze)}</span>
+                                <span style={{ color: "var(--av3-muted)" }} title="Value of the freed capital deployed per the strategy, at the horizon.">Invested pot</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(b.investedTerminalGrosze)}</span>
+                                <span style={{ color: "var(--av3-muted)" }}>Money multiple</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{b.moneyMultiple > 0 ? `${b.moneyMultiple.toFixed(2)}×` : "—"}</span>
+                              </div>
+                              <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)", fontSize: 11.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ color: "var(--av3-muted)" }}>vs Buying</span>
+                                <span className="mono" style={{ fontFamily: "var(--av3-mono)", color: b.vsBuyGrosze >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", fontWeight: 600 }}>{b.vsBuyGrosze >= 0 ? "+" : "−"}{money(Math.abs(b.vsBuyGrosze))}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)", fontSize: 11.5 }}>
-                        <span style={{ color: "var(--av3-muted)" }}>vs Buying outright <span className="mono" style={{ fontFamily: "var(--av3-mono)", color: bl.vsBuyGrosze >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", fontWeight: 600 }}>{bl.vsBuyGrosze >= 0 ? "+" : "−"}{money(Math.abs(bl.vsBuyGrosze))}</span></span>
-                        <span style={{ color: "var(--av3-muted)" }}>vs Mortgage <span className="mono" style={{ fontFamily: "var(--av3-mono)", color: bl.vsMortgageGrosze >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", fontWeight: 600 }}>{bl.vsMortgageGrosze >= 0 ? "+" : "−"}{money(Math.abs(bl.vsMortgageGrosze))}</span></span>
-                      </div>
-                      <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.45, color: accent }}>
-                        {win
-                          ? `Renting and indexing the freed capital ends up ${money(Math.abs(bl.vsBuyGrosze))} richer than sinking it all into the building — the S&P's ${bl.spRatePct.toFixed(0)}% outpaces the property's appreciation. Owning has to earn that gap back in operating margin.`
-                          : `Buying outright wins by ${money(Math.abs(bl.vsBuyGrosze))} — the unit's fatter owned-margin plus the appreciating building beat renting and indexing the difference.`}
+                      <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 10, lineHeight: 1.5 }}>
+                        Each deploys the cash-buy&apos;s full capital, so total wealth is directly comparable. <b>&ldquo;Rent + open more units&rdquo;</b> assumes the concept replicates cleanly — same demand, no cannibalisation or HQ overhead (the Fleet card models those frictions); treat it as the upside ceiling, not a promise. The freed remainder too small for another fit-out is parked at the bond rate.
                       </div>
                     </div>
                   );
                 })()}
-                <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 10, lineHeight: 1.5 }}>
-                  Edge = business total wealth (its cash flow swept into that instrument + terminal equity) − the same capital compounded in the instrument. Green = running the restaurant beats parking the capital there; red = the market wins.
-                </div>
               </CardBody>
             </Card>
           )}
