@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir, readdir, unlink } from "fs/promises
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationPremises, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
 import { timeToMinutes } from "@/lib/floor";
@@ -58,6 +58,7 @@ import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
 import { getBaseSlug } from "@/lib/utils";
+import { ALL_CURRENCIES } from "@/lib/currency";
 import { estimateReadyAt, type PrepOpts } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
 import { tempVerdict } from "@/lib/haccp";
@@ -3547,7 +3548,7 @@ export async function renameCustomMenuItem(
 
 // --- Settings ---
 
-export type AppCurrency = "PLN" | "USD" | "SGD" | "EUR";
+export type AppCurrency = "PLN" | "USD" | "SGD" | "EUR" | "AED";
 export type AppLocale = "pl" | "en" | "de" | "en-SG";
 
 export interface CurrencyConfig {
@@ -3718,7 +3719,7 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   enabledCurrencies: ["PLN", "USD", "SGD", "EUR"],
   // Reference rates per 1 PLN as of mid-2026 — operator overrides via
   // /admin/currency the moment FX moves.
-  rates: { PLN: 1, USD: 0.25, SGD: 0.34, EUR: 0.23 },
+  rates: { PLN: 1, USD: 0.25, SGD: 0.34, EUR: 0.23, AED: 0.92 },
 };
 
 export const DEFAULT_LOCALE_CONFIG: LocaleConfig = {
@@ -5259,6 +5260,47 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
 
   // Cost per portion
   return Math.round(totalCost / (recipe.yieldPortions || 1));
+}
+
+/**
+ * Split a dish's recipe food cost into the ingredient cost that reaches the
+ * plate (`base`) and the trim/spill overhead carried by each line's
+ * `wasteFactor` (`waste`). `base + waste === total === calculateFoodCost()`.
+ * The Calculator derives its separate Food-cost-% and Waste-% levers from the
+ * menu-wide weighting of this split, so waste isn't double-counted inside the
+ * flat food-cost ratio. Returns all-zero when there's no recipe.
+ */
+export async function calculateFoodCostBreakdown(
+  menuItemId: string,
+): Promise<{ base: number; waste: number; total: number }> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return { base: 0, waste: 0, total: 0 };
+
+  const activeProducts = await resolveActiveProducts(
+    recipe.ingredients.map((ri) => ri.ingredientId),
+  );
+
+  let base = 0;
+  let total = 0;
+  for (const ri of recipe.ingredients) {
+    const product = activeProducts.get(ri.ingredientId);
+    if (!product) continue;
+    const lineBase = product.costPerUnit * ri.quantity;
+    base += lineBase;
+    total += lineBase * (ri.wasteFactor || 1);
+  }
+
+  const yieldPortions = recipe.yieldPortions || 1;
+  // Round base + total independently, then derive waste as the difference so the
+  // `base + waste === total` invariant holds exactly (three independent Math.round
+  // calls can drift by 1) and waste can never round negative.
+  const roundedBase = Math.round(base / yieldPortions);
+  const roundedTotal = Math.round(total / yieldPortions);
+  return {
+    base: roundedBase,
+    waste: Math.max(0, roundedTotal - roundedBase),
+    total: roundedTotal,
+  };
 }
 
 /**
@@ -12649,18 +12691,30 @@ export function defaultSimulationScenario(): SimulationScenario {
   // Hourly rates: brutto Warsaw 2026 × 1.22 employer narzut, rounded
   // to the nearest 50 grosze. Operators who'd rather think in pure
   // brutto can divide by 1.22.
+  // 7-day rota (Mon…Sun): `shift` on every day but `offDay`.
+  const wk = (start: number, end: number, offDay: number): ({ start: number; end: number } | null)[] =>
+    Array.from({ length: 7 }, (_, d) => (d === offDay ? null : { start, end }));
   const labor: SimulationLaborLine[] = [
     // Sized for a ~90-seat full-service restaurant doing ~110 checks/day
     // across lunch + dinner, seven days. Unlike a food truck, a dining
     // room carries floor staff (several waiters), a sous-chef and a
     // kitchen porter / dish-pit — roles a truck line never has.
-    { id: "pizzaiolo",      role: "pizzaiolo",      headcount: 2, hoursPerWeek: 48, hourlyRateGrosze: 4500 },
-    { id: "chef",           role: "chef",           headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
-    { id: "sous-chef",      role: "sous-chef",      headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 4500 },
-    { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hoursPerWeek: 42, hourlyRateGrosze: 3200 },
-    { id: "waiter",         role: "waiter",         headcount: 3, hoursPerWeek: 42, hourlyRateGrosze: 3600 },
-    { id: "barista",        role: "barista",        headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
-    { id: "manager",        role: "manager",        headcount: 1, hoursPerWeek: 45, hourlyRateGrosze: 6000 },
+    //
+    // Each line is ONE worker (own rate + own weekly rota). `wk(start,end,off)`
+    // builds a 7-day week (Mon…Sun) with that consistent shift on every day
+    // except the one staggered day off, so the floor is covered all 7 days and
+    // no two consecutive shifts fall under 12h rest. Weekly hours (and pay)
+    // derive from the rota — a consistent 8h × 6-day week ≈ 48h.
+    { id: "pizzaiolo-1",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(12, 20, 6) },
+    { id: "pizzaiolo-2",    role: "pizzaiolo",      headcount: 1, hourlyRateGrosze: 4500, week: wk(15, 23, 2) },
+    { id: "chef-1",         role: "chef",           headcount: 1, hourlyRateGrosze: 3900, week: wk(12, 20, 0) },
+    { id: "sous-chef-1",    role: "sous-chef",      headcount: 1, hourlyRateGrosze: 4500, week: wk(15, 23, 1) },
+    { id: "porter-1",       role: "kitchen-porter", headcount: 1, hourlyRateGrosze: 3200, week: wk(16, 23, 3) },
+    { id: "waiter-1",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(12, 19, 4) },
+    { id: "waiter-2",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(15, 22, 5) },
+    { id: "waiter-3",       role: "waiter",         headcount: 1, hourlyRateGrosze: 3600, week: wk(16, 23, 6) },
+    { id: "barista-1",      role: "barista",        headcount: 1, hourlyRateGrosze: 3900, week: wk(12, 20, 0) },
+    { id: "manager-1",      role: "manager",        headcount: 1, hourlyRateGrosze: 6000, week: wk(12, 20, 6) },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
     rent: 2_200_000,       // 22 000 zł — prime central lease (Rynek / Nowy Świat), ~150 m²
@@ -12773,6 +12827,27 @@ export function defaultSimulationScenario(): SimulationScenario {
     // prime-street venue. An order of magnitude above a truck buildout, and
     // the number payback / IRR are computed against.
     setupCostGrosze: 90_000_000,
+    // Premises — defaults to RENTING a prime-street unit, tuned so the folded
+    // numbers reproduce the legacy baseline exactly: rent 22 000 zł/mo (= the
+    // old fixedCosts.rent), a 3-month deposit (66 000 zł) + 834 000 zł fit-out
+    // & opening capital ⇒ 900 000 zł upfront (= the old setupCost). Flip to
+    // "buy" to model a mortgage: ~3.5 M zł prime unit, 30% down, 7.8% over
+    // 20 years, 2.5%/yr building depreciation (≈40-yr straight line), plus
+    // property tax + structural upkeep the owner carries instead of a landlord.
+    premises: {
+      mode: "rent",
+      monthlyRentGrosze: 2_200_000,
+      depositMonths: 3,
+      serviceChargeMonthlyGrosze: 0,
+      purchasePriceGrosze: 350_000_000,
+      downPaymentPct: 0.30,
+      mortgageRatePct: 0.078,
+      mortgageTermYears: 20,
+      propertyTaxAnnualGrosze: 600_000,
+      buildingMaintenanceMonthlyGrosze: 150_000,
+      buildingDepreciationPct: 0.025,
+      fitoutGrosze: 83_400_000,
+    },
     seasonality: {
       // Indoor dining is far less weather-elastic than an outdoor truck.
       // Winter holds up — a warm room is a draw when it's cold out, and
@@ -12785,6 +12860,9 @@ export function defaultSimulationScenario(): SimulationScenario {
       autumn: 1.00,
     },
     menuScenario: "balanced",
+    displayCurrency: "PLN",
+    // Service window 12:00–23:00 (= the 11 open-hours the capacity math assumes).
+    openingHours: { openHour: 12, closeHour: 23 },
     assumptions: defaultSimulationAssumptions(),
     weather: defaultSimulationWeather(),
     updatedAt: new Date().toISOString(),
@@ -12937,7 +13015,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
     daysOpenPerMonth: saved.daysOpenPerMonth ?? defaults.daysOpenPerMonth,
     cogsPct: typeof saved.cogsPct === "number" ? saved.cogsPct : defaults.cogsPct,
-    labor: saved.labor.length > 0 ? saved.labor : defaults.labor,
+    labor: saved.labor.length > 0 ? expandLaborToWorkers(saved.labor) : defaults.labor,
     fixedCosts: saved.fixedCosts ?? defaults.fixedCosts,
     wageInflationPct:
       typeof saved.wageInflationPct === "number"
@@ -12958,6 +13036,17 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     seasonality: saved.seasonality ?? defaults.seasonality,
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
+    displayCurrency:
+      saved.displayCurrency && (ALL_CURRENCIES as string[]).includes(saved.displayCurrency)
+        ? saved.displayCurrency
+        : defaults.displayCurrency,
+    openingHours:
+      saved.openingHours &&
+      typeof saved.openingHours.openHour === "number" &&
+      typeof saved.openingHours.closeHour === "number" &&
+      saved.openingHours.closeHour > saved.openingHours.openHour
+        ? { openHour: saved.openingHours.openHour, closeHour: saved.openingHours.closeHour }
+        : defaults.openingHours,
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
     assumptions,
     assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,
@@ -12980,8 +13069,65 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
     prepComplexityMultiplier: typeof saved.prepComplexityMultiplier === "number" && saved.prepComplexityMultiplier > 0 ? Math.min(3, saved.prepComplexityMultiplier) : defaults.prepComplexityMultiplier,
     fleet: hydrateFleet(saved.fleet, defaults.fleet),
+    premises: hydratePremises(
+      saved.premises,
+      defaults.premises!,
+      saved.fixedCosts?.rent,
+      saved.setupCostGrosze,
+    ),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
+}
+
+/** Each labour line is now ONE worker (own rate + own shift). Legacy scenarios
+ *  stored a headcount per line; expand those into individual workers so the
+ *  Labour card and the roster can address each person, handing each their own
+ *  shift when the line carried a per-person shifts array. */
+function expandLaborToWorkers(labor: SimulationLaborLine[]): SimulationLaborLine[] {
+  return labor.flatMap((l) => {
+    const n = Math.max(1, Math.round(l.headcount ?? 1));
+    if (n === 1) return [{ ...l, headcount: 1 }];
+    return Array.from({ length: n }, (_, i) => ({
+      ...l,
+      id: `${l.id}-${i + 1}`,
+      headcount: 1,
+      shifts: Array.isArray(l.shifts) && l.shifts.length > 0 ? [l.shifts[Math.min(i, l.shifts.length - 1)]] : l.shifts,
+    }));
+  });
+}
+
+/** Hydrate the premises decision. A saved, valid premises wins; otherwise we
+ *  migrate legacy scenarios (which only had a flat rent line + setup cost) into
+ *  a rent-mode premises that reproduces their numbers — rent from the old rent
+ *  line, fit-out = old setup − deposit — so nothing shifts on first load. */
+function hydratePremises(
+  saved: Partial<SimulationPremises> | undefined,
+  def: SimulationPremises,
+  legacyRentGrosze?: number,
+  legacySetupGrosze?: number,
+): SimulationPremises {
+  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "buy")) {
+    return {
+      mode: saved.mode,
+      monthlyRentGrosze: clampNonNeg(saved.monthlyRentGrosze, def.monthlyRentGrosze),
+      depositMonths: clampNonNeg(saved.depositMonths, def.depositMonths),
+      serviceChargeMonthlyGrosze: clampNonNeg(saved.serviceChargeMonthlyGrosze, def.serviceChargeMonthlyGrosze),
+      purchasePriceGrosze: clampNonNeg(saved.purchasePriceGrosze, def.purchasePriceGrosze),
+      downPaymentPct: clamp01(saved.downPaymentPct, def.downPaymentPct),
+      mortgageRatePct: clamp01(saved.mortgageRatePct, def.mortgageRatePct),
+      mortgageTermYears: clampNonNeg(saved.mortgageTermYears, def.mortgageTermYears),
+      propertyTaxAnnualGrosze: clampNonNeg(saved.propertyTaxAnnualGrosze, def.propertyTaxAnnualGrosze),
+      buildingMaintenanceMonthlyGrosze: clampNonNeg(saved.buildingMaintenanceMonthlyGrosze, def.buildingMaintenanceMonthlyGrosze),
+      buildingDepreciationPct: clamp01(saved.buildingDepreciationPct, def.buildingDepreciationPct),
+      fitoutGrosze: clampNonNeg(saved.fitoutGrosze, def.fitoutGrosze),
+    };
+  }
+  const rent = typeof legacyRentGrosze === "number" && legacyRentGrosze >= 0 ? legacyRentGrosze : def.monthlyRentGrosze;
+  const deposit = rent * def.depositMonths;
+  const fitout = typeof legacySetupGrosze === "number" && legacySetupGrosze >= 0
+    ? Math.max(0, legacySetupGrosze - deposit)
+    : def.fitoutGrosze;
+  return { ...def, monthlyRentGrosze: rent, fitoutGrosze: fitout };
 }
 
 function clamp01(n: unknown, fallback: number): number {
@@ -13296,8 +13442,15 @@ export async function saveSimulationScenario(
         id: l.id,
         role: l.role,
         headcount: Math.max(0, Math.round(l.headcount)),
-        hoursPerWeek: Math.max(0, Math.round(l.hoursPerWeek)),
         hourlyRateGrosze: Math.max(0, Math.round(l.hourlyRateGrosze)),
+        // `week` is the 7-day rota (source of truth). hoursPerWeek / daysPerWeek
+        // / shifts are legacy and only kept if a scenario predates `week`.
+        ...(Array.isArray(l.week)
+          ? { week: l.week.slice(0, 7).map((sh) => (sh && typeof sh.start === "number" && typeof sh.end === "number" ? { start: Math.max(0, Math.round(sh.start)), end: Math.max(0, Math.round(sh.end)) } : null)) }
+          : {}),
+        ...(typeof l.hoursPerWeek === "number" ? { hoursPerWeek: Math.max(0, Math.round(l.hoursPerWeek)) } : {}),
+        ...(typeof l.daysPerWeek === "number" ? { daysPerWeek: Math.max(0, Math.round(l.daysPerWeek)) } : {}),
+        ...(Array.isArray(l.shifts) ? { shifts: l.shifts.map((sh) => ({ start: Math.max(0, Math.round(sh.start)), end: Math.max(0, Math.round(sh.end)) })) } : {}),
       })),
       fixedCosts: Object.fromEntries(
         Object.entries(scenario.fixedCosts ?? {}).map(([k, v]) => [
@@ -13439,7 +13592,10 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
     seeded.ordersPerDay = Math.max(1, Math.round(actuals.ordersPerDay));
     seeded.avgTicketGrosze = Math.max(0, Math.round(actuals.avgTicketGrosze));
     if (actuals.weightedCogsPct > 0) {
-      seeded.cogsPct = clamp01(actuals.weightedCogsPct, seeded.cogsPct);
+      // Food cost + waste split so the two Calculator levers stay honest and
+      // don't double-count (base + waste === total dish cost).
+      seeded.cogsPct = clamp01(actuals.weightedFoodCostPct, seeded.cogsPct);
+      seeded.wastePct = clamp01(actuals.weightedWastePct, seeded.wastePct ?? 0);
     }
     // Map delivery share from actuals onto the existing deliveryShare lever
     // so downstream packaging + processor math picks it up.
@@ -13502,7 +13658,51 @@ export async function computeSimulationActuals(
   // sum(qty × (item.price + Σ option.priceDelta)) across every line item
   // in every fulfilled order. The honest replacement for the operator's
   // flat cogsPct guess.
+  //
+  // The Calculator wants Food-cost-% and Waste-% as *separate* levers, so we
+  // also split each line's cost into the ingredient that reaches the plate vs
+  // the trim/spill overhead. The waste fraction comes from the *current*
+  // recipe's wasteFactor (stable per dish); it's applied to the snapshot line
+  // cost so the total (weightedCogsPct) never regresses. Items without a live
+  // recipe contribute 0 waste (no data), all cost counts as food.
+  //
+  // Recipes + ingredients + products are read ONCE (not per dish) and keyed by
+  // base slug — recipes are chain-wide (rule #10), so both locations' identical
+  // dishes share one waste fraction, and this stays 3 catalog reads regardless
+  // of menu size on a hot admin path.
+  const baseSlugs = new Set<string>();
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      if (line.menuItem) baseSlugs.add(getBaseSlug(line.menuItem.id));
+    }
+  }
+  const [allRecipes, allIngredients, allProducts] = await Promise.all([
+    getRecipes(),
+    getIngredients(),
+    getIngredientProducts(),
+  ]);
+  const recipeBySlug = new Map(allRecipes.map((r) => [getBaseSlug(r.menuItemId), r]));
+  const ingById = new Map(allIngredients.map((i) => [i.id, i]));
+  const productById = new Map(allProducts.map((p) => [p.id, p]));
+  const wasteFractionBySlug = new Map<string, number>();
+  for (const slug of baseSlugs) {
+    const recipe = recipeBySlug.get(slug);
+    if (!recipe || recipe.ingredients.length === 0) { wasteFractionBySlug.set(slug, 0); continue; }
+    let base = 0;
+    let total = 0;
+    for (const ri of recipe.ingredients) {
+      const ing = ingById.get(ri.ingredientId);
+      const product = ing?.activeProductId ? productById.get(ing.activeProductId) : undefined;
+      if (!product) continue;
+      const lineBase = product.costPerUnit * ri.quantity;
+      base += lineBase;
+      total += lineBase * (ri.wasteFactor || 1);
+    }
+    wasteFractionBySlug.set(slug, total > 0 ? (total - base) / total : 0);
+  }
+
   let menuCostTotal = 0;
+  let menuWasteTotal = 0;
   let menuRevenueTotal = 0;
   const modIndex: ModifierIndexCache = new Map();
   for (const o of fulfilled) {
@@ -13521,10 +13721,15 @@ export async function computeSimulationActuals(
         }
       }
       menuCostTotal += qty * lineCost;
+      menuWasteTotal += qty * lineCost * (wasteFractionBySlug.get(getBaseSlug(item.id)) ?? 0);
       menuRevenueTotal += qty * linePrice;
     }
   }
   const weightedCogsPct = menuRevenueTotal > 0 ? menuCostTotal / menuRevenueTotal : 0;
+  const weightedWastePct = menuRevenueTotal > 0 ? menuWasteTotal / menuRevenueTotal : 0;
+  // Food cost ex-waste — what the Calculator's Food-cost-% lever holds so it
+  // and the Waste-% lever sum back to the true dish cost.
+  const weightedFoodCostPct = Math.max(0, weightedCogsPct - weightedWastePct);
   const dayKeys = new Set(
     fulfilled
       .map((o) => {
@@ -13574,6 +13779,8 @@ export async function computeSimulationActuals(
     ordersPerDay,
     avgTicketGrosze,
     weightedCogsPct,
+    weightedFoodCostPct,
+    weightedWastePct,
     takeoutSharePct,
     deliverySharePct,
     refundPct,

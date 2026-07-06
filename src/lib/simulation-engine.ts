@@ -14,6 +14,7 @@ import type {
   BusinessCostPayrollRole,
   SimulationAttachLever,
   SimulationFleetModel,
+  SimulationPremises,
   SimulationScenario,
   SimulationSeasonality,
   SimulationWeather,
@@ -107,10 +108,10 @@ export function computeScenario(s: SimulationScenario): Computed {
   const laborVolumeFlex = Math.max(0, 1 + laborVariableShare * (volumeRatio - 1));
   const laborByRole: { role: BusinessCostPayrollRole; grosze: number }[] = s.labor.map((l) => ({
     role: l.role,
-    grosze: Math.round(l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze * laborVolumeFlex),
+    grosze: Math.round(l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze * laborVolumeFlex),
   }));
   const laborMonthly = laborByRole.reduce((sum, r) => sum + r.grosze, 0);
-  const laborHoursPerMonth = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH, 0);
+  const laborHoursPerMonth = s.labor.reduce((sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH, 0);
   const marketingFixed = s.fixedCosts.marketing ?? 0;
   const useMarketingAsCac = s.marketingAsCac !== false;
   const marketingCac = useMarketingAsCac ? marketingFixed : 0;
@@ -330,7 +331,7 @@ export function projectMonths(
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
   const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
   const baseLaborMonthly = s.labor.reduce(
-    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    (sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze,
     0,
   );
   // Same marketing-as-CAC reclassification as computeScenario so the
@@ -471,6 +472,102 @@ export function applyAssumptions(s: SimulationScenario): SimulationScenario {
   return { ...s, avgTicketGrosze: newTicket, cogsPct: newCogsPct, paymentProcessorPct: Math.max(0, Math.min(1, blendedProcessorPct)) };
 }
 
+/** Derived premises economics — the monthly + upfront numbers a Rent-vs-Buy
+ *  decision produces. Interest is levelled across the mortgage term (total
+ *  interest ÷ months) so a single steady-state monthly figure is honest for a
+ *  simulator, rather than the front-loaded first-period interest. */
+export interface PremisesComputed {
+  mode: "rent" | "buy";
+  /** All premises cost hitting the monthly P&L (rent + service, or mortgage
+   *  payment + property tax + building upkeep). */
+  monthlyOccupancyGrosze: number;
+  /** Lease cost incl. service charge (0 when buying) — feeds the rent line. */
+  rentMonthlyGrosze: number;
+  /** Level mortgage payment, principal + interest (0 when renting). */
+  mortgagePaymentGrosze: number;
+  mortgageInterestMonthlyGrosze: number;
+  mortgagePrincipalMonthlyGrosze: number;
+  propertyTaxMonthlyGrosze: number;
+  buildingMaintenanceMonthlyGrosze: number;
+  buildingDepreciationMonthlyGrosze: number;
+  /** Cash needed on day one: deposit / down payment + fit-out. */
+  upfrontCashGrosze: number;
+  loanAmountGrosze: number;
+}
+
+export function computePremises(p: SimulationPremises): PremisesComputed {
+  const fitout = Math.max(0, p.fitoutGrosze ?? 0);
+  if (p.mode === "buy") {
+    const price = Math.max(0, p.purchasePriceGrosze ?? 0);
+    const down = price * Math.max(0, Math.min(1, p.downPaymentPct ?? 0));
+    const loan = Math.max(0, price - down);
+    const n = Math.max(1, Math.round((p.mortgageTermYears ?? 0) * 12));
+    const r = Math.max(0, p.mortgageRatePct ?? 0) / 12;
+    // Standard annuity payment; r=0 degenerates to straight-line repayment.
+    const payment = r > 0 ? (loan * r) / (1 - Math.pow(1 + r, -n)) : loan / n;
+    const interestMonthly = Math.round((payment * n - loan) / n);
+    const principalMonthly = Math.round(loan / n);
+    const propertyTaxMonthly = Math.round(Math.max(0, p.propertyTaxAnnualGrosze ?? 0) / 12);
+    const buildingMaint = Math.max(0, p.buildingMaintenanceMonthlyGrosze ?? 0);
+    const buildingDeprMonthly = Math.round((price * Math.max(0, p.buildingDepreciationPct ?? 0)) / 12);
+    return {
+      mode: "buy",
+      monthlyOccupancyGrosze: Math.round(payment) + propertyTaxMonthly + buildingMaint,
+      rentMonthlyGrosze: 0,
+      mortgagePaymentGrosze: Math.round(payment),
+      mortgageInterestMonthlyGrosze: interestMonthly,
+      mortgagePrincipalMonthlyGrosze: principalMonthly,
+      propertyTaxMonthlyGrosze: propertyTaxMonthly,
+      buildingMaintenanceMonthlyGrosze: buildingMaint,
+      buildingDepreciationMonthlyGrosze: buildingDeprMonthly,
+      upfrontCashGrosze: Math.round(down + fitout),
+      loanAmountGrosze: Math.round(loan),
+    };
+  }
+  const rent = Math.max(0, p.monthlyRentGrosze ?? 0);
+  const service = Math.max(0, p.serviceChargeMonthlyGrosze ?? 0);
+  const deposit = rent * Math.max(0, p.depositMonths ?? 0);
+  return {
+    mode: "rent",
+    monthlyOccupancyGrosze: rent + service,
+    rentMonthlyGrosze: rent + service,
+    mortgagePaymentGrosze: 0,
+    mortgageInterestMonthlyGrosze: 0,
+    mortgagePrincipalMonthlyGrosze: 0,
+    propertyTaxMonthlyGrosze: 0,
+    buildingMaintenanceMonthlyGrosze: 0,
+    buildingDepreciationMonthlyGrosze: 0,
+    upfrontCashGrosze: Math.round(deposit + fitout),
+    loanAmountGrosze: 0,
+  };
+}
+
+/** Fold the premises decision into the scenario the P&L engine sees: the rent
+ *  line, mortgage interest, building depreciation, property tax + upkeep and the
+ *  upfront setup cost all become dish-derived from the Rent-vs-Buy inputs.
+ *  Premises interest / building depreciation stack ON TOP of any operator-set
+ *  non-premises values (other loans, fit-out depreciation). No-op when unset. */
+export function applyPremises(s: SimulationScenario): SimulationScenario {
+  const p = s.premises;
+  if (!p) return s;
+  const c = computePremises(p);
+  const fixedCosts = { ...s.fixedCosts };
+  if (p.mode === "buy") {
+    fixedCosts.rent = 0;
+    fixedCosts.tax = (fixedCosts.tax ?? 0) + c.propertyTaxMonthlyGrosze;
+    fixedCosts.maintenance = (fixedCosts.maintenance ?? 0) + c.buildingMaintenanceMonthlyGrosze;
+  } else {
+    fixedCosts.rent = c.rentMonthlyGrosze;
+  }
+  return {
+    ...s,
+    fixedCosts,
+    interestMonthlyGrosze: (s.interestMonthlyGrosze ?? 0) + c.mortgageInterestMonthlyGrosze,
+    depreciationMonthlyGrosze: (s.depreciationMonthlyGrosze ?? 0) + c.buildingDepreciationMonthlyGrosze,
+    setupCostGrosze: c.upfrontCashGrosze,
+  };
+}
+
 /** Annualised weather effects → ordersPerDay + daysOpen for the headline view
  *  (the projection applies weather per-month instead). No-op when weather is
  *  unset or its master toggle is off. */
@@ -530,7 +627,7 @@ export function computeFleetEconomics(s: SimulationScenario, baseSetupCost: numb
   effectiveCogsPct = Math.max(0, effectiveCogsPct);
 
   const baseRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
-  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
+  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * (l.hoursPerWeek ?? 0) * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
   const useMarketingAsCac = s.marketingAsCac !== false;
   const baseFixedExHq = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
     if (useMarketingAsCac && k === "marketing") return sum;

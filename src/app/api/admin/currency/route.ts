@@ -9,7 +9,7 @@ import {
 } from "@/lib/store";
 import { parseBody } from "@/lib/api-schemas";
 
-const currencyEnum = z.enum(["PLN", "USD", "SGD", "EUR"]);
+const currencyEnum = z.enum(["PLN", "USD", "SGD", "EUR", "AED"]);
 
 const currencyConfigSchema = z.object({
   defaultCurrency: currencyEnum,
@@ -20,6 +20,7 @@ const currencyConfigSchema = z.object({
       USD: z.number().positive(),
       SGD: z.number().positive(),
       EUR: z.number().positive(),
+      AED: z.number().positive(),
     })
     .refine((r) => r.PLN === 1, {
       message: "PLN rate is fixed at 1 (source-of-truth currency).",

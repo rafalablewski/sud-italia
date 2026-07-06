@@ -1219,12 +1219,25 @@ export interface BusinessCost {
 export interface SimulationLaborLine {
   id: string;
   role: BusinessCostPayrollRole;
-  /** Number of people on this role line. */
+  /** Number of people on this role line. When `shifts` is set it stays in lock
+   *  step with `shifts.length` (one shift = one person). */
   headcount: number;
-  /** Per-person hours per week (service + prep + close-down). */
-  hoursPerWeek: number;
   /** Per-person gross pay rate in grosze / hour. */
   hourlyRateGrosze: number;
+  /** This worker's weekly rota — a 7-slot array (Mon…Sun); each slot is that
+   *  day's shift (24h clock) or `null` for a day off. The single scheduling
+   *  surface: it drives the per-day coverage grid AND the weekly hours = Σ of
+   *  each on-day's shift length. The restaurant is open 7 days; a person works
+   *  the 5–6 they're rostered. Consecutive on-days must leave ≥12h rest. */
+  week?: ({ start: number; end: number } | null)[];
+  /** Legacy — a single representative-day shift + days/week. Superseded by
+   *  `week`; migrated on load. */
+  daysPerWeek?: number;
+  shifts?: { start: number; end: number }[];
+  /** Legacy per-person weekly hours — only used as the cost fallback for old
+   *  scenarios that predate `shifts`. New/rostered lines derive hours from the
+   *  schedule instead; this is not shown once a line has shifts. */
+  hoursPerWeek?: number;
 }
 
 export interface SimulationSeasonality {
@@ -1386,6 +1399,45 @@ export interface SimulationWeather {
   eventDayMultiplier: number;
 }
 
+/** The premises / occupancy decision — rent a unit or buy it (with a mortgage).
+ *  This is the single source of truth for the restaurant's property costs: the
+ *  engine's `applyPremises` derives the monthly rent line, mortgage interest,
+ *  building depreciation, property tax + upkeep and the upfront cash from it, so
+ *  the Rent-vs-Buy choice flows all the way through the P&L, payback and IRR. */
+export interface SimulationPremises {
+  /** "rent" a leased unit or "buy" it outright / with a mortgage. */
+  mode: "rent" | "buy";
+  // ── Rent path ──────────────────────────────────────────────────────────
+  /** Monthly base rent in grosze (feeds the fixed-cost rent line). */
+  monthlyRentGrosze: number;
+  /** Security deposit held upfront, expressed in months of rent (× rent = cash). */
+  depositMonths: number;
+  /** Monthly service charge / common-area maintenance in grosze (on top of rent). */
+  serviceChargeMonthlyGrosze: number;
+  // ── Buy path ───────────────────────────────────────────────────────────
+  /** Purchase price of the premises in grosze. */
+  purchasePriceGrosze: number;
+  /** Down payment as a fraction of the price (0–1); the rest is mortgaged. */
+  downPaymentPct: number;
+  /** Annual mortgage interest rate (0–1). */
+  mortgageRatePct: number;
+  /** Mortgage term in years. */
+  mortgageTermYears: number;
+  /** Annual property tax (podatek od nieruchomości) in grosze. */
+  propertyTaxAnnualGrosze: number;
+  /** Owner's structural building upkeep per month in grosze (roof / façade /
+   *  systems — over and above the operational maintenance line). */
+  buildingMaintenanceMonthlyGrosze: number;
+  /** Annual building depreciation rate (0–1) applied to the purchase price —
+   *  e.g. 0.025 ≈ a 40-year straight line on the structure. */
+  buildingDepreciationPct: number;
+  // ── Shared ─────────────────────────────────────────────────────────────
+  /** One-off fit-out / build-out + opening working-capital capex in grosze
+   *  (kitchen, oven, interior). Added to deposit / down payment for the total
+   *  upfront cash the payback + IRR are computed against. */
+  fitoutGrosze: number;
+}
+
 export interface SimulationScenario {
   /** Average orders served per operating day. */
   ordersPerDay: number;
@@ -1404,8 +1456,22 @@ export interface SimulationScenario {
   ingredientInflationPct?: number;
   /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
   paymentProcessorPct?: number;
-  /** Setup cost in grosze (restaurant fit-out, kitchen build, deposits) — payback calc. */
+  /** Setup cost in grosze (restaurant fit-out, kitchen build, deposits) — payback calc.
+   *  When `premises` is set it is the authoritative source and `applyPremises`
+   *  derives this from the fit-out + deposit / down payment. */
   setupCostGrosze?: number;
+  /** Premises / occupancy decision (rent vs buy). Drives the rent line,
+   *  mortgage interest, building depreciation, property costs + upfront cash
+   *  via `applyPremises`. */
+  premises?: SimulationPremises;
+  /** Display currency for the Calculator — the canonical model stays in PLN
+   *  grosze; this only changes how amounts are shown + entered, converted at
+   *  the operator's exchange rate. Mirrors `Currency` in src/lib/currency.ts. */
+  displayCurrency?: "PLN" | "USD" | "SGD" | "EUR" | "AED";
+  /** Daily service window (24h clock) — drives the demand curve start, the
+   *  open-hours capacity math and the live shift-coverage grid. `openHoursPerDay`
+   *  on kitchenCapacity is kept in sync (= closeHour − openHour). */
+  openingHours?: { openHour: number; closeHour: number };
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
   /** Id of the active menu scenario preset (e.g. "balanced", "premium").
@@ -1717,6 +1783,15 @@ export interface SimulationActualsSnapshot {
    *  operator-typed flat cogsPct. Falls back to 0 when no item carries
    *  cost data. */
   weightedCogsPct: number;
+  /** Weighted food cost *excluding* trim/spill waste — the ingredient that
+   *  reaches the plate as a fraction of revenue (Σqty×base ÷ Σqty×price).
+   *  Feeds the Calculator's Food-cost-% lever so it and Waste-% sum back to
+   *  weightedCogsPct without double-counting. */
+  weightedFoodCostPct: number;
+  /** Weighted trim/spill waste overhead as a fraction of revenue — the extra
+   *  ingredient purchased to cover loss (from each recipe line's wasteFactor).
+   *  Feeds the Calculator's Waste-% lever. */
+  weightedWastePct: number;
   /** Share of orders by fulfillment type. */
   takeoutSharePct: number;
   deliverySharePct: number;

@@ -4,16 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, CheckCircle2, Coins, Percent } from "lucide-react";
 import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
-type Currency = "PLN" | "USD" | "SGD" | "EUR";
-const ALL: Currency[] = ["PLN", "USD", "SGD", "EUR"];
+type Currency = "PLN" | "USD" | "SGD" | "EUR" | "AED";
+const ALL: Currency[] = ["PLN", "USD", "SGD", "EUR", "AED"];
 const META: Record<Currency, { label: string; symbol: string }> = {
   PLN: { label: "Polish Złoty", symbol: "zł" }, USD: { label: "US Dollar", symbol: "$" },
   SGD: { label: "Singapore Dollar", symbol: "S$" }, EUR: { label: "Euro", symbol: "€" },
+  AED: { label: "UAE Dirham", symbol: "د.إ" },
 };
 
 export function CurrencyV3() {
-  const [enabled, setEnabled] = useState<Record<Currency, boolean>>({ PLN: true, USD: false, SGD: false, EUR: false });
-  const [rates, setRates] = useState<Record<Currency, string>>({ PLN: "1", USD: "", SGD: "", EUR: "" });
+  const [enabled, setEnabled] = useState<Record<Currency, boolean>>({ PLN: true, USD: false, SGD: false, EUR: false, AED: false });
+  const [rates, setRates] = useState<Record<Currency, string>>({ PLN: "1", USD: "", SGD: "", EUR: "", AED: "" });
   const [def, setDef] = useState<Currency>("PLN");
   const [loading, setLoading] = useState(true);
 
@@ -21,8 +22,8 @@ export function CurrencyV3() {
     const d = await fetch("/api/admin/currency").then((r) => (r.ok ? r.json() : null)).catch(() => null);
     if (d) {
       setDef(d.defaultCurrency ?? "PLN");
-      setEnabled({ PLN: true, USD: d.enabledCurrencies?.includes("USD"), SGD: d.enabledCurrencies?.includes("SGD"), EUR: d.enabledCurrencies?.includes("EUR") });
-      setRates({ PLN: "1", USD: String(d.rates?.USD ?? ""), SGD: String(d.rates?.SGD ?? ""), EUR: String(d.rates?.EUR ?? "") });
+      setEnabled({ PLN: true, USD: d.enabledCurrencies?.includes("USD"), SGD: d.enabledCurrencies?.includes("SGD"), EUR: d.enabledCurrencies?.includes("EUR"), AED: d.enabledCurrencies?.includes("AED") });
+      setRates({ PLN: "1", USD: String(d.rates?.USD ?? ""), SGD: String(d.rates?.SGD ?? ""), EUR: String(d.rates?.EUR ?? ""), AED: String(d.rates?.AED ?? "") });
     }
     setLoading(false);
   }, []);

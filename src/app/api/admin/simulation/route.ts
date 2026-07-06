@@ -7,6 +7,7 @@ import {
   seedSimulationFromHistory,
 } from "@/lib/store";
 import type { SimulationLaborLine, SimulationScenario } from "@/data/types";
+import { ALL_CURRENCIES } from "@/lib/currency";
 
 const VALID_ROLES = new Set([
   "pizzaiolo",
@@ -79,8 +80,12 @@ export const PUT = withAdmin(
         typeof line.id !== "string" ||
         !VALID_ROLES.has(line.role) ||
         typeof line.headcount !== "number" ||
-        typeof line.hoursPerWeek !== "number" ||
-        typeof line.hourlyRateGrosze !== "number"
+        typeof line.hourlyRateGrosze !== "number" ||
+        // `week` is the 7-day rota; hoursPerWeek/daysPerWeek/shifts are legacy.
+        (line.week !== undefined && (!Array.isArray(line.week) || line.week.some((sh) => sh !== null && (typeof sh?.start !== "number" || typeof sh?.end !== "number")))) ||
+        (line.hoursPerWeek !== undefined && typeof line.hoursPerWeek !== "number") ||
+        (line.daysPerWeek !== undefined && typeof line.daysPerWeek !== "number") ||
+        (line.shifts !== undefined && (!Array.isArray(line.shifts) || line.shifts.some((sh) => typeof sh?.start !== "number" || typeof sh?.end !== "number")))
       ) {
         return NextResponse.json({ error: "Invalid labor line" }, { status: 400 });
       }
@@ -127,6 +132,18 @@ export const PUT = withAdmin(
       marketingAsCac: typeof b.marketingAsCac === "boolean" ? b.marketingAsCac : undefined,
       prepComplexityMultiplier: typeof b.prepComplexityMultiplier === "number" ? b.prepComplexityMultiplier : undefined,
       fleet: b.fleet,
+      premises: b.premises && typeof b.premises === "object" ? b.premises : undefined,
+      displayCurrency:
+        b.displayCurrency && (ALL_CURRENCIES as string[]).includes(b.displayCurrency)
+          ? b.displayCurrency
+          : undefined,
+      openingHours:
+        b.openingHours &&
+        typeof b.openingHours.openHour === "number" &&
+        typeof b.openingHours.closeHour === "number" &&
+        b.openingHours.closeHour > b.openingHours.openHour
+          ? { openHour: b.openingHours.openHour, closeHour: b.openingHours.closeHour }
+          : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

@@ -1,10 +1,13 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, Fragment, useCallback, useContext, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
+import { CURRENCY_META, convertFromGrosze, convertToGrosze, formatPriceInCurrency, type Currency } from "@/lib/currency";
+import { fetchPublicSettings } from "@/lib/public-settings";
+import { applyAnnualWeather, applyAssumptions, applyPremises, computeChannelEconomics, computeFleetEconomics, computePremises, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationPremises, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonPage, SkeletonRows, Switch } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -12,8 +15,21 @@ const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   pizzaiolo: "Pizzaiolo", chef: "Chef", "sous-chef": "Sous-chef", "kitchen-porter": "Kitchen porter", waiter: "Waiter",
   barista: "Barista", driver: "Driver", manager: "Manager", cleaner: "Cleaner", other: "Other",
 };
+// Full label map for every business-cost category (the detailed P&L itemises
+// fixedCosts by key, including tax + maintenance which aren't editable in the
+// Fixed-costs card but carry premises property costs).
+const FIXED_COST_LABELS: Record<string, string> = {
+  rent: "Rent", utilities: "Utilities", fuel: "Fuel", vehicle: "Vehicle",
+  insurance: "Insurance", licenses: "Licenses", marketing: "Marketing",
+  software: "Software", professional: "Professional", other: "Other",
+  tax: "Property / other tax", maintenance: "Maintenance", payroll: "Payroll",
+  ingredients: "Ingredients", equipment: "Equipment",
+};
+
+// Rent is not here — the Premises card owns the occupancy line (rent or
+// mortgage) and folds it into fixedCosts.rent via applyPremises.
 const FIXED_KEYS: { key: string; label: string }[] = [
-  { key: "rent", label: "Rent" }, { key: "utilities", label: "Utilities" }, { key: "fuel", label: "Fuel" },
+  { key: "utilities", label: "Utilities" }, { key: "fuel", label: "Fuel" },
   { key: "vehicle", label: "Vehicle" }, { key: "insurance", label: "Insurance" }, { key: "licenses", label: "Licenses" },
   { key: "marketing", label: "Marketing" }, { key: "software", label: "Software" }, { key: "professional", label: "Professional" }, { key: "other", label: "Other" },
 ];
@@ -35,12 +51,26 @@ const SEASONS: { key: keyof SimulationSeasonality; label: string }[] = [{ key: "
 const DEFAULT_WEATHER: SimulationWeather = { enabled: true, rainyDayMultiplier: 0.75, rainyShare: 0.30, heatwaveMultiplier: 1.40, heatwaveShare: 0.10, holidayClosedDaysPerMonth: 1, holidayPeakDaysPerMonth: 1, holidayPeakMultiplier: 1.60, schoolHolidayLunchMultiplier: 0.85, eventDaysPerMonth: 1, eventDayMultiplier: 1.50 };
 const DEFAULT_FLEET: SimulationFleetModel = { unitCount: 1, hqOverheadMonthlyGrosze: 0, supplyDiscountAtUnits: 5, supplyDiscountPct: 0.10, commissaryEnabledAtUnits: 4, commissarySavingsPct: 0.04, royaltyPct: 0.06, marketingFundPct: 0.02, dmaOverlapPct: 0.15, buildoutLearningPct: 0.05, buildoutFloorPct: 0.55 };
 
-// generic field helpers — money in zł, percent in %
-function Z({ label, grosze, onChange, w = 120 }: { label: string; grosze: number; onChange: (g: number) => void; w?: number }) {
-  return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} onChange={(e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} /></label>;
+// Calculator display currency — the model stays canonical in PLN grosze; this
+// context only reformats + reparses money at the operator's FX rate. The four
+// currencies the Calculator offers (SGD lives in the customer switcher only).
+const CALC_CURRENCIES: Currency[] = ["PLN", "USD", "EUR", "AED"];
+const CalcCurrencyCtx = createContext<{ cur: Currency; money: (g: number) => string }>({ cur: "PLN", money: formatPrice });
+const useCalcCurrency = () => useContext(CalcCurrencyCtx);
+
+// generic field helpers — money shown/entered in the chosen display currency, percent in %
+function Z({ label, grosze, onChange, w = 120, readOnly = false, hint }: { label: string; grosze: number; onChange: (g: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
+  const { cur } = useCalcCurrency();
+  return <label className="av3-field" style={{ width: w }}>
+    <span className="av3-field-label">{label}{hint ? <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {hint}</span> : null}</span>
+    <input className="av3-input" type="number" step="0.01" value={+convertFromGrosze(Math.round(grosze), cur).toFixed(2)} readOnly={readOnly} disabled={readOnly} onChange={readOnly ? undefined : (e) => onChange(convertToGrosze(Number(e.target.value) || 0, cur))} />
+  </label>;
 }
-function P({ label, frac, onChange, w = 110 }: { label: string; frac: number; onChange: (f: number) => void; w?: number }) {
-  return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.1" value={+(frac * 100).toFixed(2)} onChange={(e) => onChange((Number(e.target.value) || 0) / 100)} /></label>;
+function P({ label, frac, onChange, w = 110, readOnly = false, hint }: { label: string; frac: number; onChange: (f: number) => void; w?: number; readOnly?: boolean; hint?: string }) {
+  return <label className="av3-field" style={{ width: w }}>
+    <span className="av3-field-label">{label}{hint ? <span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {hint}</span> : null}</span>
+    <input className="av3-input" type="number" step="0.1" value={+(frac * 100).toFixed(2)} readOnly={readOnly} disabled={readOnly} title={readOnly ? "Derived from dish recipes — switch to the Custom scenario to edit" : undefined} onChange={readOnly ? undefined : (e) => onChange((Number(e.target.value) || 0) / 100)} />
+  </label>;
 }
 function N({ label, value, onChange, w = 110, step = 1 }: { label: string; value: number; onChange: (n: number) => void; w?: number; step?: number }) {
   return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value) || 0)} /></label>;
@@ -76,6 +106,148 @@ function demandWeights(n: number): number[] {
   return w.map((v) => v / sum);
 }
 
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DEFAULT_LABOR_DAYS = 6;
+const MIN_REST_HOURS = 12;
+type DayShift = { start: number; end: number } | null;
+
+// A worker's normalised 7-day rota (Mon…Sun). Uses `week` when set; otherwise
+// migrates the legacy single shift onto `daysPerWeek` days, or defaults to the
+// full open window on 6 days.
+function weekOf(l: SimulationLaborLine, openHour: number, closeHour: number): DayShift[] {
+  if (Array.isArray(l.week) && l.week.length === 7) {
+    return l.week.map((s) => (s && Number.isFinite(s.start) && Number.isFinite(s.end) ? { start: s.start, end: s.end } : null));
+  }
+  const shift = (l.shifts && l.shifts[0]) ? { start: l.shifts[0].start, end: l.shifts[0].end } : { start: openHour, end: closeHour };
+  const days = Math.max(0, Math.min(7, Math.round(l.daysPerWeek ?? DEFAULT_LABOR_DAYS)));
+  return Array.from({ length: 7 }, (_, d) => (d < days ? { start: shift.start, end: shift.end } : null));
+}
+
+// Weekly hours (and therefore pay) = Σ each on-day's shift length. The rota is
+// the single source of the labour hours.
+function laborHoursPerWeek(l: SimulationLaborLine, openHour: number, closeHour: number): number {
+  return weekOf(l, openHour, closeHour).reduce((sum, sh) => sum + (sh ? Math.max(0, sh.end - sh.start) : 0), 0);
+}
+
+// Days (0-based, Mon…Sun) whose shift starts under MIN_REST_HOURS after the
+// previous on-day's shift ended — includes the Sun→Mon wrap. Rest between an
+// end at `e` and the next start at `s` the following day = (24 − e) + s.
+function restViolationDays(week: DayShift[]): Set<number> {
+  const bad = new Set<number>();
+  for (let d = 0; d < 7; d++) {
+    const cur = week[d];
+    if (!cur) continue;
+    // nearest previous on-day (wrapping)
+    for (let back = 1; back <= 7; back++) {
+      const pd = (d - back + 7) % 7;
+      const prev = week[pd];
+      if (!prev) continue;
+      const restDays = back; // full days between the two on-days
+      // rest hours = (24 − prevEnd) + curStart + 24×(gap days − 1)
+      const rest = (24 - prev.end) + cur.start + 24 * (restDays - 1);
+      if (rest < MIN_REST_HOURS) bad.add(d);
+      break;
+    }
+  }
+  return bad;
+}
+
+// Demand context the roster needs to size coverage: daily order volume and the
+// effective per-hour kitchen ceiling (pizzas/hr ÷ prep-complexity) — the SAME
+// numbers the coverage grid uses, so a rostered week reads green there.
+interface RosterCtx { ordersPerDay: number; effCap: number }
+const ROSTER_MAX_SHIFT = 12; // cap a consistent shift so 24−L ≥ 12 h rest always holds
+
+// Cost-minimal, coverage-complete auto-roster.
+//
+// The old roster placed a flat 7 h shift per person and staggered a single day
+// off — which left the open/close edges bare on whichever day their sole cover
+// was off (the "short days"). This one is demand-driven and provably covers
+// every open hour on all 7 days at the minimum possible labour hours.
+//
+// Per role it computes an hourly requirement `need[i]` (pizzaioli: ⌈demand ÷
+// effCap⌉; other roles: demand-proportional to headcount) with a floor of 1 —
+// continuity while open — capped at the headcount on hand. It then decomposes
+// that staircase into contiguous "coverage bands" (band k = the hours needing
+// ≥ k people) and hands each band to a subset of the role's workers, tiling the
+// 7 days among them as contiguous runs. Because every band is filled on all 7
+// days, per-hour coverage equals `need` every day — no gaps. Total hours =
+// 7 × Σ need[i], the theoretical minimum to satisfy the requirement, so it's as
+// lean as a covered rota can be. Consistent shifts (≤12 h) keep 24−L ≥ 12 h
+// rest by construction. Where the team is too small to reach `need` at peak the
+// depth is capped at headcount and the coverage grid surfaces the residual gap
+// (a genuine "hire one more" signal, not a rostering failure).
+function rosterWeek(labor: SimulationLaborLine[], openHour: number, closeHour: number, ctx?: RosterCtx): SimulationLaborLine[] {
+  const H = Math.max(1, closeHour - openHour);
+  const weights = demandWeights(H);
+  const ordersPerDay = Math.max(0, ctx?.ordersPerDay ?? 0);
+  const effCap = Math.max(1e-6, ctx?.effCap ?? Infinity);
+  const demand = weights.map((w) => ordersPerDay * w);
+  const peak = Math.max(1e-9, ...demand);
+
+  // group workers by role, preserving first-seen order
+  const byRole = new Map<BusinessCostPayrollRole, SimulationLaborLine[]>();
+  for (const l of labor) { if (!byRole.has(l.role)) byRole.set(l.role, []); byRole.get(l.role)!.push(l); }
+
+  const weekById = new Map<string, DayShift[]>();
+  for (const [role, workers] of byRole) {
+    const n = workers.length;
+    // hourly requirement for this role, floored at 1 (continuity) and capped at headcount
+    const need = demand.map((dh) => {
+      const base = role === "pizzaiolo" ? Math.ceil(dh / effCap) : Math.round((n * dh) / peak);
+      return Math.min(n, Math.max(1, base));
+    });
+    const depth = Math.max(1, ...need);
+
+    // coverage bands: band k = contiguous hull of the hours needing ≥ k people,
+    // split into ≤ROSTER_MAX_SHIFT-hour chunks so no single shift breaks rest
+    const bands: { s: number; e: number }[] = [];
+    for (let k = 1; k <= depth; k++) {
+      let a = -1, b = -1;
+      for (let i = 0; i < H; i++) if (need[i] >= k) { if (a < 0) a = i; b = i; }
+      if (a < 0) continue;
+      let s = openHour + a; const e = openHour + b + 1;
+      while (e - s > ROSTER_MAX_SHIFT) { bands.push({ s, e: s + ROSTER_MAX_SHIFT }); s += ROSTER_MAX_SHIFT; }
+      bands.push({ s, e });
+    }
+
+    // one worker per band minimum; spare workers reinforce the band whose workers
+    // currently carry the most days (spreads the load → creates days off, no extra hours)
+    const bandCrew = bands.map(() => 1);
+    let placed = Math.min(n, bands.length);
+    while (placed < n) {
+      let bi = 0, worst = -1;
+      for (let j = 0; j < bands.length; j++) { const load = 7 / bandCrew[j]; if (load > worst) { worst = load; bi = j; } }
+      bandCrew[bi]++; placed++;
+    }
+    // flatten to a worker→band map (extra workers beyond Σ bandCrew fold onto band 0;
+    // if the team can't man every band, deep bands go unstaffed = the capped shortage)
+    const workerBand: number[] = [];
+    bands.forEach((_, bi) => { for (let c = 0; c < bandCrew[bi]; c++) if (workerBand.length < n) workerBand.push(bi); });
+    while (workerBand.length < n) workerBand.push(0);
+
+    const weeks: DayShift[][] = workers.map(() => Array<DayShift>(7).fill(null));
+    bands.forEach((band, bi) => {
+      const crew = workerBand.map((b, wi) => (b === bi ? wi : -1)).filter((wi) => wi >= 0);
+      if (crew.length === 0) return; // unstaffed band → covered by the shortage cap above
+      // tile all 7 days among this band's crew as contiguous runs; offset by band so
+      // days off stagger across bands and daily headcount stays smooth
+      for (let d = 0; d < 7; d++) {
+        const day = (d + bi) % 7;
+        const owner = crew[Math.min(crew.length - 1, Math.floor((d * crew.length) / 7))];
+        weeks[owner][day] = { start: band.s, end: band.e };
+      }
+    });
+    workers.forEach((w, wi) => weekById.set(w.id, weeks[wi]));
+  }
+
+  return labor.map((l) => ({
+    ...l,
+    week: weekById.get(l.id) ?? weekOf(l, openHour, closeHour),
+    shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined,
+  }));
+}
+
 // Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
 // Applying one loads a full input set (volume / days / ticket / COGS + the six
 // attach % values, preserving each lever's enabled state). Operator edits to a
@@ -95,6 +267,9 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
 ];
 const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 90, daysOpenPerMonth: 30, avgTicketGrosze: 8000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
 const MENU_SCENARIOS_ALL = [...MENU_SCENARIOS, CUSTOM_PRESET];
+// The five baked archetypes lock Food-cost-% + Waste-% to the dish-derived
+// values; only the Custom scenario lets the operator hand-edit them.
+const NAMED_PRESET_IDS = new Set(MENU_SCENARIOS.map((s) => s.id));
 const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_ALL.map((s) => [s.id, s]));
 const ATTACH_OF: Record<keyof MenuScenarioPreset["attach"], AttachKey> = { coffee: "coffeeAttach", dessert: "dessertAttach", antipasti: "antipastiAttach", aperitivo: "aperitivoAttach", premiumToppings: "premiumToppingsAttach", pastaPrimo: "pastaPrimoAttach" };
 // Overlay the operator's saved override (if any) on top of the baked preset.
@@ -104,13 +279,14 @@ function resolveScenarioPreset(id: string, overrides?: Record<string, Simulation
   return ovr ? { ...base, ordersPerDay: ovr.ordersPerDay, daysOpenPerMonth: ovr.daysOpenPerMonth, avgTicketGrosze: ovr.avgTicketGrosze, cogsPct: ovr.cogsPct, attach: ovr.attach } : base;
 }
 
-// compact zł for dense heatmap cells (grosze → "7.2k" / "320")
-function kZl(g: number): string {
-  const z = g / 100;
+// compact money for dense heatmap cells (grosze → "7.2k" / "320"), in display currency
+function kMoney(g: number, cur: Currency): string {
+  const z = convertFromGrosze(g, cur);
   return Math.abs(z) >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
 }
 interface HeatData { cells: number[][]; colHeaders: string[]; rowHeaders: string[]; centerRow: number; centerCol: number }
 function Heatmap({ data }: { data: HeatData }) {
+  const { cur, money } = useCalcCurrency();
   const maxAbs = Math.max(1, ...data.cells.flat().map((v) => Math.abs(v)));
   const ncol = data.colHeaders.length;
   return (
@@ -125,7 +301,7 @@ function Heatmap({ data }: { data: HeatData }) {
               const pct = Math.round((Math.abs(v) / maxAbs) * 56) + 8;
               const bg = `color-mix(in oklab, var(${v >= 0 ? "--av3-ok" : "--av3-bad"}) ${pct}%, var(--av3-s1))`;
               const center = ri === data.centerRow && ci === data.centerCol;
-              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={formatPrice(v)}>{kZl(v)}</div>;
+              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={money(v)}>{kMoney(v, cur)}</div>;
             })}
           </Fragment>
         ))}
@@ -136,40 +312,156 @@ function Heatmap({ data }: { data: HeatData }) {
 
 export function CalculatorV3() {
   const [scn, setScn] = useState<SimulationScenario | null>(null);
+  // Dish-derived food cost + waste (menu mix weighted, ex-waste split) — the
+  // source of truth for the two levers in every scenario except Custom.
+  const [dishCost, setDishCost] = useState<{ foodCostPct: number; wastePct: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [pnlDetailed, setPnlDetailed] = useState(false);
+  const [coverageDay, setCoverageDay] = useState(4); // which weekday the coverage grid shows (default Fri)
+  const [editCell, setEditCell] = useState<{ i: number; d: number; x: number; y: number } | null>(null); // rota cell being edited (popover)
+  const [roleToAdd, setRoleToAdd] = useState<BusinessCostPayrollRole>("waiter");
 
   const load = useCallback(async () => {
-    const d = await fetch("/api/admin/simulation").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    setScn(d); setLoading(false); setDirty(false);
+    const [d, act] = await Promise.all([
+      fetch("/api/admin/simulation").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/admin/simulation/actuals?days=90").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      // Hydrate the currency module's rate table from the operator's settings
+      // (setExchangeRates side-effect) so non-PLN display uses real FX, not just
+      // the build-time defaults. Best-effort — falls back to DEFAULT_RATES.
+      fetchPublicSettings().catch(() => null),
+    ]);
+    const dc = act && typeof act.weightedCogsPct === "number" && act.weightedCogsPct > 0
+      ? { foodCostPct: act.weightedFoodCostPct ?? act.weightedCogsPct, wastePct: act.weightedWastePct ?? 0 }
+      : null;
+    setDishCost(dc);
+    // A named preset draws food cost + waste from dishes — sync the stored
+    // scenario so what's saved matches what's shown and computed.
+    const scenario = d && dc && NAMED_PRESET_IDS.has(d.menuScenario ?? "")
+      ? { ...d, cogsPct: dc.foodCostPct, wastePct: dc.wastePct }
+      : d;
+    setScn(scenario); setLoading(false); setDirty(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!editCell) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setEditCell(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editCell]);
 
   const patch = (over: Partial<SimulationScenario>) => { setScn((s) => (s ? { ...s, ...over } : s)); setDirty(true); };
   const patchFixed = (key: string, g: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fixedCosts: { ...s.fixedCosts, [key]: g } }; });
-  const patchLabor = (i: number, over: Partial<SimulationLaborLine>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l, idx) => (idx === i ? { ...l, ...over } : l)) }; });
-  const addLabor = () => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role: "waiter" as BusinessCostPayrollRole, headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 3000 }] }; });
+  const patchLabor = (i: number, over: Partial<SimulationLaborLine>) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
+    return { ...s, labor: s.labor.map((l, idx) => {
+      if (idx !== i) return l;
+      const next = { ...l, ...over };
+      // Keep one shift per person — pad/trim the roster when headcount changes.
+      if (over.headcount !== undefined && next.shifts && next.shifts.length > 0) {
+        const target = Math.max(0, Math.round(next.headcount));
+        const cur = next.shifts.slice(0, target);
+        while (cur.length < target) cur.push({ start: Math.floor(oh.openHour), end: Math.ceil(oh.closeHour) });
+        next.shifts = cur;
+      }
+      return next;
+    }) };
+  });
+  // Add one worker (each labour line is a single person). Copies rate + days
+  // from an existing worker of the same role so a new hire matches the team.
+  const addWorker = (role: BusinessCostPayrollRole) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
+    const template = s.labor.find((l) => l.role === role);
+    return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role, headcount: 1, hourlyRateGrosze: template?.hourlyRateGrosze ?? 3000, daysPerWeek: template?.daysPerWeek ?? DEFAULT_LABOR_DAYS, shifts: [{ start: Math.floor(oh.openHour), end: Math.ceil(oh.closeHour) }] }] }; });
   const rmLabor = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.filter((_, idx) => idx !== i) }; });
   const patchAssume = (over: Partial<SimulationAssumptions>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, assumptions: { ...(s.assumptions ?? {}), ...over } }; });
   const patchWeather = (over: Partial<SimulationWeather>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, weather: { ...DEFAULT_WEATHER, ...(s.weather ?? {}), ...over } }; });
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
   const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
+  const patchPremises = (over: Partial<SimulationPremises>) => setScn((s) => { if (!s || !s.premises) return s; setDirty(true); return { ...s, premises: { ...s.premises, ...over } }; });
+  // Opening hours own the service window; keep kitchenCapacity.openHoursPerDay in
+  // sync so the capacity-utilisation math and the demand curve agree.
+  const patchOpeningHours = (over: Partial<{ openHour: number; closeHour: number }>) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = { openHour: 12, closeHour: 23, ...(s.openingHours ?? {}), ...over };
+    const openHoursPerDay = Math.max(1, oh.closeHour - oh.openHour);
+    return { ...s, openingHours: oh, kitchenCapacity: s.kitchenCapacity ? { ...s.kitchenCapacity, openHoursPerDay } : s.kitchenCapacity };
+  });
+  // Roster actions — stagger everyone to the demand curve, revert to flat, or
+  // break one line's headcount into hand-editable per-person shifts.
+  const autoRoster = () => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
+    const effCap = (s.kitchenCapacity?.pizzasPerHour ?? 0) / Math.max(0.5, s.prepComplexityMultiplier ?? 1);
+    return { ...s, labor: rosterWeek(s.labor, Math.floor(oh.openHour), Math.ceil(oh.closeHour), { ordersPerDay: s.ordersPerDay, effCap }) };
+  });
+  // Set one day of one worker's rota (null = day off). Materialises the week
+  // first (migrating a legacy line) so every edit lands on a real 7-slot array.
+  const setDay = (i: number, day: number, shift: DayShift) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const oh = s.openingHours ?? { openHour: 12, closeHour: 23 };
+    return { ...s, labor: s.labor.map((l, idx) => {
+      if (idx !== i) return l;
+      const week = weekOf(l, Math.floor(oh.openHour), Math.ceil(oh.closeHour)).slice();
+      week[day] = shift;
+      return { ...l, week, shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined };
+    }) };
+  });
+
+  // Display currency — the canonical model stays in PLN grosze; `money` reformats
+  // every amount at the operator's FX rate, and the Z inputs reparse back to grosze.
+  const cur: Currency = (scn?.displayCurrency ?? "PLN") as Currency;
+  const money = useCallback((g: number) => formatPriceInCurrency(g, cur), [cur]);
+
+  // A named preset locks Food-cost-% + Waste-% to the dish-derived values;
+  // only Custom (or a scenario with no preset yet) lets the operator edit them.
+  const foodWasteLocked = !!scn && NAMED_PRESET_IDS.has(scn.menuScenario ?? "");
+  const effCogsPct = foodWasteLocked && dishCost ? dishCost.foodCostPct : (scn?.cogsPct ?? 0);
+  const effWastePct = foodWasteLocked && dishCost ? dishCost.wastePct : (scn?.wastePct ?? 0);
+  // Scenario as the engine should see it: when locked, override cogs/waste with
+  // the dish-derived split so the whole P&L reflects the real menu, not a stale
+  // stored guess. Everything downstream computes off this.
+  const scnEff = useMemo<SimulationScenario | null>(() => {
+    if (!scn) return null;
+    const withDish = foodWasteLocked && dishCost ? { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct } : scn;
+    // Derive each labour line's weekly hours from its roster so the engine cost
+    // reflects the actual schedule, not a stale typed number.
+    const oh = scn.openingHours ?? { openHour: 12, closeHour: 23 };
+    const openH = Math.floor(oh.openHour);
+    const closeH = Math.ceil(oh.closeHour);
+    const withLabor = { ...withDish, labor: withDish.labor.map((l) => ({ ...l, hoursPerWeek: laborHoursPerWeek(l, openH, closeH) })) };
+    // Fold the rent-vs-buy decision into rent / mortgage interest / building
+    // depreciation / property costs + setup cost so the whole P&L reflects it.
+    return applyPremises(withLabor);
+  }, [scn, foodWasteLocked, dishCost]);
+  // Derived premises economics for the readout in the Premises card.
+  const prem = useMemo(() => (scn?.premises ? computePremises(scn.premises) : null), [scn?.premises]);
 
   // Fold the behaviour levers + annual weather into the headline scenario so
   // the P&L / tornado / returns reflect them (rule #8 — end-to-end). The
   // projection applies weather per-month itself, so it takes the
   // assumptions-folded (but not annual-weather) scenario.
-  const folded = useMemo(() => (scn ? applyAnnualWeather(applyAssumptions(scn)) : null), [scn]);
+  const folded = useMemo(() => (scnEff ? applyAnnualWeather(applyAssumptions(scnEff)) : null), [scnEff]);
   const c = useMemo(() => (folded ? computeScenario(folded) : null), [folded]);
   const tornado = useMemo(() => (folded ? computeTornado(folded) : []), [folded]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
-  const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
-  const projection = useMemo(() => (scn ? projectTwelveMonths(applyAssumptions(scn)) : []), [scn]);
+  // Investor returns are a *cash* view: in buy mode the mortgage principal is a
+  // real monthly cash outflow that accrual net profit doesn't capture (it only
+  // deducts interest), so net it out of the stream or a financed purchase looks
+  // artificially strong. Rent mode / cash purchase → principal is 0, no change.
+  const ret = useMemo(() => {
+    if (!scnEff || !c) return null;
+    const principal = scnEff.premises?.mode === "buy" && prem ? prem.mortgagePrincipalMonthlyGrosze : 0;
+    return computeReturns(c.netProfit - principal, scnEff.setupCostGrosze ?? 0, 24);
+  }, [scnEff, c, prem]);
+  const projection = useMemo(() => (scnEff ? projectTwelveMonths(applyAssumptions(scnEff)) : []), [scnEff]);
   // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
   // on-site card rate isn't the blended one (matches v2).
-  const channels = useMemo(() => (scn ? computeChannelEconomics(scn) : []), [scn]);
-  const fleet = useMemo(() => (scn ? computeFleetEconomics(scn, scn.setupCostGrosze ?? 0) : null), [scn]);
+  const channels = useMemo(() => (scnEff ? computeChannelEconomics(scnEff) : []), [scnEff]);
+  const fleet = useMemo(() => (scnEff ? computeFleetEconomics(scnEff, scnEff.setupCostGrosze ?? 0) : null), [scnEff]);
 
   // ── what-if heatmaps: recompute net profit over a grid (real engine) ──────
   const MULTS = useMemo(() => [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3], []);
@@ -182,10 +474,10 @@ export function CalculatorV3() {
     return {
       cells,
       colHeaders: MULTS.map((m) => (folded.ordersPerDay * m).toFixed(0)),
-      rowHeaders: rowMults.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      rowHeaders: rowMults.map((m) => money(Math.round(folded.avgTicketGrosze * m))),
       centerCol: MULTS.indexOf(1), centerRow: rowMults.indexOf(1),
     };
-  }, [folded, MULTS]);
+  }, [folded, MULTS, money]);
   const foodTicketHeat = useMemo(() => {
     if (!folded) return null;
     // rows = COGS % (low→high so profit falls going down), cols = avg ticket
@@ -194,11 +486,11 @@ export function CalculatorV3() {
       computeScenario({ ...folded, cogsPct: Math.max(0, folded.cogsPct + d), avgTicketGrosze: Math.round(folded.avgTicketGrosze * cm) }).netProfit));
     return {
       cells,
-      colHeaders: MULTS.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      colHeaders: MULTS.map((m) => money(Math.round(folded.avgTicketGrosze * m))),
       rowHeaders: cogsRows.map((d) => `${((folded.cogsPct + d) * 100).toFixed(0)}%`),
       centerCol: MULTS.indexOf(1), centerRow: cogsRows.indexOf(0),
     };
-  }, [folded, MULTS]);
+  }, [folded, MULTS, money]);
 
   // ── scenario archetypes: conservative / base / optimistic (real engine) ───
   const archetypes = useMemo(() => {
@@ -241,7 +533,11 @@ export function CalculatorV3() {
       const ak = ATTACH_OF[k];
       a[ak] = { ...(s.assumptions?.[ak] ?? ATTACH_DEFAULTS[ak]), attachPct: p.attach[k] };
     });
-    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct: p.cogsPct, assumptions: a };
+    // Food cost + waste are dish-sourced, not baked into the preset — seed them
+    // from the live dish mix (Custom then lets the operator diverge).
+    const cogsPct = dishCost ? dishCost.foodCostPct : s.cogsPct;
+    const wastePct = dishCost ? dishCost.wastePct : (s.wastePct ?? 0);
+    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct, wastePct, assumptions: a };
   });
   // capture the current live inputs into this scenario's override
   const saveScenarioOverride = (id: string) => setScn((s) => {
@@ -272,7 +568,7 @@ export function CalculatorV3() {
     const weights = demandWeights(hours);
     const hourly = weights.map((w) => folded.ordersPerDay * w);
     const peak = Math.max(...hourly);
-    const startHour = 11;
+    const startHour = Math.floor(folded.openingHours?.openHour ?? 12);
     const excessPerDay = hourly.reduce((s, h) => s + Math.max(0, h - perHourCap), 0);
     const balkShare = 0.5; // half of orders that can't be served at peak walk
     const lostPerMonth = Math.round(excessPerDay * balkShare * folded.daysOpenPerMonth);
@@ -285,27 +581,54 @@ export function CalculatorV3() {
     };
   }, [folded]);
 
-  // ── shift plan by daypart (modelled from the same demand curve) ───────────
-  const shiftPlan = useMemo(() => {
-    if (!oven || !folded) return null;
-    const dayparts = [
-      { key: "Lunch", lo: 0, hi: 0.45 },
-      { key: "Afternoon", lo: 0.45, hi: 0.62 },
-      { key: "Dinner", lo: 0.62, hi: 1.01 },
-    ];
-    const n = oven.bars.length;
-    const scheduledPizzaioli = folded.labor.filter((l) => l.role === "pizzaiolo").reduce((s, l) => s + l.headcount, 0);
-    const rows = dayparts.map((d) => {
-      const slice = oven.bars.filter((_, i) => { const x = i / (n - 1 || 1); return x >= d.lo && x < d.hi; });
-      const orders = slice.reduce((s, b) => s + b.orders, 0);
-      const hrs = slice.length || 1;
-      const ordersPerHour = orders / hrs;
-      const heads = Math.max(1, Math.ceil(ordersPerHour / (oven.perHourCap || 1)));
-      const range = slice.length ? `${slice[0].hour}:00–${slice[slice.length - 1].hour + 1}:00` : "—";
-      return { key: d.key, range, orders: Math.round(orders), ordersPerHour, heads };
+  // ── live shift-coverage grid for the selected weekday: staff on vs demand ──
+  // Reads each worker's rota for `coverageDay`; a worker on that day sits on the
+  // clock for that day's shift. Per hour we sum staff by role, compare the
+  // kitchen line to the demand-driven requirement, and flag peak hours + gaps.
+  const coverage = useMemo(() => {
+    if (!folded) return null;
+    const oh = folded.openingHours ?? { openHour: 12, closeHour: 23 };
+    const openHour = Math.max(0, Math.min(23, Math.floor(Number.isFinite(oh.openHour) ? oh.openHour : 12)));
+    const closeHour = Math.max(openHour + 1, Math.min(30, Math.ceil(Number.isFinite(oh.closeHour) ? oh.closeHour : 23)));
+    const nHours = closeHour - openHour;
+    const weights = demandWeights(nHours);
+    const perHourCap = folded.kitchenCapacity?.pizzasPerHour ?? 0;
+    const prepMult = Math.max(0.5, folded.prepComplexityMultiplier ?? 1);
+    const effCap = perHourCap / prepMult;
+    const peakDemand = Math.max(1e-9, ...weights) * folded.ordersPerDay;
+    // This weekday's window for each worker (null = off that day).
+    const dayWindow = (l: SimulationLaborLine): { s: number; e: number } | null => {
+      const sh = weekOf(l, openHour, closeHour)[coverageDay];
+      return sh ? { s: Math.max(openHour, Math.min(closeHour, sh.start)), e: Math.max(openHour, Math.min(closeHour, sh.end)) } : null;
+    };
+    const roles = [...new Set(folded.labor.map((l) => l.role))];
+    const hours = weights.map((w, i) => {
+      const hour = openHour + i;
+      const demand = folded.ordersPerDay * w;
+      const perRole: Partial<Record<BusinessCostPayrollRole, number>> = {};
+      let totalOn = 0;
+      let kitchenOn = 0;
+      for (const l of folded.labor) {
+        const win = dayWindow(l);
+        if (!win || hour < win.s || hour >= win.e) continue;
+        perRole[l.role] = (perRole[l.role] ?? 0) + 1;
+        totalOn += 1;
+        if (l.role === "pizzaiolo") kitchenOn += 1;
+      }
+      const requiredKitchen = effCap > 0 ? Math.max(1, Math.ceil(demand / effCap)) : 1;
+      const isPeak = demand >= 0.85 * peakDemand;
+      const kitchenShort = kitchenOn < requiredKitchen;
+      const covered = !kitchenShort && totalOn > 0;
+      return { hour, demand, perRole, totalOn, kitchenOn, requiredKitchen, isPeak, kitchenShort, covered };
     });
-    return { rows, scheduledPizzaioli };
-  }, [oven, folded]);
+    const maxDemand = Math.max(1e-9, ...hours.map((h) => h.demand));
+    const maxStaff = Math.max(1, ...hours.map((h) => h.totalOn));
+    const gaps = hours.filter((h) => !h.covered).map((h) => h.hour);
+    const peakHours = hours.filter((h) => h.isPeak).map((h) => h.hour);
+    const peakCovered = hours.filter((h) => h.isPeak).every((h) => h.covered);
+    const onToday = folded.labor.filter((l) => weekOf(l, openHour, closeHour)[coverageDay]).length;
+    return { openHour, closeHour, nHours, perHourCap: effCap, hours, roles, gaps, peakHours, peakCovered, maxDemand, maxStaff, onToday };
+  }, [folded, coverageDay]);
 
   const save = async () => {
     if (!scn) return;
@@ -314,31 +637,52 @@ export function CalculatorV3() {
   };
 
   if (loading) return <SkeletonPage />;
-  if (!scn || !c) return <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No scenario</div><div className="av3-empty-text">The simulation scenario could not be loaded.</div></div></div>;
+  if (!scn || !scnEff || !c) return <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No scenario</div><div className="av3-empty-text">The simulation scenario could not be loaded.</div></div></div>;
 
-  const pnl: { label: string; v: number; sign?: 1 | -1; strong?: boolean }[] = [
+  // Detailed breakdowns — every child sums to its parent, all from real engine
+  // output (per-role labour, per-category fixed costs, the three leakage lines,
+  // and the depreciation/interest split incl. the premises components).
+  const useMarketingAsCac = scnEff.marketingAsCac !== false;
+  const fixedChildren = Object.entries(scnEff.fixedCosts)
+    .filter(([k, v]) => (v ?? 0) !== 0 && !(useMarketingAsCac && k === "marketing"))
+    .map(([k, v]) => ({ label: FIXED_COST_LABELS[k] ?? k, v: -(v as number) }));
+  const isBuy = scn.premises?.mode === "buy";
+  const depIntChildren = [
+    { label: "Fit-out depreciation", v: -(scn.depreciationMonthlyGrosze ?? 0) },
+    ...(isBuy && prem ? [{ label: "Building depreciation", v: -prem.buildingDepreciationMonthlyGrosze }] : []),
+    ...(isBuy && prem ? [{ label: "Mortgage interest", v: -prem.mortgageInterestMonthlyGrosze }] : []),
+    { label: "Other interest", v: -(scn.interestMonthlyGrosze ?? 0) },
+  ].filter((r) => r.v !== 0);
+
+  const pnl: { label: string; v: number; strong?: boolean; children?: { label: string; v: number }[] }[] = [
     { label: "Monthly revenue", v: c.monthlyRevenue, strong: true },
     { label: "Food cost (COGS)", v: -c.monthlyCogs },
-    { label: "Labour", v: -c.laborMonthly },
-    { label: "Fixed costs", v: -c.fixedTotal },
+    { label: "Labour", v: -c.laborMonthly, children: (() => { const byRole = new Map<BusinessCostPayrollRole, number>(); for (const r of c.laborByRole) byRole.set(r.role, (byRole.get(r.role) ?? 0) + r.grosze); return [...byRole.entries()].filter(([, g]) => g !== 0).map(([role, g]) => ({ label: ROLE_LABEL[role], v: -g })); })() },
+    { label: "Fixed costs", v: -c.fixedTotal, children: fixedChildren },
     { label: "Payment fees", v: -c.paymentFees },
-    { label: "Waste + refunds + loyalty", v: -(c.wasteCost + c.refundLoss + c.loyaltyCost) },
+    { label: "Waste + refunds + loyalty", v: -(c.wasteCost + c.refundLoss + c.loyaltyCost), children: [{ label: "Waste", v: -c.wasteCost }, { label: "Refunds / voids", v: -c.refundLoss }, { label: "Loyalty burn", v: -c.loyaltyCost }].filter((r) => r.v !== 0) },
     { label: "Packaging", v: -c.packagingCost },
     { label: "Marketing (CAC)", v: -c.marketingCac },
     { label: "EBITDA", v: c.ebitda, strong: true },
-    { label: "Depreciation + interest", v: -(c.depreciation + c.interest) },
+    { label: "Depreciation + interest", v: -(c.depreciation + c.interest), children: depIntChildren },
     { label: "CIT (tax)", v: -c.citAmount },
     { label: "Net profit / month", v: c.netProfit, strong: true },
   ];
 
   return (
-    <>
+    <CalcCurrencyCtx.Provider value={{ cur, money }}>
       <div className="av3-pagehead">
         <div>
           <h1>Calculator</h1>
           <div className="av3-pagehead-sub">P&amp;L simulator · live levers → real economics (shared engine)</div>
         </div>
         <div className="av3-pagehead-actions">
+          <label className="av3-field" style={{ width: 108 }} title="Display currency — the model stays in PLN; amounts are converted at the operator's FX rate">
+            <span className="av3-field-label">Currency</span>
+            <select className="av3-select" value={cur} onChange={(e) => patch({ displayCurrency: e.target.value as Currency })}>
+              {CALC_CURRENCIES.map((code) => <option key={code} value={code}>{code} · {CURRENCY_META[code].symbol}</option>)}
+            </select>
+          </label>
           <Button variant="ghost" size="sm" loading={seeding} onClick={seedFromActuals} title="Seed orders/day, ticket & COGS from the last 30 days of real orders">Seed from last 30 days</Button>
           <Button variant="ghost" size="sm" onClick={load}>Reset</Button>
           <Button variant="primary" size="sm" loading={saving} disabled={!dirty} onClick={save}>Save scenario</Button>
@@ -347,7 +691,7 @@ export function CalculatorV3() {
 
       {/* headline KPIs — each carries a five-section ⓘ explainer (Rule #12) */}
       <div className="av3-kpi-rail">
-        <Kpi label="Net profit / mo" value={formatPrice(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
+        <Kpi label="Net profit / mo" value={money(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
           <InfoButton title="Net profit / month"
             description="The bottom line — what's left each month after every cost, including tax, is paid."
             institutional="The single number investors underwrite. For a single full-service Neapolitan restaurant a healthy steady-state net margin is 8–15% of revenue; below ~5% the unit is fragile to one bad month, above ~18% you're likely under-investing in labour or marketing. The institutional gate: net profit must clear the owner's opportunity cost of capital AND service any debt with headroom."
@@ -363,7 +707,7 @@ export function CalculatorV3() {
             tips="Margin moves on mix, not just cost-cutting: shift volume toward high-CM items (the menu-engineering 'stars'), trim the 'dogs', and protect price (avoid blanket discounts — use targeted combos instead). Watch prime cost (below) — it's the fastest margin destroyer."
             methodology="margin = netProfit ÷ monthlyRevenue. Returns 0 when revenue is 0. Same computeScenario() pipeline as net profit." />
         } />
-        <Kpi label="EBITDA / mo" value={formatPrice(c.ebitda)} accentVar="--av3-c2" info={
+        <Kpi label="EBITDA / mo" value={money(c.ebitda)} accentVar="--av3-c2" info={
           <InfoButton title="EBITDA / month"
             description="Operating cash generation before financing and accounting choices — earnings before interest, tax, depreciation & amortisation."
             institutional="EBITDA is the multiple buyers pay on (a single restaurant might trade at 3–5× annual EBITDA; a proven multi-unit chain higher). It strips out how the restaurant was financed and how fast it's depreciated, so it compares operating quality across units. The gate for expansion: EBITDA must comfortably cover D&A + interest + a reinvestment buffer."
@@ -412,7 +756,7 @@ export function CalculatorV3() {
             <CardHead title="Volume & price" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <N label="Orders / day" value={scn.ordersPerDay} onChange={(n) => patch({ ordersPerDay: n })} />
-              <Z label="Avg ticket (zł)" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
+              <Z label="Avg ticket" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
               <N label="Days open / mo" value={scn.daysOpenPerMonth} onChange={(n) => patch({ daysOpenPerMonth: n })} />
               <P label="Wage infl. %/yr" frac={scn.wageInflationPct ?? 0} onChange={(f) => patch({ wageInflationPct: f })} w={120} />
               <P label="Ingred. infl. %/yr" frac={scn.ingredientInflationPct ?? 0} onChange={(f) => patch({ ingredientInflationPct: f })} w={132} />
@@ -420,11 +764,11 @@ export function CalculatorV3() {
           </Card>
 
           <Card>
-            <CardHead title="Variable costs" />
+            <CardHead title="Variable costs" description={foodWasteLocked ? "Food cost + waste are derived from dish recipes — switch to the Custom scenario to edit them. Payment · refund · loyalty · tax are per-revenue constants." : "Payment · refund · loyalty · tax are per-revenue constants. Food cost + waste are editable here on the Custom scenario; named presets lock them to the dish recipes."} />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <P label="Food cost %" frac={scn.cogsPct} onChange={(f) => patch({ cogsPct: f })} />
+              <P label="Food cost %" frac={effCogsPct} onChange={(f) => patch({ cogsPct: f })} readOnly={foodWasteLocked} hint={foodWasteLocked ? "from dishes" : undefined} />
+              <P label="Waste %" frac={effWastePct} onChange={(f) => patch({ wastePct: f })} readOnly={foodWasteLocked} hint={foodWasteLocked ? "from dishes" : undefined} />
               <P label="Payment %" frac={scn.paymentProcessorPct ?? 0} onChange={(f) => patch({ paymentProcessorPct: f })} />
-              <P label="Waste %" frac={scn.wastePct ?? 0} onChange={(f) => patch({ wastePct: f })} />
               <P label="Refund %" frac={scn.refundPct ?? 0} onChange={(f) => patch({ refundPct: f })} />
               <P label="Loyalty %" frac={scn.loyaltyBurnPct ?? 0} onChange={(f) => patch({ loyaltyBurnPct: f })} />
               <Z label="Packaging/order" grosze={scn.packagingPerOrderGrosze ?? 0} onChange={(g) => patch({ packagingPerOrderGrosze: g })} />
@@ -432,24 +776,209 @@ export function CalculatorV3() {
             </div></CardBody>
           </Card>
 
+          {/* menu scenarios — five named archetypes + Custom; apply loads a full input set, edits persist as overrides */}
           <Card>
-            <CardHead title="Labour" actions={<Button variant="secondary" size="sm" onClick={addLabor}><Plus className="av3-btn-ico" /> Add role</Button>} />
+            <CardHead title="Scenarios" description="Five menu archetypes + Custom — apply loads volume · days · ticket · attach in one click" actions={
+              <InfoButton title="Scenarios"
+                description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo) plus a Custom slot. Applying one loads a whole input set; your edits save back onto the scenario."
+                institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume and ticket together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs, capacity and dish-derived food cost to see which clears the return gate."
+                plain="Tap 'Premium' and the model jumps to 85 orders/day at a 110 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Food cost + waste stay pinned to your real dish recipes; only 'Custom' lets you hand-type them to explore a what-if. Tweak a few fields, hit Save current, and that becomes your saved case; Reset reverts it to the baked archetype."
+                tips="Start from the closest archetype, fine-tune in the cards above, then Save current to keep it. Switch to Custom when you want to stress food cost or waste directly. Use Scenario comparison to band each concept and the heatmaps to test sensitivity."
+                methodology="Applying writes ordersPerDay/days/ticket + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Food-cost-% + Waste-% are seeded from the dish mix (computeSimulationActuals → weightedFoodCostPct / weightedWastePct) and stay read-only on the five named presets — only Custom unlocks them. Save current captures live inputs into menuScenarioOverrides[id], overlaid by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
+            } />
+            <CardBody>
+              <div className="av3-cols-3" style={{ gap: 10 }}>
+                {MENU_SCENARIOS_ALL.map((base) => {
+                  const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
+                  const active = scn.menuScenario === base.id;
+                  const edited = !!scn.menuScenarioOverrides?.[base.id];
+                  const custom = base.id === CUSTOM_PRESET.id;
+                  return (
+                    <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ fontSize: 16 }}>{p.emoji}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
+                      </div>
+                      <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
+                      <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {money(p.avgTicketGrosze)} · {custom ? "food cost editable" : "food cost from dishes"}</div>
+                      <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
+                        <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
+                        <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
+                        {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHead title="Labour" description="One row per person — set their pay rate. Hrs/wk + weekly salary come from each person's shift, set in Shift plan & coverage below." actions={
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <select className="av3-select" style={{ height: 30, fontSize: 12 }} value={roleToAdd} onChange={(e) => setRoleToAdd(e.target.value as BusinessCostPayrollRole)} aria-label="Role to add">{PAYROLL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
+                <Button variant="secondary" size="sm" onClick={() => addWorker(roleToAdd)}><Plus className="av3-btn-ico" /> Add</Button>
+              </div>
+            } />
             <CardBody style={{ paddingTop: 6 }}>
-              {scn.labor.map((l, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "end", padding: "5px 0", flexWrap: "wrap" }}>
-                  <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Role</span><select className="av3-select" value={l.role} onChange={(e) => patchLabor(i, { role: e.target.value as BusinessCostPayrollRole })}>{PAYROLL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
-                  <N label="Heads" value={l.headcount} onChange={(n) => patchLabor(i, { headcount: n })} w={70} />
-                  <N label="Hrs/wk" value={l.hoursPerWeek} onChange={(n) => patchLabor(i, { hoursPerWeek: n })} w={80} />
-                  <Z label="Rate/hr (brutto)" grosze={l.hourlyRateGrosze} onChange={(g) => patchLabor(i, { hourlyRateGrosze: g })} w={110} />
-                  <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
-                </div>
-              ))}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
+              {(() => {
+                const openH = Math.floor(scn.openingHours?.openHour ?? 12);
+                const closeH = Math.ceil(scn.openingHours?.closeHour ?? 23);
+                const order: BusinessCostPayrollRole[] = [];
+                const byRole = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
+                scn.labor.forEach((l, i) => { if (!byRole.has(l.role)) { byRole.set(l.role, []); order.push(l.role); } byRole.get(l.role)!.push({ l, i }); });
+                const hdr: CSSProperties = { fontSize: 9.5, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, textAlign: "right", paddingBottom: 2 };
+                const cellInput: CSSProperties = { textAlign: "right", fontFamily: "var(--av3-mono)" };
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(120px, 1.3fr) minmax(80px, 1fr) 72px minmax(104px, 1.1fr) 30px", columnGap: 10, rowGap: 5, alignItems: "center" }}>
+                    <div />
+                    <div style={hdr}>Rate/hr</div>
+                    <div style={hdr}>Hrs/wk</div>
+                    <div style={hdr}>Weekly salary</div>
+                    <div />
+                    {order.map((role, ri) => {
+                      const workers = byRole.get(role)!;
+                      const roleWeekly = workers.reduce((sum, { l }) => sum + laborHoursPerWeek(l, openH, closeH) * l.hourlyRateGrosze, 0);
+                      return (
+                        <Fragment key={role}>
+                          <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, marginTop: ri === 0 ? 4 : 6, paddingTop: ri === 0 ? 0 : 8, borderTop: ri === 0 ? "none" : "1px solid var(--av3-line)" }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 700 }}>{ROLE_LABEL[role]}</span>
+                            <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>×{workers.length} · {money(Math.round(roleWeekly))}/wk</span>
+                            <Button variant="ghost" size="sm" style={{ marginLeft: "auto" }} onClick={() => addWorker(role)} title={`Add another ${ROLE_LABEL[role].toLowerCase()}`}><Plus className="av3-btn-ico" /> add</Button>
+                          </div>
+                          {workers.map(({ l, i }, wi) => {
+                            const hrs = laborHoursPerWeek(l, openH, closeH);
+                            const weekly = Math.round(hrs * l.hourlyRateGrosze);
+                            return (
+                              <Fragment key={l.id}>
+                                <span style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 4 }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                                <input className="av3-input" type="number" step="0.01" style={cellInput} value={+convertFromGrosze(l.hourlyRateGrosze, cur).toFixed(2)} onChange={(e) => patchLabor(i, { hourlyRateGrosze: convertToGrosze(Number(e.target.value) || 0, cur) })} title="Gross pay rate per hour" />
+                                <input className="av3-input" type="number" readOnly disabled style={cellInput} value={hrs} title="Weekly hours = shift length × days/wk — set the shift in Shift plan & coverage" />
+                                <input className="av3-input" readOnly disabled style={cellInput} value={money(weekly)} />
+                                <button type="button" className="av3-iconbtn-sm" aria-label={`Remove ${ROLE_LABEL[role]} ${wi + 1}`} onClick={() => rmLabor(i)}><X /></button>
+                              </Fragment>
+                            );
+                          })}
+                        </Fragment>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
                 <P label="Labour flex %" frac={scn.laborVariablePct ?? 0} onChange={(f) => patch({ laborVariablePct: f })} w={110} />
                 <N label="Anchor orders/day" value={scn.laborAnchorOrdersPerDay ?? scn.ordersPerDay} onChange={(n) => patch({ laborAnchorOrdersPerDay: n })} w={140} />
               </div>
             </CardBody>
           </Card>
+
+          {/* live shift-coverage grid — sits next to Labour so you roster + check in one place */}
+          {coverage && (
+          <Card>
+            <CardHead title="Shift plan & coverage" description="Weekly rota — set each person's shift per day (open 7 days · ≥12 h rest between shifts). Pick a day to check its coverage vs demand." actions={
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <Button variant="secondary" size="sm" onClick={autoRoster} title="Cover every open hour on all 7 days at the leanest labour hours — depth matched to demand, staggered days off, ≥12 h rest">Auto-roster</Button>
+                <InfoButton title="Shift plan & coverage"
+                description="A weekly rota: set each person's shift per day (or a day off), and a per-day coverage grid shows how many of each role are on the floor every hour against demand — flagging peak hours, under-staffed gaps and any shift that breaks the 12-hour-rest rule."
+                institutional="Labour is the second-biggest controllable cost and the one operators bleed on through flat all-day staffing. The discipline is to match heads to the demand curve — thin at the lunch shoulder, doubled at the dinner peak — while giving each person their 1–2 days off and honouring the ≥12 h rest between shifts that the labour code (and basic humanity) require. A rota that's green at peak, lean off-peak and rest-legal is what holds labour % in the 22–28% band without wrecking service or burning the team out."
+                plain="The restaurant is open all 7 days; each person works 5–6 of them. Pizzaiolo 2 closes Thu at 22:00 and you try to open them Fri at 08:00 — that's only 10 h rest, so the Friday cell outlines red. Slide dinner people onto the busy days, give quiet Mondays fewer staff, and watch the coverage grid for the day you pick recompute live."
+                tips="Hit Auto-roster for a fully-covered, cost-minimal week in one click, then hand-tune cells. Use the day tabs to check each day — coverage is now identical across the 7 (days off are backfilled). If a peak hour still shows red after Auto-roster the team is genuinely one short at that hour: add a head to that role and re-roster."
+                methodology="Each worker has a 7-slot week (Mon–Sun); a null slot is a day off. Weekly hours (and pay) = Σ each on-day's shift length. Coverage for the selected day: per hour, staff-on counts every worker whose that-day shift covers the hour; kitchen need = ⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉. Rest between a shift ending at e and the next on-day starting at s = (24−e)+s (+24 h per skipped day, incl. Sun→Mon wrap); <12 h flags. Auto-roster: per role, need[i] = ⌈demand÷effCap⌉ for pizzaioli, else demand-proportional to headcount, floored at 1 (continuity) and capped at headcount; that staircase is split into contiguous coverage bands (band k = hours needing ≥k) and each band's 7 days are tiled across a crew as contiguous ≤12 h shifts — so every hour is covered on all 7 days at exactly 7×Σneed[i] hours, the minimum, with ≥12 h rest by construction. Where need exceeds headcount the depth caps and the grid shows the residual gap. src/admin-v3/CalculatorV3.tsx." />
+              </div>
+            } />
+            <CardBody>
+              {(() => {
+                const openH = coverage.openHour; const closeH = coverage.closeHour;
+                const orderR: BusinessCostPayrollRole[] = [];
+                const byRoleR = new Map<BusinessCostPayrollRole, { l: SimulationLaborLine; i: number }[]>();
+                scn.labor.forEach((l, i) => { if (!byRoleR.has(l.role)) { byRoleR.set(l.role, []); orderR.push(l.role); } byRoleR.get(l.role)!.push({ l, i }); });
+                let restBad = 0;
+                scn.labor.forEach((l) => { restBad += restViolationDays(weekOf(l, openH, closeH)).size; });
+                const dayHdr: CSSProperties = { fontSize: 10, fontWeight: 600, textAlign: "center", border: "none", cursor: "pointer", borderRadius: 4, padding: "3px 0" };
+                return (
+                  <>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, alignItems: "end" }}>
+                      <N label="Open @" value={scn.openingHours?.openHour ?? 12} onChange={(n) => patchOpeningHours({ openHour: n })} w={72} />
+                      <N label="Close @" value={scn.openingHours?.closeHour ?? 23} onChange={(n) => patchOpeningHours({ closeHour: n })} w={72} />
+                      <span style={{ fontSize: 11, color: "var(--av3-subtle)", alignSelf: "center" }}>· open 7 days</span>
+                      <Badge tone={restBad === 0 ? "ok" : "bad"}>{restBad === 0 ? "Rest ✓ ≥12 h" : `${restBad} shift${restBad > 1 ? "s" : ""} < 12 h rest`}</Badge>
+                    </div>
+
+                    {/* ── weekly rota ── */}
+                    <div className="av3-subhead" style={{ marginTop: 0, marginBottom: 6 }}>Weekly rota (24h · off = day off)</div>
+                    <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: "minmax(100px, 1fr) repeat(7, minmax(58px, 1fr)) 46px", columnGap: 4, rowGap: 4, alignItems: "center", minWidth: 600 }}>
+                      <div />
+                      {DAYS.map((d, di) => <button key={d} type="button" onClick={() => setCoverageDay(di)} title="Show this day's coverage below" style={{ ...dayHdr, background: di === coverageDay ? "color-mix(in oklab, var(--av3-c3) 24%, transparent)" : "transparent", color: di === coverageDay ? "var(--av3-fg)" : "var(--av3-subtle)" }}>{d}</button>)}
+                      <div style={{ fontSize: 9.5, fontWeight: 600, textAlign: "right", color: "var(--av3-subtle)", textTransform: "uppercase", letterSpacing: 0.4 }}>h/wk</div>
+                      {orderR.map((role) => (
+                        <Fragment key={role}>
+                          <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>{ROLE_LABEL[role]}</span>
+                            <Button variant="ghost" size="sm" style={{ marginLeft: "auto" }} onClick={() => addWorker(role)} title={`Add another ${ROLE_LABEL[role].toLowerCase()}`}><Plus className="av3-btn-ico" /> add</Button>
+                          </div>
+                          {byRoleR.get(role)!.map(({ l, i }, wi) => {
+                            const wkArr = weekOf(l, openH, closeH);
+                            const viol = restViolationDays(wkArr);
+                            const hrs = laborHoursPerWeek(l, openH, closeH);
+                            return (
+                              <Fragment key={l.id}>
+                                <span style={{ fontSize: 12, color: "var(--av3-muted)", paddingLeft: 2 }}>{ROLE_LABEL[role]} {wi + 1}</span>
+                                {wkArr.map((sh, d) => {
+                                  const bad = viol.has(d);
+                                  const sel = editCell?.i === i && editCell?.d === d;
+                                  return (
+                                    <div key={d} style={{ background: d === coverageDay ? "color-mix(in oklab, var(--av3-c3) 9%, transparent)" : "transparent", borderRadius: 6, padding: 2 }}>
+                                      <button type="button" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setEditCell({ i, d, x: r.left, y: r.bottom + 4 }); }} title={bad ? "Less than 12 h rest after the previous shift — click to fix" : "Click to edit"}
+                                        style={{ width: "100%", cursor: "pointer", fontFamily: "var(--av3-mono)", fontSize: 11.5, padding: "6px 4px", borderRadius: 5, lineHeight: 1,
+                                          border: sel ? "1px solid var(--av3-c3)" : bad ? "1px solid var(--av3-bad)" : "1px solid transparent",
+                                          background: sh ? "color-mix(in oklab, var(--av3-c3) 18%, var(--av3-s1))" : "var(--av3-s1)",
+                                          color: sh ? "var(--av3-fg)" : "var(--av3-subtle)" }}>
+                                        {sh ? `${sh.start}–${sh.end}` : "off"}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                                <span style={{ fontSize: 11, fontFamily: "var(--av3-mono)", textAlign: "right", color: "var(--av3-fg)" }}>{hrs}</span>
+                              </Fragment>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </div></div>
+                    <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 6 }}>Two numbers = that day&rsquo;s shift; <b>off</b> toggles a day off. A <span style={{ color: "var(--av3-bad)" }}>red outline</span> means &lt;12 h rest after the previous shift. Weekly hours + pay = Σ the on-day shifts. <b>Auto-roster</b> covers every open hour on all 7 days at the leanest labour hours.</div>
+
+                    {/* ── coverage for the selected day ── */}
+                    <div style={{ marginTop: 14, borderTop: "1px solid var(--av3-line)", paddingTop: 10 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                        <span className="av3-subhead" style={{ margin: 0 }}>Coverage · {DAYS[coverageDay]}</span>
+                        <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{coverage.onToday} on</span>
+                        <Badge tone={coverage.gaps.length === 0 ? "ok" : "bad"}>{coverage.gaps.length === 0 ? "all hours covered" : `${coverage.gaps.length} short: ${coverage.gaps.map((h) => `${h}:00`).join(", ")}`}</Badge>
+                        <Badge tone={coverage.peakHours.length === 0 ? "neutral" : coverage.peakCovered ? "ok" : "bad"}>{coverage.peakHours.length ? `peak ${coverage.peakHours[0]}:00–${coverage.peakHours[coverage.peakHours.length - 1] + 1}:00 ${coverage.peakCovered ? "covered" : "SHORT"}` : "no peak"}</Badge>
+                      </div>
+                      <div className="av3-heat-wrap"><div style={{ display: "grid", gridTemplateColumns: `88px repeat(${coverage.nHours}, minmax(26px, 1fr))`, gap: 2 }}>
+                        <div />
+                        {coverage.hours.map((h) => <div key={h.hour} title={h.isPeak ? "peak hour" : undefined} style={{ textAlign: "center", fontSize: 10, fontFamily: "var(--av3-mono)", padding: "2px 0", borderRadius: 3, fontWeight: h.isPeak ? 700 : 400, color: h.isPeak ? "var(--av3-fg)" : "var(--av3-subtle)", background: h.isPeak ? "color-mix(in oklab, var(--av3-c5) 24%, transparent)" : "transparent" }}>{h.hour}</div>)}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Demand/hr</div>
+                        {coverage.hours.map((h) => <div key={h.hour} title={`${h.hour}:00 · ${h.demand.toFixed(0)} orders/hr`} style={{ display: "flex", alignItems: "flex-end", height: 30, background: "var(--av3-s1)", borderRadius: 3 }}><div style={{ width: "100%", height: `${Math.round((h.demand / coverage.maxDemand) * 100)}%`, background: h.kitchenShort ? "var(--av3-bad)" : "var(--av3-c3)", opacity: 0.9, borderRadius: "3px 3px 0 0" }} /></div>)}
+                        {coverage.roles.map((role) => (
+                          <Fragment key={role}>
+                            <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>{ROLE_LABEL[role]}</div>
+                            {coverage.hours.map((h) => { const cnt = h.perRole[role] ?? 0; const inten = cnt > 0 ? 22 + Math.round((cnt / coverage.maxStaff) * 58) : 0; return <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: cnt > 0 ? "var(--av3-fg)" : "var(--av3-subtle)", background: cnt > 0 ? `color-mix(in oklab, var(--av3-c2) ${inten}%, var(--av3-s1))` : "var(--av3-s1)" }}>{cnt > 0 ? cnt : "·"}</div>; })}
+                          </Fragment>
+                        ))}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center", fontWeight: 600 }}>Total on</div>
+                        {coverage.hours.map((h) => <div key={h.hour} style={{ textAlign: "center", fontSize: 11, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", fontWeight: 600 }}>{h.totalOn || "·"}</div>)}
+                        <div style={{ fontSize: 11, color: "var(--av3-muted)", display: "flex", alignItems: "center" }}>Line on/need</div>
+                        {coverage.hours.map((h) => <div key={h.hour} title={`Pizzaioli on ${h.kitchenOn} · need ${h.requiredKitchen}${h.kitchenShort ? " · SHORT" : ""}`} style={{ textAlign: "center", fontSize: 10.5, fontFamily: "var(--av3-mono)", height: 22, lineHeight: "22px", borderRadius: 3, color: h.kitchenShort ? "#fff" : "var(--av3-fg)", background: h.kitchenShort ? "var(--av3-bad)" : "color-mix(in oklab, var(--av3-ok) 42%, var(--av3-s1))" }}>{h.kitchenOn}/{h.requiredKitchen}</div>)}
+                      </div></div>
+                    </div>
+                  </>
+                );
+              })()}
+            </CardBody>
+          </Card>
+          )}
 
           <Card>
             <CardHead title="Fixed costs (monthly)" />
@@ -459,16 +988,65 @@ export function CalculatorV3() {
             </div></CardBody>
           </Card>
 
+          {/* premises — the rent-vs-buy occupancy decision, folded into rent / mortgage / property costs + upfront cash */}
+          {scn.premises && (
           <Card>
-            <CardHead title="Investment & capacity" />
+            <CardHead title="Premises" description="Rent or buy the unit — occupancy cost, mortgage, property costs, upfront cash + payback all follow from this" actions={
+              <InfoButton title="Premises — rent vs buy"
+                description="The single biggest capital decision behind the unit: lease the space or buy it (cash or mortgage). Everything downstream — the rent line, mortgage interest, building depreciation, property tax + upkeep, the upfront cheque and therefore payback and IRR — is derived from this one toggle."
+                institutional="Occupancy is the third rail of restaurant P&Ls: institutional operators hold it under 8–10% of revenue. Renting keeps the upfront cheque small and the model asset-light (better cash-on-cash, faster payback) but the rent line is a permanent margin drag and exposes you to renewal hikes. Buying converts rent into a mortgage — the interest portion hits the P&L, the principal builds equity (a balance-sheet transfer, not an expense), and you carry property tax, structural upkeep and building depreciation — but you own an appreciating asset and fix your occupancy cost. The gate: only buy if the unit's EBITDA comfortably services the mortgage AND the tied-up down payment still clears your cost of capital versus deploying it into a second site."
+                plain="Rent a prime unit at 22 000 zł/mo: 66 000 zł deposit + 834 000 zł fit-out = ~900 000 zł to open, and 22 000 zł leaves every month forever. Buy the same unit for 3.5 M zł with 30% down: ~1.05 M zł deposit + 834 000 zł fit-out = ~1.9 M zł upfront, then a ~20 000 zł/mo mortgage — of which only the interest (~15 000 zł early on) is a cost, the rest buys the building — plus property tax and a roof-and-façade upkeep line. Bigger cheque, but in year 20 you own a multi-million-złoty asset instead of a stack of rent receipts."
+                tips="Renting: negotiate a rent-free fit-out period and a cap on annual indexation; a lower deposit frees working capital. Buying: a bigger down payment cuts the interest drag but slows payback — model both here and read the Investor returns card. Watch the occupancy ratio KPI; if buying pushes monthly occupancy far below a market rent, the equity build is effectively free margin."
+                methodology="computePremises(): rent mode → occupancy = rent + service charge, upfront = rent×depositMonths + fit-out. Buy mode → level annuity payment M = L·r ÷ (1−(1+r)^−n) on loan L = price×(1−down%), interest levelled as (M·n−L)÷n, building depreciation = price×rate÷12, upfront = down payment + fit-out. applyPremises() folds these into fixedCosts.rent, interest, depreciation and setupCostGrosze so the whole engine sees them. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody>
+              <div className="av3-chiprow" role="tablist" style={{ marginBottom: 12 }}>
+                {(["rent", "buy"] as const).map((m) => (
+                  <button key={m} type="button" role="tab" aria-selected={scn.premises!.mode === m} className={`av3-chip ${scn.premises!.mode === m ? "is-active" : ""}`} onClick={() => patchPremises({ mode: m })}>{m === "rent" ? "Rent" : "Buy / mortgage"}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {scn.premises.mode === "rent" ? <>
+                  <Z label="Rent / mo" grosze={scn.premises.monthlyRentGrosze} onChange={(g) => patchPremises({ monthlyRentGrosze: g })} w={120} />
+                  <Z label="Service charge / mo" grosze={scn.premises.serviceChargeMonthlyGrosze} onChange={(g) => patchPremises({ serviceChargeMonthlyGrosze: g })} w={150} />
+                  <N label="Deposit (months)" value={scn.premises.depositMonths} onChange={(n) => patchPremises({ depositMonths: n })} w={130} step={0.5} />
+                  <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
+                </> : <>
+                  <Z label="Purchase price" grosze={scn.premises.purchasePriceGrosze} onChange={(g) => patchPremises({ purchasePriceGrosze: g })} w={140} />
+                  <P label="Down payment %" frac={scn.premises.downPaymentPct} onChange={(f) => patchPremises({ downPaymentPct: f })} w={130} />
+                  <P label="Mortgage rate %/yr" frac={scn.premises.mortgageRatePct} onChange={(f) => patchPremises({ mortgageRatePct: f })} w={150} />
+                  <N label="Term (years)" value={scn.premises.mortgageTermYears} onChange={(n) => patchPremises({ mortgageTermYears: n })} w={110} />
+                  <Z label="Property tax / yr" grosze={scn.premises.propertyTaxAnnualGrosze} onChange={(g) => patchPremises({ propertyTaxAnnualGrosze: g })} w={130} />
+                  <Z label="Building upkeep / mo" grosze={scn.premises.buildingMaintenanceMonthlyGrosze} onChange={(g) => patchPremises({ buildingMaintenanceMonthlyGrosze: g })} w={150} />
+                  <P label="Bldg deprec. %/yr" frac={scn.premises.buildingDepreciationPct} onChange={(f) => patchPremises({ buildingDepreciationPct: f })} w={140} />
+                  <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
+                </>}
+              </div>
+              {prem && (
+                <div className="av3-od-grid" style={{ marginTop: 12 }}>
+                  <div className="av3-od-field" title={scn.premises.mode === "buy" ? "Cash that leaves your account each month (mortgage P&I + property tax + upkeep). The P&L only expenses the interest portion — principal builds equity, so it's netted from the cash-flow returns but not from EBITDA." : "Rent + service charge — the full monthly occupancy cost, all of which hits the P&L."}><div className="k">Cash outlay / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
+                  {scn.premises.mode === "buy" && <>
+                    <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePaymentGrosze)}</div></div>
+                    <div className="av3-od-field" title="Hits the P&L (the only mortgage cost that reduces net profit)."><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgageInterestMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field" title="Cash out, but builds equity — not a P&L cost. Netted from the cash-flow investor returns."><div className="k">— principal (equity) / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePrincipalMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.buildingDepreciationMonthlyGrosze)}</div></div>
+                    <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.loanAmountGrosze)}</div></div>
+                  </>}
+                  <div className="av3-od-field"><div className="k">Upfront cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.upfrontCashGrosze)}</div></div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+          )}
+
+          <Card>
+            <CardHead title="Investment & capacity" description="Fit-out depreciation + non-mortgage interest (Premises adds building deprec. + mortgage interest on top); kitchen throughput ceiling" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Z label="Setup cost" grosze={scn.setupCostGrosze ?? 0} onChange={(g) => patch({ setupCostGrosze: g })} w={130} />
-              <Z label="Deprec./mo" grosze={scn.depreciationMonthlyGrosze ?? 0} onChange={(g) => patch({ depreciationMonthlyGrosze: g })} w={120} />
-              <Z label="Interest/mo" grosze={scn.interestMonthlyGrosze ?? 0} onChange={(g) => patch({ interestMonthlyGrosze: g })} w={120} />
+              <Z label="Fit-out deprec./mo" grosze={scn.depreciationMonthlyGrosze ?? 0} onChange={(g) => patch({ depreciationMonthlyGrosze: g })} w={140} />
+              <Z label="Other interest/mo" grosze={scn.interestMonthlyGrosze ?? 0} onChange={(g) => patch({ interestMonthlyGrosze: g })} w={130} />
               {scn.kitchenCapacity && <>
                 <N label="Pizzas/hr" value={scn.kitchenCapacity.pizzasPerHour} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, pizzasPerHour: n } })} w={100} />
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
-                <N label="Open hrs/day" value={scn.kitchenCapacity.openHoursPerDay} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, openHoursPerDay: n } })} w={104} step={0.5} />
                 <N label="Oven / cycle" value={scn.kitchenCapacity.ovenPizzasPerCycle ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenPizzasPerCycle: n } })} w={96} />
                 <N label="Cycle (s)" value={scn.kitchenCapacity.ovenCycleSeconds ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenCycleSeconds: n } })} w={92} />
                 <P label="Oven eff. %" frac={scn.kitchenCapacity.ovenEfficiencyPct ?? 0} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenEfficiencyPct: f } })} w={100} />
@@ -508,17 +1086,18 @@ export function CalculatorV3() {
             </CardBody>
           </Card>
 
-          {/* ingredient cost stress — each lever shifts COGS by share × delta */}
+          {/* ingredient cost stress — same lever-row look as Behaviour assumptions; each shifts COGS by share × delta */}
           <Card>
             <CardHead title="Ingredient cost stress" description="Flex a line's cost — COGS moves by its share × delta" />
-            <CardBody><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; return (
-                <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3, width: 116, border: "1px solid var(--av3-line)", borderRadius: 7, padding: 7 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 11 }}>{INGREDIENT_LABELS[k]}</span><Switch aria-label={INGREDIENT_LABELS[k]} size="sm" checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: lev?.cogsShare ?? INGREDIENT_SHARES[k], costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} /></div>
-                  {on && lev && <input className="av3-input" type="number" step="1" value={Math.round((lev.costDeltaPct ?? 0) * 100)} onChange={(e) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: (Number(e.target.value) || 0) / 100 } } })} title="cost delta %" />}
+            <CardBody style={{ paddingTop: 4 }}>
+              {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; const share = lev?.cogsShare ?? INGREDIENT_SHARES[k]; return (
+                <div key={k} className="av3-leverrow">
+                  <Switch aria-label={INGREDIENT_LABELS[k]} checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: share, costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} />
+                  <span className="av3-lever-name">{INGREDIENT_LABELS[k]}<span style={{ color: "var(--av3-subtle)", fontWeight: 400 }}> · {Math.round(share * 100)}% COGS</span></span>
+                  {on && lev && <P label="Cost Δ %" frac={lev.costDeltaPct ?? 0} onChange={(f) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: f } } })} w={96} />}
                 </div>
               ); })}
-            </div></CardBody>
+            </CardBody>
           </Card>
 
           {/* seasonality + weather → fold into the headline ordersPerDay/daysOpen */}
@@ -594,13 +1173,26 @@ export function CalculatorV3() {
         {/* OUTPUTS */}
         <div className="av3-col">
           <Card>
-            <CardHead title="Monthly P&L" />
+            <CardHead title="Monthly P&L" actions={
+              <label className="av3-leverrow" style={{ gap: 7, padding: 0 }}>
+                <Switch aria-label="Detailed P&L breakdown" checked={pnlDetailed} onChange={setPnlDetailed} />
+                <span className="av3-lever-name" style={{ fontSize: 12 }}>Detailed</span>
+              </label>
+            } />
             <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
               {pnl.map((r) => (
-                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--av3-line)", fontWeight: r.strong ? 700 : 400 }}>
-                  <span style={{ fontSize: 12.5 }}>{r.label}</span>
-                  <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : r.strong ? "var(--av3-fg)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{formatPrice(Math.abs(r.v))}</span>
-                </div>
+                <Fragment key={r.label}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--av3-line)", fontWeight: r.strong ? 700 : 400 }}>
+                    <span style={{ fontSize: 12.5 }}>{r.label}</span>
+                    <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 12.5, color: r.v < 0 ? "var(--av3-bad)" : "var(--av3-fg)" }}>{r.v < 0 ? "−" : ""}{money(Math.abs(r.v))}</span>
+                  </div>
+                  {pnlDetailed && r.children && r.children.map((ch) => (
+                    <div key={ch.label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0 3px 16px", borderBottom: "1px solid var(--av3-line)" }}>
+                      <span style={{ fontSize: 11.5, color: "var(--av3-muted)" }}>{ch.label}</span>
+                      <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5, color: "var(--av3-subtle)" }}>{ch.v < 0 ? "−" : ""}{money(Math.abs(ch.v))}</span>
+                    </div>
+                  ))}
+                </Fragment>
               ))}
             </CardBody>
           </Card>
@@ -616,7 +1208,7 @@ export function CalculatorV3() {
             } />
             <CardBody>
               <div className="av3-od-grid">
-                <div className="av3-od-field"><div className="k">True CM1 / order</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(c.trueCm1PerOrderGrosze)}</div></div>
+                <div className="av3-od-field"><div className="k">True CM1 / order</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(c.trueCm1PerOrderGrosze)}</div></div>
                 <div className="av3-od-field"><div className="k">True CM %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.trueContributionMarginPct * 100).toFixed(0)}%</div></div>
                 <div className="av3-od-field"><div className="k">Food cost %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.foodCostPct * 100).toFixed(0)}%</div></div>
                 <div className="av3-od-field"><div className="k">Labour %</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(c.laborPct * 100).toFixed(0)}%</div></div>
@@ -633,9 +1225,9 @@ export function CalculatorV3() {
                 <thead><tr><th>Channel</th><th className="av3-th-num">Share</th><th className="av3-th-num">Fee</th><th className="av3-th-num">CM1 / order</th><th className="av3-th-num">CM1 %</th><th className="av3-th-num">Monthly contrib.</th></tr></thead>
                 <tbody>{channels.map((ch) => (
                   <tr key={ch.key}><td style={{ fontWeight: 600 }}>{ch.label}</td><td className="av3-num">{(ch.sharePct * 100).toFixed(0)}%</td>
-                    <td className="av3-num">{(ch.feePct * 100).toFixed(1)}%</td><td className="av3-num">{formatPrice(ch.cm1PerOrderGrosze)}</td>
+                    <td className="av3-num">{(ch.feePct * 100).toFixed(1)}%</td><td className="av3-num">{money(ch.cm1PerOrderGrosze)}</td>
                     <td className="av3-num"><Badge tone={ch.cm1PctOfTicket >= 0.6 ? "ok" : ch.cm1PctOfTicket >= 0.4 ? "warn" : "bad"}>{(ch.cm1PctOfTicket * 100).toFixed(0)}%</Badge></td>
-                    <td className="av3-num">{formatPrice(Math.round(ch.monthlyContributionGrosze))}</td></tr>
+                    <td className="av3-num">{money(Math.round(ch.monthlyContributionGrosze))}</td></tr>
                 ))}</tbody>
               </table></div>
             </CardBody>
@@ -646,43 +1238,43 @@ export function CalculatorV3() {
               <CardHead title="Fleet economics" description={`${fleet.unitCount} units · DMA cannibalisation, supply/commissary savings, royalty + HQ`} actions={<div style={{ display: "flex", gap: 6 }}>{fleet.supplyDiscountActive && <Badge tone="ok">supply −</Badge>}{fleet.commissaryActive && <Badge tone="ok">commissary</Badge>}</div>} />
               <CardBody>
                 <div className="av3-od-grid" style={{ marginBottom: 12 }}>
-                  <div className="av3-od-field"><div className="k">Fleet revenue / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalRevenue))}</div></div>
-                  <div className="av3-od-field"><div className="k">Fleet EBITDA / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: fleet.totalEbitda >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(Math.round(fleet.totalEbitda))}</div></div>
-                  <div className="av3-od-field"><div className="k">Avg EBITDA / unit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.avgEbitdaPerUnit))}</div></div>
+                  <div className="av3-od-field"><div className="k">Fleet revenue / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.totalRevenue))}</div></div>
+                  <div className="av3-od-field"><div className="k">Fleet EBITDA / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: fleet.totalEbitda >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(Math.round(fleet.totalEbitda))}</div></div>
+                  <div className="av3-od-field"><div className="k">Avg EBITDA / unit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.avgEbitdaPerUnit))}</div></div>
                   <div className="av3-od-field"><div className="k">HQ absorption</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(fleet.hqOverheadAbsorption * 100).toFixed(1)}%</div></div>
-                  <div className="av3-od-field"><div className="k">Total build-out</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalSetupCost))}</div></div>
-                  <div className="av3-od-field"><div className="k">HQ overhead / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(fleet.hqOverhead)}</div></div>
+                  <div className="av3-od-field"><div className="k">Total build-out</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(Math.round(fleet.totalSetupCost))}</div></div>
+                  <div className="av3-od-field"><div className="k">HQ overhead / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(fleet.hqOverhead)}</div></div>
                 </div>
                 <div className="av3-table-wrap"><table className="av3-table">
                   <thead><tr><th>Unit</th><th className="av3-th-num">Revenue</th><th className="av3-th-num">EBITDA</th><th className="av3-th-num">Royalty</th><th className="av3-th-num">Build-out</th></tr></thead>
                   <tbody>{fleet.units.map((u) => (
-                    <tr key={u.unitIndex}><td>#{u.unitIndex}</td><td className="av3-num">{formatPrice(Math.round(u.revenue))}</td>
-                      <td className="av3-num" style={{ color: u.ebitda >= 0 ? undefined : "var(--av3-bad)" }}>{formatPrice(Math.round(u.ebitda))}</td>
-                      <td className="av3-num">{formatPrice(Math.round(u.royalty))}</td><td className="av3-num">{formatPrice(Math.round(u.setupCost))}</td></tr>
+                    <tr key={u.unitIndex}><td>#{u.unitIndex}</td><td className="av3-num">{money(Math.round(u.revenue))}</td>
+                      <td className="av3-num" style={{ color: u.ebitda >= 0 ? undefined : "var(--av3-bad)" }}>{money(Math.round(u.ebitda))}</td>
+                      <td className="av3-num">{money(Math.round(u.royalty))}</td><td className="av3-num">{money(Math.round(u.setupCost))}</td></tr>
                   ))}</tbody>
                 </table></div>
               </CardBody>
             </Card>
           )}
 
-          {ret && (scn.setupCostGrosze ?? 0) > 0 && (
+          {ret && (scnEff?.setupCostGrosze ?? 0) > 0 && (
             <Card>
-              <CardHead title="Investor returns" description="24-month horizon on a steady net-profit stream" />
+              <CardHead title="Investor returns" description="24-month cash-flow horizon — buy mode nets mortgage principal (debt service), not just interest" />
               <CardBody>
                 <div className="av3-od-grid" style={{ marginBottom: 12 }}>
-                  <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r10)}</div></div>
-                  <div className="av3-od-field"><div className="k">NPV @ 15%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r15 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r15)}</div></div>
-                  <div className="av3-od-field"><div className="k">NPV @ 20%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r20 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r20)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r10)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 15%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r15 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r15)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 20%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r20 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.npv.r20)}</div></div>
                   <div className="av3-od-field"><div className="k">IRR (annual)</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.irrAnnualPct != null ? `${ret.irrAnnualPct.toFixed(0)}%` : "—"}</div></div>
                   <div className="av3-od-field"><div className="k">Payback</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.paybackMonth != null ? `${ret.paybackMonth} mo` : "—"}</div></div>
-                  <div className="av3-od-field"><div className="k">24-mo cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.cumulative[23] >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.cumulative[23])}</div></div>
+                  <div className="av3-od-field"><div className="k">24-mo cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.cumulative[23] >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(ret.cumulative[23])}</div></div>
                 </div>
                 {/* cumulative cash recovery — bars cross from red (below 0) to green */}
                 <div style={{ display: "flex", alignItems: "stretch", gap: 2, height: 48 }}>
                   {ret.cumulative.map((cv, i) => {
                     const peak = Math.max(1, ...ret.cumulative.map((x) => Math.abs(x)));
                     const h = (Math.abs(cv) / peak) * 100;
-                    return <div key={i} title={`Mo ${i + 1}: ${formatPrice(cv)}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}><div style={{ height: `${h / 2}%`, alignSelf: cv >= 0 ? "flex-start" : "flex-end", width: "100%", background: cv >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: 2 }} /></div>;
+                    return <div key={i} title={`Mo ${i + 1}: ${money(cv)}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}><div style={{ height: `${h / 2}%`, alignSelf: cv >= 0 ? "flex-start" : "flex-end", width: "100%", background: cv >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: 2 }} /></div>;
                   })}
                 </div>
                 <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 4, fontFamily: "var(--av3-mono)" }}>cumulative cash · mo 1 → 24</div>
@@ -695,7 +1287,7 @@ export function CalculatorV3() {
             <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
               {tornado.map((t) => (
                 <div key={t.key} style={{ padding: "6px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, marginBottom: 4 }}><span>{t.label}</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", color: "var(--av3-muted)" }}>±{formatPrice(Math.round(t.totalSwing / 2))}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, marginBottom: 4 }}><span>{t.label}</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", color: "var(--av3-muted)" }}>±{money(Math.round(t.totalSwing / 2))}</span></div>
                   <div style={{ display: "flex", height: 6, gap: 2 }}>
                     <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}><div style={{ width: `${(Math.abs(t.downGrosze) / maxSwing) * 100}%`, background: "var(--av3-bad)", borderRadius: "3px 0 0 3px" }} /></div>
                     <div style={{ flex: 1 }}><div style={{ width: `${(Math.abs(t.upGrosze) / maxSwing) * 100}%`, background: "var(--av3-ok)", borderRadius: "0 3px 3px 0" }} /></div>
@@ -723,8 +1315,8 @@ export function CalculatorV3() {
               title="12-month projection"
               description="Seasonality × weather × wage/ingredient inflation composed per month — revenue vs net profit"
               actions={<div style={{ display: "flex", gap: 14, fontSize: 11.5, fontFamily: "var(--av3-mono)" }}>
-                <span style={{ color: "var(--av3-muted)" }}>Yr revenue <b style={{ color: "var(--av3-fg)" }}>{formatPrice(annualRevenue)}</b></span>
-                <span style={{ color: "var(--av3-muted)" }}>Yr net <b style={{ color: annualNet >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(annualNet)}</b></span>
+                <span style={{ color: "var(--av3-muted)" }}>Yr revenue <b style={{ color: "var(--av3-fg)" }}>{money(annualRevenue)}</b></span>
+                <span style={{ color: "var(--av3-muted)" }}>Yr net <b style={{ color: annualNet >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(annualNet)}</b></span>
               </div>}
             />
             <CardBody>
@@ -736,7 +1328,7 @@ export function CalculatorV3() {
                   const npH = (Math.abs(r.netProfit) / range) * H;
                   const npUp = r.netProfit >= 0;
                   return (
-                    <div key={r.monthIndex} title={`${r.month} · revenue ${formatPrice(r.revenue)} · net ${formatPrice(r.netProfit)}`} style={{ flex: 1, position: "relative" }}>
+                    <div key={r.monthIndex} title={`${r.month} · revenue ${money(r.revenue)} · net ${money(r.netProfit)}`} style={{ flex: 1, position: "relative" }}>
                       <div style={{ position: "absolute", bottom: `${zeroBottomPct}%`, left: "8%", width: "40%", height: revH, background: "var(--av3-c3)", opacity: 0.5, borderRadius: "2px 2px 0 0" }} />
                       <div style={{ position: "absolute", [npUp ? "bottom" : "top"]: `${npUp ? zeroBottomPct : zeroTopPct}%`, left: "52%", width: "40%", height: npH, background: npUp ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: npUp ? "2px 2px 0 0" : "0 0 2px 2px" }} />
                     </div>
@@ -772,9 +1364,9 @@ export function CalculatorV3() {
               {archetypes.map((a) => (
                 <div key={a.name} className="av3-scn-card" data-base={a.base}>
                   <div className="av3-scn-name">{a.name}{a.base && <Badge tone="brand">live</Badge>}</div>
-                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
+                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{money(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
                   <div className="av3-scn-line"><span>Net margin</span><span className="v">{(a.margin * 100).toFixed(1)}%</span></div>
-                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{formatPrice(a.ebitda)}</span></div>
+                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{money(a.ebitda)}</span></div>
                   <div className="av3-scn-line"><span>Break-even / day</span><span className="v">{Math.ceil(a.breakEven)}</span></div>
                   <div className="av3-scn-line"><span>Payback</span><span className="v">{a.payback != null ? `${a.payback.toFixed(1)} mo` : "—"}</span></div>
                 </div>
@@ -813,46 +1405,7 @@ export function CalculatorV3() {
         </div>
       )}
 
-      {/* menu scenarios — named archetypes; apply loads a full input set, edits persist as overrides */}
-      <Card>
-        <CardHead title="Menu scenarios" description="Named menu shapes — apply loads volume · days · ticket · COGS · attach in one click" actions={
-          <InfoButton title="Menu scenarios"
-            description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo + Custom). Applying one loads a whole input set; your edits save back onto the scenario."
-            institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume, ticket and COGS together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs and capacity to see which clears the return gate."
-            plain="Tap 'Premium' and the model jumps to 55 orders/day at an 88 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Tweak a few fields, hit Save, and that becomes your saved Premium case; Reset reverts it to the baked archetype."
-            tips="Start from the closest archetype, fine-tune in the cards above, then Save to keep it. Use Scenario comparison to band each concept and the heatmaps to test how sensitive it is. 'Custom' is the blank slot for a concept that doesn't match an archetype."
-            methodology="Applying writes ordersPerDay/days/ticket/COGS + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Save captures the live inputs into menuScenarioOverrides[id], overlaid on the baked preset by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
-        } />
-        <CardBody>
-          <div className="av3-cols-3" style={{ gap: 10 }}>
-            {MENU_SCENARIOS_ALL.map((base) => {
-              const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
-              const active = scn.menuScenario === base.id;
-              const edited = !!scn.menuScenarioOverrides?.[base.id];
-              return (
-                <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ fontSize: 16 }}>{p.emoji}</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
-                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
-                  </div>
-                  <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
-                  <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {(p.cogsPct * 100).toFixed(0)}% COGS</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
-                    <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
-                    <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
-                    {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
-
-      {oven && shiftPlan && (
-        <div className="av3-grid-2">
-          {/* oven curve & peak saturation */}
+      {oven && (
           <Card>
             <CardHead title="Oven curve & peak saturation" actions={
               <InfoButton title="Oven curve & peak saturation"
@@ -897,34 +1450,6 @@ export function CalculatorV3() {
               })()}
             </CardBody>
           </Card>
-
-          {/* shift plan by daypart */}
-          <Card>
-            <CardHead title="Shift plan — labour by daypart" actions={
-              <InfoButton title="Shift plan — labour by daypart"
-                description="Forecast orders per daypart and the line headcount needed to serve them within the oven ceiling."
-                institutional="Labour is the second-biggest controllable cost, and flat all-day staffing is where it leaks. Matching heads to the demand curve — light at the lunch shoulder, doubled at the dinner peak — is how good operators hold labour % in range without blowing service. The gate: scheduled peak heads must cover the dinner daypart's orders/hr, or the oven curve goes red."
-                plain="Dinner does 22 orders/hr against a 16/hr line, so you need 2 pizzaioli on at 18:00–21:00; lunch at 9/hr needs only 1. Staffing 2 all day burns wage on the dead afternoon; staffing 1 all day loses the dinner rush."
-                tips="Schedule to the 'rec. heads' column: add the second pair of hands only for the dinner block, cross-train so a waiter can plate at peak, and start prep before the lunch ramp. If recommended > scheduled at dinner, that's your queue loss in the oven curve."
-                methodology="Orders/daypart = Σ of the modelled hourly demand within the daypart window; rec. heads = ⌈(orders/hr) ÷ kitchenCapacity.pizzasPerHour⌉ (min 1). Scheduled pizzaioli = Σ headcount of pizzaiolo labour lines. Modelling layer over the scenario." />
-            } />
-            <CardBody>
-              <div className="av3-cfgrow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
-              {shiftPlan.rows.map((r) => (
-                <div key={r.key} className="av3-cfgrow" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.key}</span>
-                  <span className="av3-cell-muted" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5 }}>{r.range}</span>
-                  <span style={{ textAlign: "right", fontFamily: "var(--av3-mono)", fontSize: 12 }}>{r.orders}<span className="av3-cell-muted" style={{ fontSize: 10 }}> · {r.ordersPerHour.toFixed(0)}/h</span></span>
-                  <span style={{ textAlign: "right" }}><Badge tone={r.heads > shiftPlan.scheduledPizzaioli ? "bad" : "ok"}>{r.heads}</Badge></span>
-                </div>
-              ))}
-              <div style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 8 }}>
-                Scheduled pizzaioli: <b style={{ color: "var(--av3-fg)" }}>{shiftPlan.scheduledPizzaioli}</b>
-                {shiftPlan.rows.some((r) => r.heads > shiftPlan.scheduledPizzaioli) ? <span style={{ color: "var(--av3-warn)" }}> · peak daypart needs more heads than scheduled</span> : <span style={{ color: "var(--av3-ok)" }}> · covers every daypart</span>}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
       )}
 
       {/* real-data sandboxes — independent of the hypothetical scenario above */}
@@ -933,7 +1458,56 @@ export function CalculatorV3() {
       <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>
         Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The sandboxes below read <b>real orders</b>; the model above is hypothetical. Five-section ⓘ explainers (Rule #12) land next.
       </div>
-    </>
+      {editCell && scn.labor[editCell.i] && (() => {
+        const worker = scn.labor[editCell.i];
+        const O = Math.floor(scn.openingHours?.openHour ?? 12);
+        const C = Math.ceil(scn.openingHours?.closeHour ?? 23);
+        const wi = scn.labor.slice(0, editCell.i).filter((x) => x.role === worker.role).length + 1;
+        const cur = weekOf(worker, O, C)[editCell.d] ?? { start: O, end: Math.min(C, O + 8) };
+        const len = Math.min(C - O, 8);
+        const presets: { label: string; s: number; e: number }[] = [
+          { label: "Open", s: O, e: Math.min(C, O + len) },
+          { label: "Mid", s: Math.min(C - len, O + 2), e: Math.min(C, O + 2 + len) },
+          { label: "Close", s: Math.max(O, C - len), e: C },
+          { label: "Full", s: O, e: C },
+        ];
+        const isPreset = (p: { s: number; e: number }) => weekOf(worker, O, C)[editCell.d]?.start === p.s && weekOf(worker, O, C)[editCell.d]?.end === p.e;
+        const num: CSSProperties = { width: 56, textAlign: "center", fontFamily: "var(--av3-mono)" };
+        const left = Math.max(8, Math.min(editCell.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 252));
+        return createPortal(
+          <div onClick={() => setEditCell(null)} style={{ position: "fixed", inset: 0, zIndex: 300 }}>
+            <div className="av3-root" onClick={(e) => e.stopPropagation()} style={{ position: "fixed", left, top: editCell.y, width: 244, background: "var(--av3-s2)", border: "1px solid var(--av3-line-strong)", borderRadius: 11, boxShadow: "var(--av3-sh-2)", padding: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700 }}>{ROLE_LABEL[worker.role]} {wi} · {DAYS[editCell.d]}</span>
+                <button type="button" onClick={() => setEditCell(null)} aria-label="Close" style={{ background: "none", border: "none", color: "var(--av3-subtle)", cursor: "pointer", padding: 0, display: "flex" }}><X /></button>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {presets.map((p) => (
+                  <button key={p.label} type="button" onClick={() => setDay(editCell.i, editCell.d, { start: p.s, end: p.e })}
+                    style={{ fontFamily: "var(--av3-mono)", fontSize: 11, padding: "4px 9px", borderRadius: 999, cursor: "pointer", fontWeight: 600,
+                      border: "1px solid " + (isPreset(p) ? "var(--av3-c3)" : "var(--av3-line)"),
+                      background: isPreset(p) ? "color-mix(in oklab, var(--av3-c3) 22%, var(--av3-s1))" : "var(--av3-s1)", color: "var(--av3-fg)" }}>
+                    {p.label} <span style={{ color: "var(--av3-subtle)" }}>{p.s}–{p.e}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "end", gap: 8, marginBottom: 12 }}>
+                <label className="av3-field"><span className="av3-field-label">Start</span><input className="av3-input" style={num} type="number" min={0} max={24} value={cur.start} onChange={(e) => setDay(editCell.i, editCell.d, { start: Number(e.target.value) || 0, end: cur.end })} /></label>
+                <span style={{ color: "var(--av3-muted)", paddingBottom: 8 }}>–</span>
+                <label className="av3-field"><span className="av3-field-label">End</span><input className="av3-input" style={num} type="number" min={0} max={24} value={cur.end} onChange={(e) => setDay(editCell.i, editCell.d, { start: cur.start, end: Number(e.target.value) || 0 })} /></label>
+                <span style={{ fontSize: 11.5, color: "var(--av3-muted)", fontFamily: "var(--av3-mono)", paddingBottom: 8 }}>{Math.max(0, cur.end - cur.start)}h</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button variant="ghost" size="sm" onClick={() => { setDay(editCell.i, editCell.d, null); setEditCell(null); }}>Day off</Button>
+                <Button variant="ghost" size="sm" title="Set every day this week to this shift" onClick={() => { setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((ll, idx) => idx !== editCell.i ? ll : { ...ll, week: Array.from({ length: 7 }, () => ({ start: cur.start, end: cur.end })), shifts: undefined, daysPerWeek: undefined, hoursPerWeek: undefined }) }; }); setEditCell(null); }}>All week</Button>
+                <Button variant="secondary" size="sm" style={{ marginLeft: "auto" }} onClick={() => setEditCell(null)}>Done</Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        );
+      })()}
+    </CalcCurrencyCtx.Provider>
   );
 }
 
@@ -947,6 +1521,7 @@ interface MenuEng { menuItemId: string; name: string; category: string; unitsSol
 const QUADRANT_TONE: Record<string, "ok" | "warn" | "info" | "bad"> = { star: "ok", plowhorse: "warn", puzzle: "info", dog: "bad" };
 
 function SimSandboxes() {
+  const { money } = useCalcCurrency();
   const [tab, setTab] = useState<SandTab>("cohorts");
   const [days, setDays] = useState(90);
   const [cohort, setCohort] = useState<Cohort | null>(null);
@@ -1006,20 +1581,20 @@ function SimSandboxes() {
                 <Kpi label="Customers" value={cohort.totalCustomers.toLocaleString("pl-PL")} accentVar="--av3-c3" />
                 <Kpi label="Repeat rate" value={`${(cohort.repeatRatePct * 100).toFixed(0)}%`} accentVar="--av3-c4" />
                 <Kpi label="Orders / cust" value={cohort.avgOrdersPerCustomer.toFixed(2)} accentVar="--av3-c2" />
-                <Kpi label="Revenue / cust" value={formatPrice(cohort.avgRevenuePerCustomerGrosze)} accentVar="--av3-c5" />
-                <Kpi label="GP / cust (LTV)" value={formatPrice(cohort.avgGpPerCustomerGrosze)} accentVar="--av3-c4" />
+                <Kpi label="Revenue / cust" value={money(cohort.avgRevenuePerCustomerGrosze)} accentVar="--av3-c5" />
+                <Kpi label="GP / cust (LTV)" value={money(cohort.avgGpPerCustomerGrosze)} accentVar="--av3-c4" />
                 <Kpi label="New / mo" value={cohort.newCustomersPerMonth.toFixed(0)} accentVar="--av3-c1" />
               </div>
               <div className="av3-subhead">New vs returning revenue</div>
               {(() => { const n = cohort.newCustomerRevenueGrosze, r = cohort.returningCustomerRevenueGrosze, tot = Math.max(1, n + r); return (
                 <>
                   <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden" }}>
-                    <div title={`New ${formatPrice(n)}`} style={{ width: `${(n / tot) * 100}%`, background: "var(--av3-c3)" }} />
-                    <div title={`Returning ${formatPrice(r)}`} style={{ width: `${(r / tot) * 100}%`, background: "var(--av3-c4)" }} />
+                    <div title={`New ${money(n)}`} style={{ width: `${(n / tot) * 100}%`, background: "var(--av3-c3)" }} />
+                    <div title={`Returning ${money(r)}`} style={{ width: `${(r / tot) * 100}%`, background: "var(--av3-c4)" }} />
                   </div>
                   <div style={{ display: "flex", gap: 16, marginTop: 6, fontSize: 11, color: "var(--av3-muted)" }}>
-                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c3)", marginRight: 5 }} />New {formatPrice(n)} ({Math.round((n / tot) * 100)}%)</span>
-                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c4)", marginRight: 5 }} />Returning {formatPrice(r)} ({Math.round((r / tot) * 100)}%)</span>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c3)", marginRight: 5 }} />New {money(n)} ({Math.round((n / tot) * 100)}%)</span>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c4)", marginRight: 5 }} />Returning {money(r)} ({Math.round((r / tot) * 100)}%)</span>
                   </div>
                 </>
               ); })()}
@@ -1032,8 +1607,8 @@ function SimSandboxes() {
               <tbody>{dayparts.map((d) => (
                 <tr key={d.key}><td style={{ fontWeight: 600 }}>{d.label}</td><td className="av3-cell-muted">{d.hours}</td>
                   <td className="av3-num">{d.ordersCount}</td><td className="av3-num">{(d.sharePct * 100).toFixed(0)}%</td>
-                  <td className="av3-num">{formatPrice(d.avgTicketGrosze)}</td><td className="av3-num">{formatPrice(d.revenueGrosze)}</td>
-                  <td className="av3-num">{formatPrice(d.gpGrosze)}</td><td className="av3-num"><Badge tone={d.gpRatePct >= 0.68 ? "ok" : d.gpRatePct >= 0.6 ? "warn" : "bad"}>{(d.gpRatePct * 100).toFixed(0)}%</Badge></td></tr>
+                  <td className="av3-num">{money(d.avgTicketGrosze)}</td><td className="av3-num">{money(d.revenueGrosze)}</td>
+                  <td className="av3-num">{money(d.gpGrosze)}</td><td className="av3-num"><Badge tone={d.gpRatePct >= 0.68 ? "ok" : d.gpRatePct >= 0.6 ? "warn" : "bad"}>{(d.gpRatePct * 100).toFixed(0)}%</Badge></td></tr>
               ))}</tbody>
             </table></div>
           )
@@ -1065,7 +1640,7 @@ function SimSandboxes() {
                 <tbody>{[...menuEng].sort((a, b) => b.unitsSold - a.unitsSold).slice(0, 30).map((m) => (
                   <tr key={m.menuItemId}><td style={{ fontWeight: 600 }}>{m.name}<span className="av3-cell-muted" style={{ fontSize: 11, marginLeft: 6 }}>{m.category}</span></td>
                     <td><Badge tone={QUADRANT_TONE[m.quadrant]}>{m.quadrant}</Badge></td>
-                    <td className="av3-num">{m.unitsSold}</td><td className="av3-num">{formatPrice(m.gpPerUnit)}</td><td className="av3-num">{formatPrice(m.trueCm1PerUnit)}</td>
+                    <td className="av3-num">{m.unitsSold}</td><td className="av3-num">{money(m.gpPerUnit)}</td><td className="av3-num">{money(m.trueCm1PerUnit)}</td>
                     <td>{m.marginTrap && <Badge tone="bad">margin trap</Badge>}{m.prepHeavy && <Badge tone="warn">prep-heavy</Badge>}{m.menuRole && <Badge tone="neutral">{m.menuRole}</Badge>}</td></tr>
                 ))}</tbody>
               </table></div>

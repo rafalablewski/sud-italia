@@ -22,9 +22,9 @@
 // `unmarkAdminContext()`). For admin server components, prefer
 // `formatPricePLN()` (the explicit PLN helper in `src/lib/utils.ts`).
 
-export type Currency = "PLN" | "USD" | "SGD" | "EUR";
+export type Currency = "PLN" | "USD" | "SGD" | "EUR" | "AED";
 
-export const ALL_CURRENCIES: Currency[] = ["PLN", "USD", "SGD", "EUR"];
+export const ALL_CURRENCIES: Currency[] = ["PLN", "USD", "SGD", "EUR", "AED"];
 
 export const CURRENCY_META: Record<
   Currency,
@@ -34,16 +34,18 @@ export const CURRENCY_META: Record<
   USD: { label: "US Dollar", symbol: "$", numberLocale: "en-US" },
   SGD: { label: "Singapore Dollar", symbol: "S$", numberLocale: "en-SG" },
   EUR: { label: "Euro", symbol: "€", numberLocale: "de-DE" },
+  AED: { label: "UAE Dirham", symbol: "د.إ", numberLocale: "en-AE" },
 };
 
 // Defaults reflect mid-2026 reference rates per 1 PLN. Operators override
 // these in /admin/currency; the public endpoint serves the live values to
-// the customer site on mount.
+// the customer site on mount. (AED is USD-pegged at ~3.6725, so 0.25 × 3.6725.)
 export const DEFAULT_RATES: Record<Currency, number> = {
   PLN: 1,
   USD: 0.25,
   SGD: 0.34,
   EUR: 0.23,
+  AED: 0.92,
 };
 
 export const CURRENCY_COOKIE = "sud-italia-currency";
@@ -135,6 +137,15 @@ export function convertFromGrosze(grosze: number, target: Currency): number {
   if (target === "PLN") return grosze / 100;
   const plnZloty = grosze / 100;
   return plnZloty * getExchangeRate(target);
+}
+
+/** Inverse of `convertFromGrosze` — take an amount the operator typed in the
+ *  display currency and store it back as PLN grosze (the canonical unit). PLN
+ *  is a plain ×100; other currencies divide out the rate first. */
+export function convertToGrosze(value: number, source: Currency): number {
+  if (source === "PLN") return Math.round(value * 100);
+  const rate = getExchangeRate(source) || 1;
+  return Math.round((value / rate) * 100);
 }
 
 // `Intl.NumberFormat` construction is non-trivial — ICU locale lookup +

@@ -1189,16 +1189,185 @@ auth canvas's signature lighting and the sign-in lockup:
   (Seasonality); build-out learning % + floor % (Fleet). Every scenario field
   the engine reads is now editable.
   **Part 3i shipped — menu-scenario system (full v2 parity, nothing left):** the
-  named-scenario model is ported — a **Menu scenarios** card with the five baked
+  named-scenario model is ported — a **Scenarios** card with the five baked
   archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) + **Custom**,
   each resolving its `menuScenarioOverrides[id]` over the baked preset. **Apply**
-  loads the full input set (orders/day · days · ticket · COGS + the six attach %,
+  loads the full input set (orders/day · days · ticket + the six attach %,
   preserving enabled-state) and sets `menuScenario=id`; **Save current** captures
   the live inputs into the override; **Reset** drops it. The same overrides
   round-trip with v2 via `PUT /api/admin/simulation`. With this the v3 Calculator
   is at **field-for-field AND feature-for-feature parity** with the 17k-line v2
   `AdminSimulation` — every variable, lever, what-if, operational view and named
   scenario.
+  **Part 3j shipped — food cost + waste come from the dishes, not the preset:**
+  the **Scenarios** card moved up into the inputs column directly **below Variable
+  costs** (it read as an afterthought stranded at the page bottom). The Variable
+  costs card keeps **Food cost %** and **Waste %**, but they're now the *derived*
+  half of the card — pinned to the real menu and **read-only on all five named
+  presets**; only **Custom** unlocks them for hand-typed what-ifs. The derivation
+  is `computeSimulationActuals`, extended to split each dish's recipe cost into
+  the ingredient that reaches the plate vs the `wasteFactor` trim/spill overhead
+  (`calculateFoodCostBreakdown`) and weight both by real sales mix →
+  `weightedFoodCostPct` + `weightedWastePct` on `SimulationActualsSnapshot` (they
+  sum to the existing `weightedCogsPct`, so no double-count). The Calculator
+  fetches `/api/admin/simulation/actuals` on load, seeds cogs/waste from it on
+  every **Apply**, and overrides them in the compute scenario (`scnEff`) whenever
+  a named preset is active so the whole P&L / heatmaps / projection reflect the
+  dishes. The remaining Variable-cost levers (payment · refund · loyalty · CIT ·
+  packaging) stay the per-revenue **constants** they always were. The `P()` field
+  primitive gained an optional `readOnly` + `hint` for the locked state.
+  **Part 3k shipped — premises (rent vs buy) + matching lever cards:** the
+  **Investment & capacity** card was unprofessional about the biggest capital
+  decision — a single flat "Setup cost" and "Rent" line hid the rent-vs-buy
+  choice entirely. A new **Premises** card (between Fixed costs and Investment)
+  carries a Rent / Buy segmented toggle: *Rent* → monthly rent, service charge,
+  deposit (months), fit-out capex; *Buy* → purchase price, down
+  payment %, mortgage rate + term, property tax, structural upkeep, building
+  depreciation %, fit-out capex. A derived readout shows cash outlay/mo,
+  mortgage P&I (split into interest = P&L and principal = equity), building depreciation, loan and upfront
+  cash. The engine gained `computePremises` + `applyPremises` (a fold like
+  `applyAssumptions`/`applyAnnualWeather`): it derives `fixedCosts.rent`, mortgage
+  interest, building depreciation, property tax + upkeep and `setupCostGrosze`
+  from the decision, stacking premises interest/depreciation on top of the
+  operator's non-premises values — so rent-vs-buy flows all the way to payback +
+  IRR. `SimulationPremises` is the new authoritative source: `rent` left the
+  Fixed-costs card (`FIXED_KEYS`) and the Investment card now holds only fit-out
+  depreciation + non-mortgage interest + capacity. Rent-mode defaults reproduce
+  the legacy baseline exactly (22 000 zł rent, 900 000 zł setup). `hydratePremises`
+  migrates legacy scenarios from their flat rent + setup. The `Z()` primitive
+  gained the same `readOnly` + `hint` as `P()`. In the same pass the **Ingredient
+  cost stress** card was restyled to the identical `av3-leverrow` toggle-row look
+  as **Behaviour assumptions** (switch + name + inline `P` field), replacing its
+  odd bordered-tile grid so the two lever cards read as one system.
+  **Part 3l shipped — display currency (PLN / USD / EUR / AED):** a currency
+  selector in the Calculator page-head lets the operator read + enter the whole
+  model in any of four currencies. The canonical model stays in **PLN grosze** —
+  this is a pure display/entry layer: a `CalcCurrencyCtx` provides `{ cur, money }`
+  down the tree, the `Z` money-field converts grosze→display on render
+  (`convertFromGrosze`) and display→grosze on input (`convertToGrosze`, the new
+  inverse in `src/lib/currency.ts`), and every `formatPrice` in the page became a
+  context `money()` so KPIs, P&L, premises, heatmaps, projection, returns and the
+  real-order sandboxes all reformat together. Rates come from the operator's
+  `/admin/currency` settings (hydrated on load via `fetchPublicSettings`), falling
+  back to the build-time reference rates. **AED** was added as a first-class
+  currency across the system (`Currency`/`AppCurrency` unions, `CURRENCY_META`,
+  `DEFAULT_RATES` ≈ 0.92/PLN, the `/admin/currency` Zod schema + CurrencyV3 board),
+  so it's also selectable for the customer storefront once enabled. The choice
+  persists as `SimulationScenario.displayCurrency`.
+  **Part 3m shipped — detailed P&L breakdown:** the **Monthly P&L** card gained a
+  **Detailed** toggle in its head. Off = the twelve summary lines; on = each
+  bundled line expands into indented, muted child rows that sum exactly to their
+  parent — **Labour** by role (`c.laborByRole`), **Fixed costs** by category
+  (`scnEff.fixedCosts`, so it reflects the premises-folded rent / property tax /
+  upkeep and drops the marketing line when it's reclassified as CAC),
+  **Waste + refunds + loyalty** into its three leakage lines, and
+  **Depreciation + interest** into fit-out depreciation + (buy mode) building
+  depreciation + mortgage interest + other interest. All values come from the
+  engine `Computed` output + `computePremises`, no re-derivation.
+  **Part 3n shipped — live shift-coverage planner:** the old read-only
+  "Shift plan — labour by daypart" card was replaced by an interactive
+  **Shift plan & coverage** card moved up next to **Labour** (roster + check in
+  one place). New model fields: `SimulationScenario.openingHours` (the service
+  window, which owns and keeps `kitchenCapacity.openHoursPerDay` in sync, so the
+  standalone "Open hrs/day" field left the Investment card) and per-line
+  `SimulationLaborLine.startHour`/`endHour` (a shift window; two On/Off fields
+  were added to each Labour row — split a role into two lines for staggered
+  shifts). The card renders a live hour-by-hour grid: a demand/hr bar row, one
+  headcount-heatmap row per role on the roster, a Total-on row, and a
+  "Line on/need" row that goes red when pizzaioli-on < the demand-driven kitchen
+  requirement (⌈demand ÷ (pizzas-per-hour ÷ prep-complexity)⌉). Peak hours (≥85%
+  of peak demand) are tinted in the header; summary badges call out under-staffed
+  hours, peak coverage and scheduled floor-hours/day. All derived in a `coverage`
+  memo over the folded scenario; the oven-curve card now stands alone (its start
+  hour follows `openingHours.openHour`).
+  **Part 3o shipped — individual shifts + demand auto-roster:** a flat headcount
+  sat everyone on the floor all day, so "Total on" read the same every hour. New
+  `SimulationLaborLine.shifts` (per-person `{start,end}` windows) let staff be
+  scheduled individually; when present they define coverage instead of the flat
+  headcount×window. The Shift plan card gained a **roster editor** (one editable
+  start–end pair per person, per line, with an *Individualise* button to break a
+  flat line into per-person shifts) and two header actions: **Auto-roster** —
+  `rosterToDemand`, a greedy that places each person's shift on the busiest
+  under-covered block so staffing tracks the demand curve (Total on ramps into
+  lunch/dinner and thins to a skeleton at the quiet open/close — a min-1 pass
+  stretches the nearest shift so the floor is never left empty while open), and
+  **Flat** to revert; the coverage grid + gap badges give live feedback as you
+  tune them.
+  **Part 3p shipped — schedule drives the hours (de-duped labour model):** the
+  Labour card had three overlapping ways to say *when* people worked — a line
+  `startHour`/`endHour`, the per-person roster `shifts`, and a hand-typed
+  `hoursPerWeek` disconnected from either. Collapsed to one: the **roster is the
+  single scheduling surface**, and weekly hours (hence cost) **derive** from it —
+  `hoursPerWeek = avg shift length × daysPerWeek`, folded into the engine in
+  `scnEff`. `SimulationLaborLine` dropped `startHour`/`endHour`, gained
+  `daysPerWeek`, and made `hoursPerWeek` a legacy cost-fallback (only used by
+  pre-`shifts` scenarios). The Labour row is now **Role · Heads · Rate · Days/wk ·
+  Hrs/wk** (read-only "auto" once a line is rostered; editable only for legacy
+  flat lines), the On/Off fields are gone, and `patchLabor` keeps `shifts.length`
+  in lock-step with headcount. The roster editor shows each person's shift length
+  + the resulting `h/wk ea.`, so a shorter shift reads as a cheaper person —
+  individual differentiation (e.g. 5 waiters on different hours) falls out for
+  free. The default scenario ships **pre-rostered** (8h/7h staggered shifts) so
+  Total on is demand-shaped out of the box (`5,5,5,8,10,10,10,9,5,5,4`) and the
+  ~82.5k zł monthly labour matches the prior flat-48h baseline within ~1%.
+  **Part 3q shipped — labour is people, not headcounts:** each `SimulationLaborLine`
+  is now **one worker** (`headcount` is always 1) with its own pay rate and its
+  own shift — so five waiters can be five different wages/hours. The **Labour**
+  card is grouped by role: a role header with an "add" (plus a role picker in the
+  head to add a new role), and under it one row per person showing **Rate/hr ·
+  Hrs/wk (auto) · Weekly salary** — no headcount, no schedule (both derive). The
+  **schedule lives entirely in the Shift plan roster**: one row per person with
+  their shift start–end + days/wk, and the derived `= Nh/wk · zł/wk`. Weekly hours
+  and pay flow from shift length × days. `expandLaborToWorkers` migrates legacy
+  multi-headcount lines into individual workers on load (splitting a per-person
+  `shifts` array across them); the default ships as 10 individual workers.
+  `rosterToDemand` now greedily staggers against a **shared** coverage curve (each
+  worker is a line), so Auto-roster spreads people across the day instead of piling
+  each role onto the same block. The detailed-P&L labour breakdown re-aggregates
+  the now-per-worker `laborByRole` back to one line per role.
+  **Part 3r shipped — weekly rota (per-day shifts + 12h rest):** the single-shift
+  model became a full **7-day rota** — `SimulationLaborLine.week` is a 7-slot array
+  (Mon–Sun), each slot a `{start,end}` shift or `null` (day off). The restaurant is
+  open all 7 days; each person works the 5–6 they're rostered. **Weekly hours (and
+  pay) = Σ each on-day's shift length** (`laborHoursPerWeek`/`weekOf`), so Labour's
+  Hrs/wk + salary and the coverage grid both derive from the rota, live. The Shift
+  plan card is now a **weekly rota grid** (person × Mon–Sun; each cell a clean
+  readable shift *chip* — `12–20` or `off` — that opens a portal **popover editor**
+  with shift presets, Start/End, *Day off* + *All week*; per-worker h/wk on the
+  right) over a **per-day coverage grid**
+  with Mon–Sun day tabs (staffing varies by day as days-off thin the floor). A hard
+  **≥12 h rest** rule (`restViolationDays`, incl. the Sun→Mon wrap: rest between an
+  end `e` and next-day start `s` = (24−e)+s +24/skipped-day) red-outlines any
+  offending cell and shows a card-level count. `rosterWeek` (replacing
+  `rosterToDemand`) gives each worker a demand-fit **consistent** shift on 6
+  staggered days — a consistent shift leaves 24−L h rest, always ≥12, so
+  auto-rosters are rest-legal by construction. `weekOf` migrates legacy
+  single-shift lines; the sanitizer + PUT validate `week`; the default ships as 10
+  workers each with a staggered day off (labour unchanged at ~82.5k zł). Design
+  chosen from `tests/sketches/labour-per-day-scheduler-concepts.html` (concept 01).
+  **Part 3s shipped — coverage-complete, cost-minimal auto-roster + 12–23 window:**
+  the default service window moved to **12:00–23:00** (still 11 open-hours; the
+  default worker shifts + fallbacks slid +1 h, coverage/labour unchanged). More
+  importantly `rosterWeek` was rewritten from a flat "7 h shift + one staggered
+  day off" heuristic — which left the open/close edges bare on whichever day a
+  worker's sole cover was off (the reported "short days") — into a demand-driven
+  scheduler that **provably covers every open hour on all 7 days at the minimum
+  labour hours**. It now takes a `RosterCtx {ordersPerDay, effCap}` (the same
+  numbers the coverage grid uses) so it knows the real requirement. Per role it
+  builds an hourly `need[i]` (pizzaioli `⌈demand÷effCap⌉`, other roles
+  demand-proportional to headcount, floored at 1 for continuity, capped at
+  headcount), decomposes that staircase into contiguous **coverage bands** (band
+  k = the hours needing ≥ k people, split into ≤`ROSTER_MAX_SHIFT`=12 h chunks so
+  rest never breaks), and tiles each band's 7 days across a crew as contiguous
+  runs. Because every band is filled on all 7 days, per-hour coverage = `need`
+  every day — no gaps — at exactly `7 × Σ need[i]` hours (the theoretical floor),
+  with ≥12 h rest by construction and days off backfilled by the crew. Where the
+  team can't reach peak `need` the depth caps at headcount and the coverage grid
+  surfaces the residual gap (a genuine "hire one more" signal). Verified: on the
+  default team the all-7-day gap count drops 11→0 while weekly hours *fall*
+  660→602, and an overloaded scenario correctly leaves only the true headcount
+  shortfall red. `autoRoster` passes the demand context; the ⓘ methodology +
+  card footnote document the formula.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

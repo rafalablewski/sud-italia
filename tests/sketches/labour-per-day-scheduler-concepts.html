@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Per-day shift scheduler — 5 concepts</title>
+<style>
+  :root {
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,0.07); --av3-line-strong:rgba(255,255,255,0.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f; --av3-c6:#9b7ec0;
+    --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --av3-ui:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--av3-bg); color:var(--av3-fg); font-family:var(--av3-ui);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:28px 22px 80px; }
+  .wrap { max-width:1080px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-0.02em; }
+  h2 { font-size:15px; margin:0; }
+  .sub { color:var(--av3-muted); font-size:13px; }
+  .mono { font-family:var(--av3-mono); }
+  .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:var(--av3-r-lg);
+    padding:16px 18px; margin:14px 0; box-shadow:0 8px 28px -8px rgba(0,0,0,0.55); }
+  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:2px 8px;
+    border-radius:var(--av3-r-pill); font-weight:600; }
+  .b-ok { background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1)); color:var(--av3-ok); }
+  .b-warn { background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1)); color:var(--av3-warn); }
+  .b-bad { background:color-mix(in oklab,var(--av3-bad) 18%,var(--av3-s1)); color:var(--av3-bad); }
+  .b-n { background:var(--av3-s3); color:var(--av3-muted); }
+  .concept-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .concept-no { font-family:var(--av3-mono); font-size:12px; color:var(--av3-brand); font-weight:700; }
+  .desc { color:var(--av3-muted); font-size:12.5px; margin:10px 0 0; }
+  .pc { display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; font-size:11.5px; }
+  .pc b { color:var(--av3-fg); font-weight:600; }
+  .rowlbl { color:var(--av3-subtle); font-size:9.5px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600; }
+
+  /* rota grid (concept 1 + 3) */
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  .rota th, .rota td { padding:5px 6px; text-align:center; border-bottom:1px solid var(--av3-line); }
+  .rota th { color:var(--av3-subtle); font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; }
+  .rota td.person { text-align:left; color:var(--av3-muted); white-space:nowrap; }
+  .rota tr.role td { background:var(--av3-s2); color:var(--av3-fg); font-weight:700; text-align:left; font-size:12px; letter-spacing:-0.01em; }
+  .cell { font-family:var(--av3-mono); border-radius:5px; padding:3px 4px; display:inline-block; min-width:46px; }
+  .on { background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1)); color:var(--av3-fg); }
+  .off { color:var(--av3-subtle); }
+  .viol { box-shadow:inset 0 0 0 1.5px var(--av3-bad); position:relative; }
+  .wk { font-family:var(--av3-mono); color:var(--av3-fg); font-weight:600; }
+
+  /* timelines (concept 2) */
+  .tl-day { display:flex; align-items:center; gap:8px; margin:3px 0; }
+  .tl-name { width:16px; font-size:10px; color:var(--av3-subtle); font-family:var(--av3-mono); }
+  .track { position:relative; height:14px; flex:1; background:var(--av3-s2); border-radius:4px; overflow:hidden; }
+  .seg { position:absolute; top:0; bottom:0; border-radius:4px; background:color-mix(in oklab,var(--av3-c4) 55%,var(--av3-s1)); }
+  .seg.k { background:color-mix(in oklab,var(--av3-c5) 55%,var(--av3-s1)); }
+  .restbad { outline:1.5px solid var(--av3-bad); outline-offset:1px; }
+
+  /* templates (concept 3) */
+  .tpl { display:inline-flex; align-items:center; gap:5px; font-family:var(--av3-mono); font-size:11px;
+    padding:3px 9px; border-radius:var(--av3-r-pill); font-weight:600; }
+  .dot { width:8px; height:8px; border-radius:50%; }
+
+  /* coverage (concept 4) */
+  .heat { display:grid; grid-template-columns:44px repeat(11,1fr); gap:2px; font-family:var(--av3-mono); font-size:10px; }
+  .hc { height:18px; border-radius:3px; display:flex; align-items:center; justify-content:center; color:var(--av3-fg); }
+
+  /* pattern (concept 5) */
+  .daychip { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; font-family:var(--av3-mono); border:1px solid var(--av3-line); }
+  .dc-on { background:color-mix(in oklab,var(--av3-c4) 24%,var(--av3-s1)); color:var(--av3-fg); border-color:transparent; }
+  .dc-off { background:var(--av3-s2); color:var(--av3-subtle); }
+  .field { display:inline-flex; flex-direction:column; gap:3px; }
+  .input { background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:6px; color:var(--av3-fg);
+    padding:4px 8px; font-family:var(--av3-mono); font-size:12px; }
+  .rec li { margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Weekly shift scheduler — 5 concepts</h1>
+  <div class="sub">Restaurant open 7 days · staff work 5–6 · different hours per day · ≥12 h rest between shifts.
+  Hours + salary (Labour) and the coverage grid (Shift plan) recompute from the schedule.</div>
+
+  <div class="card" style="background:var(--av3-s2);">
+    <div style="display:flex; gap:22px; flex-wrap:wrap; font-size:12.5px;">
+      <div><span class="rowlbl">Model shift</span><br>Each person gets a <b>7-day week</b>: a shift (or <i>off</i>) per day. <span class="mono" style="color:var(--av3-muted)">hrs/wk = Σ daily shift lengths</span>.</div>
+      <div><span class="rowlbl">Rest rule</span><br><span class="badge b-bad">&lt; 12 h rest</span> flagged when a shift starts less than 12 h after the previous day's end (incl. Sun→Mon wrap).</div>
+      <div><span class="rowlbl">Coverage</span><br>Shift plan grid gains <b>day tabs</b> (Mon–Sun) — the demand curve + line-cover check run per day.</div>
+    </div>
+  </div>
+
+  <!-- ============ CONCEPT 1 ============ -->
+  <div class="card">
+    <div class="concept-head"><span class="concept-no">01</span><h2>Weekly rota grid</h2><span class="badge b-ok">most familiar</span></div>
+    <table class="rota">
+      <thead><tr><th class="person" style="text-align:left">Person</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th><th>h/wk</th><th>zł/wk</th></tr></thead>
+      <tbody>
+        <tr class="role"><td colspan="10">Pizzaiolo · ×2 · 4 320 zł/wk</td></tr>
+        <tr><td class="person">Pizzaiolo 1</td>
+          <td><span class="cell on">11–19</span></td><td><span class="cell on">11–19</span></td><td><span class="cell off">off</span></td>
+          <td><span class="cell on">11–19</span></td><td><span class="cell on">11–19</span></td><td><span class="cell on">12–20</span></td><td><span class="cell off">off</span></td>
+          <td class="wk">40</td><td class="wk">1 800</td></tr>
+        <tr><td class="person">Pizzaiolo 2</td>
+          <td><span class="cell off">off</span></td><td><span class="cell on">14–22</span></td><td><span class="cell on">14–22</span></td>
+          <td><span class="cell on">14–22</span></td><td><span class="cell on viol" title="Fri 14:00 is only 10 h after Thu close 22:00 — needs Thu earlier or Fri later">13–22</span></td><td><span class="cell on">14–23</span></td><td><span class="cell on">14–22</span></td>
+          <td class="wk">49</td><td class="wk">2 205</td></tr>
+        <tr class="role"><td colspan="10">Waiter · ×3 · 4 536 zł/wk</td></tr>
+        <tr><td class="person">Waiter 1</td>
+          <td><span class="cell on">11–18</span></td><td><span class="cell on">11–18</span></td><td><span class="cell on">11–18</span></td>
+          <td><span class="cell off">off</span></td><td><span class="cell off">off</span></td><td><span class="cell on">11–18</span></td><td><span class="cell on">11–18</span></td>
+          <td class="wk">35</td><td class="wk">1 260</td></tr>
+      </tbody>
+    </table>
+    <div class="desc">People down the side, <b>Mon–Sun</b> across. Click a cell → set that day's hours or mark <i>off</i>. Days off are just empty cells (each person picks their 5–6). A cell with a red outline breaks the 12 h-rest rule; the week's <span class="mono">h/wk</span> and salary total on the right update live.</div>
+    <div class="pc"><span><b>+</b> Reads like a printed rota; managers get it instantly; whole team on one screen.</span><span><b>−</b> Wide — needs horizontal scroll on mobile; a busy grid.</span></div>
+  </div>
+
+  <!-- ============ CONCEPT 2 ============ -->
+  <div class="card">
+    <div class="concept-head"><span class="concept-no">02</span><h2>Per-person day timelines</h2><span class="badge b-n">most visual</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div>
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Pizzaiolo 1 · <span class="mono" style="color:var(--av3-muted)">40 h/wk · 1 800 zł</span></div>
+        <!-- 24h tracks: left 0h -> right 24h. shift 11-19 => left 45.8%, width 33% -->
+        <div class="tl-day"><span class="tl-name">M</span><div class="track"><div class="seg k" style="left:45.8%; width:33.3%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">T</span><div class="track"><div class="seg k" style="left:45.8%; width:33.3%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">W</span><div class="track"></div></div>
+        <div class="tl-day"><span class="tl-name">T</span><div class="track"><div class="seg k" style="left:45.8%; width:33.3%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">F</span><div class="track"><div class="seg k" style="left:45.8%; width:33.3%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">S</span><div class="track"><div class="seg k" style="left:50%; width:33.3%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">S</span><div class="track"></div></div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Waiter 1 · <span class="mono" style="color:var(--av3-muted)">35 h/wk · 1 260 zł</span></div>
+        <div class="tl-day"><span class="tl-name">M</span><div class="track"><div class="seg" style="left:45.8%; width:29.2%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">T</span><div class="track"><div class="seg" style="left:45.8%; width:29.2%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">W</span><div class="track"><div class="seg" style="left:45.8%; width:29.2%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">T</span><div class="track"></div></div>
+        <div class="tl-day"><span class="tl-name">F</span><div class="track"></div></div>
+        <div class="tl-day"><span class="tl-name">S</span><div class="track"><div class="seg restbad" style="left:70.8%; width:29.2%"></div></div></div>
+        <div class="tl-day"><span class="tl-name">S</span><div class="track"><div class="seg" style="left:45.8%; width:29.2%"></div></div></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px; margin-top:8px; font-size:10px; color:var(--av3-subtle);">
+      <span>0h ────────── 12h ────────── 24h</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:color-mix(in oklab,var(--av3-c5) 55%,var(--av3-s1));vertical-align:middle"></span> kitchen</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:color-mix(in oklab,var(--av3-c4) 55%,var(--av3-s1));vertical-align:middle"></span> floor</span>
+      <span><span class="badge b-bad" style="padding:1px 6px">red outline = &lt;12 h rest</span></span>
+    </div>
+    <div class="desc">Each person is a stack of 7 mini 24-hour tracks; drag the block's edges to set start/end, click a track to toggle a day off. You <b>see the rest gap</b> between one day's block and the next — a too-short gap outlines the block red. Beautiful, but one person at a time.</div>
+    <div class="pc"><span><b>+</b> Instantly shows overlaps, gaps and the rest rule; great on touch.</span><span><b>−</b> Vertical; comparing the whole team at once is harder.</span></div>
+  </div>
+
+  <!-- ============ CONCEPT 3 ============ -->
+  <div class="card">
+    <div class="concept-head"><span class="concept-no">03</span><h2>Shift templates → drop onto days</h2><span class="badge b-ok">fastest</span></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <span class="tpl" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))"><span class="dot" style="background:var(--av3-c3)"></span>Open · 11–19</span>
+      <span class="tpl" style="background:color-mix(in oklab,var(--av3-c5) 22%,var(--av3-s1))"><span class="dot" style="background:var(--av3-c5)"></span>Mid · 13–21</span>
+      <span class="tpl" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))"><span class="dot" style="background:var(--av3-c6)"></span>Close · 14–22</span>
+      <span class="tpl" style="background:var(--av3-s2); color:var(--av3-subtle)">off</span>
+      <span class="tpl" style="background:var(--av3-s3); color:var(--av3-muted)">+ new template</span>
+    </div>
+    <table class="rota">
+      <thead><tr><th class="person" style="text-align:left">Person</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th><th>h/wk</th></tr></thead>
+      <tbody>
+        <tr><td class="person">Pizzaiolo 1</td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))">Open</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))">Open</span></td>
+          <td><span class="cell off">off</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))">Open</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))">Open</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c5) 22%,var(--av3-s1))">Mid</span></td>
+          <td><span class="cell off">off</span></td><td class="wk">40</td></tr>
+        <tr><td class="person">Pizzaiolo 2</td>
+          <td><span class="cell off">off</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td>
+          <td><span class="cell" style="background:color-mix(in oklab,var(--av3-c6) 22%,var(--av3-s1))">Close</span></td><td class="wk">48</td></tr>
+      </tbody>
+    </table>
+    <div class="desc">Define a handful of named shifts once (with a colour), then each day-cell is a one-tap pick from that set (or <i>off</i>). Editing a template re-times everyone on it. The rest rule is checked as templates are assigned. Best when the team runs on a few standard shift shapes.</div>
+    <div class="pc"><span><b>+</b> Very fast, consistent, colour-coded coverage; low error.</span><span><b>−</b> Less free-form; one-off custom hours need an override.</span></div>
+  </div>
+
+  <!-- ============ CONCEPT 4 ============ -->
+  <div class="card">
+    <div class="concept-head"><span class="concept-no">04</span><h2>Coverage-first (demand + fill)</h2><span class="badge b-warn">most powerful</span></div>
+    <div style="font-size:11px; color:var(--av3-subtle); margin-bottom:4px;">Friday · staff on vs demand (11:00–22:00)</div>
+    <div class="heat" style="margin-bottom:6px;">
+      <div class="rowlbl" style="line-height:18px">dem</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 20%,var(--av3-s1))">3</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 32%,var(--av3-s1))">5</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 60%,var(--av3-s1))">12</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 80%,var(--av3-s1))">17</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 40%,var(--av3-s1))">8</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 22%,var(--av3-s1))">4</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 34%,var(--av3-s1))">6</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 62%,var(--av3-s1))">14</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 95%,var(--av3-s1))">22</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 62%,var(--av3-s1))">14</div>
+      <div class="hc" style="background:color-mix(in oklab,var(--av3-c3) 34%,var(--av3-s1))">6</div>
+    </div>
+    <div class="heat">
+      <div class="rowlbl" style="line-height:18px">on</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.5">1</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.5">2</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.7">4</div>
+      <div class="hc" style="background:var(--av3-bad)">4</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.6">5</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.5">3</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.5">3</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.8">6</div>
+      <div class="hc" style="background:var(--av3-bad)">7</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.7">6</div>
+      <div class="hc" style="background:var(--av3-ok);opacity:.5">3</div>
+    </div>
+    <div style="font-size:10px; color:var(--av3-subtle); margin-top:4px;">11 · 12 · 13 · 14 · 15 · 16 · 17 · 18 · 19 · 20 · 21 &nbsp;·&nbsp; <span class="badge b-bad" style="padding:1px 6px">red = short vs demand</span></div>
+    <div class="desc">Start from <b>demand per day</b>, then Auto-fill drops people onto the hottest under-covered hours — respecting each person's days-off and the 12 h-rest rule across days. You tune by painting hours onto a person. This is concept-4 of the existing coverage grid, extended to all 7 days with a day switcher.</div>
+    <div class="pc"><span><b>+</b> Optimises to real demand; auto-roster does the heavy lifting; rest + days-off baked in.</span><span><b>−</b> More abstract; the individual's week is a step removed.</span></div>
+  </div>
+
+  <!-- ============ CONCEPT 5 ============ -->
+  <div class="card">
+    <div class="concept-head"><span class="concept-no">05</span><h2>Contract pattern + exceptions</h2><span class="badge b-n">least clicks</span></div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+      <div>
+        <div style="font-size:12px; font-weight:600; margin-bottom:6px;">Pizzaiolo 2</div>
+        <div style="display:flex; gap:5px; margin-bottom:8px;">
+          <div class="daychip dc-off">M</div><div class="daychip dc-on">T</div><div class="daychip dc-on">W</div>
+          <div class="daychip dc-on">T</div><div class="daychip dc-on">F</div><div class="daychip dc-on">S</div><div class="daychip dc-on">S</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="field"><span class="rowlbl">Default shift</span><input class="input" style="width:96px" value="14 – 22" readonly></div>
+          <div class="field"><span class="rowlbl">Days/wk</span><input class="input" style="width:48px" value="6" readonly></div>
+          <div style="font-size:12px; color:var(--av3-muted); padding-bottom:5px;" class="mono">= 48 h/wk · 2 160 zł</div>
+        </div>
+        <div style="margin-top:10px;">
+          <span class="rowlbl">Exceptions</span><br>
+          <span class="tpl" style="background:color-mix(in oklab,var(--av3-c5) 20%,var(--av3-s1)); margin-top:4px">Sat · 12–22 <span style="color:var(--av3-subtle)">×</span></span>
+          <span class="tpl" style="background:var(--av3-s3); color:var(--av3-muted); margin-top:4px">+ add</span>
+        </div>
+      </div>
+      <div style="max-width:320px;">
+        <span class="badge b-ok">1 tap = a full week</span>
+        <div class="desc" style="margin-top:8px;">Set the on-days (tap the chips) + one default shift; the week is done. Add <b>exceptions</b> only for the days that differ. Matches how contracts actually read ("Tue–Sun, 14–22"). Rest rule flags an exception that lands too close to the neighbouring day.</div>
+      </div>
+    </div>
+    <div class="pc"><span><b>+</b> Minimal input for regular staff; mirrors real employment terms.</span><span><b>−</b> Highly-variable schedules become mostly exceptions.</span></div>
+  </div>
+
+  <!-- ============ RECOMMENDATION ============ -->
+  <div class="card" style="border-color:var(--av3-line-strong);">
+    <div class="concept-head"><span class="concept-no">★</span><h2>Suggested build</h2></div>
+    <ul class="rec" style="margin:0; padding-left:18px; font-size:13px; color:var(--av3-muted);">
+      <li><b style="color:var(--av3-fg)">Weekly rota grid (01)</b> as the primary editor in the roster — it reads like the rota managers already use and shows the whole team's week at once.</li>
+      <li><b style="color:var(--av3-fg)">Shift templates (03)</b> layered on top as an accelerator: pick a template per cell, or type custom hours.</li>
+      <li><b style="color:var(--av3-fg)">Auto-roster from demand (04)</b> reused per day — fills the grid respecting each person's days-off and the ≥12 h-rest rule, then you fine-tune.</li>
+      <li>Shift plan &amp; coverage grid gets <b style="color:var(--av3-fg)">Mon–Sun day tabs</b>; Labour's <span class="mono">hrs/wk</span> + weekly salary become <span class="mono">Σ</span> of each person's daily shifts — fully dynamic both ways.</li>
+      <li>A standing <span class="badge b-bad" style="padding:1px 6px">rest &lt; 12 h</span> check across the week (incl. the Sun→Mon wrap) surfaces on the offending cell and as a card-level count.</li>
+    </ul>
+  </div>
+
+  <div style="text-align:center; color:var(--av3-subtle); font-size:11px; margin-top:22px;">Pick one (or a hybrid) and I'll wire it into Labour + Shift plan &amp; coverage.</div>
+</div>
+</body>
+</html>
