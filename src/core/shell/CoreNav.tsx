@@ -69,7 +69,7 @@ const ICON: Record<string, ReactNode> = {
 // (it's a Service view, reached from the Tables lens tabs); Guest IS a lens —
 // its own hub of Inbox · CRM · Loyalty · Concierge.
 const LENSES: { key: keyof typeof ICON; href: string; label: string; sub: string }[] = [
-  { key: "service", href: CORE_SURFACES.book, label: "Book", sub: "reservations · tables" },
+  { key: "service", href: CORE_SURFACES.service, label: "Tables", sub: "zones · seats" },
   { key: "pos", href: CORE_SURFACES.pos, label: "POS", sub: "order & charge" },
   { key: "kds", href: CORE_SURFACES.kds, label: "KDS", sub: "kitchen wall" },
   { key: "guest", href: CORE_SURFACES.guest, label: "Guest", sub: "inbox · crm" },

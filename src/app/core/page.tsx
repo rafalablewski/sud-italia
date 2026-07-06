@@ -9,5 +9,5 @@ import { getCurrentRole } from "@/lib/admin-auth";
 // be split further from the session role alone.
 export default async function CoreIndex() {
   const role = await getCurrentRole();
-  redirect(coreHref(role === "kitchen" ? "/kds" : "/service/book"));
+  redirect(coreHref(role === "kitchen" ? "/kds" : "/service/tables"));
 }

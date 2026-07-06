@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
-import { coreHref } from "@/core/routes";
+import { isAuthenticated } from "@/lib/admin-auth";
+import { CoreTables } from "@/core/service/CoreTables";
 
-// Tables management moved INTO Book (below the timeline). This standalone route
-// is retired — redirect any bookmark / old link to Book, where the floor-plan
-// manager now lives and its KPIs fold into the summary strip. The auth gate is
-// handled by Book's own page.
-export default function CoreTablesPage() {
-  redirect(coreHref("/service/book"));
+export default async function CoreTablesPage() {
+  if (!(await isAuthenticated())) redirect("/login");
+  // Tables is a pure management surface — zones, tables, seats — reading and
+  // writing the shared table catalogue directly (/api/admin/floor/tables). It
+  // no longer mounts the embedded till, so it needs no server-resolved menu or
+  // cross-sell config; seating and checks live in Book / POS.
+  return <CoreTables />;
 }

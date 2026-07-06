@@ -15,7 +15,7 @@ import { coreHref } from "@/core/routes";
 interface Cmd { id: string; label: string; hint: string; run: () => void; }
 
 const LENSES = [
-  { label: "Floor plan", path: "/service/book", kw: "tables zones seats floor plan map book reservations timeline" },
+  { label: "Tables", path: "/service/tables", kw: "tables zones seats floor plan map" },
   { label: "POS · Line", path: "/pos", kw: "pos till order line check" },
   { label: "KDS · Pass", path: "/kds", kw: "kds kitchen pass tickets wall" },
   { label: "Book", path: "/book", kw: "book reserve reservation slots" },
@@ -67,7 +67,7 @@ export function CommandPalette() {
     for (const l of LENSES) if (!t || l.label.toLowerCase().includes(t) || l.kw.includes(t)) list.push({ id: `lens:${l.path}`, label: l.label, hint: "Lens", run: () => go(l.path) });
     if (!t || "shift handover close open".includes(t)) list.push({ id: "act:handover", label: "Shift handover", hint: "Action", run: () => { setOpen(false); window.dispatchEvent(new Event("core:handover")); } });
     if (t) {
-      for (const tb of tables) if (`table ${tb.number}`.includes(t) || String(tb.number) === t) list.push({ id: `tbl:${tb.id}`, label: `Table ${tb.number}`, hint: "Tables", run: () => go("/service/book") });
+      for (const tb of tables) if (`table ${tb.number}`.includes(t) || String(tb.number) === t) list.push({ id: `tbl:${tb.id}`, label: `Table ${tb.number}`, hint: "Tables", run: () => go("/service/tables") });
       for (const m of menu) if (m.name.toLowerCase().includes(t)) list.push({ id: `sku:${m.id}`, label: m.name, hint: "Add on POS", run: () => go("/pos") });
     }
     return list.slice(0, 40);
