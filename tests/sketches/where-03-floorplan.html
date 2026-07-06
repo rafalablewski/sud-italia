@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Where pane — table picker redesign</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+.core{--font-core-display:'Bricolage Grotesque';--font-core-mono:'JetBrains Mono';
+  --display:var(--font-core-display),ui-sans-serif,system-ui,sans-serif;--mono:var(--font-core-mono),ui-monospace,monospace;
+  --on-accent:#2a160b;--on-basil:#0c1a0f;--r-sm:7px;--r-md:10px;--r-lg:14px;--pill:999px;--fast:130ms cubic-bezier(.3,.7,0,1)}
+.core,.core[data-theme="dark"]{--bg:#15110d;--panel:#1f1a14;--panel-2:#28211a;--panel-3:#322a21;--hover:#3a3026;
+  --ink:#f8f1e7;--ink-2:#c9bba9;--ink-3:#908172;--line:rgba(255,247,235,.10);--line-2:rgba(255,247,235,.18);
+  --brand:#e86b3e;--brand-bright:#ff905e;--brand-wash:rgba(232,107,62,.16);--basil:#6fb155;--basil-wash:rgba(111,177,85,.16);
+  --amber:#e8a23c;--amber-wash:rgba(232,162,60,.16);--info:#3fa7ce;--info-wash:rgba(63,167,206,.18);--danger:#e5484a;--danger-wash:rgba(229,72,74,.18)}
+.core[data-skin="liquid-glass"]{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.18);
+  --amber:#f0ad46;--amber-wash:rgba(240,173,70,.18);--info:#54bce0;--info-wash:rgba(84,188,224,.2);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.2);
+  --lg-blur:blur(22px) saturate(175%);--lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);--lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+  background:radial-gradient(70% 55% at 10% 4%,rgba(232,107,62,.34),transparent 62%),radial-gradient(65% 60% at 92% 96%,rgba(84,188,224,.27),transparent 62%),radial-gradient(55% 45% at 80% 12%,rgba(240,173,70,.22),transparent 58%),radial-gradient(60% 55% at 20% 92%,rgba(125,196,100,.18),transparent 60%),radial-gradient(95% 80% at 50% 42%,rgba(232,107,62,.11),transparent 72%),var(--bg);background-attachment:fixed}
+*{box-sizing:border-box}
+body.core{display:block;min-height:100vh;margin:0;color:var(--ink);font-family:var(--mono);padding:34px 20px 70px}
+.wrap{max-width:620px;margin:0 auto}
+.sk-ey{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-bright);margin:0 0 6px}
+.sk-h1{font-family:var(--display);font-size:21px;font-weight:700;margin:0 0 5px}
+.sk-lede{color:var(--ink-3);font-size:12.5px;line-height:1.5;margin:0 0 22px}
+.sk-lede b{color:var(--ink-2)}
+/* real Core "Where" pane shell */
+.core-book-pane{background:var(--lg-sheen),var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:12px}
+.core-book-panelab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.core-book-panelab .mut{color:var(--ink-3);letter-spacing:.04em;font-size:9px}
+.core-bk-bookbtn{height:44px;width:100%;border-radius:var(--r-md);border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));box-shadow:0 8px 24px -6px rgba(125,196,100,.6),var(--lg-rim);display:flex;align-items:center;justify-content:center;gap:8px}
+.core-bk-bookbtn.dim{opacity:.5}
+.tfit{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:var(--basil);background:var(--basil-wash);white-space:nowrap}
+.tfit.rec{color:var(--brand-bright);background:rgba(232,107,62,.25)}
+.tfit.gone{color:var(--ink-3);background:var(--panel-2)}
+.sk-note{margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.55}
+.sk-note .p{color:var(--basil)}.sk-note .m{color:var(--amber)}
+.wf-plan{position:relative;height:250px;border:1px solid var(--line);border-radius:12px;background:repeating-linear-gradient(0deg,transparent 0 29px,rgba(255,255,255,.02) 29px 30px),repeating-linear-gradient(90deg,transparent 0 29px,rgba(255,255,255,.02) 29px 30px),var(--panel-2);overflow:hidden}
+.wf-t{position:absolute;border:1px solid var(--line-2);background:var(--panel-3);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-family:var(--mono);gap:1px}
+.wf-t .tn{font-size:13px;font-weight:700;color:var(--ink)}
+.wf-t .tc{font-size:8px;color:var(--ink-3)}
+.wf-t.free{border-color:rgba(125,196,100,.5)}
+.wf-t.free .tn{color:var(--basil)}
+.wf-t.gone{background:var(--danger-wash);border-color:rgba(255,90,92,.45);opacity:.75;cursor:not-allowed}
+.wf-t.gone .tn{color:var(--danger)}
+.wf-t.rec{background:var(--brand-wash);box-shadow:0 0 0 1px var(--brand),0 0 20px -4px var(--brand)}
+.wf-t.rec .tn{color:var(--brand-bright)}
+.wf-t.on{box-shadow:0 0 0 2px var(--brand-bright)}
+.wf-zone{position:absolute;font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);pointer-events:none}
+.wf-div{position:absolute;background:var(--line);pointer-events:none}
+.wf-leg{display:flex;gap:12px;font-family:var(--mono);font-size:9px;color:var(--ink-3)}
+.wf-leg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:middle}
+</style></head><body class="core" data-skin="liquid-glass" data-theme="dark"><div class="wrap">
+<p class="sk-ey">Where · redesign 03</p><h1 class="sk-h1">Floor-plan picker</h1>
+<p class="sk-lede">Tables laid out <b>spatially, like the actual room</b> — tinted green (free), red (taken), ember (recommended). Tap the table you can see. Matches how staff picture the floor; no list to read or scroll.</p>
+<section class="core-book-pane">
+  <div class="core-book-panelab"><span>Where</span><span class="mut">the room · live</span></div>
+  <div class="wf-plan">
+    <div class="wf-zone" style="left:12px;top:8px">Floor</div>
+    <div class="wf-zone" style="right:12px;top:8px">Window ▤</div>
+    <div class="wf-zone" style="left:12px;bottom:8px">Terrace 🌿</div>
+    <div class="wf-div" style="left:50%;top:10px;bottom:70px;width:1px"></div>
+    <div class="wf-div" style="left:10px;right:10px;bottom:64px;height:1px"></div>
+    <button class="wf-t rec on" style="left:26px;top:34px;width:46px;height:46px"><span class="tn">T1</span><span class="tc">2-top</span></button>
+    <button class="wf-t free" style="left:96px;top:34px;width:46px;height:46px"><span class="tn">T2</span><span class="tc">2-top</span></button>
+    <button class="wf-t" style="left:166px;top:30px;width:70px;height:52px"><span class="tn">T3</span><span class="tc">4-top</span></button>
+    <button class="wf-t gone" style="left:60px;top:104px;width:70px;height:50px"><span class="tn">T9</span><span class="tc">taken</span></button>
+    <button class="wf-t free" style="left:150px;top:110px;width:46px;height:46px"><span class="tn">T11</span><span class="tc">2-top</span></button>
+    <button class="wf-t" style="right:26px;top:34px;width:70px;height:52px"><span class="tn">T4</span><span class="tc">4-top</span></button>
+    <button class="wf-t" style="right:104px;top:34px;width:70px;height:52px"><span class="tn">T5</span><span class="tc">4-top</span></button>
+    <button class="wf-t" style="right:40px;top:104px;width:84px;height:52px"><span class="tn">T6</span><span class="tc">6-top</span></button>
+    <button class="wf-t free" style="left:26px;bottom:14px;width:44px;height:40px"><span class="tn">T7</span><span class="tc">2-top</span></button>
+    <button class="wf-t" style="left:92px;bottom:14px;width:66px;height:40px"><span class="tn">T8</span><span class="tc">4-top</span></button>
+    <button class="wf-t" style="right:40px;bottom:14px;width:84px;height:40px"><span class="tn">T10</span><span class="tc">6-top</span></button>
+  </div>
+  <div class="wf-leg"><span><i style="background:rgba(125,196,100,.5)"></i>free</span><span><i style="background:var(--brand-wash);box-shadow:inset 0 0 0 1px var(--brand)"></i>recommended</span><span><i style="background:var(--danger-wash)"></i>taken</span></div>
+  <button class="core-bk-bookbtn">✓ Book table · 14:45 · T1 · 2</button>
+</section>
+<p class="sk-note"><span class="p">＋ Spatial + instant — pick the table you can literally see; zones/windows are obvious. No scroll.</span> &nbsp; <span class="m">－ Needs real x/y coordinates per table (a one-time floor-plan setup) to be truthful.</span></p>
+</div></body></html>

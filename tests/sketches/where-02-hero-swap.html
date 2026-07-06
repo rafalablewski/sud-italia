@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Where pane — table picker redesign</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+.core{--font-core-display:'Bricolage Grotesque';--font-core-mono:'JetBrains Mono';
+  --display:var(--font-core-display),ui-sans-serif,system-ui,sans-serif;--mono:var(--font-core-mono),ui-monospace,monospace;
+  --on-accent:#2a160b;--on-basil:#0c1a0f;--r-sm:7px;--r-md:10px;--r-lg:14px;--pill:999px;--fast:130ms cubic-bezier(.3,.7,0,1)}
+.core,.core[data-theme="dark"]{--bg:#15110d;--panel:#1f1a14;--panel-2:#28211a;--panel-3:#322a21;--hover:#3a3026;
+  --ink:#f8f1e7;--ink-2:#c9bba9;--ink-3:#908172;--line:rgba(255,247,235,.10);--line-2:rgba(255,247,235,.18);
+  --brand:#e86b3e;--brand-bright:#ff905e;--brand-wash:rgba(232,107,62,.16);--basil:#6fb155;--basil-wash:rgba(111,177,85,.16);
+  --amber:#e8a23c;--amber-wash:rgba(232,162,60,.16);--info:#3fa7ce;--info-wash:rgba(63,167,206,.18);--danger:#e5484a;--danger-wash:rgba(229,72,74,.18)}
+.core[data-skin="liquid-glass"]{--bg:#0a0806;--ink:#fbf6ee;--ink-2:#d9cbba;--ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075);--panel-2:rgba(255,255,255,.05);--panel-3:rgba(255,255,255,.11);--hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14);--line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e;--brand-bright:#ff9463;--brand-wash:rgba(232,107,62,.18);--basil:#7dc464;--basil-wash:rgba(125,196,100,.18);
+  --amber:#f0ad46;--amber-wash:rgba(240,173,70,.18);--info:#54bce0;--info-wash:rgba(84,188,224,.2);--danger:#ff5a5c;--danger-wash:rgba(255,90,92,.2);
+  --lg-blur:blur(22px) saturate(175%);--lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-sheen:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 30%,transparent 44%);
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);--lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+  background:radial-gradient(70% 55% at 10% 4%,rgba(232,107,62,.34),transparent 62%),radial-gradient(65% 60% at 92% 96%,rgba(84,188,224,.27),transparent 62%),radial-gradient(55% 45% at 80% 12%,rgba(240,173,70,.22),transparent 58%),radial-gradient(60% 55% at 20% 92%,rgba(125,196,100,.18),transparent 60%),radial-gradient(95% 80% at 50% 42%,rgba(232,107,62,.11),transparent 72%),var(--bg);background-attachment:fixed}
+*{box-sizing:border-box}
+body.core{display:block;min-height:100vh;margin:0;color:var(--ink);font-family:var(--mono);padding:34px 20px 70px}
+.wrap{max-width:620px;margin:0 auto}
+.sk-ey{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-bright);margin:0 0 6px}
+.sk-h1{font-family:var(--display);font-size:21px;font-weight:700;margin:0 0 5px}
+.sk-lede{color:var(--ink-3);font-size:12.5px;line-height:1.5;margin:0 0 22px}
+.sk-lede b{color:var(--ink-2)}
+/* real Core "Where" pane shell */
+.core-book-pane{background:var(--lg-sheen),var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float),var(--lg-rim);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:12px}
+.core-book-panelab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.core-book-panelab .mut{color:var(--ink-3);letter-spacing:.04em;font-size:9px}
+.core-bk-bookbtn{height:44px;width:100%;border-radius:var(--r-md);border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));box-shadow:0 8px 24px -6px rgba(125,196,100,.6),var(--lg-rim);display:flex;align-items:center;justify-content:center;gap:8px}
+.core-bk-bookbtn.dim{opacity:.5}
+.tfit{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:var(--basil);background:var(--basil-wash);white-space:nowrap}
+.tfit.rec{color:var(--brand-bright);background:rgba(232,107,62,.25)}
+.tfit.gone{color:var(--ink-3);background:var(--panel-2)}
+.sk-note{margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.55}
+.sk-note .p{color:var(--basil)}.sk-note .m{color:var(--amber)}
+.wh-hero{border:1px solid var(--brand);background:linear-gradient(180deg,rgba(232,107,62,.18),var(--panel-2));border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 0 22px -8px var(--brand)}
+.wh-hero .big{font-family:var(--display);font-size:30px;font-weight:700;line-height:1;color:var(--ink)}
+.wh-hero .meta{display:flex;flex-direction:column;gap:3px}
+.wh-hero .meta .l{font-size:13.5px;color:var(--ink);font-weight:600}
+.wh-hero .meta .s{font-family:var(--mono);font-size:10px;color:var(--brand-bright)}
+.wh-book{margin-left:auto;height:44px;padding:0 20px;border:0;border-radius:var(--pill);font-family:var(--display);font-weight:700;font-size:14px;color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));box-shadow:0 8px 20px -6px rgba(125,196,100,.6);cursor:pointer;white-space:nowrap}
+.wh-altlab{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin:2px 0 0}
+.wh-alt{display:flex;flex-wrap:wrap;gap:7px}
+.wh-chip{position:relative;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:8px 11px;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-width:82px}
+.wh-chip .tn{font-family:var(--mono);font-size:14px;font-weight:700}
+.wh-chip .tc{font-family:var(--mono);font-size:9px;color:var(--ink-3)}
+.wh-chip:hover{background:var(--panel-3)}
+.wh-chip.gone{opacity:.45;cursor:not-allowed}
+</style></head><body class="core" data-skin="liquid-glass" data-theme="dark"><div class="wrap">
+<p class="sk-ey">Where · redesign 02</p><h1 class="sk-h1">Recommended hero + swap</h1>
+<p class="sk-lede">The engine's best table is a <b>big hero card with the Book button right on it</b> — the routine booking is <b>one tap, zero scroll</b>. Alternatives sit as small chips underneath; tapping one swaps it into the hero.</p>
+<section class="core-book-pane">
+  <div class="core-book-panelab"><span>Where</span><span class="mut">best fit for 2</span></div>
+  <div class="wh-hero">
+    <span class="big">T1</span>
+    <div class="meta"><span class="l">2-top · Floor</span><span class="s">✨ score 92 · frees 16:30 · Kowalski's usual</span></div>
+    <button class="wh-book">Book T1 →</button>
+  </div>
+  <p class="wh-altlab">or choose another</p>
+  <div class="wh-alt">
+    <button class="wh-chip"><span class="tn">T2</span><span class="tc">2-top · Floor</span></button>
+    <button class="wh-chip"><span class="tn">T7</span><span class="tc">2-top · Terrace</span></button>
+    <button class="wh-chip"><span class="tn">T11</span><span class="tc">2-top · Floor</span></button>
+    <button class="wh-chip"><span class="tn">T3</span><span class="tc">4-top · +2</span></button>
+    <button class="wh-chip"><span class="tn">T4</span><span class="tc">4-top · +2</span></button>
+    <button class="wh-chip"><span class="tn">T8</span><span class="tc">4-top · +2</span></button>
+    <button class="wh-chip gone"><span class="tn">T9</span><span class="tc">booked</span></button>
+    <button class="wh-chip"><span class="tn">T6</span><span class="tc">6-top · +4</span></button>
+  </div>
+</section>
+<p class="sk-note"><span class="p">＋ Fastest possible booking — the 90% case is one tap, no scroll ever. Alternatives one tap away.</span> &nbsp; <span class="m">－ Non-recommended tables get less detail until swapped in.</span></p>
+</div></body></html>
