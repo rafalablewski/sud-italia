@@ -554,11 +554,14 @@ export function computePremisesInvestment(
     const rentDeposit1 = rentScn.terminalAssetGrosze;
 
     // Assemble a blended row from N rented units + a lump grown at `investRate`.
+    // `investedTerminalOverride` lets a strategy supply a custom terminal value
+    // for the deployed capital (e.g. a bond whose coupons are swept elsewhere).
     const build = (
       key: string, label: string, detail: string,
       units: number, investPrincipal: number, investRate: number,
+      investedTerminalOverride?: number,
     ): PremisesBlended => {
-      const investedTerminal = Math.round(investPrincipal * Math.pow(1 + investRate, horizonYears));
+      const investedTerminal = investedTerminalOverride ?? Math.round(investPrincipal * Math.pow(1 + investRate, horizonYears));
       const restaurantWealth = units * rentWealth1;
       const terminalWealth = restaurantWealth + investedTerminal;
       // Combined stream: outlay the full capital, collect every unit's monthly
@@ -593,10 +596,23 @@ export function computePremisesInvestment(
     const extraUnits = perUnitCapital > 0 ? Math.floor(freed / perUnitCapital) : 0;
     const reserve = freed - extraUnits * perUnitCapital;
 
+    // Bond-only, realistic: a 10y bond bought at par pays a coupon TWICE a year;
+    // each coupon is swept into the S&P (not compounded back into the bond), and
+    // the principal returns at face value at maturity. So terminal = principal +
+    // Σ coupons each grown in the S&P from its pay date to the horizon.
+    const couponsPerYear = 2;
+    const couponPerPayment = (totalCapital * (rates.bond / 100)) / couponsPerYear;
+    let couponPot = 0;
+    for (let k = 1; k <= couponsPerYear * horizonYears; k++) {
+      const yearsRemaining = horizonYears - k / couponsPerYear;
+      couponPot += couponPerPayment * Math.pow(1 + rates.sp500 / 100, yearsRemaining);
+    }
+    const bondOnlyTerminal = Math.round(totalCapital + couponPot);
+
     blended.push(
       // Pure-passive baselines — no restaurant at all, the whole cheque into one
       // instrument. The floor every restaurant strategy is measured against.
-      build("bond-only", "Bond only — no restaurant", `full ${zl(totalCapital)} → 10y bond @ ${rates.bond.toFixed(0)}%, no restaurant`, 0, totalCapital, rates.bond / 100),
+      build("bond-only", "Bond only — no restaurant", `full ${zl(totalCapital)} → 10y bond @ ${rates.bond.toFixed(0)}%; coupons paid 2×/yr, reinvested in the S&P`, 0, totalCapital, rates.bond / 100, bondOnlyTerminal),
       build("sp500-only", "S&P 500 only — no restaurant", `full ${zl(totalCapital)} → S&P today @ ${rates.sp500.toFixed(0)}%, no restaurant`, 0, totalCapital, rates.sp500 / 100),
       // Rent + deploy the freed capital.
       build("sp500", "Rent + S&P 500", `freed ${zl(freed)} → S&P @ ${rates.sp500.toFixed(0)}%`, 1, freed, rates.sp500 / 100),

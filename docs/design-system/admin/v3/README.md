@@ -1442,7 +1442,8 @@ auth canvas's signature lighting and the sign-in lockup:
   set: `computePremisesInvestment` returns `blended: PremisesBlended[]` — seven
   strategies all deploying the cash-buy's full capital, **ranked by 10-yr total
   wealth**. Two pure-passive baselines (skip the restaurant: whole cheque into a
-  10y bond, or into the S&P today) sit at the floor; five rent-and-deploy plays
+  10y bond — coupons paid 2×/yr swept into the S&P, principal back at par via a
+  per-coupon `investedTerminalOverride` — or into the S&P today) sit at the floor; five rent-and-deploy plays
   put rent's small restaurant outlay + the freed remainder into the S&P / a bond /
   the Nasdaq-100 / a 60-40 portfolio / **more rented units** (replicate the unit
   economics per extra site — flagged as an upside ceiling, before fleet
