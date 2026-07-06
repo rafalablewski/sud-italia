@@ -413,7 +413,17 @@
 .core .core-bk-trust .tr-k { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
 
 /* ── Table signals — the score, laid open (explainability) ──────────────────── */
-.core .core-bk-signals { margin-top: 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
+/* Collapsed summary — one tap opens the full `.core-bk-signals` breakdown, so
+   the score never adds height between the table card grid and Book. */
+.core .core-bk-whytoggle { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; cursor: pointer; font-family: var(--mono); padding: 8px 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); }
+.core .core-bk-whytoggle:hover { background: var(--panel-3); color: var(--ink); }
+.core .core-bk-whytoggle.on { border-color: var(--line-2); }
+.core .core-bk-whytoggle .wt-t { font-size: 11px; font-weight: 600; color: var(--ink); }
+.core .core-bk-whytoggle .wt-shadow { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--on-accent); background: var(--amber); border-radius: 4px; padding: 1px 5px; }
+.core .core-bk-whytoggle .wt-score { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--brand-bright); }
+.core .core-bk-whytoggle .wt-score small { font-size: 9px; color: var(--ink-3); }
+.core .core-bk-whytoggle .wt-chev { font-size: 10px; color: var(--ink-3); }
+.core .core-bk-signals { margin-top: 8px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
 .core .core-bk-signals .sg-head { display: flex; align-items: baseline; gap: 8px; }
 .core .core-bk-signals .sg-t { font-size: 12px; font-weight: 600; color: var(--ink); }
 .core .core-bk-signals .sg-score { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--brand-bright); }

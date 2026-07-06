@@ -99,6 +99,9 @@ export function CoreBook({
   const [slotId, setSlotId] = useState<string | null>(null);
   const [partyN, setPartyN] = useState(2);
   const [tableId, setTableId] = useState<string | null>(null);
+  // "Why this table" signals panel is collapsed by default (a tap reveals it),
+  // so the score breakdown never adds height between the card grid and Book.
+  const [showWhy, setShowWhy] = useState(false);
   // A selected table-join (combine several tables for a big party). Picking a
   // single table clears it; picking a join sets tableId to its primary.
   const [joinSel, setJoinSel] = useState<JoinSuggestion | null>(null);
@@ -1000,14 +1003,23 @@ export function CoreBook({
               )}
               {/* Signals — the engine's score, laid open. Answers "why this
                   table?" with the weighted contribution of each signal + the
-                  human reasons, so the pick is never a black box. */}
+                  human reasons, so the pick is never a black box. Collapsed
+                  behind a tap so it never pushes Book down the pane. */}
               {shownSug && shownSug.ok && (
+                <>
+                  <button
+                    type="button"
+                    className={`core-bk-whytoggle${showWhy ? " on" : ""}`}
+                    onClick={() => setShowWhy((v) => !v)}
+                    aria-expanded={showWhy}
+                  >
+                    <span className="wt-t">Why {tLabel(shownSug.number)}?</span>
+                    {policy?.shadowMode && <span className="wt-shadow" title="Advisory only — shadow mode is on">shadow</span>}
+                    <span className="wt-score">{shownSug.score}<small>/100</small></span>
+                    <span className="wt-chev" aria-hidden>{showWhy ? "▾" : "▸"}</span>
+                  </button>
+                {showWhy && (
                 <div className="core-bk-signals">
-                  <div className="sg-head">
-                    <span className="sg-t">Why {tLabel(shownSug.number)}</span>
-                    <span className="sg-score">{shownSug.score}<small>/100</small></span>
-                    {policy?.shadowMode && <span className="sg-shadow" title="Advisory only — shadow mode is on">shadow</span>}
-                  </div>
                   <div className="sg-bars">
                     {([
                       ["fit", shownSug.breakdown.fit],
@@ -1035,6 +1047,8 @@ export function CoreBook({
                     <div className="sg-reasons">{shownSug.reasons.map((r, i) => <span key={i} className="sg-reason">{r}</span>)}</div>
                   )}
                 </div>
+                )}
+                </>
               )}
             </div>
 

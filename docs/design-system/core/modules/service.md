@@ -223,12 +223,15 @@ Excluded tables dim. (The walk-in seating dialog keeps the compact vertical
 — VIP standing from spend/visits/loyalty, usual table + zone from reservation
 history) and feeds it into the engine's `guest` signal, so a regular is nudged
 toward their usual table/zone. Below the
-picker a **signals panel** (`.core-bk-signals`) lays the score open for the
-chosen (or recommended) table: the weighted contribution of each of the **six**
-signals as a labelled bar (`.sg-bar` — fit/runway/guest/pacing/yield/**section**,
-each colour-coded), the 0–100 total, a **facts** row (`.sg-facts` — confidence %,
-expected turn ±band, and the predicted **frees-at** time), the `reasons`, and a
-**shadow** badge when shadow mode is on — so a pick is never a black box. Before a slot is picked it falls back to a plain
+grid a collapsed **`.core-bk-whytoggle`** ("Why {table}? · {score}/100 ▸")
+reveals on tap the **signals panel** (`.core-bk-signals`) that lays the score
+open for the chosen (or recommended) table — collapsed by default so the
+breakdown never pushes Book down the pane. Expanded, it shows the weighted
+contribution of each of the **six** signals as a labelled bar (`.sg-bar` —
+fit/runway/guest/pacing/yield/**section**, each colour-coded), the 0–100 total, a
+**facts** row (`.sg-facts` — confidence %, expected turn ±band, and the predicted
+**frees-at** time), the `reasons`, and a **shadow** badge on the toggle when
+shadow mode is on — so a pick is never a black box. Before a slot is picked it falls back to a plain
 capacity check. A **Guest needs** chip row (`.core-bk-needs` — accessible ·
 high-chair · step-free) hard-filters the picker to tables that offer every
 required feature (tables carry `features`, edited in the Tables table dialog's
