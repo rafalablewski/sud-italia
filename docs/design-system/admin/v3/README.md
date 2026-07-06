@@ -1389,5 +1389,34 @@ auth canvas's signature lighting and the sign-in lockup:
   per channel, and a **Fleet economics** card (shown at >1 unit) gives fleet
   revenue/EBITDA, avg EBITDA per unit, HQ absorption and a per-unit table. With
   this the v3 Calculator is at functional parity with the v2 `AdminSimulation`.
+  **Part 3t shipped — premises: rent / mortgage / buy + ROI-vs-markets:** the
+  **Premises** card's two-way *Rent / Buy* toggle became a three-way **Rent ·
+  Mortgage · Buy (cash)** segmented control. `SimulationPremises.mode` widened to
+  `"rent" | "mortgage" | "buy"`: *mortgage* is the old financed purchase (down
+  payment + loan), *buy* is an all-cash purchase (loan 0, no mortgage
+  interest, whole price upfront). `computePremises` folds both owned modes'
+  building depreciation + property tax + upkeep but only mortgage's interest;
+  `applyPremises` keys off `mode !== "rent"`. The buy/mortgage input set is now
+  gated — down payment / rate / term show only for *mortgage* — and a
+  **Appreciation %/yr** field (`propertyAppreciationPct`) was added to both owned
+  modes. A new **Premises ROI vs markets** output card (below Investor returns)
+  answers "is it viable to run this vs invest the capital?": `computePremisesInvestment`
+  re-runs the full P&L for **all three** modes (`applyPremises` per mode → the
+  same assumptions/weather fold as the headline → `computeScenario`), derives each
+  mode's free cash flow (net profit + non-cash depreciation − mortgage principal),
+  terminal equity (appreciated price − remaining loan, or the refundable deposit
+  for rent) and an annualised return (IRR of the `[−capital, cashflows…, +terminal]`
+  stream), then scores each against the **S&P 500**, **Nasdaq-100** and a **5%
+  bond** over a configurable horizon (new `investHorizonYears` / `sp500RatePct` /
+  `nasdaq100RatePct` / `bondRatePct` fields, edited inline on the card). Each
+  benchmark compounds the same upfront capital and sweeps the business's cash flow
+  into that instrument so the green/red **edge** is like-for-like. Three scenario
+  cards reuse the `av3-scn` grid (the live mode gets the `live` badge, a
+  loss-making mode a `bad` badge) with a five-section ⓘ (Rule #12). The Investor-
+  returns principal-netting and the detailed-P&L building-deprec./interest rows
+  switched from `mode === "buy"` to the mortgage/owned check accordingly. Store
+  defaults + `hydratePremises` carry the new fields (appreciation 4%, horizon 10y,
+  10/13/5% benchmarks) and accept the `mortgage` mode. `src/lib/simulation-engine.ts`,
+  `src/admin-v3/CalculatorV3.tsx`, `src/data/types.ts`, `src/lib/store.ts`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

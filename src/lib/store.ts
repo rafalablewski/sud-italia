@@ -12846,7 +12846,13 @@ export function defaultSimulationScenario(): SimulationScenario {
       propertyTaxAnnualGrosze: 600_000,
       buildingMaintenanceMonthlyGrosze: 150_000,
       buildingDepreciationPct: 0.025,
+      propertyAppreciationPct: 0.04, // ≈ Polish prime-commercial long-run appreciation
       fitoutGrosze: 83_400_000,
+      // Opportunity-cost benchmarks for the "run it vs invest the capital" model.
+      investHorizonYears: 10,
+      sp500RatePct: 0.10,     // S&P 500 long-run nominal total return
+      nasdaq100RatePct: 0.13, // Nasdaq-100 long-run nominal total return
+      bondRatePct: 0.05,      // a 5% fixed-income coupon
     },
     seasonality: {
       // Indoor dining is far less weather-elastic than an outdoor truck.
@@ -13106,7 +13112,7 @@ function hydratePremises(
   legacyRentGrosze?: number,
   legacySetupGrosze?: number,
 ): SimulationPremises {
-  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "buy")) {
+  if (saved && typeof saved === "object" && (saved.mode === "rent" || saved.mode === "mortgage" || saved.mode === "buy")) {
     return {
       mode: saved.mode,
       monthlyRentGrosze: clampNonNeg(saved.monthlyRentGrosze, def.monthlyRentGrosze),
@@ -13119,7 +13125,12 @@ function hydratePremises(
       propertyTaxAnnualGrosze: clampNonNeg(saved.propertyTaxAnnualGrosze, def.propertyTaxAnnualGrosze),
       buildingMaintenanceMonthlyGrosze: clampNonNeg(saved.buildingMaintenanceMonthlyGrosze, def.buildingMaintenanceMonthlyGrosze),
       buildingDepreciationPct: clamp01(saved.buildingDepreciationPct, def.buildingDepreciationPct),
+      propertyAppreciationPct: clamp01(saved.propertyAppreciationPct, def.propertyAppreciationPct),
       fitoutGrosze: clampNonNeg(saved.fitoutGrosze, def.fitoutGrosze),
+      investHorizonYears: clampNonNeg(saved.investHorizonYears, def.investHorizonYears),
+      sp500RatePct: clamp01(saved.sp500RatePct, def.sp500RatePct),
+      nasdaq100RatePct: clamp01(saved.nasdaq100RatePct, def.nasdaq100RatePct),
+      bondRatePct: clamp01(saved.bondRatePct, def.bondRatePct),
     };
   }
   const rent = typeof legacyRentGrosze === "number" && legacyRentGrosze >= 0 ? legacyRentGrosze : def.monthlyRentGrosze;

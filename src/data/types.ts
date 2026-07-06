@@ -1399,14 +1399,17 @@ export interface SimulationWeather {
   eventDayMultiplier: number;
 }
 
-/** The premises / occupancy decision — rent a unit or buy it (with a mortgage).
- *  This is the single source of truth for the restaurant's property costs: the
- *  engine's `applyPremises` derives the monthly rent line, mortgage interest,
- *  building depreciation, property tax + upkeep and the upfront cash from it, so
- *  the Rent-vs-Buy choice flows all the way through the P&L, payback and IRR. */
+/** The premises / occupancy decision — rent a unit, buy it with a mortgage, or
+ *  buy it outright for cash. This is the single source of truth for the
+ *  restaurant's property costs: the engine's `applyPremises` derives the monthly
+ *  rent line, mortgage interest, building depreciation, property tax + upkeep and
+ *  the upfront cash from it, so the Rent / Mortgage / Buy choice flows all the way
+ *  through the P&L, payback and IRR. `computePremisesInvestment` reads it to
+ *  score all three scenarios' 10-year ROI against SP500 / Nasdaq-100 / a bond. */
 export interface SimulationPremises {
-  /** "rent" a leased unit or "buy" it outright / with a mortgage. */
-  mode: "rent" | "buy";
+  /** "rent" a leased unit, "mortgage" a purchase (down payment + loan) or "buy"
+   *  it outright for cash (no loan, no mortgage interest). */
+  mode: "rent" | "mortgage" | "buy";
   // ── Rent path ──────────────────────────────────────────────────────────
   /** Monthly base rent in grosze (feeds the fixed-cost rent line). */
   monthlyRentGrosze: number;
@@ -1414,10 +1417,11 @@ export interface SimulationPremises {
   depositMonths: number;
   /** Monthly service charge / common-area maintenance in grosze (on top of rent). */
   serviceChargeMonthlyGrosze: number;
-  // ── Buy path ───────────────────────────────────────────────────────────
-  /** Purchase price of the premises in grosze. */
+  // ── Buy / mortgage path ────────────────────────────────────────────────
+  /** Purchase price of the premises in grosze (shared by mortgage + cash-buy). */
   purchasePriceGrosze: number;
-  /** Down payment as a fraction of the price (0–1); the rest is mortgaged. */
+  /** Down payment as a fraction of the price (0–1); the rest is mortgaged.
+   *  Ignored in cash-"buy" mode (the whole price is paid upfront, loan = 0). */
   downPaymentPct: number;
   /** Annual mortgage interest rate (0–1). */
   mortgageRatePct: number;
@@ -1431,11 +1435,28 @@ export interface SimulationPremises {
   /** Annual building depreciation rate (0–1) applied to the purchase price —
    *  e.g. 0.025 ≈ a 40-year straight line on the structure. */
   buildingDepreciationPct: number;
+  /** Annual market appreciation of the property (0–1). Used only by the
+   *  investment comparison to value the building you still own at the end of the
+   *  horizon (terminal equity = appreciated price − remaining loan). Independent
+   *  of the accounting `buildingDepreciationPct`, which is a P&L charge. */
+  propertyAppreciationPct: number;
   // ── Shared ─────────────────────────────────────────────────────────────
   /** One-off fit-out / build-out + opening working-capital capex in grosze
    *  (kitchen, oven, interior). Added to deposit / down payment for the total
    *  upfront cash the payback + IRR are computed against. */
   fitoutGrosze: number;
+  // ── Investment comparison (opportunity cost of the capital) ─────────────
+  /** Horizon in years for the "run the business vs invest the capital" model
+   *  (`computePremisesInvestment`). Default 10. */
+  investHorizonYears: number;
+  /** Assumed annual total return of an S&P 500 index fund (0–1) — the capital's
+   *  opportunity cost if parked in US large-caps instead. Default ≈ 0.10. */
+  sp500RatePct: number;
+  /** Assumed annual total return of a Nasdaq-100 index fund (0–1). Default ≈ 0.13. */
+  nasdaq100RatePct: number;
+  /** Assumed annual coupon of a fixed-income bond (0–1) — the risk-free-ish
+   *  alternative. Default 0.05. */
+  bondRatePct: number;
 }
 
 export interface SimulationScenario {

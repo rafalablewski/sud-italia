@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { CURRENCY_META, convertFromGrosze, convertToGrosze, formatPriceInCurrency, type Currency } from "@/lib/currency";
 import { fetchPublicSettings } from "@/lib/public-settings";
-import { applyAnnualWeather, applyAssumptions, applyPremises, computeChannelEconomics, computeFleetEconomics, computePremises, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
+import { applyAnnualWeather, applyAssumptions, applyPremises, computeChannelEconomics, computeFleetEconomics, computePremises, computePremisesInvestment, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationPremises, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonPage, SkeletonRows, Switch } from "./ui";
 
@@ -424,7 +424,10 @@ export function CalculatorV3() {
   // Scenario as the engine should see it: when locked, override cogs/waste with
   // the dish-derived split so the whole P&L reflects the real menu, not a stale
   // stored guess. Everything downstream computes off this.
-  const scnEff = useMemo<SimulationScenario | null>(() => {
+  // Scenario BEFORE the premises fold (rent line still flat, no folded mortgage
+  // interest / building depreciation) — the base `computePremisesInvestment`
+  // re-applies premises to, once per rent/mortgage/buy mode.
+  const basePre = useMemo<SimulationScenario | null>(() => {
     if (!scn) return null;
     const withDish = foodWasteLocked && dishCost ? { ...scn, cogsPct: dishCost.foodCostPct, wastePct: dishCost.wastePct } : scn;
     // Derive each labour line's weekly hours from its roster so the engine cost
@@ -432,11 +435,11 @@ export function CalculatorV3() {
     const oh = scn.openingHours ?? { openHour: 12, closeHour: 23 };
     const openH = Math.floor(oh.openHour);
     const closeH = Math.ceil(oh.closeHour);
-    const withLabor = { ...withDish, labor: withDish.labor.map((l) => ({ ...l, hoursPerWeek: laborHoursPerWeek(l, openH, closeH) })) };
-    // Fold the rent-vs-buy decision into rent / mortgage interest / building
-    // depreciation / property costs + setup cost so the whole P&L reflects it.
-    return applyPremises(withLabor);
+    return { ...withDish, labor: withDish.labor.map((l) => ({ ...l, hoursPerWeek: laborHoursPerWeek(l, openH, closeH) })) };
   }, [scn, foodWasteLocked, dishCost]);
+  // Fold the rent / mortgage / buy decision into rent / mortgage interest /
+  // building depreciation / property costs + setup cost so the whole P&L reflects it.
+  const scnEff = useMemo<SimulationScenario | null>(() => (basePre ? applyPremises(basePre) : null), [basePre]);
   // Derived premises economics for the readout in the Premises card.
   const prem = useMemo(() => (scn?.premises ? computePremises(scn.premises) : null), [scn?.premises]);
 
@@ -454,9 +457,16 @@ export function CalculatorV3() {
   // artificially strong. Rent mode / cash purchase → principal is 0, no change.
   const ret = useMemo(() => {
     if (!scnEff || !c) return null;
-    const principal = scnEff.premises?.mode === "buy" && prem ? prem.mortgagePrincipalMonthlyGrosze : 0;
+    const principal = scnEff.premises?.mode === "mortgage" && prem ? prem.mortgagePrincipalMonthlyGrosze : 0;
     return computeReturns(c.netProfit - principal, scnEff.setupCostGrosze ?? 0, 24);
   }, [scnEff, c, prem]);
+  // Premises ROI vs the markets — all three occupancy scenarios (rent / mortgage
+  // / cash-buy) scored over the horizon against S&P 500 / Nasdaq-100 / a bond.
+  // Re-runs the full P&L per mode through the same fold as the headline.
+  const premInvest = useMemo(
+    () => (basePre?.premises ? computePremisesInvestment(basePre, (s) => applyAnnualWeather(applyAssumptions(s))) : null),
+    [basePre],
+  );
   const projection = useMemo(() => (scnEff ? projectTwelveMonths(applyAssumptions(scnEff)) : []), [scnEff]);
   // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
   // on-site card rate isn't the blended one (matches v2).
@@ -646,11 +656,11 @@ export function CalculatorV3() {
   const fixedChildren = Object.entries(scnEff.fixedCosts)
     .filter(([k, v]) => (v ?? 0) !== 0 && !(useMarketingAsCac && k === "marketing"))
     .map(([k, v]) => ({ label: FIXED_COST_LABELS[k] ?? k, v: -(v as number) }));
-  const isBuy = scn.premises?.mode === "buy";
+  const isOwned = scn.premises?.mode === "mortgage" || scn.premises?.mode === "buy";
   const depIntChildren = [
     { label: "Fit-out depreciation", v: -(scn.depreciationMonthlyGrosze ?? 0) },
-    ...(isBuy && prem ? [{ label: "Building depreciation", v: -prem.buildingDepreciationMonthlyGrosze }] : []),
-    ...(isBuy && prem ? [{ label: "Mortgage interest", v: -prem.mortgageInterestMonthlyGrosze }] : []),
+    ...(isOwned && prem ? [{ label: "Building depreciation", v: -prem.buildingDepreciationMonthlyGrosze }] : []),
+    ...(isOwned && prem ? [{ label: "Mortgage interest", v: -prem.mortgageInterestMonthlyGrosze }] : []),
     { label: "Other interest", v: -(scn.interestMonthlyGrosze ?? 0) },
   ].filter((r) => r.v !== 0);
 
@@ -991,18 +1001,18 @@ export function CalculatorV3() {
           {/* premises — the rent-vs-buy occupancy decision, folded into rent / mortgage / property costs + upfront cash */}
           {scn.premises && (
           <Card>
-            <CardHead title="Premises" description="Rent or buy the unit — occupancy cost, mortgage, property costs, upfront cash + payback all follow from this" actions={
-              <InfoButton title="Premises — rent vs buy"
-                description="The single biggest capital decision behind the unit: lease the space or buy it (cash or mortgage). Everything downstream — the rent line, mortgage interest, building depreciation, property tax + upkeep, the upfront cheque and therefore payback and IRR — is derived from this one toggle."
-                institutional="Occupancy is the third rail of restaurant P&Ls: institutional operators hold it under 8–10% of revenue. Renting keeps the upfront cheque small and the model asset-light (better cash-on-cash, faster payback) but the rent line is a permanent margin drag and exposes you to renewal hikes. Buying converts rent into a mortgage — the interest portion hits the P&L, the principal builds equity (a balance-sheet transfer, not an expense), and you carry property tax, structural upkeep and building depreciation — but you own an appreciating asset and fix your occupancy cost. The gate: only buy if the unit's EBITDA comfortably services the mortgage AND the tied-up down payment still clears your cost of capital versus deploying it into a second site."
-                plain="Rent a prime unit at 22 000 zł/mo: 66 000 zł deposit + 834 000 zł fit-out = ~900 000 zł to open, and 22 000 zł leaves every month forever. Buy the same unit for 3.5 M zł with 30% down: ~1.05 M zł deposit + 834 000 zł fit-out = ~1.9 M zł upfront, then a ~20 000 zł/mo mortgage — of which only the interest (~15 000 zł early on) is a cost, the rest buys the building — plus property tax and a roof-and-façade upkeep line. Bigger cheque, but in year 20 you own a multi-million-złoty asset instead of a stack of rent receipts."
-                tips="Renting: negotiate a rent-free fit-out period and a cap on annual indexation; a lower deposit frees working capital. Buying: a bigger down payment cuts the interest drag but slows payback — model both here and read the Investor returns card. Watch the occupancy ratio KPI; if buying pushes monthly occupancy far below a market rent, the equity build is effectively free margin."
-                methodology="computePremises(): rent mode → occupancy = rent + service charge, upfront = rent×depositMonths + fit-out. Buy mode → level annuity payment M = L·r ÷ (1−(1+r)^−n) on loan L = price×(1−down%), interest levelled as (M·n−L)÷n, building depreciation = price×rate÷12, upfront = down payment + fit-out. applyPremises() folds these into fixedCosts.rent, interest, depreciation and setupCostGrosze so the whole engine sees them. src/lib/simulation-engine.ts." />
+            <CardHead title="Premises" description="Rent, mortgage or buy the unit — occupancy cost, mortgage, property costs, upfront cash + payback all follow from this" actions={
+              <InfoButton title="Premises — rent vs mortgage vs buy"
+                description="The single biggest capital decision behind the unit: lease the space, buy it with a mortgage, or buy it outright for cash. Everything downstream — the rent line, mortgage interest, building depreciation, property tax + upkeep, the upfront cheque and therefore payback and IRR — is derived from this one toggle."
+                institutional="Occupancy is the third rail of restaurant P&Ls: institutional operators hold it under 8–10% of revenue. Renting keeps the upfront cheque small and the model asset-light (better cash-on-cash, faster payback) but the rent line is a permanent margin drag and exposes you to renewal hikes. A mortgage converts rent into debt service — the interest portion hits the P&L, the principal builds equity (a balance-sheet transfer, not an expense), and you carry property tax, structural upkeep and building depreciation — but you own an appreciating asset and fix your occupancy cost. Buying for cash removes the interest drag entirely and maximises P&L margin, but ties up the most capital day one, so the opportunity-cost hurdle (S&P/Nasdaq/bond) is highest. The gate: only own if the unit's EBITDA comfortably clears the alternative return on the capital you'd sink into the building."
+                plain="Rent a prime unit at 22 000 zł/mo: 66 000 zł deposit + 834 000 zł fit-out = ~900 000 zł to open, and 22 000 zł leaves every month forever. Mortgage the same 3.5 M zł unit at 30% down: ~1.05 M zł deposit + fit-out = ~1.9 M zł upfront, then a ~20 000 zł/mo payment — only the interest (~15 000 zł early on) is a cost, the rest buys the building. Buy it outright: ~4.3 M zł upfront and no mortgage line at all — your margin is the fattest of the three, but that 4.3 M zł could have been compounding in an index instead. The ROI-vs-markets card scores all three."
+                tips="Renting: negotiate a rent-free fit-out period and a cap on annual indexation; a lower deposit frees working capital. Mortgage: a bigger down payment cuts the interest drag but slows payback and raises the opportunity cost. Cash-buy: only if the unit's return still beats the S&P/Nasdaq/bond on that much idle capital. Read the ‘Premises ROI vs markets’ card below — it re-runs the whole P&L for each mode."
+                methodology="computePremises(): rent → occupancy = rent + service, upfront = rent×depositMonths + fit-out. Mortgage → level annuity M = L·r ÷ (1−(1+r)^−n) on loan L = price×(1−down%), interest levelled as (M·n−L)÷n. Buy → loan 0, whole price upfront, no interest. Both owned modes: building depreciation = price×rate÷12, property tax + upkeep on the P&L. applyPremises() folds these into fixedCosts.rent, interest, depreciation and setupCostGrosze. src/lib/simulation-engine.ts." />
             } />
             <CardBody>
               <div className="av3-chiprow" role="tablist" style={{ marginBottom: 12 }}>
-                {(["rent", "buy"] as const).map((m) => (
-                  <button key={m} type="button" role="tab" aria-selected={scn.premises!.mode === m} className={`av3-chip ${scn.premises!.mode === m ? "is-active" : ""}`} onClick={() => patchPremises({ mode: m })}>{m === "rent" ? "Rent" : "Buy / mortgage"}</button>
+                {(["rent", "mortgage", "buy"] as const).map((m) => (
+                  <button key={m} type="button" role="tab" aria-selected={scn.premises!.mode === m} className={`av3-chip ${scn.premises!.mode === m ? "is-active" : ""}`} onClick={() => patchPremises({ mode: m })}>{m === "rent" ? "Rent" : m === "mortgage" ? "Mortgage" : "Buy (cash)"}</button>
                 ))}
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1013,25 +1023,30 @@ export function CalculatorV3() {
                   <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
                 </> : <>
                   <Z label="Purchase price" grosze={scn.premises.purchasePriceGrosze} onChange={(g) => patchPremises({ purchasePriceGrosze: g })} w={140} />
-                  <P label="Down payment %" frac={scn.premises.downPaymentPct} onChange={(f) => patchPremises({ downPaymentPct: f })} w={130} />
-                  <P label="Mortgage rate %/yr" frac={scn.premises.mortgageRatePct} onChange={(f) => patchPremises({ mortgageRatePct: f })} w={150} />
-                  <N label="Term (years)" value={scn.premises.mortgageTermYears} onChange={(n) => patchPremises({ mortgageTermYears: n })} w={110} />
+                  {scn.premises.mode === "mortgage" && <>
+                    <P label="Down payment %" frac={scn.premises.downPaymentPct} onChange={(f) => patchPremises({ downPaymentPct: f })} w={130} />
+                    <P label="Mortgage rate %/yr" frac={scn.premises.mortgageRatePct} onChange={(f) => patchPremises({ mortgageRatePct: f })} w={150} />
+                    <N label="Term (years)" value={scn.premises.mortgageTermYears} onChange={(n) => patchPremises({ mortgageTermYears: n })} w={110} />
+                  </>}
                   <Z label="Property tax / yr" grosze={scn.premises.propertyTaxAnnualGrosze} onChange={(g) => patchPremises({ propertyTaxAnnualGrosze: g })} w={130} />
                   <Z label="Building upkeep / mo" grosze={scn.premises.buildingMaintenanceMonthlyGrosze} onChange={(g) => patchPremises({ buildingMaintenanceMonthlyGrosze: g })} w={150} />
                   <P label="Bldg deprec. %/yr" frac={scn.premises.buildingDepreciationPct} onChange={(f) => patchPremises({ buildingDepreciationPct: f })} w={140} />
+                  <P label="Appreciation %/yr" frac={scn.premises.propertyAppreciationPct} onChange={(f) => patchPremises({ propertyAppreciationPct: f })} w={140} />
                   <Z label="Fit-out capex" grosze={scn.premises.fitoutGrosze} onChange={(g) => patchPremises({ fitoutGrosze: g })} w={130} />
                 </>}
               </div>
               {prem && (
                 <div className="av3-od-grid" style={{ marginTop: 12 }}>
-                  <div className="av3-od-field" title={scn.premises.mode === "buy" ? "Cash that leaves your account each month (mortgage P&I + property tax + upkeep). The P&L only expenses the interest portion — principal builds equity, so it's netted from the cash-flow returns but not from EBITDA." : "Rent + service charge — the full monthly occupancy cost, all of which hits the P&L."}><div className="k">Cash outlay / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
-                  {scn.premises.mode === "buy" && <>
+                  <div className="av3-od-field" title={scn.premises.mode === "rent" ? "Rent + service charge — the full monthly occupancy cost, all of which hits the P&L." : "Cash that leaves your account each month (mortgage P&I + property tax + upkeep, or — cash-buy — just tax + upkeep). The P&L only expenses the interest portion — principal builds equity, so it's netted from the cash-flow returns but not from EBITDA."}><div className="k">Cash outlay / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.monthlyOccupancyGrosze)}</div></div>
+                  {scn.premises.mode === "mortgage" && <>
                     <div className="av3-od-field"><div className="k">Mortgage P&amp;I / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePaymentGrosze)}</div></div>
                     <div className="av3-od-field" title="Hits the P&L (the only mortgage cost that reduces net profit)."><div className="k">— interest / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgageInterestMonthlyGrosze)}</div></div>
                     <div className="av3-od-field" title="Cash out, but builds equity — not a P&L cost. Netted from the cash-flow investor returns."><div className="k">— principal (equity) / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.mortgagePrincipalMonthlyGrosze)}</div></div>
-                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.buildingDepreciationMonthlyGrosze)}</div></div>
                     <div className="av3-od-field"><div className="k">Loan amount</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.loanAmountGrosze)}</div></div>
                   </>}
+                  {scn.premises.mode !== "rent" && (
+                    <div className="av3-od-field"><div className="k">Building deprec. / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.buildingDepreciationMonthlyGrosze)}</div></div>
+                  )}
                   <div className="av3-od-field"><div className="k">Upfront cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{money(prem.upfrontCashGrosze)}</div></div>
                 </div>
               )}
@@ -1278,6 +1293,71 @@ export function CalculatorV3() {
                   })}
                 </div>
                 <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 4, fontFamily: "var(--av3-mono)" }}>cumulative cash · mo 1 → 24</div>
+              </CardBody>
+            </Card>
+          )}
+
+          {premInvest && (
+            <Card>
+              <CardHead title="Premises ROI vs markets" description={`Run the unit vs invest the capital — each occupancy scenario over ${premInvest.horizonYears} yr, scored against the S&P 500, Nasdaq-100 and a bond`} actions={
+                <InfoButton title="Premises ROI vs markets"
+                  description="For each occupancy scenario (rent · mortgage · cash-buy) this answers the owner's real question: is running the restaurant a better use of the upfront capital than simply investing it in the S&P 500, the Nasdaq-100 or a 5% bond over the horizon?"
+                  institutional="This is the opportunity-cost gate every disciplined investor applies before sinking capital into an operating business. The relevant hurdle is not zero — it is the risk-adjusted return of liquid alternatives. Historically the S&P 500 has compounded ≈10%/yr nominal and the Nasdaq-100 ≈13%, so an illiquid, operationally-intensive single restaurant should clear a meaningful premium over those to compensate for its concentration and execution risk; merely beating the 5% bond is table stakes. The gate: the scenario's annualised return (IRR of the full cash-flow stream including the terminal building equity) must beat your chosen benchmark, and the more capital a mode ties up (cash-buy > mortgage > rent), the higher the bar it must clear because more money is exposed to that opportunity cost."
+                  plain="Say renting needs ~900 000 zł upfront and throws off ~40 000 zł/mo — that's a high annualised return because little capital is tied up. Buying the building for cash needs ~4.3 M zł upfront: the monthly margin is fatter (no rent, no interest) and you own an appreciating asset at the end, but that 4.3 M zł would have grown to ~11 M zł in the S&P 500 over 10 years untouched — so the cash-buy has to work hard to justify itself. The card shows, per scenario, what your money becomes running the business versus parked in each market, and flags green when the business wins."
+                  tips="If a mode trails the S&P/Nasdaq, don't sink the capital there: rent instead and deploy the freed cash into a second unit (or the index). Push a losing scenario over the line by lifting net profit (ticket, attach, labour efficiency), negotiating a lower purchase price, or — for the mortgage — a bigger down payment only if it still clears the hurdle. Lower the benchmark rates here if you have a house view that markets will underperform; raise them to stress-test."
+                  methodology="Per mode: re-run the full P&L (applyPremises → computeScenario) for its net profit; free cash flow = net profit + non-cash depreciation − mortgage principal. Business terminal wealth = Σ cash flow + terminal equity (appreciated price − remaining loan, or the refundable deposit for rent). Annualised return = IRR of [−upfront capital, monthly cash flow…, +terminal equity]. Each benchmark compounds the same upfront capital at its rate and sweeps the business's cash flow into that instrument, so the edge is like-for-like. computePremisesInvestment(), src/lib/simulation-engine.ts." />
+              } />
+              <CardBody>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid var(--av3-line)" }}>
+                  <N label="Horizon (yrs)" value={scn.premises?.investHorizonYears ?? 10} onChange={(n) => patchPremises({ investHorizonYears: Math.max(1, Math.round(n)) })} w={110} />
+                  <P label="S&P 500 %/yr" frac={scn.premises?.sp500RatePct ?? 0.1} onChange={(f) => patchPremises({ sp500RatePct: f })} w={120} />
+                  <P label="Nasdaq-100 %/yr" frac={scn.premises?.nasdaq100RatePct ?? 0.13} onChange={(f) => patchPremises({ nasdaq100RatePct: f })} w={130} />
+                  <P label="Bond %/yr" frac={scn.premises?.bondRatePct ?? 0.05} onChange={(f) => patchPremises({ bondRatePct: f })} w={110} />
+                </div>
+                <div className="av3-scn">
+                  {premInvest.scenarios.map((sc) => {
+                    const active = scn.premises?.mode === sc.mode;
+                    const roi = sc.annualizedReturnPct;
+                    const beatsAll = sc.benchmarks.every((b) => b.businessWins);
+                    const beatsSome = sc.benchmarks.some((b) => b.businessWins);
+                    const tone = !sc.viable ? "var(--av3-bad)" : beatsAll ? "var(--av3-ok)" : beatsSome ? "var(--av3-c1)" : "var(--av3-bad)";
+                    return (
+                      <div key={sc.mode} className="av3-scn-card" data-base={active}>
+                        <div className="av3-scn-name">{sc.label}{active && <Badge tone="brand">live</Badge>}{!sc.viable && <Badge tone="bad">loss</Badge>}</div>
+                        <div className="av3-scn-net" style={{ color: tone }}>{roi != null ? `${roi.toFixed(1)}%` : "—"}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /yr ROI</span></div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 3, columnGap: 8, fontSize: 11.5, margin: "8px 0 4px" }}>
+                          <span style={{ color: "var(--av3-muted)" }}>Upfront capital</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.upfrontCapitalGrosze)}</span>
+                          <span style={{ color: "var(--av3-muted)" }}>Net profit / mo</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", color: sc.monthlyNetProfitGrosze >= 0 ? "var(--av3-fg)" : "var(--av3-bad)" }}>{money(sc.monthlyNetProfitGrosze)}</span>
+                          <span style={{ color: "var(--av3-muted)" }}>{premInvest.horizonYears}-yr cash flow</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.totalCashFlowGrosze)}</span>
+                          <span style={{ color: "var(--av3-muted)" }} title="Building equity (appreciated price − remaining loan) or the refundable deposit for rent.">Terminal asset</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{money(sc.terminalAssetGrosze)}</span>
+                          <span style={{ color: "var(--av3-fg)", fontWeight: 600 }}>Total wealth</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right", fontWeight: 600 }}>{money(sc.terminalWealthGrosze)}</span>
+                          <span style={{ color: "var(--av3-muted)" }}>Money multiple</span><span className="mono" style={{ fontFamily: "var(--av3-mono)", textAlign: "right" }}>{sc.moneyMultiple > 0 ? `${sc.moneyMultiple.toFixed(2)}×` : "—"}</span>
+                        </div>
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
+                          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", marginBottom: 5 }}>vs investing the capital</div>
+                          {sc.benchmarks.map((b) => (
+                            <div key={b.key} title={`${b.label}: the ${money(sc.upfrontCapitalGrosze)} would grow to ${money(b.terminalCapitalGrosze)}. Running the unit (cash swept into ${b.label}) ${b.businessWins ? "beats" : "trails"} that by ${money(Math.abs(b.edgeGrosze))}.`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, padding: "2px 0" }}>
+                              <span style={{ color: "var(--av3-muted)" }}>{b.label} <span style={{ color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{b.annualRatePct.toFixed(0)}%</span></span>
+                              <span className="mono" style={{ fontFamily: "var(--av3-mono)", color: b.businessWins ? "var(--av3-ok)" : "var(--av3-bad)" }}>{b.businessWins ? "+" : "−"}{money(Math.abs(b.edgeGrosze))}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 8, fontSize: 11, lineHeight: 1.45, color: tone }}>
+                          {!sc.viable
+                            ? "Loss-making — not viable to run."
+                            : beatsAll
+                              ? "Beats every benchmark — running it wins."
+                              : beatsSome
+                                ? "Beats some benchmarks — marginal; weigh the illiquidity."
+                                : "Trails every market — the capital does better invested."}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 10, lineHeight: 1.5 }}>
+                  Edge = business total wealth (its cash flow swept into that instrument + terminal equity) − the same capital compounded in the instrument. Green = running the restaurant beats parking the capital there; red = the market wins.
+                </div>
               </CardBody>
             </Card>
           )}
