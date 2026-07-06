@@ -3,329 +3,323 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Book · New-reservation layouts — 5 concepts</title>
+<title>Book · New-reservation layouts — 5 concepts (real Core styles)</title>
 <style>
-  :root{
-    --bg:#100e0b; --panel:rgba(255,255,255,.03); --panel-2:rgba(255,255,255,.05);
-    --line:#2a2620; --line-2:#3b352b;
-    --ink:#ece6da; --ink-2:#b6ad9c; --ink-3:#867e6e;
-    --basil:#7dc464; --basil-wash:rgba(125,196,100,.14);
-    --amber:#f0ad46; --amber-wash:rgba(240,173,70,.14);
-    --danger:#e8615a; --danger-wash:rgba(232,97,90,.14);
-    --info:#54bce0; --info-wash:rgba(84,188,224,.13);
-    --brand:#e86b3e; --brand-bright:#f4834f; --brand-wash:rgba(232,107,62,.15);
-    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    --r:11px; --r-sm:7px;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:
-      radial-gradient(1200px 500px at 20% -5%,rgba(232,107,62,.06),transparent 60%),
-      var(--bg);
-    color:var(--ink);font-family:var(--mono);line-height:1.4;padding:34px 22px 80px;}
-  h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0 0 4px}
-  .lede{color:var(--ink-3);font-size:12.5px;max-width:760px;margin:0 0 30px}
-  .lede b{color:var(--ink-2);font-weight:600}
-  .concept{max-width:1080px;margin:0 auto 46px;border:1px solid var(--line);border-radius:16px;
-    background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);overflow:hidden}
-  .chead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--line);
-    background:rgba(255,255,255,.015)}
-  .cnum{font-size:11px;font-weight:700;color:var(--brand-bright);border:1px solid var(--brand);border-radius:99px;
-    padding:2px 9px;letter-spacing:.06em}
-  .ctitle{font-size:15px;font-weight:700}
-  .cwhy{color:var(--ink-3);font-size:11.5px;flex:1;min-width:220px}
-  .cwhy b{color:var(--basil);font-weight:600}
-  .cbody{padding:18px 20px 22px}
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-  /* ---------- shared schematic timeline ---------- */
-  .tl{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
-  .tl-h{display:grid;grid-template-columns:44px repeat(9,1fr);border-bottom:1px solid var(--line);
-    font-size:8.5px;color:var(--ink-3);background:rgba(0,0,0,.25)}
-  .tl-h span{padding:5px 0 5px 5px;border-left:1px solid var(--line)}
-  .tl-h span:first-child{border-left:0}
-  .tl-body{position:relative}
-  .tl-row{display:grid;grid-template-columns:44px repeat(9,1fr);height:26px;border-bottom:1px solid var(--line);position:relative}
-  .tl-row:last-child{border-bottom:0}
-  .tl-row .lbl{font-size:9px;color:var(--ink-2);display:flex;align-items:center;padding-left:7px;
-    border-right:1px solid var(--line);background:rgba(255,255,255,.02)}
-  .tl-row .c{border-left:1px solid var(--line)}
-  .blk{position:absolute;top:3px;bottom:3px;border-radius:5px;font-size:8.5px;display:flex;align-items:center;
-    padding:0 6px;color:var(--ink);white-space:nowrap;overflow:hidden}
-  .blk.seat{background:var(--info-wash);box-shadow:inset 0 0 0 1px rgba(84,188,224,.5)}
-  .blk.pend{background:var(--amber-wash);box-shadow:inset 0 0 0 1px rgba(240,173,70,.5)}
-  .nowline{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--danger);z-index:4}
-  .nowline::before{content:"";position:absolute;top:-3px;left:-3px;width:7px;height:7px;border-radius:50%;background:var(--danger)}
-  .nowline b{position:absolute;top:1px;left:5px;font-size:7.5px;background:var(--danger);color:#fff;padding:0 3px;border-radius:3px;font-weight:700}
+/* ===== REAL Core design tokens (src/app/themes/core/tokens.css) ===== */
+.core{
+  --font-core-display:'Bricolage Grotesque'; --font-core-ui:'Inter'; --font-core-mono:'JetBrains Mono';
+  --display:var(--font-core-display),ui-sans-serif,system-ui,sans-serif;
+  --ui:var(--font-core-ui),ui-sans-serif,system-ui,sans-serif;
+  --mono:var(--font-core-mono),ui-monospace,monospace;
+  --brand-ink:#6e2a12; --on-accent:#2a160b; --on-basil:#0c1a0f; --on-danger:#fff4f0;
+  --r-sm:7px; --r-md:10px; --r-lg:14px; --r-xl:20px; --pill:999px;
+  --fast:130ms cubic-bezier(.3,.7,0,1);
+}
+/* dark defaults */
+.core,.core[data-theme="dark"]{
+  --bg:#15110d; --panel:#1f1a14; --panel-2:#28211a; --panel-3:#322a21; --hover:#3a3026;
+  --ink:#f8f1e7; --ink-2:#c9bba9; --ink-3:#908172;
+  --line:rgba(255,247,235,.10); --line-2:rgba(255,247,235,.18);
+  --brand:#e86b3e; --brand-bright:#ff905e; --brand-wash:rgba(232,107,62,.16);
+  --basil:#6fb155; --basil-wash:rgba(111,177,85,.16);
+  --amber:#e8a23c; --amber-wash:rgba(232,162,60,.16);
+  --info:#3fa7ce; --info-wash:rgba(63,167,206,.18);
+  --danger:#e5484a; --danger-wash:rgba(229,72,74,.18);
+}
+/* ===== REAL "Liquid Glass" skin (src/app/themes/core/skins/liquid-glass.css) ===== */
+.core[data-skin="liquid-glass"],.core[data-skin="liquid-glass"][data-theme="dark"]{
+  --bg:#0a0806; --ink:#fbf6ee; --ink-2:#d9cbba; --ink-3:#9a8b79;
+  --panel:rgba(255,255,255,.075); --panel-2:rgba(255,255,255,.05); --panel-3:rgba(255,255,255,.11); --hover:rgba(255,255,255,.15);
+  --line:rgba(255,247,235,.14); --line-2:rgba(255,247,235,.24);
+  --brand:#e86b3e; --brand-bright:#ff9463; --brand-wash:rgba(232,107,62,.18);
+  --basil:#7dc464; --basil-wash:rgba(125,196,100,.18);
+  --amber:#f0ad46; --amber-wash:rgba(240,173,70,.18);
+  --info:#54bce0; --info-wash:rgba(84,188,224,.2);
+  --danger:#ff5a5c; --danger-wash:rgba(255,90,92,.2);
+  --lg-blur:blur(22px) saturate(175%);
+  --lg-fill:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%,rgba(255,255,255,.02));
+  --lg-rim:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.22);
+  --lg-float:0 18px 50px -14px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.4);
+  background:
+    radial-gradient(70% 55% at 10% 4%,rgba(232,107,62,.34),transparent 62%),
+    radial-gradient(65% 60% at 92% 96%,rgba(84,188,224,.27),transparent 62%),
+    radial-gradient(55% 45% at 80% 12%,rgba(240,173,70,.22),transparent 58%),
+    radial-gradient(60% 55% at 20% 92%,rgba(125,196,100,.18),transparent 60%),
+    radial-gradient(95% 80% at 50% 42%,rgba(232,107,62,.11),transparent 72%),
+    var(--bg);
+  background-attachment:fixed;
+}
 
-  /* ---------- primitives reused across concepts ---------- */
-  .lab{font-size:9.5px;letter-spacing:.12em;color:var(--ink-3);text-transform:uppercase;margin:0 0 7px}
-  .stepper{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line-2);border-radius:99px;background:var(--panel-2)}
-  .stepper button{width:30px;height:30px;border:0;background:transparent;color:var(--ink-2);font-size:15px;cursor:pointer;border-radius:99px}
-  .stepper span{min-width:26px;text-align:center;font-weight:700;font-size:14px}
-  .need{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:99px;
-    padding:6px 12px;font-size:11px;color:var(--ink-2);background:var(--panel-2);cursor:pointer}
-  .need.on{border-color:var(--info);color:var(--info);background:var(--info-wash)}
-  .book{border:0;border-radius:99px;padding:0 18px;height:38px;font-family:var(--mono);font-weight:700;font-size:12px;
-    color:#fff;background:linear-gradient(180deg,var(--brand-bright),var(--brand));cursor:pointer;box-shadow:0 6px 16px -6px var(--brand)}
-  .ghost{border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);border-radius:99px;height:34px;padding:0 14px;font-family:var(--mono);font-size:11px;cursor:pointer}
-  .fits{font-size:8.5px;font-weight:700;letter-spacing:.05em;color:var(--basil);background:var(--basil-wash);border-radius:99px;padding:2px 7px}
-  .rec{font-size:8.5px;font-weight:700;letter-spacing:.05em;color:#fff;background:linear-gradient(180deg,var(--brand-bright),var(--brand));border-radius:99px;padding:2px 8px}
+/* neutralise the app-shell flex so the page scrolls as a document */
+*{box-sizing:border-box}
+body.core{display:block;height:auto;min-height:100vh;margin:0;color:var(--ink);font-family:var(--ui);
+  padding:34px 22px 90px;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 
-  /* slot chip (small) */
-  .schip{border:1px solid var(--line-2);border-radius:8px;background:var(--panel-2);padding:6px 4px;text-align:center;cursor:pointer;min-width:0}
-  .schip .t{font-size:12px;font-weight:700;color:var(--ink)}
-  .schip .n{font-size:8.5px;color:var(--basil)}
-  .schip.on{border-color:var(--brand);background:var(--brand-wash)}
-  .schip.warm .n{color:var(--amber)} .schip.full{opacity:.5} .schip.full .n{color:var(--danger)}
+/* ===== REAL Book component CSS (src/app/themes/core/parity/book.css) ===== */
+.core .core-book-tlpanel{background:var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--lg-float),var(--lg-rim);}
+.core .core-bk-tlscroll{overflow-x:auto}
+.core .core-bk-tlcols{--lblw:48px;--tick:64px;min-width:calc(var(--lblw) + var(--cols,13)*var(--tick))}
+.core .core-bk-hours{display:grid;grid-template-columns:var(--lblw) repeat(var(--cols,13),var(--tick));border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;background:rgba(10,8,6,.35)}
+.core .core-bk-hours .hc{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);padding:6px 0 6px 6px;border-left:1px solid var(--line);text-align:left}
+.core .core-bk-hours .hc:first-child{border-left:0}
+.core .core-bk-hours .hc.hh{color:var(--ink-2)}
+.core .core-bk-tlbody{position:relative}
+.core .core-bk-row{display:grid;grid-template-columns:var(--lblw) repeat(var(--cols,13),var(--tick));position:relative;height:34px;border-bottom:1px solid var(--line)}
+.core .core-bk-row:last-child{border-bottom:0}
+.core .core-bk-row .lbl{font-family:var(--mono);font-size:10px;color:var(--ink-2);display:flex;align-items:center;padding-left:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);position:sticky;left:0;z-index:6}
+.core .core-bk-row .tick{border-left:1px solid var(--line)}
+.core .core-bk-row .tick.hh{border-left-color:var(--line-2)}
+.core .core-bk-blk{position:absolute;top:4px;bottom:4px;border-radius:var(--r-sm);padding:0 8px;display:flex;flex-direction:column;justify-content:center;gap:1px;font-family:var(--mono);overflow:hidden;cursor:grab;z-index:3;box-shadow:var(--lg-rim,inset 0 0 0 1px var(--line-2))}
+.core .core-bk-blk .bn{font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.core .core-bk-blk .bm{font-size:8.5px;color:var(--ink-3);white-space:nowrap}
+.core .core-bk-blk.seated{background:var(--info-wash);box-shadow:inset 0 0 0 1px rgba(84,188,224,.5)}
+.core .core-bk-blk.seated .bm{color:var(--info)}
+.core .core-bk-blk.pending{background:var(--amber-wash);box-shadow:inset 0 0 0 1px rgba(240,173,70,.5)}
+.core .core-bk-blk.pending .bm{color:var(--amber)}
+.core .core-bk-now{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--danger);z-index:5;pointer-events:none}
+.core .core-bk-now::before{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.core .core-bk-now-lbl{position:absolute;top:1px;left:5px;font-family:var(--mono);font-size:8.5px;font-weight:700;line-height:1.3;color:#fff;background:var(--danger);padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 4px -1px rgba(0,0,0,.5)}
 
-  .note{margin-top:12px;font-size:10.5px;color:var(--ink-3)}
-  .note .p{color:var(--basil)} .note .m{color:var(--amber)}
-  .rowflex{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  .divider{height:1px;background:var(--line);margin:16px 0}
-  .tablerow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:11px}
-  .tablerow.rec{border-color:var(--brand);box-shadow:inset 0 0 0 1px rgba(232,107,62,.3)}
-  .tablerow .tn{font-weight:700;font-size:12px;min-width:26px}
-  .tablerow .meta{color:var(--ink-3);flex:1}
-  .scrollx{overflow-x:auto;scrollbar-width:thin}
-  @media(max-width:720px){.cwhy{min-width:100%}}
+.core .core-book-form{padding:0;background:var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--lg-float),var(--lg-rim)}
+.core .core-bk-resvh{flex:none;padding:11px 12px;border-bottom:1px solid var(--line)}
+.core .core-bk-resvh .t{font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink)}
+.core .core-bk-resvh .s{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.core .core-bk-resvb{padding:11px 12px;display:flex;flex-direction:column;gap:12px}
+.core .core-bk-field{display:flex;flex-direction:column}
+.core .core-bk-flab{font-family:var(--mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.core .core-bk-flab .mut{color:var(--ink-3);letter-spacing:.04em}
+.core .core-bk-slotchips{display:flex;flex-wrap:wrap;gap:5px}
+.core .core-bk-slotchip{font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px}
+.core .core-bk-slotchip small{font-size:8px;color:var(--ink-3)}
+.core .core-bk-slotchip.ok{background:var(--basil-wash);color:var(--basil);box-shadow:inset 0 0 0 1px rgba(125,196,100,.4);border-color:transparent}
+.core .core-bk-slotchip.ok small{color:var(--basil)}
+.core .core-bk-slotchip.mid{background:var(--amber-wash);color:var(--amber);box-shadow:inset 0 0 0 1px rgba(240,173,70,.4);border-color:transparent}
+.core .core-bk-slotchip.mid small{color:var(--amber)}
+.core .core-bk-slotchip.warm{background:var(--brand-wash);color:var(--brand-bright);box-shadow:inset 0 0 0 1px rgba(232,107,62,.4);border-color:transparent}
+.core .core-bk-slotchip.warm small{color:var(--brand-bright)}
+.core .core-bk-slotchip.full{color:var(--danger);box-shadow:inset 0 0 0 1px rgba(255,90,92,.4);border-color:transparent;opacity:.6}
+.core .core-bk-slotchip.full small{color:var(--danger)}
+.core .core-bk-slotchip.on{background:var(--brand-wash);color:var(--brand-bright);border-color:transparent;box-shadow:inset 0 0 0 1px rgba(232,107,62,.6),0 0 14px -5px var(--brand)}
+.core .core-bk-slotchip.on small{color:var(--brand-bright)}
+.core .core-bk-partyrow{display:flex;align-items:center;gap:10px}
+.core .core-bk-partyrow .hint{font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+.core .core-covers{display:inline-flex;align-items:center;gap:4px;background:var(--panel-3);border:1px solid var(--line);border-radius:var(--pill);padding:2px}
+.core .core-covers button{width:24px;height:24px;border-radius:50%;color:var(--ink-2);font-size:15px;border:0;background:transparent;cursor:pointer}
+.core .core-covers button:hover{background:var(--hover);color:var(--ink)}
+.core .core-covers .mono{min-width:18px;text-align:center;font-weight:600;font-size:13px;font-family:var(--mono)}
+.core .core-bk-needs{display:flex;flex-wrap:wrap;gap:6px}
+.core .core-bk-need{font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer}
+.core .core-bk-need.on{color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));border-color:transparent}
+.core .core-bk-tpicks{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto}
+.core .core-bk-tpick{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel-2);cursor:pointer;text-align:left;width:100%}
+.core .core-bk-tpick:hover{background:var(--panel-3)}
+.core .core-bk-tpick .tn{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);min-width:30px}
+.core .core-bk-tpick .tc{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);flex:1}
+.core .core-bk-tpick .tfit{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:var(--basil);background:var(--basil-wash)}
+.core .core-bk-tpick.rec{background:var(--brand-wash);box-shadow:inset 0 0 0 1px rgba(232,107,62,.5),0 0 16px -6px var(--brand)}
+.core .core-bk-tpick.rec .tfit{color:var(--brand-bright);background:rgba(232,107,62,.25)}
+.core .core-bk-bookbtn{height:44px;width:100%;border-radius:var(--r-md);border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;color:var(--on-basil);background:linear-gradient(180deg,#93d67c,var(--basil));box-shadow:0 8px 24px -6px rgba(125,196,100,.6),var(--lg-rim,none);display:flex;align-items:center;justify-content:center;gap:8px}
+.core .core-bk-toolbtn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);padding:6px 12px;border-radius:999px;cursor:pointer}
+.core .core-inp{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink);padding:8px 10px;font-family:var(--mono);font-size:12px;width:100%}
+
+/* ===== sketch chrome (sk-*) — page framing only ===== */
+.sk-h1{font-family:var(--display);font-size:22px;font-weight:700;margin:0 0 5px;max-width:1080px;margin-inline:auto}
+.sk-lede{color:var(--ink-3);font-size:13px;max-width:1080px;margin:0 auto 30px;line-height:1.5}
+.sk-lede b{color:var(--ink-2);font-weight:600}
+.sk-concept{max-width:1080px;margin:0 auto 40px;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  background:var(--lg-fill);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-float)}
+.sk-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+.sk-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--brand-bright);border:1px solid rgba(232,107,62,.55);border-radius:99px;padding:2px 9px;letter-spacing:.06em}
+.sk-title{font-family:var(--display);font-size:16px;font-weight:700}
+.sk-why{color:var(--ink-3);font-size:12px;flex:1;min-width:240px;line-height:1.5}
+.sk-why b{color:var(--basil);font-weight:600}
+.sk-body{padding:18px 20px 22px}
+.sk-lab{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--ink-3);text-transform:uppercase;margin:0 0 8px}
+.sk-panel{border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel);padding:12px}
+.sk-note{margin-top:13px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);line-height:1.5}
+.sk-note .p{color:var(--basil)} .sk-note .m{color:var(--amber)}
+.sk-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.sk-div{height:1px;background:var(--line);margin:16px 0}
+.sk-scrollx{overflow-x:auto;scrollbar-width:thin;display:flex;gap:6px;padding-bottom:6px}
+.sk-sel{font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:var(--r-sm);color:var(--ink);padding:9px 11px}
+.sk-mini .core-bk-tpick{min-width:150px;width:auto}
+@media(max-width:760px){.sk-why{min-width:100%}}
 </style>
 </head>
-<body>
+<body class="core" data-skin="liquid-glass" data-theme="dark">
 
-<h1>New-reservation · 5 layout concepts</h1>
-<p class="lede">The current form is a tall right rail (37 slot chips + party + needs + a long table list, stacked). These five move it <b>below the timeline</b> and trade height for width or progressive disclosure. Each shows a schematic timeline on top and the reworked booking UI beneath. Pick one (or mix) and I'll build it for real in <b>CoreBook</b>.</p>
+<h1 class="sk-h1">New-reservation · 5 layout concepts</h1>
+<p class="sk-lede">Rendered with the <b>real Core liquid-glass tokens + the actual <code>core-bk-*</code> component styles</b> (slot chips, blocks, table picks, the green Book button, the now-line). The current form is a tall right rail; these five move it <b>below the timeline</b>, trading height for width or progressive disclosure. Pick one (or a blend) and I'll wire it into <b>CoreBook.tsx</b>.</p>
 
-<!-- ============ CONCEPT 1 — COMMAND BAR ============ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cnum">01</span>
-    <span class="ctitle">Command bar</span>
-    <span class="cwhy">One <b>single horizontal row</b> under the timeline: time → party → needs → table → Book. Zero scrolling, always visible. Most compact; best for fast repeat bookings.</span>
-  </div>
-  <div class="cbody">
-    <div class="tl">
-      <div class="tl-h"><span>T</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></div>
-      <div class="tl-body">
-        <div class="tl-row"><div class="lbl">T1</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk pend" style="left:12.5%;width:16%">Nowak · 2/2</div></div>
-        <div class="tl-row"><div class="lbl">T2</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk seat" style="left:33%;width:20%">Kowalski · 4/4</div></div>
-        <div class="tl-row"><div class="lbl">T3</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div></div>
-        <div class="nowline" style="left:44%"><b>14:37</b></div>
-      </div>
+<!-- 01 COMMAND BAR -->
+<section class="sk-concept">
+  <div class="sk-head"><span class="sk-num">01</span><span class="sk-title">Command bar</span>
+    <span class="sk-why">One <b>horizontal row</b> under the timeline: time → party → needs → table → Book. Nothing scrolls; best for fast repeat bookings.</span></div>
+  <div class="sk-body">
+    <div class="core-book-tlpanel" data-tl="a"></div>
+    <div class="sk-panel" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
+      <div><p class="sk-lab">When</p><select class="sk-sel"><option>14:45 · 13 open</option><option>15:00 · 13 open</option></select></div>
+      <div><p class="sk-lab">Party</p><div class="core-covers"><button>−</button><span class="mono">2</span><button>+</button></div></div>
+      <div><p class="sk-lab">Needs</p><div class="core-bk-needs"><span class="core-bk-need on">♿</span><span class="core-bk-need">🍼</span><span class="core-bk-need">▱</span></div></div>
+      <div style="flex:1;min-width:190px"><p class="sk-lab">Table</p><select class="sk-sel" style="width:100%"><option>✨ T1 · 2-top (recommended)</option><option>T2 · 2-top · fits</option></select></div>
+      <button class="core-bk-bookbtn" style="width:auto;padding:0 20px">Book →</button>
     </div>
-
-    <div style="margin-top:16px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel-2);padding:12px">
-      <div class="rowflex" style="gap:16px">
-        <div>
-          <p class="lab" style="margin-bottom:5px">When</p>
-          <select class="ghost" style="height:38px;min-width:120px"><option>14:45 · 13 open</option><option>15:00 · 13 open</option><option>15:15 · 12 open</option></select>
-        </div>
-        <div>
-          <p class="lab" style="margin-bottom:5px">Party</p>
-          <div class="stepper"><button>−</button><span>2</span><button>+</button></div>
-        </div>
-        <div>
-          <p class="lab" style="margin-bottom:5px">Needs</p>
-          <div class="rowflex" style="gap:6px"><span class="need">♿</span><span class="need">🍼</span><span class="need">▱</span></div>
-        </div>
-        <div style="flex:1;min-width:150px">
-          <p class="lab" style="margin-bottom:5px">Table</p>
-          <select class="ghost" style="height:38px;width:100%"><option>✨ T1 · 2-top (recommended)</option><option>T2 · 2-top · fits</option><option>T3 · 4-top · fits</option></select>
-        </div>
-        <div style="align-self:flex-end"><button class="book" style="height:38px">Book →</button></div>
-      </div>
-    </div>
-    <p class="note"><span class="p">＋ Tiny footprint, everything on one line, nothing scrolls.</span> &nbsp; <span class="m">－ Table picker hidden in a dropdown (less scannable than a list).</span></p>
+    <p class="sk-note"><span class="p">＋ Tiny footprint, one line, nothing scrolls.</span> &nbsp; <span class="m">－ Table hidden in a dropdown (less scannable than a list).</span></p>
   </div>
 </section>
 
-<!-- ============ CONCEPT 2 — THREE-PANE DECK ============ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cnum">02</span>
-    <span class="ctitle">Three-pane deck</span>
-    <span class="cwhy">Below the timeline, three side-by-side panes — <b>When · Who · Where</b>. Wide and short instead of tall; every choice stays visible at once. Best on a landscape iPad / desktop.</span>
-  </div>
-  <div class="cbody">
-    <div class="tl">
-      <div class="tl-h"><span>T</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></div>
-      <div class="tl-body">
-        <div class="tl-row"><div class="lbl">T1</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk pend" style="left:12.5%;width:16%">Nowak</div></div>
-        <div class="tl-row"><div class="lbl">T2</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk seat" style="left:33%;width:20%">Kowalski</div></div>
-        <div class="nowline" style="left:44%"><b>14:37</b></div>
-      </div>
-    </div>
-
-    <div style="margin-top:16px;display:grid;grid-template-columns:1.3fr 1fr 1.2fr;gap:14px">
-      <!-- when -->
-      <div style="border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:12px">
-        <p class="lab">When</p>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:150px;overflow:auto">
-          <div class="schip"><div class="t">14:30</div><div class="n">13/13</div></div>
-          <div class="schip on"><div class="t">14:45</div><div class="n">13/13</div></div>
-          <div class="schip"><div class="t">15:00</div><div class="n">13/13</div></div>
-          <div class="schip warm"><div class="t">15:15</div><div class="n">12/13</div></div>
-          <div class="schip"><div class="t">15:30</div><div class="n">13/13</div></div>
-          <div class="schip"><div class="t">15:45</div><div class="n">13/13</div></div>
-          <div class="schip"><div class="t">16:00</div><div class="n">13/13</div></div>
-          <div class="schip full"><div class="t">16:15</div><div class="n">0/13</div></div>
+<!-- 02 THREE-PANE DECK -->
+<section class="sk-concept">
+  <div class="sk-head"><span class="sk-num">02</span><span class="sk-title">Three-pane deck</span>
+    <span class="sk-why">Below the timeline, three panes — <b>When · Who · Where</b>. Wide-and-short, every choice visible at once. Best on a landscape iPad / desktop.</span></div>
+  <div class="sk-body">
+    <div class="core-book-tlpanel" data-tl="b"></div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1.25fr .95fr 1.2fr;gap:14px">
+      <div class="sk-panel"><p class="sk-lab">When</p>
+        <div class="core-bk-slotchips" style="max-height:150px;overflow:auto">
+          <div class="core-bk-slotchip ok"><span>14:30</span><small>13/13</small></div>
+          <div class="core-bk-slotchip on"><span>14:45</span><small>13/13</small></div>
+          <div class="core-bk-slotchip ok"><span>15:00</span><small>13/13</small></div>
+          <div class="core-bk-slotchip mid"><span>15:15</span><small>9/13</small></div>
+          <div class="core-bk-slotchip ok"><span>15:30</span><small>13/13</small></div>
+          <div class="core-bk-slotchip ok"><span>15:45</span><small>13/13</small></div>
+          <div class="core-bk-slotchip warm"><span>16:00</span><small>3/13</small></div>
+          <div class="core-bk-slotchip full"><span>16:15</span><small>0/13</small></div>
+        </div></div>
+      <div class="sk-panel"><p class="sk-lab">Who</p>
+        <div class="core-bk-partyrow" style="margin-bottom:12px"><div class="core-covers"><button>−</button><span class="mono">2</span><button>+</button></div><span class="hint">seats 2 · needs 2-top+</span></div>
+        <div class="core-bk-needs"><span class="core-bk-need on">♿ accessible</span><span class="core-bk-need">🍼 high-chair</span><span class="core-bk-need">▱ step-free</span></div></div>
+      <div class="sk-panel"><p class="sk-lab" style="display:flex;justify-content:space-between">Where <span style="color:var(--ink-3)">needs 2-top+</span></p>
+        <div class="core-bk-tpicks" style="max-height:150px">
+          <button class="core-bk-tpick rec"><span class="tn">T1</span><span class="tc">2-top · Floor</span><span class="tfit">✨ rec</span></button>
+          <button class="core-bk-tpick"><span class="tn">T2</span><span class="tc">2-top · Floor</span><span class="tfit">fits</span></button>
+          <button class="core-bk-tpick"><span class="tn">T3</span><span class="tc">4-top · Floor</span><span class="tfit">fits</span></button>
         </div>
-      </div>
-      <!-- who -->
-      <div style="border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:12px">
-        <p class="lab">Who</p>
-        <div class="stepper" style="margin-bottom:14px"><button>−</button><span>2</span><button>+</button></div>
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:10px">seats 2 · needs 2-top+</div>
-        <div class="rowflex" style="gap:6px"><span class="need on">♿ accessible</span><span class="need">🍼 high-chair</span><span class="need">▱ step-free</span></div>
-      </div>
-      <!-- where -->
-      <div style="border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:12px">
-        <p class="lab" style="display:flex;justify-content:space-between">Where <span style="color:var(--ink-3)">needs 2-top+</span></p>
-        <div style="display:grid;gap:6px;max-height:150px;overflow:auto">
-          <div class="tablerow rec"><span class="tn">T1</span><span class="meta">2-top · Floor</span><span class="rec">✨ REC</span></div>
-          <div class="tablerow"><span class="tn">T2</span><span class="meta">2-top · Floor</span><span class="fits">FITS</span></div>
-          <div class="tablerow"><span class="tn">T3</span><span class="meta">4-top · Floor</span><span class="fits">FITS</span></div>
-        </div>
-        <button class="book" style="width:100%;margin-top:12px">Book reservation →</button>
-      </div>
+        <button class="core-bk-bookbtn" style="margin-top:12px">Book reservation →</button></div>
     </div>
-    <p class="note"><span class="p">＋ Everything visible, no scrolling for the common case, reads left→right like a sentence.</span> &nbsp; <span class="m">－ Needs a wide screen; stacks on a phone.</span></p>
+    <p class="sk-note"><span class="p">＋ Everything visible, reads left→right like a sentence.</span> &nbsp; <span class="m">－ Wants a wide screen; stacks on a phone.</span></p>
   </div>
 </section>
 
-<!-- ============ CONCEPT 3 — QUICK-BOOK + DETAILS DRAWER ============ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cnum">03</span>
-    <span class="ctitle">Quick-book bar + details drawer</span>
-    <span class="cwhy">A slim primary bar handles the <b>90% case</b> — time, party, auto-picked best table, Book. <b>“More options”</b> expands needs + the full table list only when the booking is special. Progressive disclosure.</span>
-  </div>
-  <div class="cbody">
-    <div class="tl">
-      <div class="tl-h"><span>T</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></div>
-      <div class="tl-body">
-        <div class="tl-row"><div class="lbl">T1</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk pend" style="left:12.5%;width:16%">Nowak</div></div>
-        <div class="tl-row"><div class="lbl">T2</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk seat" style="left:33%;width:20%">Kowalski</div></div>
-        <div class="nowline" style="left:44%"><b>14:37</b></div>
-      </div>
+<!-- 03 QUICK-BOOK + DRAWER -->
+<section class="sk-concept">
+  <div class="sk-head"><span class="sk-num">03</span><span class="sk-title">Quick-book bar + details drawer</span>
+    <span class="sk-why">A slim bar handles the <b>90% case</b> — party, time, auto-picked best table, Book. <b>“More options”</b> reveals needs + the full table list only when the booking is special.</span></div>
+  <div class="sk-body">
+    <div class="core-book-tlpanel" data-tl="c"></div>
+    <div class="sk-panel" style="margin-top:16px;border-color:rgba(232,107,62,.5);background:var(--brand-wash);display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+      <span class="sk-lab" style="margin:0">Book</span>
+      <div class="core-covers"><button>−</button><span class="mono">2</span><button>+</button></div>
+      <span style="color:var(--ink-3);font-size:12px">guests at</span>
+      <select class="sk-sel"><option>14:45</option><option>15:00</option></select>
+      <span style="color:var(--ink-3);font-size:12px">on</span>
+      <button class="core-bk-tpick rec" style="width:auto;padding:6px 11px"><span class="tn">T1</span><span class="tfit">✨ best fit</span></button>
+      <div style="flex:1"></div>
+      <button class="core-bk-bookbtn" style="width:auto;padding:0 20px;height:38px">Book →</button>
     </div>
-
-    <div style="margin-top:16px;border:1px solid var(--brand);border-radius:var(--r);background:var(--brand-wash);padding:14px">
-      <div class="rowflex" style="gap:14px;align-items:center">
-        <div style="font-size:10px;color:var(--ink-3)">BOOK</div>
-        <div class="stepper"><button>−</button><span>2</span><button>+</button></div>
-        <div style="color:var(--ink-3);font-size:11px">guests, at</div>
-        <select class="ghost" style="height:36px"><option>14:45</option><option>15:00</option></select>
-        <div style="color:var(--ink-3);font-size:11px">on</div>
-        <div class="tablerow rec" style="padding:6px 10px"><span class="tn">T1</span><span class="rec">✨ best fit</span></div>
-        <div style="flex:1"></div>
-        <button class="book">Book →</button>
+    <div style="margin-top:8px;text-align:center"><button class="core-bk-toolbtn">▾ More options — needs · pick another table</button></div>
+    <div class="sk-panel" style="margin-top:8px;border-style:dashed;opacity:.9">
+      <div class="core-bk-needs" style="margin-bottom:12px"><span class="core-bk-need">♿ accessible</span><span class="core-bk-need">🍼 high-chair</span><span class="core-bk-need">▱ step-free</span></div>
+      <div class="sk-scrollx sk-mini">
+        <button class="core-bk-tpick rec"><span class="tn">T1</span><span class="tc">2-top</span><span class="tfit">rec</span></button>
+        <button class="core-bk-tpick"><span class="tn">T2</span><span class="tc">2-top</span><span class="tfit">fits</span></button>
+        <button class="core-bk-tpick"><span class="tn">T3</span><span class="tc">4-top</span><span class="tfit">fits</span></button>
+        <button class="core-bk-tpick"><span class="tn">T4</span><span class="tc">4-top</span><span class="tfit">fits</span></button>
       </div>
+      <p class="sk-note" style="margin-top:8px">(collapsed by default — shown only after “More options”)</p>
     </div>
-    <div style="margin-top:8px;text-align:center"><button class="ghost">▾ More options — needs · pick another table</button></div>
-
-    <div style="margin-top:8px;border:1px dashed var(--line-2);border-radius:var(--r);padding:14px;opacity:.85">
-      <div class="rowflex" style="gap:6px;margin-bottom:12px"><span class="need">♿ accessible</span><span class="need">🍼 high-chair</span><span class="need">▱ step-free</span></div>
-      <div class="scrollx" style="display:flex;gap:6px">
-        <div class="tablerow rec" style="min-width:150px"><span class="tn">T1</span><span class="meta">2-top</span><span class="rec">REC</span></div>
-        <div class="tablerow" style="min-width:130px"><span class="tn">T2</span><span class="meta">2-top</span><span class="fits">FITS</span></div>
-        <div class="tablerow" style="min-width:130px"><span class="tn">T3</span><span class="meta">4-top</span><span class="fits">FITS</span></div>
-        <div class="tablerow" style="min-width:130px"><span class="tn">T4</span><span class="meta">4-top</span><span class="fits">FITS</span></div>
-      </div>
-      <p class="note" style="margin-top:8px">(shown only after “More options” — collapsed by default)</p>
-    </div>
-    <p class="note"><span class="p">＋ Shortest path for the routine booking; the engine already picks the best table, so most bookings never expand.</span> &nbsp; <span class="m">－ One extra tap when staff want a specific table.</span></p>
+    <p class="sk-note"><span class="p">＋ Shortest path — the engine already picks the best table, so most bookings never expand.</span> &nbsp; <span class="m">－ One extra tap for a specific table.</span></p>
   </div>
 </section>
 
-<!-- ============ CONCEPT 4 — CLICK-TO-BOOK ON THE GRID ============ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cnum">04</span>
-    <span class="ctitle">Click-to-book on the grid</span>
-    <span class="cwhy">No separate form at all in the common case — <b>tap an empty cell</b> (table × time) and a compact popover pre-fills that table + time, asks party + needs, confirms. The timeline <b>is</b> the picker.</span>
-  </div>
-  <div class="cbody">
-    <div class="tl" style="position:relative">
-      <div class="tl-h"><span>T</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></div>
-      <div class="tl-body">
-        <div class="tl-row"><div class="lbl">T1</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk pend" style="left:12.5%;width:16%">Nowak</div></div>
-        <div class="tl-row"><div class="lbl">T2</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk seat" style="left:33%;width:20%">Kowalski</div></div>
-        <div class="tl-row"><div class="lbl" style="color:var(--brand-bright)">T3</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c" style="background:var(--brand-wash);box-shadow:inset 0 0 0 1px var(--brand)"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div></div>
-        <div class="tl-row"><div class="lbl">T4</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div></div>
-        <div class="nowline" style="left:44%"><b>14:37</b></div>
-      </div>
-    </div>
-
-    <!-- popover mock -->
-    <div style="max-width:340px;margin:14px auto 0;border:1px solid var(--brand);border-radius:14px;
-      background:linear-gradient(180deg,rgba(232,107,62,.14),var(--panel));box-shadow:0 18px 40px -14px #000;padding:16px;position:relative">
-      <div style="position:absolute;top:-8px;left:40px;width:14px;height:14px;background:var(--brand-wash);border-left:1px solid var(--brand);border-top:1px solid var(--brand);transform:rotate(45deg)"></div>
+<!-- 04 CLICK-TO-BOOK -->
+<section class="sk-concept">
+  <div class="sk-head"><span class="sk-num">04</span><span class="sk-title">Click-to-book on the grid</span>
+    <span class="sk-why">No separate form in the common case — <b>tap an empty cell</b> (table × time); a compact popover pre-fills that table + time, asks party + needs, confirms. The timeline <b>is</b> the picker.</span></div>
+  <div class="sk-body">
+    <div class="core-book-tlpanel" data-tl="d"></div>
+    <div style="max-width:360px;margin:14px auto 0;border:1px solid var(--brand);border-radius:14px;background:linear-gradient(180deg,rgba(232,107,62,.16),var(--panel));box-shadow:var(--lg-float);padding:16px;position:relative">
+      <div style="position:absolute;top:-8px;left:48px;width:14px;height:14px;background:rgba(232,107,62,.16);border-left:1px solid var(--brand);border-top:1px solid var(--brand);transform:rotate(45deg)"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div><div style="font-weight:700;font-size:14px">T3 · 15:00</div><div style="font-size:10px;color:var(--ink-3)">4-top · Floor · free for the turn</div></div>
-        <div class="stepper"><button>−</button><span>2</span><button>+</button></div>
+        <div><div style="font-family:var(--display);font-weight:700;font-size:15px">T3 · 15:00</div><div style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">4-top · Floor · free for the turn</div></div>
+        <div class="core-covers"><button>−</button><span class="mono">2</span><button>+</button></div>
       </div>
-      <div class="rowflex" style="gap:6px;margin-bottom:12px"><span class="need">♿</span><span class="need">🍼</span><span class="need">▱</span>
-        <input placeholder="name / phone (optional)" style="flex:1;min-width:120px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:11px" /></div>
-      <div class="rowflex" style="justify-content:flex-end;gap:8px"><button class="ghost">Cancel</button><button class="book" style="height:34px">Seat T3 →</button></div>
+      <div class="core-bk-needs" style="margin-bottom:12px"><span class="core-bk-need">♿</span><span class="core-bk-need">🍼</span><span class="core-bk-need">▱</span></div>
+      <input class="core-inp" placeholder="name / phone (optional)" style="margin-bottom:12px" />
+      <div class="sk-row" style="justify-content:flex-end;gap:8px"><button class="core-bk-toolbtn">Cancel</button><button class="core-bk-bookbtn" style="width:auto;padding:0 16px;height:36px">Seat T3 →</button></div>
     </div>
-    <p class="note"><span class="p">＋ Fewest steps — table + time are chosen by the tap; spatial, matches how staff think about the floor.</span> &nbsp; <span class="m">－ Harder on a phone; “any table at 15:00” still needs a fallback (a small time+party bar).</span></p>
+    <p class="sk-note"><span class="p">＋ Fewest steps — table + time chosen by the tap; spatial, matches how staff read the floor.</span> &nbsp; <span class="m">－ Harder on a phone; “any table at 15:00” still needs a small fallback bar.</span></p>
   </div>
 </section>
 
-<!-- ============ CONCEPT 5 — SLOT RIBBON + COMPACT FORM ============ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cnum">05</span>
-    <span class="ctitle">Slot ribbon + compact form</span>
-    <span class="cwhy">Slots become a <b>single horizontal scrolling ribbon</b> (not a 5-wide grid), then one tidy row: party + needs on the left, tables as <b>horizontal chips</b> on the right. Keeps the full slot list but flattens it.</span>
-  </div>
-  <div class="cbody">
-    <div class="tl">
-      <div class="tl-h"><span>T</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></div>
-      <div class="tl-body">
-        <div class="tl-row"><div class="lbl">T1</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk pend" style="left:12.5%;width:16%">Nowak</div></div>
-        <div class="tl-row"><div class="lbl">T2</div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="blk seat" style="left:33%;width:20%">Kowalski</div></div>
-        <div class="nowline" style="left:44%"><b>14:37</b></div>
-      </div>
+<!-- 05 SLOT RIBBON -->
+<section class="sk-concept">
+  <div class="sk-head"><span class="sk-num">05</span><span class="sk-title">Slot ribbon + compact form</span>
+    <span class="sk-why">Slots become a <b>single horizontal ribbon</b> (not a 5-wide grid); then one row — party + needs left, tables as <b>horizontal chips</b> right. Smallest change from today.</span></div>
+  <div class="sk-body">
+    <div class="core-book-tlpanel" data-tl="e"></div>
+    <p class="sk-lab" style="margin:16px 0 8px">Slot <span style="float:right;color:var(--ink-3)">← scroll →</span></p>
+    <div class="sk-scrollx">
+      <div class="core-bk-slotchip ok"><span>14:30</span><small>13/13</small></div>
+      <div class="core-bk-slotchip on"><span>14:45</span><small>13/13</small></div>
+      <div class="core-bk-slotchip ok"><span>15:00</span><small>13/13</small></div>
+      <div class="core-bk-slotchip mid"><span>15:15</span><small>9/13</small></div>
+      <div class="core-bk-slotchip ok"><span>15:30</span><small>13/13</small></div>
+      <div class="core-bk-slotchip ok"><span>15:45</span><small>13/13</small></div>
+      <div class="core-bk-slotchip warm"><span>16:00</span><small>3/13</small></div>
+      <div class="core-bk-slotchip full"><span>16:15</span><small>0/13</small></div>
+      <div class="core-bk-slotchip ok"><span>16:30</span><small>13/13</small></div>
+      <div class="core-bk-slotchip ok"><span>16:45</span><small>13/13</small></div>
     </div>
-
-    <p class="lab" style="margin:16px 0 7px">Slot <span style="float:right;color:var(--ink-3)">← scroll →</span></p>
-    <div class="scrollx" style="display:flex;gap:7px;padding-bottom:6px">
-      <div class="schip" style="min-width:62px"><div class="t">14:30</div><div class="n">13/13</div></div>
-      <div class="schip on" style="min-width:62px"><div class="t">14:45</div><div class="n">13/13</div></div>
-      <div class="schip" style="min-width:62px"><div class="t">15:00</div><div class="n">13/13</div></div>
-      <div class="schip warm" style="min-width:62px"><div class="t">15:15</div><div class="n">12/13</div></div>
-      <div class="schip" style="min-width:62px"><div class="t">15:30</div><div class="n">13/13</div></div>
-      <div class="schip" style="min-width:62px"><div class="t">15:45</div><div class="n">13/13</div></div>
-      <div class="schip" style="min-width:62px"><div class="t">16:00</div><div class="n">13/13</div></div>
-      <div class="schip full" style="min-width:62px"><div class="t">16:15</div><div class="n">0/13</div></div>
-      <div class="schip" style="min-width:62px"><div class="t">16:30</div><div class="n">13/13</div></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start">
-      <div>
-        <p class="lab">Party · needs</p>
-        <div class="stepper" style="margin-bottom:10px"><button>−</button><span>2</span><button>+</button></div>
-        <div class="rowflex" style="gap:6px"><span class="need">♿</span><span class="need">🍼</span><span class="need">▱</span></div>
-      </div>
-      <div>
-        <p class="lab">Table <span style="float:right;color:var(--ink-3)">needs 2-top+ · ← scroll →</span></p>
-        <div class="scrollx" style="display:flex;gap:7px;padding-bottom:6px">
-          <div class="tablerow rec" style="min-width:150px"><span class="tn">T1</span><span class="meta">2-top</span><span class="rec">✨REC</span></div>
-          <div class="tablerow" style="min-width:130px"><span class="tn">T2</span><span class="meta">2-top</span><span class="fits">FITS</span></div>
-          <div class="tablerow" style="min-width:130px"><span class="tn">T3</span><span class="meta">4-top</span><span class="fits">FITS</span></div>
-          <div class="tablerow" style="min-width:130px"><span class="tn">T4</span><span class="meta">4-top</span><span class="fits">FITS</span></div>
-          <div class="tablerow" style="min-width:130px"><span class="tn">T5</span><span class="meta">4-top</span><span class="fits">FITS</span></div>
+    <div class="sk-div"></div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start">
+      <div><p class="sk-lab">Party · needs</p>
+        <div class="core-covers" style="margin-bottom:10px"><button>−</button><span class="mono">2</span><button>+</button></div>
+        <div class="core-bk-needs"><span class="core-bk-need">♿</span><span class="core-bk-need">🍼</span><span class="core-bk-need">▱</span></div></div>
+      <div><p class="sk-lab">Table <span style="float:right;color:var(--ink-3)">needs 2-top+ · ← scroll →</span></p>
+        <div class="sk-scrollx sk-mini">
+          <button class="core-bk-tpick rec"><span class="tn">T1</span><span class="tc">2-top</span><span class="tfit">✨rec</span></button>
+          <button class="core-bk-tpick"><span class="tn">T2</span><span class="tc">2-top</span><span class="tfit">fits</span></button>
+          <button class="core-bk-tpick"><span class="tn">T3</span><span class="tc">4-top</span><span class="tfit">fits</span></button>
+          <button class="core-bk-tpick"><span class="tn">T4</span><span class="tc">4-top</span><span class="tfit">fits</span></button>
+          <button class="core-bk-tpick"><span class="tn">T5</span><span class="tc">4-top</span><span class="tfit">fits</span></button>
         </div>
-        <button class="book" style="margin-top:12px">Book reservation →</button>
-      </div>
+        <button class="core-bk-bookbtn" style="margin-top:12px">Book reservation →</button></div>
     </div>
-    <p class="note"><span class="p">＋ Keeps every slot + table on screen but flat; small change from today’s form, easy to ship.</span> &nbsp; <span class="m">－ Two horizontal scrolls; long lists still need a swipe.</span></p>
+    <p class="sk-note"><span class="p">＋ Keeps every slot + table on screen but flat; easiest to ship.</span> &nbsp; <span class="m">－ Two horizontal scrolls.</span></p>
   </div>
 </section>
 
-<p class="lede" style="margin-top:10px;text-align:center">Tell me which number (or a blend, e.g. “3 with 5’s ribbon”) and I’ll wire it into <b>CoreBook.tsx</b> for real.</p>
+<p class="sk-lede" style="text-align:center;margin-top:6px">Tell me a number — or a blend, e.g. <b>“03 with 05’s slot ribbon”</b> — and I’ll build it into <b>CoreBook.tsx</b> for real.</p>
 
+<script>
+// Build each timeline with the REAL core-bk-* markup so it matches the app 1:1.
+const LBLW=48,TICKW=64,TICK=30,OPEN=720,COLS=11;
+const fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0');
+function tl(el,{rows=['T1','T2','T3'],blocks=[],now=877,hot=null}){
+  let hours='<div class="hc"></div>';
+  for(let i=0;i<COLS;i++){const m=OPEN+i*TICK;hours+=`<div class="hc${m%60===0?' hh':''}">${fmt(m)}</div>`;}
+  let body='';
+  if(now!=null){const left=LBLW+((now-OPEN)/TICK)*TICKW;body+=`<div class="core-bk-now" style="left:${left}px"><span class="core-bk-now-lbl">${fmt(now)}</span></div>`;}
+  rows.forEach(tn=>{
+    let ticks='';
+    for(let i=0;i<COLS;i++){const isHot=hot&&hot.row===tn&&hot.i===i;ticks+=`<div class="tick${(OPEN+i*TICK)%60===0?' hh':''}"${isHot?' style="background:var(--brand-wash);box-shadow:inset 0 0 0 1px var(--brand)"':''}></div>`;}
+    let blks='';
+    blocks.filter(b=>b.row===tn).forEach(b=>{const left=LBLW+((b.s-OPEN)/TICK)*TICKW;const w=((b.e-b.s)/TICK)*TICKW-4;blks+=`<div class="core-bk-blk ${b.c}" style="left:${left}px;width:${w}px"><span class="bn">${b.n}</span><span class="bm">${b.m}</span></div>`;});
+    const lblStyle=hot&&hot.row===tn?' style="color:var(--brand-bright)"':'';
+    body+=`<div class="core-bk-row"><div class="lbl"${lblStyle}>${tn}</div>${ticks}${blks}</div>`;
+  });
+  el.innerHTML=`<div class="core-bk-tlscroll"><div class="core-bk-tlcols" style="--cols:${COLS}"><div class="core-bk-hours">${hours}</div><div class="core-bk-tlbody">${body}</div></div></div>`;
+}
+const base=[{row:'T1',c:'pending',s:765,e:855,n:'Nowak · 2/2',m:'pending'},{row:'T2',c:'seated',s:810,e:900,n:'Kowalski · 4/4',m:'seated · 34m'}];
+tl(document.querySelector('[data-tl="a"]'),{blocks:base});
+tl(document.querySelector('[data-tl="b"]'),{blocks:base});
+tl(document.querySelector('[data-tl="c"]'),{blocks:base});
+tl(document.querySelector('[data-tl="d"]'),{rows:['T1','T2','T3','T4'],blocks:base,hot:{row:'T3',i:6}});
+tl(document.querySelector('[data-tl="e"]'),{blocks:base});
+</script>
 </body>
 </html>
