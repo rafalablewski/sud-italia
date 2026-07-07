@@ -170,24 +170,38 @@ export function Pos() {
   // sheet is always flush to the screen edge.
   const SHEET_MIN = 452 + insets.bottom;
   const SHEET_MAX = Math.max(SHEET_MIN + 140, Math.round(winH * 0.86));
+  // Keep the live snap bounds in a ref so the (once-created) PanResponder always
+  // reads current values even though insets/winH resolve after the first render.
+  const boundsRef = useRef({ min: SHEET_MIN, max: SHEET_MAX });
+  boundsRef.current = { min: SHEET_MIN, max: SHEET_MAX };
   const sheetH = useRef(new Animated.Value(SHEET_MIN)).current;
   const sheetFrom = useRef(SHEET_MIN);
+  const snapTo = useCallback(
+    (v: number) => Animated.spring(sheetH, { toValue: v, useNativeDriver: false, bounciness: 4 }).start(),
+    [sheetH],
+  );
   const sheetPan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 4,
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 3,
       onPanResponderGrant: () => {
         sheetH.stopAnimation((v: number) => {
           sheetFrom.current = v;
         });
       },
       onPanResponderMove: (_e, g) => {
-        const h = Math.min(SHEET_MAX, Math.max(SHEET_MIN, sheetFrom.current - g.dy));
-        sheetH.setValue(h);
+        const { min, max } = boundsRef.current;
+        sheetH.setValue(Math.min(max, Math.max(min, sheetFrom.current - g.dy)));
       },
       onPanResponderRelease: (_e, g) => {
-        const ended = sheetFrom.current - g.dy;
-        const target = ended > (SHEET_MIN + SHEET_MAX) / 2 ? SHEET_MAX : SHEET_MIN;
-        Animated.spring(sheetH, { toValue: target, useNativeDriver: false, bounciness: 4 }).start();
+        const { min, max } = boundsRef.current;
+        const mid = (min + max) / 2;
+        // A tap (tiny drag) toggles; a real drag snaps to the nearer stop.
+        if (Math.abs(g.dy) < 6) {
+          snapTo(sheetFrom.current < mid ? max : min);
+          return;
+        }
+        snapTo(sheetFrom.current - g.dy > mid ? max : min);
       },
     }),
   ).current;
@@ -830,7 +844,11 @@ export function Pos() {
           menu peeks under it. Real server check: channel, line steppers, void +
           fire-to-KDS. ──────────────────────────────────────────────────────── */}
       {cartOpen && activeTab && (
-        <Animated.View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: sheetH }}>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          {/* transparent spacer — flex-ends the sheet to the very bottom; lets
+              menu taps pass through where the sheet isn't covering. */}
+          <View style={{ flex: 1 }} pointerEvents="none" />
+          <Animated.View style={{ height: sheetH }}>
           <View
             style={{
               flex: 1,
@@ -839,15 +857,16 @@ export function Pos() {
               overflow: "hidden",
               borderTopWidth: StyleSheet.hairlineWidth,
               borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: c.surface2,
               shadowColor: "#000",
               shadowOpacity: 0.45,
               shadowRadius: 22,
               shadowOffset: { width: 0, height: -8 },
             }}
           >
-            {/* SwiftUI glass sheet material behind the check — anchored, edge-to-edge */}
+            {/* SwiftUI glass sheen over the solid sheet — no menu bleed-through */}
             <LiquidGlass glassCornerRadius={26} pointerEvents="none" style={StyleSheet.absoluteFill} />
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(15,11,8,0.82)" }]} />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(15,11,8,0.90)" }]} />
             <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: insets.bottom + spacing.sm, gap: spacing.sm }}>
               {/* grabber — drag up / down to resize the sheet */}
               <View {...sheetPan.panHandlers} style={{ paddingTop: spacing.sm, paddingBottom: 4, alignItems: "center" }}>
@@ -1068,7 +1087,8 @@ export function Pos() {
             </View>
             </View>
           </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
       )}
 
       {/* Check-action sheets — tender · discount · member · table. */}
