@@ -153,20 +153,21 @@ export function CoreBook({
   useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
   const openCheck = (tableId?: string) => { if (tableId) setCheckTableId(tableId); };
 
-  // Fullscreen — a distraction-free full-viewport Book (space is tight; a host
-  // running the pass wants the whole screen). Requests native fullscreen on the
-  // surface wrapper and tracks it so the toggle + `.is-fullscreen` chrome stay
-  // in sync even when the user leaves via Esc / the browser.
-  const bookRef = useRef<HTMLDivElement>(null);
+  // Fullscreen — drop the browser chrome for a distraction-free full-viewport
+  // pass (space is tight; a host running the service wants the whole screen).
+  // Requests native fullscreen on the DOCUMENT ROOT, matching the KDS/POS kiosk:
+  // every overlay here (Walk-in / Forecast / Policy dialogs, the POS check, and
+  // toasts) portals to `.core`, so fullscreening only `.core-book` would strand
+  // them behind its top-layer element. Rooting fullscreen at the document keeps
+  // `.core` — and thus those overlays — inside the fullscreen tree, usable.
+  // Tracked via `fullscreenchange` so Esc / the browser exiting keeps us in sync.
   const [fullscreen, setFullscreen] = useState(false);
   const toggleFullscreen = useCallback(() => {
-    const el = bookRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) void el.requestFullscreen?.().catch(() => {});
+    if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
     else void document.exitFullscreen?.().catch(() => {});
   }, []);
   useEffect(() => {
-    const onFs = () => setFullscreen(document.fullscreenElement === bookRef.current);
+    const onFs = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
@@ -703,7 +704,7 @@ export function CoreBook({
       eyebrow="Service · Book"
       tabs={serviceTabs("book")}
     >
-      <div className={`core-book${fullscreen ? " is-fullscreen" : ""}`} ref={bookRef}>
+      <div className="core-book">
         {/* Unified ActionBar — identity (Service · Book) · controls (the View
             switch + day picker) on the left · actions (Forecast · Policy ·
             Walk-in · the primary New-reservation pill that jumps focus to the

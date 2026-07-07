@@ -328,10 +328,12 @@ the **timeline / floor / arrivals** view switch, then the shared
 **`CoreDateField`** picker (same as Slots); on the right the occasional
 **Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, then a
 **fullscreen** `.core-iconbtn` (the shared `ExpandIcon`) that requests native
-fullscreen on the `.core-book` wrapper for a distraction-free full-viewport Book
-— toggling `.is-fullscreen` (the `:fullscreen`/`.is-fullscreen` chrome gives it
-the theme `--bg`, padding + its own scroll), kept in sync via a
-`fullscreenchange` listener so Esc/browser-exit resets it. Then
+fullscreen on the **document root** (matching the KDS/POS kiosk) for a
+distraction-free full-viewport pass — rooting it at the document, not
+`.core-book`, keeps every `.core`-portaled overlay (the Walk-in / Forecast /
+Policy dialogs, the POS check, toasts) inside the fullscreen tree and usable;
+`.core` already fills `100dvh` with `--bg`, so nothing bleeds through. State is
+kept in sync via a `fullscreenchange` listener so Esc / browser-exit resets it. Then
 the frequent **Walk-in** button + the brand **New reservation** pill
 (`.core-bk-newpill`, focuses the guest field) inline. A
 **◔ Forecast** button opens a **pre-service simulation** `CoreDialog`

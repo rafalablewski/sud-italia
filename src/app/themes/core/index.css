@@ -1657,12 +1657,6 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 }
 /* tablet portrait / phone — the three panes stack to one column */
 @media (max-width: 1000px) { .core .core-book-deck { grid-template-columns: 1fr; } }
-/* Fullscreen — the surface wrapper requests native fullscreen, so it becomes
-   the fullscreen element. Give it the theme background + padding + its own
-   scroll so the distraction-free Book fills the screen cleanly (the browser
-   would otherwise paint it on a bare black canvas). */
-.core .core-book:fullscreen,
-.core .core-book.is-fullscreen { background: var(--bg); padding: 14px; overflow-y: auto; }
 /* dense-console header rows span the full width above the form/side row */
 .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 /* Book renders its header inside the padded timeline GRID (0 14px). Pull the
