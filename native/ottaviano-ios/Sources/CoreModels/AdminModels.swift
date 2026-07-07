@@ -192,6 +192,17 @@ public struct LoyaltyWalletMember: Codable, Sendable, Identifiable {
     public let contributedPoints: Int
 }
 
+/// One points redemption in the loyalty ledger (`/api/v1/admin/loyalty/redemptions`).
+/// `walletId` nil = a solo (non-wallet) redemption.
+public struct LoyaltyRedemption: Codable, Sendable, Identifiable {
+    public let id: String
+    public let walletId: String?
+    public let phone: String
+    public let points: Int
+    public let rewardId: String
+    public let createdAt: String
+}
+
 /// A shared family wallet — the pooled-points group behind the Loyalty · Wallets
 /// tab. `spendablePool` = earned − redeemed (points). Chain-wide (not per-site).
 public struct LoyaltyWallet: Codable, Sendable, Identifiable {

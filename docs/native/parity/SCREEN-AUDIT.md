@@ -291,14 +291,21 @@ proxy over existing store logic; backend typechecks clean) + native screens:
     (+ `/reservations`): pick a dine-in slot + best-fit table, party, guest,
     override; list + cancel upcoming bookings. Reuses the shared `createBooking`.
 - POS **member-attach** + **QR queue** shipped in the prior pass (existing endpoints).
-- **Loyalty → Wallets (this pass):** the web `CoreLoyalty` grew a tabbed structure
-  (Members · Wallets · Redemptions · Win-back); native `GuestLoyaltyTab` was a flat
-  members list. Added a **Members | Wallets** segment: the Wallets tab renders the
-  **family-wallet** ledger (head, member roster with per-member contributed points,
-  shared spendable pool) off a new **`GET /api/v1/admin/loyalty/wallets`** (manager+,
-  a thin proxy over the shared `getAdminWalletSummaries` — real loyalty/order state,
-  Rule #1; verified live). Redemptions / Win-back tabs are follow-ups pending their
-  facade routes (`getWalletRedemptions` / `getRetentionOutreach`).
+- **Loyalty → Wallets + Redemptions (this pass):** the web `CoreLoyalty` grew a
+  tabbed structure (Members · Wallets · Redemptions · Win-back); native
+  `GuestLoyaltyTab` was a flat members list. Added a **Members | Wallets |
+  Redemptions** segment:
+  - **Wallets** — the **family-wallet** ledger (head, member roster with per-member
+    contributed points, shared spendable pool) off **`GET /api/v1/admin/loyalty/
+    wallets`** (a thin proxy over `getAdminWalletSummaries`; verified live — a
+    3-member wallet, pool 3077 pts).
+  - **Redemptions** — the points-redemption ledger (reward · phone · solo/wallet ·
+    date · −points) + a spent-points KPI, off **`GET /api/v1/admin/loyalty/
+    redemptions`** (`getWalletRedemptions`, newest first).
+  Both manager+, chain-wide (loyalty isn't per-site), real state (Rule #1 — the
+  Redemptions ledger honestly shows empty when nothing's been redeemed). The
+  **Win-back** tab (churn-candidate outreach) is the one remaining follow-up (needs
+  a churn-scoring facade route).
 
 ### Guest → Inbox + Concierge — the last two CORE tabs (this pass) ✅
 The two Guest sub-tabs previously listed as honest gaps are now live, on thin

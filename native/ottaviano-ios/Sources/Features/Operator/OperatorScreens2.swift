@@ -51,6 +51,9 @@ final class OperatorGuestStore {
     /// Family wallets (Loyalty · Wallets tab) — loaded lazily on first view.
     var wallets: [LoyaltyWallet] = []
     var walletsLoaded = false
+    /// Redemption ledger (Loyalty · Redemptions tab) — loaded lazily on first view.
+    var redemptions: [LoyaltyRedemption] = []
+    var redemptionsLoaded = false
     var loaded = false
     var error: String?
     private let api: APIClient
@@ -64,6 +67,10 @@ final class OperatorGuestStore {
     func loadWallets() async {
         wallets = (try? await api.send(.adminLoyaltyWallets())) ?? []
         walletsLoaded = true
+    }
+    func loadRedemptions() async {
+        redemptions = (try? await api.send(.adminLoyaltyRedemptions())) ?? []
+        redemptionsLoaded = true
     }
 }
 
@@ -79,9 +86,9 @@ struct GuestLoyaltyTab: View {
     init(api: APIClient) { self.api = api }
 
     enum GuestSort: Hashable { case recent, name }
-    /// Members | Wallets — mirrors the web `CoreLoyalty` tabs (Redemptions /
-    /// Win-back are follow-ups pending their facade routes).
-    enum LoyaltyTab: Hashable { case members, wallets }
+    /// Members | Wallets | Redemptions — mirrors the web `CoreLoyalty` tabs
+    /// (Win-back is a follow-up pending its churn-candidate facade route).
+    enum LoyaltyTab: Hashable { case members, wallets, redemptions }
     private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
 
     var body: some View {
@@ -94,18 +101,28 @@ struct GuestLoyaltyTab: View {
             if store == nil { store = OperatorGuestStore(api: api) }
             if store?.loaded == false { await store?.load() }
         }
-        .task(id: tab) { if tab == .wallets, store?.walletsLoaded == false { await store?.loadWallets() } }
-        .refreshable { await store?.load(); if tab == .wallets { await store?.loadWallets() } }
+        .task(id: tab) {
+            if tab == .wallets, store?.walletsLoaded == false { await store?.loadWallets() }
+            if tab == .redemptions, store?.redemptionsLoaded == false { await store?.loadRedemptions() }
+        }
+        .refreshable {
+            await store?.load()
+            if tab == .wallets { await store?.loadWallets() }
+            if tab == .redemptions { await store?.loadRedemptions() }
+        }
         .sheet(item: $selected) { m in GuestDetailView(m: m) }
     }
 
     @ViewBuilder
     private func content(_ store: OperatorGuestStore) -> some View {
         VStack(alignment: .leading, spacing: theme.space.lg) {
-            DSSegmented($tab, options: [(value: .members, label: "Members"), (value: .wallets, label: "Wallets")])
+            DSSegmented($tab, options: [(value: .members, label: "Members"),
+                                        (value: .wallets, label: "Wallets"),
+                                        (value: .redemptions, label: "Redemptions")])
             switch tab {
             case .members: membersContent(store)
             case .wallets: walletsContent(store)
+            case .redemptions: redemptionsContent(store)
             }
         }
         .padding(theme.space.lg)
@@ -145,6 +162,40 @@ struct GuestLoyaltyTab: View {
             }
             VStack(spacing: theme.space.sm) { ForEach(store.wallets) { walletCard($0) } }
         }
+    }
+
+    @ViewBuilder
+    private func redemptionsContent(_ store: OperatorGuestStore) -> some View {
+        if !store.redemptionsLoaded {
+            ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xl)
+        } else if store.redemptions.isEmpty {
+            DSEmptyState("Redemptions", systemImage: "gift.fill", message: "No points redeemed yet — the ledger of reward claims appears here.")
+        } else {
+            let total = store.redemptions.reduce(0) { $0 + $1.points }
+            LazyVGrid(columns: cols, spacing: theme.space.md) {
+                OperatorKPICard(label: "Redemptions", value: "\(store.redemptions.count)", icon: "gift.fill", tint: theme.color.accent)
+                OperatorKPICard(label: "Points spent", value: "\(total)", icon: "star.slash.fill", tint: theme.color.warning, caption: "all-time")
+            }
+            VStack(spacing: theme.space.sm) { ForEach(store.redemptions) { redemptionRow($0) } }
+        }
+    }
+
+    private func redemptionRow(_ r: LoyaltyRedemption) -> some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: "gift.fill").font(.caption).foregroundStyle(theme.color.accent)
+                .frame(width: 32, height: 32).background(theme.color.accent.opacity(0.14), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(r.rewardId.replacingOccurrences(of: "-", with: " ").capitalized)
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                Text("\(r.phone)\(r.walletId == nil ? " · solo" : " · wallet") · \(String(r.createdAt.prefix(10)))")
+                    .font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+            }
+            Spacer(minLength: theme.space.sm)
+            Text("−\(r.points)").font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.warning)
+        }
+        .padding(theme.space.md)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func walletCard(_ w: LoyaltyWallet) -> some View {

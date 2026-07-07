@@ -273,6 +273,10 @@ public extension Endpoint {
     static func adminLoyaltyWallets() -> Endpoint<[LoyaltyWallet]> {
         Endpoint<[LoyaltyWallet]>(.get, "admin/loyalty/wallets", requiresAuth: true)
     }
+    /// Points-redemption ledger for the Loyalty · Redemptions tab (newest first).
+    static func adminLoyaltyRedemptions() -> Endpoint<[LoyaltyRedemption]> {
+        Endpoint<[LoyaltyRedemption]>(.get, "admin/loyalty/redemptions", requiresAuth: true)
+    }
     static func adminTasks() -> Endpoint<[AdminTask]> {
         Endpoint<[AdminTask]>(.get, "admin/tasks", requiresAuth: true)
     }
