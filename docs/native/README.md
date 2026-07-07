@@ -39,6 +39,7 @@ leaving Vercel — designed for from day one).
 | [`API-V1.md`](./API-V1.md) | 2 | The `/api/v1` facade: envelope, auth/token lifecycle, endpoints, OpenAPI/codegen, host-portability |
 | [`VERCEL-EXIT.md`](./VERCEL-EXIT.md) | infra | Host-migration cutover plan — portable runtime, cron/CDN/storage swaps, zero-downtime sequence |
 | [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md) | decision | Web 1:1 mirroring — **DECIDED: 100% native, no WebView.** Options compared; how native parity is held (token/IA codegen + parity ledger); the accepted maintenance cost; hardware/offline/responsive |
+| [`ADR-001-rn-hybrid-liquid-glass.md`](./ADR-001-rn-hybrid-liquid-glass.md) | decision (proposed) | **OttavianoKDS → React Native + bridged SwiftUI (Liquid Glass).** Re-opens the operator app's SwiftUI-only choice to stop layout drift; keeps "no WebView". Gated on a POS + `LiquidGlassView` spike before Accepted. |
 
 ## Decisions (signed off 2026-06-26)
 - **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.
