@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { CoreSurfToolbar } from "@/core/shell/CoreSurfToolbar";
 import { CoreDateField } from "@/core/shell/CoreDateField";
@@ -154,9 +154,13 @@ export function CoreSlots() {
     setBoard(d?.board ?? null);
   }, [loc, date]);
   // Reservations for every visible date (one day, or the week's seven) — merged
-  // so each window can read its real occupancy client-side.
+  // so each window can read its real occupancy client-side. A generation guard
+  // drops a slow fetch whose result is superseded by a newer day/range/location
+  // change, so a late-resolving `Promise.all` can't overwrite fresh occupancy.
+  const resGen = useRef(0);
   const loadReservations = useCallback(async () => {
     if (!date) return;
+    const gen = ++resGen.current;
     const dates = range === "week" ? weekDates(date) : [date];
     const chunks = await Promise.all(
       dates.map((d) =>
@@ -165,6 +169,7 @@ export function CoreSlots() {
           .catch(() => []),
       ),
     );
+    if (gen !== resGen.current) return;
     const flat = chunks.flat().filter((x): x is Reservation => !!x && typeof x === "object" && typeof (x as Reservation).id === "string");
     setReservations(flat);
   }, [loc, date, range, setReservations]);
@@ -375,6 +380,7 @@ export function CoreSlots() {
   const refresh = () => {
     void loadSlots();
     void loadBoard();
+    void loadReservations();
     toast("Refreshed slots + demand", "success");
   };
 
