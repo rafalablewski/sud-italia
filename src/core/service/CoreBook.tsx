@@ -36,6 +36,7 @@ import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type 
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 import { tLabel } from "./tableLabel";
+import { ExpandIcon } from "@/core/shell/toolIcons";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
@@ -152,6 +153,24 @@ export function CoreBook({
   useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
   const openCheck = (tableId?: string) => { if (tableId) setCheckTableId(tableId); };
 
+  // Fullscreen — a distraction-free full-viewport Book (space is tight; a host
+  // running the pass wants the whole screen). Requests native fullscreen on the
+  // surface wrapper and tracks it so the toggle + `.is-fullscreen` chrome stay
+  // in sync even when the user leaves via Esc / the browser.
+  const bookRef = useRef<HTMLDivElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const toggleFullscreen = useCallback(() => {
+    const el = bookRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) void el.requestFullscreen?.().catch(() => {});
+    else void document.exitFullscreen?.().catch(() => {});
+  }, []);
+  useEffect(() => {
+    const onFs = () => setFullscreen(document.fullscreenElement === bookRef.current);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
   const load = useCallback(async () => {
     if (!date) return;
     setLoading(true);
@@ -202,6 +221,21 @@ export function CoreBook({
   );
 
   const sortedTables = useMemo(() => [...tables].sort(byTableNumber), [tables]);
+  // The WHERE pane groups the floor by ZONE (patio · bar · window…) so a host
+  // scans by section in the tight deck space rather than reading one long flat
+  // grid. Named zones sort alphabetically; unzoned tables fall to a trailing
+  // "Unzoned" group so they never hide a real section.
+  const tablesByZone = useMemo(() => {
+    const groups = new Map<string, FloorTable[]>();
+    for (const t of sortedTables) {
+      const z = t.zone?.trim() || "Unzoned";
+      const bucket = groups.get(z) ?? (groups.set(z, []), groups.get(z)!);
+      bucket.push(t);
+    }
+    return [...groups.entries()].sort(([a], [b]) =>
+      a === "Unzoned" ? 1 : b === "Unzoned" ? -1 : a.localeCompare(b),
+    );
+  }, [sortedTables]);
   const tableLabel = (id?: string) => {
     const n = tables.find((t) => t.id === id)?.number;
     return n ? tLabel(n) : "—";
@@ -623,12 +657,53 @@ export function CoreBook({
     } finally { setActing(null); }
   };
 
+  // One WHERE-pane table card — engine-driven when a slot gives a seating time,
+  // else a plain capacity/availability check. Shared by every zone group so the
+  // card, tag + tooltip logic lives in exactly one place.
+  const renderTableCard = (t: FloorTable) => {
+    const sug = suggByTable.get(t.id);
+    const isRec = t.id === recTableId;
+    const on = tableId === t.id;
+    let tag: string;
+    let dim = false;
+    let title: string;
+    if (sug) {
+      // engine-driven — a slot gives us a seating time to rank against
+      dim = !sug.ok;
+      tag = sug.isRecommended ? "✨ Recommend" : sug.ok ? "fits" : sug.excludedReason ?? "unavailable";
+      title = sug.ok ? `${sug.score} pts · ${sug.reasons.join(" · ")}` : sug.excludedReason ?? "unavailable";
+    } else {
+      // pre-slot fallback — plain capacity/availability check
+      const st = tableState(t);
+      if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
+      else if (t.seats < partyN) { tag = "too small"; dim = true; }
+      else if (!st.ok) { tag = "booked"; dim = true; }
+      else tag = isRec ? "✨ Recommend" : "fits";
+      title = st.label;
+    }
+    const focus = selected?.kind === "table" && selected.id === t.id;
+    return (
+      <button
+        key={t.id}
+        className={`core-bk-tcard${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
+        disabled={dim && !override}
+        onClick={() => pickTable(t.id)}
+        title={title}
+      >
+        <span className="pick" aria-hidden />
+        <span className="tn">{tLabel(t.number)}</span>
+        <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
+        <span className="tfit">{tag}</span>
+      </button>
+    );
+  };
+
   return (
     <CoreShell
       eyebrow="Service · Book"
       tabs={serviceTabs("book")}
     >
-      <div className="core-book">
+      <div className={`core-book${fullscreen ? " is-fullscreen" : ""}`} ref={bookRef}>
         {/* Unified ActionBar — identity (Service · Book) · controls (the View
             switch + day picker) on the left · actions (Forecast · Policy ·
             Walk-in · the primary New-reservation pill that jumps focus to the
@@ -659,6 +734,9 @@ export function CoreBook({
                   { label: "Policy", icon: <span aria-hidden>⚙</span>, onClick: () => setPolicyOpen(true) },
                 ]}
               />
+              <button type="button" className={`core-iconbtn${fullscreen ? " on" : ""}`} onClick={toggleFullscreen} title={fullscreen ? "Exit fullscreen" : "Fullscreen"} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"} aria-pressed={fullscreen}>
+                <ExpandIcon />
+              </button>
               <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
                 <span aria-hidden>+</span> Walk-in
               </button>
@@ -944,42 +1022,21 @@ export function CoreBook({
               {tables.length === 0 ? (
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
-                <div className="core-bk-tgrid">
-                  {sortedTables.map((t) => {
-                    const sug = suggByTable.get(t.id);
-                    const isRec = t.id === recTableId;
-                    const on = tableId === t.id;
-                    let tag: string;
-                    let dim = false;
-                    let title: string;
-                    if (sug) {
-                      // engine-driven — a slot gives us a seating time to rank against
-                      dim = !sug.ok;
-                      tag = sug.isRecommended ? "✨ Recommend" : sug.ok ? "fits" : sug.excludedReason ?? "unavailable";
-                      title = sug.ok ? `${sug.score} pts · ${sug.reasons.join(" · ")}` : sug.excludedReason ?? "unavailable";
-                    } else {
-                      // pre-slot fallback — plain capacity/availability check
-                      const st = tableState(t);
-                      if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
-                      else if (t.seats < partyN) { tag = "too small"; dim = true; }
-                      else if (!st.ok) { tag = "booked"; dim = true; }
-                      else tag = isRec ? "✨ Recommend" : "fits";
-                      title = st.label;
-                    }
-                    const focus = selected?.kind === "table" && selected.id === t.id;
+                // Grouped by zone — each section is a small labelled header + its
+                // own card grid, so the tight WHERE pane reads section-by-section.
+                <div className="core-bk-zones">
+                  {tablesByZone.map(([zone, zts]) => {
+                    const free = zts.filter((t) => (suggByTable.get(t.id)?.ok ?? tableState(t).ok)).length;
                     return (
-                      <button
-                        key={t.id}
-                        className={`core-bk-tcard${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
-                        disabled={dim && !override}
-                        onClick={() => pickTable(t.id)}
-                        title={title}
-                      >
-                        <span className="pick" aria-hidden />
-                        <span className="tn">{tLabel(t.number)}</span>
-                        <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
-                        <span className="tfit">{tag}</span>
-                      </button>
+                      <div className="core-bk-zone" key={zone}>
+                        <div className="core-bk-zonehd">
+                          <span className="zn">{zone}</span>
+                          <span className="zc">{free}/{zts.length} free</span>
+                        </div>
+                        <div className="core-bk-tgrid">
+                          {zts.map(renderTableCard)}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

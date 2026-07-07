@@ -195,10 +195,22 @@
 .core .core-bk-tpick.on { box-shadow: inset 0 0 0 1px var(--brand); border-color: var(--brand); }
 .core .core-bk-tpick.is-focus { border-color: var(--brand); }
 
-/* New-reservation table picker — card GRID (the whole floor fits at a glance,
-   so you never scroll a vertical list to reach Book). Cards are fit-tinted; the
-   recommended one glows, the picked one gets a ring + filled radio, unavailable
-   dims. (The walk-in dialog keeps the compact vertical `.core-bk-tpicks` list.) */
+/* New-reservation table picker — grouped by ZONE (patio · bar · window…) so the
+   tight WHERE pane reads section-by-section. Each zone is a small sticky header
+   (name + free/total) over its own card grid; groups stack with a little gap. */
+.core .core-bk-zones { display: flex; flex-direction: column; gap: 12px; }
+.core .core-bk-zone { display: flex; flex-direction: column; gap: 7px; }
+.core .core-bk-zonehd {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em;
+}
+.core .core-bk-zonehd .zn { color: var(--ink-2); font-weight: 700; }
+.core .core-bk-zonehd .zc { color: var(--ink-3); letter-spacing: .04em; }
+
+/* Table picker — card GRID (the whole floor fits at a glance, so you never
+   scroll a vertical list to reach Book). Cards are fit-tinted; the recommended
+   one glows, the picked one gets a ring + filled radio, unavailable dims. (The
+   walk-in dialog keeps the compact vertical `.core-bk-tpicks` list.) */
 .core .core-bk-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
 .core .core-bk-tcard {
   position: relative; text-align: left; display: flex; flex-direction: column; gap: 3px;

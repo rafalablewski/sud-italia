@@ -1638,7 +1638,10 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-tlpanel { grid-column: 1 / -1; min-width: 0; }
 .core .core-book-form { grid-column: 1 / -1; } /* legacy right-rail hook — the deck replaces it */
 .core .core-book-side { grid-column: 1 / -1; }
-.core .core-book-deck { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
+/* When · Who · Where are NOT equal thirds — Where (the zone-grouped table
+   grid) carries the most, When the least. The 5:6:9 fr split ≈ 1/3 · 2/5 · 3/5,
+   normalised to 25% / 30% / 45% across the full 100% width. */
+.core .core-book-deck { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) minmax(0, 9fr); gap: 10px; align-items: start; }
 .core .core-book-deckhead { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; padding: 2px 2px 0; }
 .core .core-book-deckhead .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
 .core .core-book-deckhead .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
@@ -1647,6 +1650,12 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-panelab .mut { color: var(--ink-3); letter-spacing: .04em; font-size: 9px; }
 /* tablet portrait / phone — the three panes stack to one column */
 @media (max-width: 1000px) { .core .core-book-deck { grid-template-columns: 1fr; } }
+/* Fullscreen — the surface wrapper requests native fullscreen, so it becomes
+   the fullscreen element. Give it the theme background + padding + its own
+   scroll so the distraction-free Book fills the screen cleanly (the browser
+   would otherwise paint it on a bare black canvas). */
+.core .core-book:fullscreen,
+.core .core-book.is-fullscreen { background: var(--bg); padding: 14px; overflow-y: auto; }
 /* dense-console header rows span the full width above the form/side row */
 .core .core-book > .core-statstrip, .core .core-book > .core-surf-toolbar, .core .core-book-tlbar { grid-column: 1 / -1; }
 /* Book renders its header inside the padded timeline GRID (0 14px). Pull the
