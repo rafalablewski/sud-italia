@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
+  Animated,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   TextInput,
@@ -160,8 +162,35 @@ export function Pos() {
   const { authed } = useOperator();
   const { slug, locations, setSlug, ensureLoaded } = useOperatorLocation();
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
+  const { width: winW, height: winH } = useWindowDimensions();
   const cardW = winW - spacing.md * 2;
+
+  // Draggable cart sheet: snaps between a peek (controls only) and a tall state
+  // (full line list). The grabber drives it; height is pinned to bottom:0 so the
+  // sheet is always flush to the screen edge.
+  const SHEET_MIN = 452 + insets.bottom;
+  const SHEET_MAX = Math.max(SHEET_MIN + 140, Math.round(winH * 0.86));
+  const sheetH = useRef(new Animated.Value(SHEET_MIN)).current;
+  const sheetFrom = useRef(SHEET_MIN);
+  const sheetPan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 4,
+      onPanResponderGrant: () => {
+        sheetH.stopAnimation((v: number) => {
+          sheetFrom.current = v;
+        });
+      },
+      onPanResponderMove: (_e, g) => {
+        const h = Math.min(SHEET_MAX, Math.max(SHEET_MIN, sheetFrom.current - g.dy));
+        sheetH.setValue(h);
+      },
+      onPanResponderRelease: (_e, g) => {
+        const ended = sheetFrom.current - g.dy;
+        const target = ended > (SHEET_MIN + SHEET_MAX) / 2 ? SHEET_MAX : SHEET_MIN;
+        Animated.spring(sheetH, { toValue: target, useNativeDriver: false, bounciness: 4 }).start();
+      },
+    }),
+  ).current;
 
   const [items, setItems] = useState<PosMenuItem[] | null>(null);
   const [kpis, setKpis] = useState<PosKpis | null>(null);
@@ -528,7 +557,7 @@ export function Pos() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (cartOpen ? 440 : 40) + insets.bottom }}
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: cartOpen ? SHEET_MIN + 24 : 40 + insets.bottom }}
       >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
         <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
@@ -801,9 +830,10 @@ export function Pos() {
           menu peeks under it. Real server check: channel, line steppers, void +
           fire-to-KDS. ──────────────────────────────────────────────────────── */}
       {cartOpen && activeTab && (
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+        <Animated.View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: sheetH }}>
           <View
             style={{
+              flex: 1,
               borderTopLeftRadius: 26,
               borderTopRightRadius: 26,
               overflow: "hidden",
@@ -817,10 +847,12 @@ export function Pos() {
           >
             {/* SwiftUI glass sheet material behind the check — anchored, edge-to-edge */}
             <LiquidGlass glassCornerRadius={26} pointerEvents="none" style={StyleSheet.absoluteFill} />
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(17,12,9,0.58)" }]} />
-            <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.sm, gap: spacing.sm }}>
-              {/* grabber */}
-              <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.30)", marginBottom: 2 }} />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(15,11,8,0.82)" }]} />
+            <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: insets.bottom + spacing.sm, gap: spacing.sm }}>
+              {/* grabber — drag up / down to resize the sheet */}
+              <View {...sheetPan.panHandlers} style={{ paddingTop: spacing.sm, paddingBottom: 4, alignItems: "center" }}>
+                <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.34)" }} />
+              </View>
               {/* header */}
               <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -877,7 +909,7 @@ export function Pos() {
             )}
 
             {/* line items — name · variant · stepper · line total */}
-            <View style={{ maxHeight: 168 }}>
+            <View style={{ flex: 1, minHeight: 60 }}>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {checkLines.map(({ item, qty }) => (
                   <View
@@ -1036,7 +1068,7 @@ export function Pos() {
             </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Check-action sheets — tender · discount · member · table. */}

@@ -52,7 +52,7 @@ settings:
     # BUMP CONVENTION: increment the PATCH (the last number) — 0.5.0 → 0.5.1 →
     # 0.5.2 — NOT the minor. Only move the minor (→ 0.6.0) on a deliberate new
     # train, not for routine TestFlight pushes.
-    MARKETING_VERSION: "0.5.6"
+    MARKETING_VERSION: "0.5.7"
     # CFBundleVersion (build number). Old app shipped build 51; the bare-RN line
     # starts at 60 (strictly > 51). CI auto-increments it monotonically per run
     # (60 + github.run_number) so every upload climbs and TestFlight always
