@@ -90,12 +90,55 @@ public struct Reservation: Codable, Sendable, Identifiable {
     public let slotId: String?
     public let status: String   // booked | seated | completed | cancelled | no-show
     public let notes: String?
+    /// booking (default) | walk-in — a walk-in was seated on arrival, no prior hold.
+    public let source: String?
+    /// ISO — start of live occupancy (stamped on the seat transition).
+    public let seatedAt: String?
+    /// ISO — party left; (seatedAt→completedAt) is one realised turn.
+    public let completedAt: String?
+    /// Guest-needs the table had to satisfy (accessible | high-chair | step-free).
+    public let needs: [String]?
+    /// Combined tables for a big party (held / freed together).
+    public let joinedTableIds: [String]?
     public let createdAt: String
 }
 
 public struct ReservationDeleteResult: Codable, Sendable {
     public let deleted: Bool
     public let id: String
+}
+
+// MARK: - Dispatch (/api/v1/admin/dispatch)
+
+/// One line on a delivery order card (name × quantity; money stays on the order).
+public struct DispatchLine: Codable, Sendable {
+    public let name: String
+    public let quantity: Int
+}
+
+/// A live delivery order on the dispatch board. `totalGrosze` is minor units.
+public struct DispatchOrder: Codable, Sendable, Identifiable {
+    public let id: String
+    public let status: String   // confirmed | preparing | ready | assigned | picked_up
+    public let customerName: String
+    public let deliveryAddress: String?
+    public let totalGrosze: Grosze
+    public let assignedDriverId: String?
+    public let items: [DispatchLine]
+    public let createdAt: String
+}
+
+/// A driver on the roster (staff in the delivery role group, active only).
+public struct DispatchDriver: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let role: String
+}
+
+/// `GET /api/v1/admin/dispatch` envelope payload: in-flight deliveries + drivers.
+public struct DispatchBoard: Codable, Sendable {
+    public let orders: [DispatchOrder]
+    public let drivers: [DispatchDriver]
 }
 
 // MARK: - CRM customer detail (/api/v1/admin/customers/:phone)

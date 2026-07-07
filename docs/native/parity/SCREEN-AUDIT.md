@@ -68,6 +68,17 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   (`UIApplication.isIdleTimerDisabled`, UIKit-gated), and shows a floating exit
   button. **Needs on-device confirmation** (audio + idle-timer can't be exercised
   from the Linux container) — the one verification step that wants a Mac/iPad.
+- **Shipped — cancel-notify (this pass):** the web KDS shows a dish **voided after
+  it fired** struck-through on the pass (web `.core-tk-voided`, role=alert) so a
+  pulled line never silently vanishes. Carried onto native: the v1 order DTO now
+  carries **`voidedItems`** (`schemas.ts` `VoidedItemSchema` + `order-dto.ts`
+  mapper; OpenAPI regenerated, `api-v1-openapi.test.ts` green), the native `Order`
+  gained `voidedItems: [VoidedItem]?`, and **`KDSTicket`** renders a danger-toned,
+  struck-through **cancel-notify** block (qty × name · reason). Display-side parity;
+  the void **write** (an operator pulling a fired line from the native POS) reuses
+  the same `voidKitchenItem` store fn and is a follow-up (needs a v1 write route +
+  POS check-editor action) — the display already reflects real voids from any
+  surface (Rule #1).
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),
@@ -109,6 +120,23 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   shared `chargeTab` (one comp-cap gate, web + native); a new
   `GET /api/v1/admin/pos/comp-status` backs the meter (real audit total, Rule #1).
   This closes the earlier tender-method gap **and** adds bill-splitting.
+- **Shipped — dense-console visual parity (this pass):** the native till was a
+  generation behind the web `CorePos` "dense-console" redesign (bare 2-col grid,
+  name + price only). Carried onto native:
+  - **Live KPI stat strip** over the menu — **Open checks · Covers (+floor %) ·
+    Avg check · Prep queue · Table turns · Sales /hr**. The three live counts are
+    derived on-device from the till's own tab state (open/non-parked tabs, dine-in
+    covers, fired-to-KDS item units); avg check / table turns / sales-hr (each with
+    an honest trailing-7-day delta) come from **`GET /api/v1/admin/pos/kpis`** (new
+    facade route this pass, a thin proxy over the shared `getPosKpis` — every figure
+    from real orders, Rule #1; verified live against `npm run dev`).
+  - **Rich item cards** — the card now renders the item **description** and
+    **dietary badges** (V / VG / S) derived from the real `AdminMenuItem.description`
+    + `tags` (already on the DTO — no enrichment), matching the web card.
+  - **Category chips with counts** — each filter chip shows its item count.
+  - **Liquid-glass surface** — the till body now paints the `AuroraBackground` on
+    the glassy (operator) skin, mirroring the web `liquid-glass` Core skin (was a
+    flat canvas).
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
@@ -263,6 +291,21 @@ proxy over existing store logic; backend typechecks clean) + native screens:
     (+ `/reservations`): pick a dine-in slot + best-fit table, party, guest,
     override; list + cancel upcoming bookings. Reuses the shared `createBooking`.
 - POS **member-attach** + **QR queue** shipped in the prior pass (existing endpoints).
+- **Loyalty → Wallets + Redemptions (this pass):** the web `CoreLoyalty` grew a
+  tabbed structure (Members · Wallets · Redemptions · Win-back); native
+  `GuestLoyaltyTab` was a flat members list. Added a **Members | Wallets |
+  Redemptions** segment:
+  - **Wallets** — the **family-wallet** ledger (head, member roster with per-member
+    contributed points, shared spendable pool) off **`GET /api/v1/admin/loyalty/
+    wallets`** (a thin proxy over `getAdminWalletSummaries`; verified live — a
+    3-member wallet, pool 3077 pts).
+  - **Redemptions** — the points-redemption ledger (reward · phone · solo/wallet ·
+    date · −points) + a spent-points KPI, off **`GET /api/v1/admin/loyalty/
+    redemptions`** (`getWalletRedemptions`, newest first).
+  Both manager+, chain-wide (loyalty isn't per-site), real state (Rule #1 — the
+  Redemptions ledger honestly shows empty when nothing's been redeemed). The
+  **Win-back** tab (churn-candidate outreach) is the one remaining follow-up (needs
+  a churn-scoring facade route).
 
 ### Guest → Inbox + Concierge — the last two CORE tabs (this pass) ✅
 The two Guest sub-tabs previously listed as honest gaps are now live, on thin
@@ -299,6 +342,46 @@ present, or genuinely new server logic): the **POS split-bill** (splitting an or
 into N checks — no server function exists). These remain honest gaps rather than
 mocked surfaces (Rule #1). (Slots **Demand-Exchange** is now live — Service hub
 **Floor | Slots | Demand**, off `/api/v1/admin/demand-exchange`.)
+
+### Service overhaul — Book · Tables · Slots · Dispatch (this pass) ✅🟡
+The web Service section was rebuilt (web PRs: Book fullscreen + calendar redesign,
+Floor → Tables, Slots stat-strip, Arrivals seat-early / running-late) — carried
+onto native so `OperatorServiceView` now mirrors the web `serviceTabs` exactly:
+**Book · Tables · Slots · Dispatch** (was Floor | Slots | Demand). Also fixed a
+latent routing bug: the **Book** rail item (`/core/service/book`) matched a dead
+`/core/book` case and fell to the generic scaffold — it now lands on the console's
+Book tab.
+- **Book** (`OperatorBookView` + `OperatorBookStore`) — the native twin of web
+  `CoreBook`. **Timeline lens:** a table-rows × 30-min-tick board (12:00–23:00
+  window) of status-toned reservation blocks (pending / seated / **dimmed "done"
+  history**), a live **now-line**, tap a block for seat / no-show / complete /
+  cancel. **Arrivals lens:** the host queue — **◷ Running late** triage (booked &
+  past their time today → Seat / No-show), **Upcoming** (a party ahead of its time
+  today gets **Seat early**, which reschedules to *now* + seats in one write),
+  **Seated** (→ Complete). **New-reservation deck** (sheet): capacity-tinted dine-in
+  slot chips, party stepper, guest name/phone/notes, best-fit table grid, override.
+  Real data off `admin/floor/{reservations,tables,booking}` + `admin/slots`; the
+  seat/seat-early/no-show/complete/cancel transitions post to
+  **`admin/floor/reservations`** (new facade route this pass, verified live). Two
+  `CoreDay`-driven time computations (now-line, late/early split) — never faked.
+- **Tables** (`OperatorFloorView`) — the live floor plan off `admin/floor/twin`
+  (occupancy, seat/clear/move), relabelled from "Floor plan". *Gap (honest):* zone
+  / table **CRUD** (web `CoreTables` create/edit table + zone) needs
+  `admin/floor/{tables,zones}` write coverage on v1 — deferred, not faked (Rule #1).
+- **Slots** (`ServiceSlotsTab`) — the existing bespoke Slots (service windows) +
+  Demand (pace levers) under a **Manage | Demand** switch, matching the web Slots
+  surface. *Gap:* the dine-in-book stat strip (reservation covers/seated/no-show
+  leading the window list) is a follow-up refinement.
+- **Dispatch** (`OperatorDispatchView` + `OperatorDispatchStore`) — the delivery
+  driver board, **new** to native. In-kitchen / ready / on-road / drivers KPIs;
+  per-order cards (address, lines, total) with **assign driver** → advance
+  (`assigned → picked_up → delivered`) → unassign; a driver roster with derived
+  idle/en-route state. Off **`admin/dispatch`** (new GET/PUT facade route this pass,
+  verified live) reusing `getOrders` / `getStaff` / `assignOrderDriver` /
+  `updateOrderStatus` — no new persistence, real orders only.
+- **Shared primitive:** **`OperatorDateField`** (+ `CoreDay`) — the native twin of
+  web `CoreDateField` (day stepper + Today/Tomorrow/+1wk chips + Monday-first month
+  grid), now shared by Book and Slots. See DESIGN-SYSTEM §4.1.
 
 ---
 

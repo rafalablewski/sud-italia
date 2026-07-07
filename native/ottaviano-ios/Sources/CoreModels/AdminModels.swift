@@ -183,6 +183,39 @@ public struct AdminLoyaltyMember: Codable, Sendable, Identifiable {
     public let dob: String?
 }
 
+/// One member of a family wallet (`/api/v1/admin/loyalty/wallets`).
+public struct LoyaltyWalletMember: Codable, Sendable, Identifiable {
+    public var id: String { phone }
+    public let phone: String
+    public let status: String   // active | invited | removed
+    public let isHead: Bool
+    public let contributedPoints: Int
+}
+
+/// One points redemption in the loyalty ledger (`/api/v1/admin/loyalty/redemptions`).
+/// `walletId` nil = a solo (non-wallet) redemption.
+public struct LoyaltyRedemption: Codable, Sendable, Identifiable {
+    public let id: String
+    public let walletId: String?
+    public let phone: String
+    public let points: Int
+    public let rewardId: String
+    public let createdAt: String
+}
+
+/// A shared family wallet — the pooled-points group behind the Loyalty · Wallets
+/// tab. `spendablePool` = earned − redeemed (points). Chain-wide (not per-site).
+public struct LoyaltyWallet: Codable, Sendable, Identifiable {
+    public let id: String
+    public let headPhone: String
+    public let createdAt: String
+    public let memberCount: Int
+    public let poolEarned: Int
+    public let spendablePool: Int
+    public let totalRedeemed: Int
+    public let members: [LoyaltyWalletMember]
+}
+
 /// `/api/v1/admin/tasks` — a shift to-do (Task).
 public struct AdminTask: Codable, Sendable, Identifiable {
     public let id: String

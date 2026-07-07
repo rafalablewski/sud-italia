@@ -126,6 +126,15 @@ public struct OrderPrediction: Codable, Sendable, Equatable {
     public let atRisk: Bool
 }
 
+/// A dish cancelled AFTER it fired (KDS cancel-notify) — mirrors the web
+/// `Order.voidedItems`; shown struck-through with a reason on the pass.
+public struct VoidedItem: Codable, Sendable, Equatable {
+    public let name: String
+    public let quantity: Int
+    public let reason: String?
+    public let at: String
+}
+
 public struct Order: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     /// Short, glanceable ticket id (last 6, uppercased) — the KDS card header.
@@ -162,6 +171,9 @@ public struct Order: Codable, Sendable, Identifiable, Equatable {
     /// Predictive block (SLA meter / at-risk tier) — present on the live board
     /// frames; nil on single-order reads the model doesn't score.
     public let prediction: OrderPrediction?
+    /// Dishes voided AFTER firing (KDS cancel-notify) — rendered struck-through on
+    /// the pass so a pulled line never silently vanishes. Nil when none.
+    public let voidedItems: [VoidedItem]?
 
     /// Glanceable ticket id — server `shortId`, or a derived fallback (last 6,
     /// uppercased) for any frame that predates the field.

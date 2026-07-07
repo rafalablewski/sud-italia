@@ -219,10 +219,11 @@ struct OperatorRootView: View {
             OperatorRecipesView(api: deps.api)
         case "/core/guest":
             OperatorGuestView(api: deps.api)
-        case "/core/book":
-            GuestBookTab(api: deps.api)
-                .navigationTitle("Book")
-                .navigationBarTitleDisplayMode(.inline)
+        case "/core/service/book":
+            // The Book rail item lands on the Service console's Book tab (the web
+            // `serviceTabs` first view). Fixes the prior `/core/book` id mismatch
+            // that fell through to the generic parity scaffold.
+            OperatorServiceView(api: deps.api, initial: .book)
         case "/admin/alerts":
             OperatorAlertsView(api: deps.api)
         case "/admin/comms/tasks":

@@ -138,6 +138,12 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(PosSuggestionsBody(locationSlug: locationSlug, itemIds: itemIds))
         return Endpoint<[PosSuggestion]>(.post, "admin/pos/suggestions", body: body, requiresAuth: true)
     }
+    /// Live till KPI strip — server-computed avg check / sales-hr / table turns
+    /// (with trailing-7-day deltas). The client counts (open checks · covers ·
+    /// prep queue) stay on-device from the tab list.
+    static func adminPosKpis(location: String) -> Endpoint<PosKpis> {
+        Endpoint<PosKpis>(.get, "admin/pos/kpis", query: ["location": location], requiresAuth: true)
+    }
 
     // POS open checks (Tabs) — several concurrent checks per till, persisted server-
     // side. Lines are id+qty(+course); prices resolve at send/charge.
@@ -262,6 +268,14 @@ public extension Endpoint {
     }
     static func adminLoyalty() -> Endpoint<[AdminLoyaltyMember]> {
         Endpoint<[AdminLoyaltyMember]>(.get, "admin/loyalty", requiresAuth: true)
+    }
+    /// Family wallets — pooled-points groups for the Loyalty · Wallets tab.
+    static func adminLoyaltyWallets() -> Endpoint<[LoyaltyWallet]> {
+        Endpoint<[LoyaltyWallet]>(.get, "admin/loyalty/wallets", requiresAuth: true)
+    }
+    /// Points-redemption ledger for the Loyalty · Redemptions tab (newest first).
+    static func adminLoyaltyRedemptions() -> Endpoint<[LoyaltyRedemption]> {
+        Endpoint<[LoyaltyRedemption]>(.get, "admin/loyalty/redemptions", requiresAuth: true)
     }
     static func adminTasks() -> Endpoint<[AdminTask]> {
         Endpoint<[AdminTask]>(.get, "admin/tasks", requiresAuth: true)
@@ -556,6 +570,67 @@ public struct BookingBody: Encodable, Sendable {
     }
 }
 
+/// Body for `POST /api/v1/admin/floor/reservations` — the Book · Arrivals state
+/// transitions (seat / seat-early / no-show / complete / reassign). The whole
+/// record is resent with the changed fields; the server re-gates on a time change
+/// (service window, then conflict unless `override`) and stamps `seatedAt` /
+/// `completedAt`.
+public struct ReservationUpdateBody: Encodable, Sendable {
+    public let id: String
+    public let customerName: String
+    public let customerPhone: String?
+    public let partySize: Int
+    public let date: String
+    public let time: String
+    public let durationMin: Int
+    public let tableId: String?
+    public let slotId: String?
+    public let status: String
+    public let notes: String?
+    public let source: String?
+    public let seatedAt: String?
+    public let completedAt: String?
+    public let forceOverride: Bool
+    public init(id: String, customerName: String, customerPhone: String? = nil, partySize: Int,
+                date: String, time: String, durationMin: Int, tableId: String? = nil, slotId: String? = nil,
+                status: String, notes: String? = nil, source: String? = nil,
+                seatedAt: String? = nil, completedAt: String? = nil, forceOverride: Bool = false) {
+        self.id = id; self.customerName = customerName; self.customerPhone = customerPhone
+        self.partySize = partySize; self.date = date; self.time = time; self.durationMin = durationMin
+        self.tableId = tableId; self.slotId = slotId; self.status = status; self.notes = notes
+        self.source = source; self.seatedAt = seatedAt; self.completedAt = completedAt
+        self.forceOverride = forceOverride
+    }
+    /// Build an update from an existing reservation, overriding only what changed.
+    public init(from r: Reservation, status: String, time: String? = nil, tableId: String? = nil,
+                seatedAt: String? = nil, completedAt: String? = nil, forceOverride: Bool = false) {
+        self.init(id: r.id, customerName: r.customerName, customerPhone: r.customerPhone,
+                  partySize: r.partySize, date: r.date, time: time ?? r.time, durationMin: r.durationMin,
+                  tableId: tableId ?? r.tableId, slotId: r.slotId, status: status, notes: r.notes,
+                  source: r.source, seatedAt: seatedAt, completedAt: completedAt, forceOverride: forceOverride)
+    }
+    enum CodingKeys: String, CodingKey {
+        case id, customerName, customerPhone, partySize, date, time, durationMin, tableId, slotId
+        case status, notes, source, seatedAt, completedAt
+        case forceOverride = "override"
+    }
+}
+
+/// Body for `PUT /api/v1/admin/dispatch` assign — `driverId` nil ⇒ unassign, so it
+/// must serialize as an explicit JSON `null` (the server keys off its presence).
+private struct DispatchAssignBody: Encodable {
+    let orderId: String
+    let driverId: String?
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(orderId, forKey: .orderId)
+        try c.encode(driverId, forKey: .driverId) // writes null when nil (not omitted)
+    }
+    enum CodingKeys: String, CodingKey { case orderId, driverId }
+}
+/// Body for `PUT /api/v1/admin/dispatch` advance — move a delivery down its lifecycle.
+private struct DispatchAdvanceBody: Encodable { let orderId: String; let status: String }
+
 private struct AdjustPointsBody: Encodable { let delta: Int; let reason: String? }
 
 public extension Endpoint {
@@ -581,6 +656,26 @@ public extension Endpoint {
     static func adminCreateBooking(_ b: BookingBody) -> Endpoint<Reservation> {
         let body = try? JSONEncoder().encode(b)
         return Endpoint<Reservation>(.post, "admin/floor/booking", query: ["location": b.locationSlug], body: body, requiresAuth: true)
+    }
+    /// Transition a booking (seat / seat-early / no-show / complete / reassign).
+    static func adminUpdateReservation(location: String, _ b: ReservationUpdateBody) -> Endpoint<Reservation> {
+        let body = try? JSONEncoder().encode(b)
+        return Endpoint<Reservation>(.post, "admin/floor/reservations", query: ["location": location], body: body, requiresAuth: true)
+    }
+
+    // Service · Dispatch — the delivery driver board (real orders + drivers).
+    static func adminDispatch(location: String) -> Endpoint<DispatchBoard> {
+        Endpoint<DispatchBoard>(.get, "admin/dispatch", query: ["location": location], requiresAuth: true)
+    }
+    /// Assign a driver, or pass `driverId: nil` to clear the assignment.
+    static func adminDispatchAssign(orderId: String, driverId: String?) -> Endpoint<DispatchOrder> {
+        let body = try? JSONEncoder().encode(DispatchAssignBody(orderId: orderId, driverId: driverId))
+        return Endpoint<DispatchOrder>(.put, "admin/dispatch", body: body, requiresAuth: true)
+    }
+    /// Advance a delivery down its lifecycle (assigned → picked_up → delivered).
+    static func adminDispatchAdvance(orderId: String, status: String) -> Endpoint<DispatchOrder> {
+        let body = try? JSONEncoder().encode(DispatchAdvanceBody(orderId: orderId, status: status))
+        return Endpoint<DispatchOrder>(.put, "admin/dispatch", body: body, requiresAuth: true)
     }
     static func adminCustomerDetail(phone: String) -> Endpoint<CrmCustomerDetail> {
         Endpoint<CrmCustomerDetail>(.get, "admin/customers/\(phonePathDigits(phone))", requiresAuth: true)
@@ -669,6 +764,20 @@ public struct PosSuggestion: Codable, Sendable, Identifiable {
     public let reason: String
 }
 private struct PosSuggestionsBody: Encodable { let locationSlug: String; let itemIds: [String] }
+
+/// Live till KPIs (`GET /api/v1/admin/pos/kpis`) — today's figures from real
+/// orders, each with an honest trailing-7-day (same-time-of-day) delta (nil when
+/// there's no baseline). Money is grosze; `tableTurns` is covers ÷ tables.
+public struct PosKpis: Codable, Sendable {
+    public let avgCheck: Grosze
+    public let avgCheckDeltaPct: Int?
+    public let salesPerHour: Grosze
+    public let salesDeltaPct: Int?
+    public let tableTurns: Double
+    public let tableTurnsDeltaPct: Int?
+    public let tableCount: Int
+    public let generatedAt: String
+}
 
 /// Body for `PUT /api/v1/admin/pos/tabs` — edit an open check. Lines are id+qty
 /// (+course); the server resolves prices/discounts at send/charge.

@@ -48,6 +48,12 @@ public struct OperatorRecipesView: View {
 @Observable
 final class OperatorGuestStore {
     var members: [AdminLoyaltyMember] = []
+    /// Family wallets (Loyalty · Wallets tab) — loaded lazily on first view.
+    var wallets: [LoyaltyWallet] = []
+    var walletsLoaded = false
+    /// Redemption ledger (Loyalty · Redemptions tab) — loaded lazily on first view.
+    var redemptions: [LoyaltyRedemption] = []
+    var redemptionsLoaded = false
     var loaded = false
     var error: String?
     private let api: APIClient
@@ -58,6 +64,14 @@ final class OperatorGuestStore {
         catch { self.error = "Something went wrong" }
         loaded = true
     }
+    func loadWallets() async {
+        wallets = (try? await api.send(.adminLoyaltyWallets())) ?? []
+        walletsLoaded = true
+    }
+    func loadRedemptions() async {
+        redemptions = (try? await api.send(.adminLoyaltyRedemptions())) ?? []
+        redemptionsLoaded = true
+    }
 }
 
 /// Loyalty members tab of the Guest hub (see OperatorGuestHub.swift).
@@ -67,10 +81,14 @@ struct GuestLoyaltyTab: View {
     @State private var selected: AdminLoyaltyMember?
     @State private var search = ""
     @State private var sort: GuestSort = .recent
+    @State private var tab: LoyaltyTab = .members
     private let api: APIClient
     init(api: APIClient) { self.api = api }
 
     enum GuestSort: Hashable { case recent, name }
+    /// Members | Wallets | Redemptions — mirrors the web `CoreLoyalty` tabs
+    /// (Win-back is a follow-up pending its churn-candidate facade route).
+    enum LoyaltyTab: Hashable { case members, wallets, redemptions }
     private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
 
     var body: some View {
@@ -83,30 +101,135 @@ struct GuestLoyaltyTab: View {
             if store == nil { store = OperatorGuestStore(api: api) }
             if store?.loaded == false { await store?.load() }
         }
-        .refreshable { await store?.load() }
+        .task(id: tab) {
+            if tab == .wallets, store?.walletsLoaded == false { await store?.loadWallets() }
+            if tab == .redemptions, store?.redemptionsLoaded == false { await store?.loadRedemptions() }
+        }
+        .refreshable {
+            await store?.load()
+            if tab == .wallets { await store?.loadWallets() }
+            if tab == .redemptions { await store?.loadRedemptions() }
+        }
         .sheet(item: $selected) { m in GuestDetailView(m: m) }
     }
 
     @ViewBuilder
     private func content(_ store: OperatorGuestStore) -> some View {
         VStack(alignment: .leading, spacing: theme.space.lg) {
-            if let error = store.error, store.members.isEmpty {
-                ContentUnavailableView("Couldn't load guests", systemImage: "person.2", description: Text(error))
-                    .padding(.top, theme.space.xxl)
-            } else if store.members.isEmpty && store.loaded {
-                DSEmptyState("Guest", systemImage: "person.2", message: "No loyalty members yet.")
-            } else {
-                kpis(store.members)
-                controls
-                let rows = filtered(store.members)
-                if rows.isEmpty {
-                    Text("No members match.").textRole(.callout).foregroundStyle(theme.color.textSecondary)
-                } else {
-                    VStack(spacing: theme.space.sm) { ForEach(rows) { memberCard($0) } }
-                }
+            DSSegmented($tab, options: [(value: .members, label: "Members"),
+                                        (value: .wallets, label: "Wallets"),
+                                        (value: .redemptions, label: "Redemptions")])
+            switch tab {
+            case .members: membersContent(store)
+            case .wallets: walletsContent(store)
+            case .redemptions: redemptionsContent(store)
             }
         }
         .padding(theme.space.lg)
+    }
+
+    @ViewBuilder
+    private func membersContent(_ store: OperatorGuestStore) -> some View {
+        if let error = store.error, store.members.isEmpty {
+            ContentUnavailableView("Couldn't load guests", systemImage: "person.2", description: Text(error))
+                .padding(.top, theme.space.xxl)
+        } else if store.members.isEmpty && store.loaded {
+            DSEmptyState("Guest", systemImage: "person.2", message: "No loyalty members yet.")
+        } else {
+            kpis(store.members)
+            controls
+            let rows = filtered(store.members)
+            if rows.isEmpty {
+                Text("No members match.").textRole(.callout).foregroundStyle(theme.color.textSecondary)
+            } else {
+                VStack(spacing: theme.space.sm) { ForEach(rows) { memberCard($0) } }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func walletsContent(_ store: OperatorGuestStore) -> some View {
+        if !store.walletsLoaded {
+            ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xl)
+        } else if store.wallets.isEmpty {
+            DSEmptyState("Wallets", systemImage: "person.3.fill", message: "No family wallets yet — shared-points groups appear here.")
+        } else {
+            let pooled = store.wallets.reduce(0) { $0 + $1.spendablePool }
+            LazyVGrid(columns: cols, spacing: theme.space.md) {
+                OperatorKPICard(label: "Wallets", value: "\(store.wallets.count)", icon: "person.3.fill", tint: theme.color.accent)
+                OperatorKPICard(label: "Members", value: "\(store.wallets.reduce(0) { $0 + $1.memberCount })", icon: "person.2.fill", tint: theme.color.textSecondary)
+                OperatorKPICard(label: "Spendable pool", value: "\(pooled)", icon: "star.circle.fill", tint: theme.color.success, caption: "shared points")
+            }
+            VStack(spacing: theme.space.sm) { ForEach(store.wallets) { walletCard($0) } }
+        }
+    }
+
+    @ViewBuilder
+    private func redemptionsContent(_ store: OperatorGuestStore) -> some View {
+        if !store.redemptionsLoaded {
+            ProgressView().frame(maxWidth: .infinity).padding(.top, theme.space.xl)
+        } else if store.redemptions.isEmpty {
+            DSEmptyState("Redemptions", systemImage: "gift.fill", message: "No points redeemed yet — the ledger of reward claims appears here.")
+        } else {
+            let total = store.redemptions.reduce(0) { $0 + $1.points }
+            LazyVGrid(columns: cols, spacing: theme.space.md) {
+                OperatorKPICard(label: "Redemptions", value: "\(store.redemptions.count)", icon: "gift.fill", tint: theme.color.accent)
+                OperatorKPICard(label: "Points spent", value: "\(total)", icon: "star.slash.fill", tint: theme.color.warning, caption: "all-time")
+            }
+            VStack(spacing: theme.space.sm) { ForEach(store.redemptions) { redemptionRow($0) } }
+        }
+    }
+
+    private func redemptionRow(_ r: LoyaltyRedemption) -> some View {
+        HStack(spacing: theme.space.sm) {
+            Image(systemName: "gift.fill").font(.caption).foregroundStyle(theme.color.accent)
+                .frame(width: 32, height: 32).background(theme.color.accent.opacity(0.14), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(r.rewardId.replacingOccurrences(of: "-", with: " ").capitalized)
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                Text("\(r.phone)\(r.walletId == nil ? " · solo" : " · wallet") · \(String(r.createdAt.prefix(10)))")
+                    .font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+            }
+            Spacer(minLength: theme.space.sm)
+            Text("−\(r.points)").font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.warning)
+        }
+        .padding(theme.space.md)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
+    }
+
+    private func walletCard(_ w: LoyaltyWallet) -> some View {
+        let head = w.members.first { $0.isHead }
+        return VStack(alignment: .leading, spacing: theme.space.sm) {
+            HStack {
+                Avatar(name: head?.phone ?? w.headPhone)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(w.headPhone).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
+                    Text("\(w.memberCount) member\(w.memberCount == 1 ? "" : "s") · since \(String(w.createdAt.prefix(10)))")
+                        .font(.caption).foregroundStyle(theme.color.textSecondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("\(w.spendablePool)").font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(theme.color.success)
+                    Text("spendable pts").font(.caption2).foregroundStyle(theme.color.textSecondary)
+                }
+            }
+            if !w.members.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(w.members) { m in
+                        Text("\(m.isHead ? "★ " : "")\(String(m.phone.suffix(4))) · \(m.contributedPoints)")
+                            .font(.caption2).foregroundStyle(m.status == "active" ? theme.color.textSecondary : theme.color.textSecondary.opacity(0.5))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(theme.color.surface, in: Capsule())
+                            .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
+                    }
+                }
+            }
+        }
+        .padding(theme.space.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func kpis(_ members: [AdminLoyaltyMember]) -> some View {
