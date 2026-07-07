@@ -22,6 +22,7 @@ import { useOperatorLocation } from "@/store/operatorLocation";
 import { StateBlock } from "@/components/ui";
 import { Aurora, LiquidGlass } from "@/components/LiquidGlass";
 import { formatMoney } from "@/lib/format";
+import { useBreakpoint } from "@/lib/useBreakpoint";
 
 // Service · POS — the ADR-001 target screen. A bespoke operator POS mirroring the
 // web `CorePos` dense console, in React Native, on the bridged SwiftUI Aurora +
@@ -163,6 +164,10 @@ export function Pos() {
   const { slug, locations, setSlug, ensureLoaded } = useOperatorLocation();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
+  // Responsive layout (ADR-002): wide screens (Mac / iPad landscape) pack the
+  // menu grid tighter, on the way to the full desktop console.
+  const { isDesktop, isTablet } = useBreakpoint();
+  const menuCardWidth = isDesktop ? "23.5%" : isTablet ? "31.5%" : "48%";
   const cardW = winW - spacing.md * 2;
 
   // Draggable cart sheet: snaps between a peek (controls only) and a tall state
@@ -769,7 +774,7 @@ export function Pos() {
                 activeOpacity={0.85}
                 disabled={!avail}
                 onPress={() => void addItem(item.id)}
-                style={{ width: "48%", flexGrow: 1 }}
+                style={{ width: menuCardWidth, flexGrow: 1 }}
               >
                 <View
                   style={{
