@@ -15,12 +15,25 @@ interface LiquidGlassProps extends ViewProps {
 }
 
 let Native: HostComponent<LiquidGlassProps> | null = null;
+let NativeAurora: HostComponent<ViewProps> | null = null;
 if (Platform.OS === "ios") {
   try {
     Native = requireNativeComponent<LiquidGlassProps>("LiquidGlassView");
   } catch {
     Native = null; // native module not present in this build — fall back gracefully
   }
+  try {
+    NativeAurora = requireNativeComponent<ViewProps>("AuroraView");
+  } catch {
+    NativeAurora = null;
+  }
+}
+
+/** Ambient native SwiftUI backdrop the glass refracts (ADR-001). iOS-only; a
+ *  plain dark View elsewhere. Place it full-bleed behind glass content. */
+export function Aurora({ style, ...rest }: ViewProps) {
+  if (!NativeAurora) return <View style={[{ backgroundColor: "#140f0d" }, style]} {...rest} />;
+  return <NativeAurora style={style} {...rest} />;
 }
 
 export function LiquidGlass({

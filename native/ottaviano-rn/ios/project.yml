@@ -87,6 +87,7 @@ targets:
       - path: Ottaviano/Images.xcassets
       # Bridged native SwiftUI Liquid Glass element (ADR-001) — shared by both apps.
       - path: Ottaviano/LiquidGlassView.swift
+      - path: Ottaviano/AuroraView.swift
       - path: Ottaviano/LiquidGlassViewManager.swift
       - path: Ottaviano/LiquidGlassViewManager.m
       - path: Ottaviano/PrivacyInfo.xcprivacy
@@ -118,6 +119,7 @@ targets:
       - path: Ottaviano/Images.xcassets
       # Bridged native SwiftUI Liquid Glass element (ADR-001) — shared by both apps.
       - path: Ottaviano/LiquidGlassView.swift
+      - path: Ottaviano/AuroraView.swift
       - path: Ottaviano/LiquidGlassViewManager.swift
       - path: Ottaviano/LiquidGlassViewManager.m
       - path: Ottaviano/PrivacyInfo.xcprivacy

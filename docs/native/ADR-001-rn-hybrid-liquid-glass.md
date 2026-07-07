@@ -162,6 +162,33 @@ resolved **yes** on the first attempt. Pending only the human on-device visual
 sign-off, this ADR is ready to promote to **Accepted** and begin the staged
 migration (§5.3).
 
+### 6.1 Spike follow-up — POS promoted to full-console parity
+
+After the gates passed, the POS spike was taken from "KPI strip · rail · grid" to
+a **faithful 1:1 of the web `CorePos` dense console** — the chosen target ("match
+the real web POS exactly"):
+
+- **Second bridged SwiftUI element — `AuroraView`** (`ios/Ottaviano/AuroraView.swift`,
+  manager in `LiquidGlassViewManager.{swift,m}`, JS wrapper `Aurora` in
+  `src/components/LiquidGlass.tsx`). A full-bleed ambient backdrop of slow-drifting
+  brand blooms (terracotta · amber · basil · indigo) over espresso `#140f0d`,
+  reduce-motion aware. Its only job: give the glass panels real colour to refract —
+  glass reads as glass only over dynamic content. Registered in `project.yml` for
+  both targets. This proves the bridge generalises past a single element.
+- **POS rebuilt** (`src/features/operator/Pos.tsx`) with every web-console layer:
+  command bar + live **risk badge**, the six-cell KPI stat strip (real till state +
+  server KPIs with signed deltas), open-check tabs, the category rail with counts +
+  per-category **~Nm promise**, the **steering banner** (bottleneck util + reason),
+  and menu cards carrying role badges, dietary flags, and **★ make-now / ▼ ease**
+  pace cues + 86 grey-out — all floating on `<Aurora>` + `<LiquidGlass>`.
+- **Four new `/api/v1` signal routes** back the live layers (thin wrappers over the
+  same shared store/lib the web till reads — Rule #1, no mock): `admin/pos/pressure`
+  (risk), `admin/pace/steering` (promise · make-now · throttle · banner),
+  `admin/pos/popular` (daypart ★ set), `admin/kds/eighty-six` (86 grey-out).
+
+Still native-visual-only pending the on-device TestFlight check; the RN + TS side
+typechecks clean (`tsc` exit 0).
+
 ## 7. Open questions (resolved during the spike)
 - Is the RN New Architecture (Fabric) already enabled in `native/ottaviano-rn`? If
   not, enabling it is a spike prerequisite for the native component.

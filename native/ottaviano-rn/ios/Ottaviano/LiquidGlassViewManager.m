@@ -9,3 +9,7 @@ RCT_EXPORT_VIEW_PROPERTY(glassCornerRadius, CGFloat)
 RCT_EXPORT_VIEW_PROPERTY(glassVariant, NSString)
 
 @end
+
+// Ambient backdrop the glass refracts (no props).
+@interface RCT_EXTERN_MODULE(AuroraViewManager, RCTViewManager)
+@end

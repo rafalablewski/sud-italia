@@ -601,6 +601,7 @@
     "manage-locations",
     "menu",
     "menu-engineering",
+    "pace",
     "permissions",
     "pos",
     "purchase-orders",
@@ -624,6 +625,7 @@
     "concierge",
     "demand-exchange",
     "dispatch",
+    "pace",
     "whatsapp"
   ],
   "counts": {
