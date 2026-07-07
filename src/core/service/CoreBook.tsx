@@ -494,6 +494,31 @@ export function CoreBook({
     } finally { setActing(null); }
   };
 
+  // ── Seat early — the guest showed up ahead of their booking (a 14:00 party at
+  // 12:30). Reschedule the reservation to NOW and seat in one write, so the
+  // timeline block, elapsed clock and learned turn-time all read the real seating
+  // moment (not the future slot). One POST reschedules (time→now, past the
+  // service-window gate) AND seats (`seatedAt` auto-stamped); `override` clears
+  // any table clash the earlier hour introduces. The full record — joins + needs
+  // included — is resent so nothing about the party is lost on the move.
+  const seatEarly = async (r: Reservation) => {
+    setActing(r.id);
+    try {
+      const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: r.id, customerName: r.customerName, customerPhone: r.customerPhone, partySize: r.partySize,
+          date: r.date, time: nowHM, durationMin: r.durationMin ?? DURATION_MIN, tableId: r.tableId,
+          slotId: r.slotId, notes: r.notes, source: r.source, status: "seated",
+          needs: r.needs, joinedTableIds: r.joinedTableIds, override: true,
+        }),
+      });
+      if (res.ok) { toast(`${r.customerName} · seated early · was ${r.time}, now ${nowHM}`, "success"); await load(); }
+      else { const j = (await res.json().catch(() => ({}))) as { message?: string }; toast(j.message || "Could not seat early", "danger"); }
+    } finally { setActing(null); }
+  };
+
   // ── Walk-in — the engine ranks safe tables at "now"; only ok ones seat. A
   // walk-in is an ad-hoc reservation (source: walk-in, seated immediately).
   const walkSuggestions = useMemo<Suggestion[]>(() => {
@@ -625,6 +650,12 @@ export function CoreBook({
   );
   const seatedCount = useMemo(() => sessions.filter((s) => s.state === "seated").length, [sessions]);
   const expected = useMemo(() => reservations.filter((r) => r.status === "booked").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
+  // Split Expected into two host-triage groups (Arrivals): parties whose booked
+  // time has already passed and still aren't seated are **running late** (chase /
+  // hold / no-show); everyone else is still **upcoming**. Late only applies to
+  // today — a future date has no "now" to be late against.
+  const lateExpected = useMemo(() => (isToday ? expected.filter((r) => toMin(r.time) < nowMin) : []), [expected, isToday, nowMin]);
+  const upcomingExpected = useMemo(() => expected.filter((r) => !(isToday && toMin(r.time) < nowMin)), [expected, isToday, nowMin]);
   const seatedList = useMemo(() => reservations.filter((r) => r.status === "seated").sort((a, b) => a.time.localeCompare(b.time)), [reservations]);
 
   // ── Waitlist (the host queue) — live wait quotes from the engine. Each party's
@@ -1266,19 +1297,57 @@ export function CoreBook({
             <div className="acol">
               <div className="acolh"><span className="t">Expected</span><span className="c">{expected.length}</span></div>
               <div className="acolb">
-                {expected.length === 0 ? <div className="core-ctx-empty pad">Nothing due.</div> : expected.map((r) => {
-                  const late = isToday && toMin(r.time) < nowMin;
-                  return (
-                    <div key={r.id} className={`apc${late ? " late" : ""}`}>
-                      <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{r.time}{late ? " · late" : ""}</span></div>
-                      <div className="r2">◈ {resTableLabel(r)}{r.notes ? ` · ${r.notes}` : ""}</div>
-                      <div className="aact">
-                        <button className="prim" disabled={acting === r.id} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
-                        <button disabled={acting === r.id} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {expected.length === 0 ? <div className="core-ctx-empty pad">Nothing due.</div> : (
+                  <>
+                    {/* Running late — booked time already passed, still not seated.
+                        A subsection at the top of Expected so the host chases them
+                        first; the card is danger-toned and reads how many minutes
+                        over. They finally show → Seat (at their table); give up →
+                        No-show. */}
+                    {lateExpected.length > 0 && (
+                      <div className="asubh late"><span>◷ Running late</span><span className="c">{lateExpected.length}</span></div>
+                    )}
+                    {lateExpected.map((r) => {
+                      const over = nowMin - toMin(r.time);
+                      return (
+                        <div key={r.id} className="apc late">
+                          <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{r.time} · {over}m late</span></div>
+                          <div className="r2">◈ {resTableLabel(r)}{r.notes ? ` · ${r.notes}` : ""}</div>
+                          <div className="aact">
+                            <button className="prim" disabled={acting === r.id} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
+                            <button disabled={acting === r.id} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Upcoming — still ahead of their slot. When the party turns
+                        up EARLY (arrives before their booked time, today), the
+                        primary action is Seat early: it reschedules the booking to
+                        now and seats in one move (see seatEarly) so the record
+                        matches reality, rather than parking them at a stale future
+                        time. On the slot (or a future date) it's a plain Seat. */}
+                    {lateExpected.length > 0 && upcomingExpected.length > 0 && (
+                      <div className="asubh"><span>Upcoming</span><span className="c">{upcomingExpected.length}</span></div>
+                    )}
+                    {upcomingExpected.map((r) => {
+                      const early = isToday && toMin(r.time) > nowMin;
+                      return (
+                        <div key={r.id} className={`apc${early ? " early" : ""}`}>
+                          <div className="r1"><span className="nm">{r.customerName} · {r.partySize}</span><span className="tm">{r.time}{early ? " · early" : ""}</span></div>
+                          <div className="r2">◈ {resTableLabel(r)}{r.notes ? ` · ${r.notes}` : ""}</div>
+                          <div className="aact">
+                            {early ? (
+                              <button className="prim" disabled={acting === r.id} onClick={() => void seatEarly(r)} title={`Reschedule ${r.time} → ${nowHM} and seat now`}>Seat early</button>
+                            ) : (
+                              <button className="prim" disabled={acting === r.id} onClick={() => void setResStatus(r, "seated", "Seated")}>Seat</button>
+                            )}
+                            <button disabled={acting === r.id} onClick={() => void setResStatus(r, "no-show", "No-show")}>No-show</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
             <div className="acol">

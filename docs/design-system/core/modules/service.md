@@ -329,7 +329,18 @@ bookings show "due" + Seat, `held` tiles show the next booking's countdown,
 `free` tiles tap to seat a walk-in, and a table seated **off-book from POS**
 renders as a dashed **`.offbook`** "occupied · walk-in" tile that also
 opens its check), and **Arrivals** (`.core-bk-arrivals` — the host queue: **Expected
-· Waitlist · Seated**). The **Waitlist** column (`.core-bk-wladd` add row +
+· Waitlist · Seated**). The **Expected** column is split into two host-triage
+subsections (`.asubh` mono divider headers): **◷ Running late** — booked parties
+whose slot has already passed and still aren't seated (`.apc.late`, danger-toned,
+reading `{time} · {N}m late`) so the host chases / holds / no-shows them first —
+then **Upcoming**. A party that turns up **early** (arrives before its booked
+time, today) gets an `.apc.early` card (basil accent + "early" tag) whose primary
+action is **Seat early** (`seatEarly`): one POST reschedules the reservation to
+**now** *and* seats it (past the service-window gate, `seatedAt` auto-stamped,
+`override` clears the earlier-hour clash), so the timeline block, elapsed clock and
+learned turn-time read the real seating moment instead of a stale future slot — the
+`14:00 party at 12:30` case. On the slot (or a future date) it's a plain **Seat**;
+both keep the No-show action. The **Waitlist** column (`.core-bk-wladd` add row +
 `.apc.waitc` entries, backed by `/api/admin/floor/waitlist`) queues walk-ins with
 a **live wait quote** from `estimateWaitMin` (soonest a fitting table frees, pushed
 out by the parties ahead); an entry flips to "table ready" and **Seat** drops them

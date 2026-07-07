@@ -534,6 +534,16 @@
 .core .core-bk-arrivals .apc .nm { font-weight: 600; font-size: 13px; }
 .core .core-bk-arrivals .apc .tm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
 .core .core-bk-arrivals .apc.late .tm { color: var(--danger); }
+/* Early arrival — the party turned up ahead of their slot; a basil accent + a
+   "early" tag marks the card whose primary action reschedules them to now. */
+.core .core-bk-arrivals .apc.early { border-color: rgba(122, 184, 96, .45); box-shadow: inset 0 0 0 1px rgba(122, 184, 96, .18); }
+.core .core-bk-arrivals .apc.early .tm { color: var(--basil); }
+/* Triage subsection headers inside the Expected column (Running late · Upcoming).
+   A light mono divider row so the two groups read apart without a second panel. */
+.core .core-bk-arrivals .asubh { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 4px 2px 2px; margin-top: 2px; border-top: 1px solid var(--line); }
+.core .core-bk-arrivals .asubh:first-child { border-top: 0; margin-top: 0; }
+.core .core-bk-arrivals .asubh.late { color: var(--danger); }
+.core .core-bk-arrivals .asubh .c { font-family: var(--mono); font-size: 9px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; }
 .core .core-bk-arrivals .apc .r2 { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 3px; }
 .core .core-bk-arrivals .apc .aact { display: flex; gap: 6px; margin-top: 9px; }
 .core .core-bk-arrivals .apc .aact button { flex: 1; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 6px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-3); color: var(--ink-2); }
