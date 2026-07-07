@@ -93,6 +93,13 @@ export function CoreSlots() {
   // instantly (no empty flash); the mount/poll fetch revalidates.
   const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:slots:${loc}`, []);
   const [board, setBoard] = useCoreCache<DemandBoard | null>(`core:slots-board:${loc}`, null);
+  // Floor size — the real dine-in capacity of any window. A slot's `maxOrders`
+  // is an ONLINE/POS order-throughput cap, NOT seats (see src/lib/booking.ts):
+  // a dine-in window seats at most one party per table, so its seat ceiling is
+  // the table count, not maxOrders. (The 90-min turn + 15-min cleanup hold that
+  // governs live *availability* is applied per-reservation in Book's slot fill;
+  // this is the static ceiling.)
+  const [tableCount, setTableCount] = useCoreCache<number>(`core:slots-tables:${loc}`, 0);
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [cMode, setCMode] = useState<"bulk" | "single">("bulk");
@@ -135,6 +142,17 @@ export function CoreSlots() {
   useEffect(() => {
     void loadSlots();
   }, [loadSlots]);
+  // The floor's table count drives the dine-in seat ceiling shown per window.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const r = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
+      const d = r.ok ? await r.json() : [];
+      const arr = Array.isArray(d) ? d : (d.tables ?? []);
+      if (!cancelled) setTableCount(arr.length);
+    })();
+    return () => { cancelled = true; };
+  }, [loc, setTableCount]);
   // Demand exchange sits alongside Manage (dense-console: both columns live),
   // so the board loads on every date/location change, not on a tab toggle.
   useEffect(() => {
@@ -333,7 +351,14 @@ export function CoreSlots() {
   const slotRow = (s: TimeSlot) => {
     const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
     const tier = pct >= 100 ? "full" : pct >= 70 ? "tight" : "healthy";
-    const statusText = pct >= 100 ? "full" : pct >= 85 ? "filling fast" : `seats to ${s.maxOrders}`;
+    // A dine-in window's capacity is the floor (one party per table), so show
+    // "seats to <tables>" — NOT maxOrders, which is the online-order cap. Only
+    // online-only windows advertise "orders to <maxOrders>". Before the floor
+    // count loads, fall back to maxOrders so the row never reads "seats to 0".
+    const servesDineIn = s.fulfillmentTypes.includes("dine-in");
+    const capNoun = servesDineIn ? "seats" : "orders";
+    const capTo = servesDineIn && tableCount > 0 ? tableCount : s.maxOrders;
+    const statusText = pct >= 100 ? "full" : pct >= 85 ? "filling fast" : `${capNoun} to ${capTo}`;
     const available = s.status === "active";
     const selected = sel.has(s.id);
     // Auto dine-in grid windows are recreated on load — closing them = mark
