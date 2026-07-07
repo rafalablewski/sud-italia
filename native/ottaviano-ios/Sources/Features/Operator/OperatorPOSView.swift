@@ -335,12 +335,29 @@ public struct OperatorPOSView: View {
     @State private var category: String?
     @State private var search = ""
     @State private var tabMessage: String?
+    /// Focus mode — hides the lens rail (the native twin of the web fullscreen toggle).
+    @State private var focusMode = false
+    /// Jump to another Core surface from the in-screen lens rail. Injected by the
+    /// app shell (sets the sidebar selection); nil = rail navigation disabled.
+    private let onLens: ((String) -> Void)?
 
-    public init(api: APIClient, location: String = "krakow") {
+    public init(api: APIClient, location: String = "krakow", onLens: ((String) -> Void)? = nil) {
         _store = State(initialValue: OperatorPOSStore(api: api, location: location))
+        self.onLens = onLens
     }
 
     private let gridCols = [GridItem(.adaptive(minimum: 144), spacing: 12)]
+
+    /// The Core "room lenses" — the native twin of the web left Lens Rail. POS is
+    /// the active one; the rest jump the app shell to that surface.
+    private struct Lens: Identifiable { let id: String; let icon: String; let label: String }
+    private let lenses: [Lens] = [
+        .init(id: "/core/pos", icon: "creditcard.and.123", label: "POS"),
+        .init(id: "/core/kds", icon: "flame.fill", label: "Kitchen Display"),
+        .init(id: "/core/orders", icon: "list.bullet.rectangle.portrait", label: "Orders"),
+        .init(id: "/core/guest", icon: "person.2.fill", label: "Guest"),
+        .init(id: "/core/service", icon: "fork.knife.circle.fill", label: "Service"),
+    ]
 
     public var body: some View {
         Group {
@@ -359,21 +376,10 @@ public struct OperatorPOSView: View {
             // keeps the plain canvas.
             if theme.glassy { AuroraBackground() } else { theme.color.surface }
         }
-        .navigationTitle("POS — \(store.location.capitalized)")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showQR = true } label: {
-                    let n = store.unpaidQrCount
-                    Label(n > 0 ? "QR (\(n))" : "QR orders",
-                          systemImage: n > 0 ? "qrcode.viewfinder" : "qrcode")
-                        .foregroundStyle(n > 0 ? theme.color.warning : theme.color.accent)
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showTabs = true } label: { Label("Manage checks", systemImage: "rectangle.stack.fill") }
-            }
-        }
+        // The web POS carries its own in-page chrome (command bar + lens rail), so
+        // the native shell hides the system nav bar and renders that chrome itself.
+        // Back to the operator rail stays available via the edge-swipe / the lenses.
+        .toolbar(.hidden, for: .navigationBar)
         .task { if case .loading = store.state { await store.load() } }
         .task { await store.refreshTabs(); await store.loadTables(); await store.loadQrOrders(); await store.loadKpis() }
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
@@ -405,22 +411,96 @@ public struct OperatorPOSView: View {
 
     @ViewBuilder
     private func loaded(_ items: [AdminMenuItem]) -> some View {
-        VStack(spacing: 0) {
-            tabStrip
-            Divider().overlay(theme.color.line)
-            if hSize == .regular {
-                HStack(spacing: 0) {
-                    menuPane(items).frame(maxWidth: .infinity)
-                    Divider().overlay(theme.color.line)
-                    POSCheckPanel(store: store, message: $tabMessage, onWalkInCharge: { showCharge = true })
-                        .frame(width: 380)
-                        .background(theme.color.surface2)
+        HStack(spacing: 0) {
+            if !focusMode {
+                lensRail
+                Divider().overlay(theme.color.line)
+            }
+            VStack(spacing: 0) {
+                commandBar
+                Divider().overlay(theme.color.line)
+                tabStrip
+                Divider().overlay(theme.color.line)
+                if hSize == .regular {
+                    HStack(spacing: 0) {
+                        menuPane(items).frame(maxWidth: .infinity)
+                        Divider().overlay(theme.color.line)
+                        POSCheckPanel(store: store, message: $tabMessage, onWalkInCharge: { showCharge = true })
+                            .frame(width: 380)
+                            .background(theme.color.surface2)
+                    }
+                } else {
+                    menuPane(items)
+                    if !store.isEmpty || store.currentTabID != nil { compactCartBar }
                 }
-            } else {
-                menuPane(items)
-                if !store.isEmpty || store.currentTabID != nil { compactCartBar }
             }
         }
+    }
+
+    // MARK: command bar (web `core › pos:order` header)
+
+    private var commandBar: some View {
+        HStack(spacing: 6) {
+            Text("core").font(.caption.monospaced()).foregroundStyle(theme.color.textSecondary)
+            Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(theme.color.textSecondary)
+            Text("pos:order").font(.caption.monospaced().weight(.semibold)).foregroundStyle(theme.color.accent)
+            Text(store.location.capitalized).font(.caption2).foregroundStyle(theme.color.textSecondary)
+                .padding(.leading, 4)
+            Spacer()
+            Button { showQR = true } label: {
+                let n = store.unpaidQrCount
+                Label(n > 0 ? "QR \(n)" : "QR orders", systemImage: n > 0 ? "qrcode.viewfinder" : "qrcode")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, theme.space.sm).frame(height: 30)
+                    .foregroundStyle(n > 0 ? theme.color.warning : theme.info)
+                    .background((n > 0 ? theme.color.warning : theme.info).opacity(0.14), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Button { showTabs = true } label: {
+                Image(systemName: "rectangle.stack.fill").font(.caption)
+                    .frame(width: 30, height: 30).foregroundStyle(theme.color.textSecondary)
+                    .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Manage checks")
+            Button { focusMode.toggle() } label: {
+                Image(systemName: focusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    .font(.caption).frame(width: 30, height: 30).foregroundStyle(theme.color.textSecondary)
+                    .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(focusMode ? "Exit focus mode" : "Focus mode")
+        }
+        .padding(.horizontal, theme.space.md).frame(height: 46)
+        .background(theme.color.surface)
+    }
+
+    // MARK: lens rail (web left Lens Rail)
+
+    private var lensRail: some View {
+        VStack(spacing: theme.space.sm) {
+            ForEach(lenses) { l in
+                let active = l.id == "/core/pos"
+                Button { if !active { onLens?(l.id) } } label: {
+                    Image(systemName: l.icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 40, height: 40)
+                        .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
+                        .background(active ? theme.color.accent : theme.color.surface2,
+                                    in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous)
+                            .strokeBorder(theme.color.line, lineWidth: active ? 0 : 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(active || onLens == nil)
+                .accessibilityLabel(l.label)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, theme.space.md).padding(.horizontal, theme.space.xs)
+        .frame(width: 56)
+        .frame(maxHeight: .infinity)
+        .background(theme.color.surface.opacity(0.65))
     }
 
     // MARK: open-checks strip
@@ -484,14 +564,17 @@ public struct OperatorPOSView: View {
             .background(theme.color.surface2, in: Capsule())
             .overlay(Capsule().strokeBorder(theme.color.line, lineWidth: 1))
 
+            // Category rail — icon tiles with counts (the web dense-console rail),
+            // replacing plain text chips.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: theme.space.xs) {
-                    catChip("All", count: items.count, active: category == nil) { category = nil }
+                    catTile(icon: "square.grid.2x2.fill", label: "All", count: items.count, active: category == nil) { category = nil }
                     ForEach(categories(items), id: \.self) { c in
-                        catChip(c.capitalized, count: items.filter { $0.category == c }.count,
+                        catTile(icon: catIcon(c), label: c.capitalized, count: items.filter { $0.category == c }.count,
                                 active: category == c) { category = c }
                     }
                 }
+                .padding(.vertical, 2)
             }
 
             ScrollView {
@@ -504,18 +587,38 @@ public struct OperatorPOSView: View {
         .padding(.horizontal, theme.space.lg).padding(.top, theme.space.sm)
     }
 
-    private func catChip(_ label: String, count: Int, active: Bool, _ tap: @escaping () -> Void) -> some View {
+    /// A category rail tile — glyph + a corner count badge (web dense-console rail).
+    private func catTile(icon: String, label: String, count: Int, active: Bool, _ tap: @escaping () -> Void) -> some View {
         Button(action: tap) {
-            HStack(spacing: 5) {
-                Text(label).textRole(.caption).fontWeight(.semibold)
-                Text("\(count)").font(.caption2.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(active ? theme.color.onAccent.opacity(0.85) : theme.color.textSecondary.opacity(0.7))
-            }
-            .padding(.horizontal, theme.space.md).frame(height: 30)
-            .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
-            .background(active ? theme.color.accent : theme.color.surface2, in: Capsule())
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 46, height: 40)
+                .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
+                .background(active ? theme.color.accent : theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: active ? 0 : 1))
+                .overlay(alignment: .topTrailing) {
+                    Text("\(count)").font(.system(size: 8.5, weight: .bold)).monospacedDigit()
+                        .padding(.horizontal, 3).padding(.vertical, 1)
+                        .foregroundStyle(active ? theme.color.accent : theme.color.textSecondary)
+                        .background(active ? theme.color.onAccent : theme.color.surface, in: Capsule())
+                        .offset(x: 5, y: -4)
+                }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(label), \(count) items")
+    }
+    /// SF Symbol per menu category — the native approximation of the web CAT_ICON set.
+    private func catIcon(_ category: String) -> String {
+        switch category {
+        case "pizza": return "flame.fill"
+        case "pasta": return "fork.knife"
+        case "antipasti": return "leaf.fill"
+        case "panini": return "square.stack.3d.up.fill"
+        case "desserts": return "birthday.cake.fill"
+        case "drinks": return "cup.and.saucer.fill"
+        case "sides": return "takeoutbag.and.cup.and.straw.fill"
+        default: return "square.grid.2x2"
+        }
     }
 
     // Dense-console stat strip — the web `CorePos` KPI row. Client counts (open
@@ -555,9 +658,15 @@ public struct OperatorPOSView: View {
         let qty = store.ticketQty(item.id) ?? 0
         return Button { store.add(item) } label: {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top) {
+                HStack(alignment: .top, spacing: 4) {
                     Text(item.name).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                         .lineLimit(2).multilineTextAlignment(.leading)
+                    if let role = roleBadge(item.menuRole) {
+                        Text(role.label).font(.system(size: 8, weight: .bold)).tracking(0.3)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .foregroundStyle(role.color).background(role.color.opacity(0.16), in: Capsule())
+                            .fixedSize()
+                    }
                     Spacer(minLength: 2)
                     if qty > 0 {
                         Text("\(qty)").font(.caption.weight(.bold)).monospacedDigit()
@@ -621,23 +730,45 @@ public struct OperatorPOSView: View {
             .foregroundStyle(c).background(c.opacity(0.16), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
-    // MARK: compact cart bar (iPhone)
+    /// Menu-engineering role badge (web `ROLE_BADGE`): Hero / Profit / Anchor / LTO.
+    private func roleBadge(_ role: String?) -> (label: String, color: Color)? {
+        switch role {
+        case "hero": return ("HERO", theme.color.accent)
+        case "profit-driver": return ("PROFIT", theme.color.success)
+        case "anchor": return ("ANCHOR", theme.info)
+        case "lto": return ("LTO", theme.color.warning)
+        default: return nil
+        }
+    }
+
+    // MARK: docked check bar (iPhone — web `.core-dock` open-check panel)
 
     private var compactCartBar: some View {
-        Button { showCheckSheet = true } label: {
-            HStack {
-                Image(systemName: "cart.fill")
-                Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s")").fontWeight(.semibold)
-                if let n = store.currentTabName { Text("· \(n)").foregroundStyle(theme.color.onAccent.opacity(0.85)) }
-                Spacer()
-                MoneyText(store.totalAfterDiscount).fontWeight(.bold)
-                Image(systemName: "chevron.up")
+        HStack(spacing: theme.space.sm) {
+            Circle().fill(theme.color.accent).frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(store.currentTabName ?? "Quick sale")
+                        .font(.subheadline.weight(.bold)).foregroundStyle(theme.color.textPrimary).lineLimit(1)
+                    if store.currentTabID != nil {
+                        Text("Open").font(.caption2.weight(.bold)).foregroundStyle(theme.color.success)
+                    }
+                }
+                Text("\(store.lineCount) item\(store.lineCount == 1 ? "" : "s") · \(store.covers) covers")
+                    .font(.caption).foregroundStyle(theme.color.textSecondary).lineLimit(1)
             }
-            .foregroundStyle(theme.color.onAccent)
-            .padding(theme.space.lg)
-            .background(theme.color.accent)
+            Spacer(minLength: theme.space.sm)
+            MoneyText(store.totalAfterDiscount).font(.subheadline.weight(.bold)).foregroundStyle(theme.color.textPrimary)
+            Button { showCheckSheet = true } label: {
+                Text("Open").font(.caption.weight(.bold)).foregroundStyle(theme.color.onAccent)
+                    .padding(.horizontal, theme.space.md).frame(height: 34)
+                    .background(theme.color.accent, in: Capsule())
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, theme.space.md).padding(.vertical, theme.space.sm)
+        .background(theme.color.surface2)
+        .overlay(alignment: .top) { Rectangle().fill(theme.color.line).frame(height: 1) }
     }
 
     // MARK: helpers

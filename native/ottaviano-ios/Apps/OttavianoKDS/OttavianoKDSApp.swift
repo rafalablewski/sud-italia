@@ -190,7 +190,7 @@ struct OperatorRootView: View {
     private func detail(for item: OperatorNavItem) -> some View {
         switch item.id {
         case "/core/pos":
-            OperatorPOSView(api: deps.api)
+            OperatorPOSView(api: deps.api, onLens: { id in selection = operatorNavItem(id: id) })
         case "/core/kds":
             KDSBoardView(store: KDSStore(api: deps.api, sse: deps.sse), api: deps.api, role: role)
         case "/core/orders", "/admin/orders":
