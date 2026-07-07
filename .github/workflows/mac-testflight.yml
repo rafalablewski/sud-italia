@@ -55,10 +55,14 @@ jobs:
 
       - name: Add react-native-macos (in-job, not committed)
         # Pinned to the RN 0.79 line. Kept out of the shared package.json so the
-        # iOS pipeline's npm install is never affected.
-        run: npm install --no-save react-native-macos@^0.79.0
+        # iOS pipeline's npm install is never affected. --legacy-peer-deps because
+        # react-native-macos 0.79.x pins a slightly different RN patch (0.79.6 vs
+        # our 0.79.5) — the core diff is negligible for the macOS bring-up.
+        run: npm install --no-save --legacy-peer-deps react-native-macos@^0.79.0
 
       - name: Scaffold the macOS project (if absent)
+        env:
+          npm_config_legacy_peer_deps: "true"
         run: |
           if [ ! -d macos ]; then
             npx --yes react-native-macos-init --overwrite --version "^0.79.0" || {
