@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, TextInput, TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import { ScrollView, TextInput, TouchableOpacity, View, Text, StyleSheet, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
 import { useOperatorLocation } from "@/store/operatorLocation";
@@ -101,6 +102,14 @@ export function Pos() {
   const { c, radius, spacing } = useTheme();
   const { authed } = useOperator();
   const { slug, locations, setSlug, ensureLoaded } = useOperatorLocation();
+  // Bridged glass views hug their content width under the Fabric interop layer,
+  // so an unconstrained KPI strip / command bar sizes to its content and spills
+  // past the screen (the rounded right corner ends up off-screen). Bind every
+  // glass surface to an explicit card width, and honour the bottom safe area so
+  // the docked check floats above the home indicator instead of under it.
+  const insets = useSafeAreaInsets();
+  const { width: winW } = useWindowDimensions();
+  const cardW = winW - spacing.md * 2;
 
   const [items, setItems] = useState<PosMenuItem[] | null>(null);
   const [kpis, setKpis] = useState<PosKpis | null>(null);
@@ -231,9 +240,12 @@ export function Pos() {
       {/* Native SwiftUI ambient backdrop — the glass panels refract it (ADR-001). */}
       <Aurora style={StyleSheet.absoluteFill} />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: ticketCount > 0 ? 128 : 40 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (ticketCount > 0 ? 128 : 40) + insets.bottom }}
+      >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
-        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md }}>
+        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md, width: cardW }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
             <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: -0.3 }}>POS</Text>
             <Text style={{ color: c.textSecondary, fontSize: 13, fontWeight: "600" }}>· Order</Text>
@@ -278,8 +290,8 @@ export function Pos() {
         </LiquidGlass>
 
         {/* ── KPI stat strip — the dense-console metric row (web core-statstrip) ── */}
-        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.sm }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: 4 }}>
+        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.sm, width: cardW }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 4 }}>
             <KpiCell
               label="Open checks"
               value={String(railCount)}
@@ -547,19 +559,19 @@ export function Pos() {
 
       {/* ── Docked check — a second Liquid Glass surface (web core-ticket) ── */}
       {ticketCount > 0 && (
-        <View style={{ position: "absolute", left: spacing.md, right: spacing.md, bottom: spacing.md }}>
-          <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md }}>
+        <View style={{ position: "absolute", left: spacing.md, right: spacing.md, bottom: insets.bottom + spacing.sm }}>
+          <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md, width: cardW }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: c.accent }} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }}>Quick sale</Text>
-                <Text style={{ color: c.textSecondary, fontSize: 12 }}>
+              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: c.accent, flexShrink: 0 }} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }} numberOfLines={1}>Quick sale</Text>
+                <Text style={{ color: c.textSecondary, fontSize: 12 }} numberOfLines={1}>
                   {ticketCount} {ticketCount === 1 ? "item" : "items"}
                   {promiseMin(ticketPromiseSec) ? ` · ready ${promiseMin(ticketPromiseSec)}` : ""}
                 </Text>
               </View>
-              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 17 }}>{formatMoney(ticketTotal)}</Text>
-              <TouchableOpacity onPress={() => setTicket({})}>
+              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 17, flexShrink: 0 }}>{formatMoney(ticketTotal)}</Text>
+              <TouchableOpacity onPress={() => setTicket({})} style={{ flexShrink: 0 }}>
                 <Text
                   style={{
                     color: c.onAccent,
@@ -677,6 +689,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexShrink: 0,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 999,
     paddingVertical: 4,
