@@ -197,13 +197,15 @@ rail. `.core-book-tlform` is now a single-column grid that stacks the full-width
 **`.core-book-pane`** cards — **When · Who · Where** — headed
 by a full-width `.core-book-deckhead` ("New reservation · date · loc") and each
 labelled by a `.core-book-panelab`. The three panes are **not equal thirds**:
-`grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) minmax(0, 9fr)` (a `5:6:9`
-split ≈ `1/3 · 2/5 · 3/5`, i.e. **25% / 30% / 45%** across the full 100% width),
-so **Where** — the zone-grouped table grid — carries the most room and **When**
-the least. This trades the old tall rail for a wide,
+`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr)` (a `1:1:2`
+split = **25% / 25% / 50%** across the full 100% width), so **Where** — the
+zone-grouped table grid — carries half, while **When** (slot chips) and **Who**
+(a compact party + guest form) each take a quarter. This trades the old tall rail for a wide,
 short layout so every choice stays on screen; **Today's bookings** still flows
 full-width beneath the whole deck. Panes: **When** = the slot chips; **Who** =
-party stepper + guest-needs chips + guest name/phone/notes (+ CRM match); **Where**
+party stepper + guest-needs chips + a **guest** block (`.core-bk-guest` — name +
+phone share a ½ + ½ `.core-bk-guestgrid` row, a full-width `.core-bk-notes`
+**textarea** beneath, evenly gapped, + CRM match); **Where**
 = the ranked table cards **grouped by zone** (`.core-bk-zones` → per-zone
 `.core-bk-zone` = a `.core-bk-zonehd` header + its own `.core-bk-tgrid` of
 `.core-bk-tcard`) + joins + signals + min-spend + override + Book button.

@@ -235,8 +235,15 @@
 .core .core-bk-tcard.dim .tfit { color: var(--ink-3); background: var(--panel-2); }
 .core .core-bk-tcard.is-focus { border-color: var(--brand); }
 
-/* guest — stacked full-width inputs */
+/* guest — name + phone share a ½ + ½ row, notes runs full-width beneath, all
+   evenly spaced. `.core-bk-guest` owns the vertical rhythm so the field's flab
+   keeps its own margin (no double gap). */
 .core .core-bk-input { width: 100%; }
+.core .core-bk-guest { display: flex; flex-direction: column; gap: 8px; }
+.core .core-bk-guestgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* notes is a textarea — `.core-inp` is a fixed 36px single-line input, so undo
+   its height/vertical-padding and let it grow (resize vertical). */
+.core .core-bk-notes { height: auto; min-height: 60px; padding-top: 8px; padding-bottom: 8px; line-height: 1.4; resize: vertical; }
 
 /* min-spend note (real: slot.minSpendGrosze) */
 .core .core-bk-minspend {

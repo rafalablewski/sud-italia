@@ -1000,21 +1000,26 @@ export function CoreBook({
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Guest</span></div>
-              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
-              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
-              {guestProfile && (
-                <div className="core-bk-guestmatch">
-                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
-                  <span className="gm-txt">
-                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
-                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
-                  </span>
-                  {name.trim() === "" && guestProfile.name && (
-                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
-                  )}
+              <div className="core-bk-guest">
+                {/* name + phone share a row (½ + ½); notes runs full-width below */}
+                <div className="core-bk-guestgrid">
+                  <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Surname — e.g. Kowalski" />
+                  <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — +48 512 340 118" />
                 </div>
-              )}
-              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
+                {guestProfile && (
+                  <div className="core-bk-guestmatch">
+                    {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
+                    <span className="gm-txt">
+                      {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
+                      {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
+                    </span>
+                    {name.trim() === "" && guestProfile.name && (
+                      <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
+                    )}
+                  </div>
+                )}
+                <textarea className="core-inp core-bk-input core-bk-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes — high chair, window seat…" rows={2} />
+              </div>
             </div>
           </section>
 
