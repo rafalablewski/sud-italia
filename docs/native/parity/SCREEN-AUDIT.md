@@ -137,6 +137,17 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   - **Liquid-glass surface** — the till body now paints the `AuroraBackground` on
     the glassy (operator) skin, mirroring the web `liquid-glass` Core skin (was a
     flat canvas).
+- **Shipped — web-shell chrome (this pass):** the till now reproduces the web
+  `CorePos` in-page shell rather than a plain iOS screen. The system nav bar is
+  hidden and replaced by: a **command bar** (`core › pos:order` breadcrumb + QR /
+  focus toggle), a left **lens rail** (POS active · Kitchen · Orders · Guest ·
+  Service — taps jump the app shell to that surface via an injected `onLens`
+  closure that sets the sidebar selection), a **category icon rail** (glyph tiles
+  with count badges, replacing text chips), **menu-role badges** (Hero / Profit /
+  Anchor / LTO from `menuRole`, the web `ROLE_BADGE`), and a **docked check bar**
+  (name · Open · items · covers · Open) styled like the web dock. A **focus mode**
+  hides the lens rail (the native twin of the web fullscreen toggle). Chrome only —
+  no data-flow change; all figures stay real (Rule #1).
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
