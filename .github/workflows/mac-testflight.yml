@@ -1,0 +1,90 @@
+name: Mac app — TestFlight (bootstrap)
+
+# ADR-002 phase 2 — bring up the react-native-macos target IN CI (our "Mac in the
+# loop"), since the macos/ Xcode project must be scaffolded on macOS. This is a
+# BOOTSTRAP harness: it scaffolds macos/ at build time, installs pods, and tries
+# to build the macOS app. Expect it to fail on the first runs and iterate on the
+# real errors — exactly how the iOS pipeline was brought up. Once green, we commit
+# native/ottaviano-rn/macos/ and switch to building the committed project.
+#
+# Kept OUT of the iOS pipeline: react-native-macos is installed in-job (never in
+# the shared package.json), so it can't break ios-testflight.yml.
+#
+# Manual-dispatch only for now (no auto-trigger while it's still red).
+on:
+  workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: "Marketing version (blank = project default)"
+        type: string
+        default: ""
+
+concurrency:
+  group: mac-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    name: Scaffold + build react-native-macos
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: native/ottaviano-rn
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)"
+          if [ -z "$XCODE_APP" ]; then echo "No Xcode 26" >&2; ls -d /Applications/Xcode*.app || true; exit 1; fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install JS dependencies (iOS baseline)
+        run: npm install
+
+      - name: Add react-native-macos (in-job, not committed)
+        # Pinned to the RN 0.79 line. Kept out of the shared package.json so the
+        # iOS pipeline's npm install is never affected.
+        run: npm install --no-save react-native-macos@^0.79.0
+
+      - name: Scaffold the macOS project (if absent)
+        run: |
+          if [ ! -d macos ]; then
+            npx --yes react-native-macos-init --overwrite --version "^0.79.0" || {
+              echo "::warning::react-native-macos-init failed — see log; the bare RN + XcodeGen layout may need manual reconciliation (see docs/native/MACOS-SETUP.md)."
+              exit 1
+            }
+          fi
+          ls -la macos
+
+      - name: pod install (macOS)
+        working-directory: native/ottaviano-rn/macos
+        run: |
+          bundle install || gem install cocoapods
+          (bundle exec pod install || pod install)
+
+      - name: Build macOS app
+        working-directory: native/ottaviano-rn/macos
+        run: |
+          WS="$(ls -d *.xcworkspace | head -n1)"
+          echo "Workspace: $WS"
+          # First goal is a clean compile; signing / archive / notarize / upload
+          # are layered on once this builds (see MACOS-SETUP.md).
+          xcodebuild build \
+            -workspace "$WS" \
+            -scheme "Ottaviano-macOS" \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO

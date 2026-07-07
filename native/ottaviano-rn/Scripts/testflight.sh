@@ -13,10 +13,14 @@
 #   3. xcrun altool --upload-app -f <ipa> --apiKey/--apiIssuer
 #
 # Usage:
-#   Scripts/testflight.sh <Scheme> [BuildNumber]
-#     <Scheme>      Ottaviano | OttavianoKDS   (default: OttavianoKDS)
-#     [BuildNumber] optional integer; overrides project.yml's CURRENT_PROJECT_VERSION
-#                   (must be strictly > 51; the committed default is 60).
+#   Scripts/testflight.sh <Scheme> [BuildNumber] [MarketingVersion]
+#     <Scheme>           Ottaviano | OttavianoKDS   (default: OttavianoKDS)
+#     [BuildNumber]      optional integer; overrides project.yml's CURRENT_PROJECT_VERSION
+#                        (must be strictly > 51; the committed default is 60).
+#     [MarketingVersion] optional semver (e.g. 0.5.1); overrides project.yml's
+#                        MARKETING_VERSION. MUST be >= the live TestFlight train or
+#                        the upload files as an older version and never shows as an
+#                        update. Empty = use the committed project.yml value.
 #
 # Required environment (provided as CI secrets):
 #   ASC_KEY_ID     App Store Connect API key id
@@ -28,6 +32,7 @@ set -euo pipefail
 
 SCHEME="${1:-OttavianoKDS}"
 BUILD_NUMBER="${2:-}"
+MARKETING_VERSION="${3:-}"
 
 # Resolve paths relative to this script so it works from any CWD.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -86,11 +91,16 @@ cat > "$EXPORT_OPTIONS" <<PLIST
 </plist>
 PLIST
 
-# Optionally override the build number for this run.
-BUILD_NUMBER_FLAG=()
+# Optionally override the version + build number for this run. Both are applied
+# as xcodebuild build settings so they win over project.yml at archive time.
+VERSION_FLAGS=()
 if [ -n "$BUILD_NUMBER" ]; then
   echo "==> Overriding build number -> $BUILD_NUMBER"
-  BUILD_NUMBER_FLAG=(CURRENT_PROJECT_VERSION="$BUILD_NUMBER")
+  VERSION_FLAGS+=(CURRENT_PROJECT_VERSION="$BUILD_NUMBER")
+fi
+if [ -n "$MARKETING_VERSION" ]; then
+  echo "==> Overriding marketing version -> $MARKETING_VERSION"
+  VERSION_FLAGS+=(MARKETING_VERSION="$MARKETING_VERSION")
 fi
 
 echo "==> Archiving scheme '$SCHEME' (workspace build)"
@@ -104,7 +114,7 @@ xcodebuild archive \
   -authenticationKeyPath "$KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-  "${BUILD_NUMBER_FLAG[@]}" \
+  ${VERSION_FLAGS[@]+"${VERSION_FLAGS[@]}"} \
   COMPILER_INDEX_STORE_ENABLE=NO
 
 echo "==> Exporting .ipa"

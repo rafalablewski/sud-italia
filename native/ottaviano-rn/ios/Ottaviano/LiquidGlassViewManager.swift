@@ -9,3 +9,10 @@ final class LiquidGlassViewManager: RCTViewManager {
     override func view() -> UIView! { LiquidGlassView() }
     override static func requiresMainQueueSetup() -> Bool { true }
 }
+
+/// Manager for the ambient `AuroraView` backdrop (ADR-001).
+@objc(AuroraViewManager)
+final class AuroraViewManager: RCTViewManager {
+    override func view() -> UIView! { AuroraView() }
+    override static func requiresMainQueueSetup() -> Bool { true }
+}

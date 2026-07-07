@@ -4,6 +4,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
 import { formatMoney } from "@/lib/format";
 import { Card, SectionHeading, StatTile, StateBlock } from "@/components/ui";
+import { useBreakpoint } from "@/lib/useBreakpoint";
 
 interface SummaryStats {
   totalRevenue: number;
@@ -26,6 +27,7 @@ interface SummaryStats {
  */
 export function Dashboard() {
   const { c } = useTheme();
+  const { isDesktop } = useBreakpoint();
   const { authed } = useOperator();
   const [s, setS] = useState<SummaryStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,10 @@ export function Dashboard() {
   if (!s) return <StateBlock kind="loading" />;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.surface }} contentContainerStyle={{ padding: 14, gap: 14 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: c.surface }}
+      contentContainerStyle={{ padding: 14, gap: 14, width: "100%", maxWidth: isDesktop ? 1120 : undefined, alignSelf: isDesktop ? "center" : "auto" }}
+    >
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <StatTile label="Revenue" value={formatMoney(s.totalRevenue)} tone="ok" />
         <StatTile label="Profit" value={formatMoney(s.totalProfit)} tone={s.totalProfit >= 0 ? "ok" : "bad"} />
