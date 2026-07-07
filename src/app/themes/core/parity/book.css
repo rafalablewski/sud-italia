@@ -79,6 +79,17 @@
 .core .core-bk-blk.seated .bm { color: var(--info); }
 .core .core-bk-blk.pending { background: var(--amber-wash); box-shadow: inset 0 0 0 1px rgba(240, 173, 70, .5); }
 .core .core-bk-blk.pending .bm { color: var(--amber); }
+/* done — a completed booking, kept on the timeline as muted history. Dimmed,
+   not draggable, striped so it reads as "past" against the live blocks. */
+.core .core-bk-blk.done {
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 6px, rgba(255, 255, 255, .015) 6px 12px), var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--line-2); cursor: default; opacity: .72;
+  /* history sits UNDER live blocks (z 3): if a completed booking's planned span
+     overlaps a later live one on the same table, the live block stays legible. */
+  z-index: 2;
+}
+.core .core-bk-blk.done .bn { color: var(--ink-2); font-weight: 500; }
+.core .core-bk-blk.done .bm { color: var(--ink-3); }
 
 /* overlapping bookings — stacked half-height red-hatched blocks */
 .core .core-bk-blk.conflict {
