@@ -197,15 +197,25 @@ today and the clock sits inside the window, and it re-seeds client-side (0 until
 mounted, so no SSR mismatch) and ticks with the shared 30s clock. The
 new-reservation form is the **three-pane deck** below the timeline — not a right
 rail. `.core-book-tlform` is now a single-column grid that stacks the full-width
-`.core-book-tlpanel` (timeline) over `.core-book-deck`, a `repeat(3, minmax(0,
-1fr))` row of glass **`.core-book-pane`** cards — **When · Who · Where** — headed
+`.core-book-tlpanel` (timeline) over `.core-book-deck`, a row of glass
+**`.core-book-pane`** cards — **When · Who · Where** — headed
 by a full-width `.core-book-deckhead` ("New reservation · date · loc") and each
-labelled by a `.core-book-panelab`. This trades the old tall rail for a wide,
+labelled by a `.core-book-panelab`. The three panes are **not equal thirds**:
+`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr)` (a `1:1:2`
+split = **25% / 25% / 50%** across the full 100% width), so **Where** — the
+zone-grouped table grid — carries half, while **When** (slot chips) and **Who**
+(a compact party + guest form) each take a quarter. This trades the old tall rail for a wide,
 short layout so every choice stays on screen; **Today's bookings** still flows
 full-width beneath the whole deck. Panes: **When** = the slot chips; **Who** =
-party stepper + guest-needs chips + guest name/phone/notes (+ CRM match); **Where**
-= the ranked table **card grid** (`.core-bk-tgrid` of `.core-bk-tcard`) + joins + signals + min-spend + override + Book button.
-Below 1000px the deck collapses to one column (`.core-book-deck:
+party stepper + guest-needs chips + a **guest** block (`.core-bk-guest` — name +
+phone share a ½ + ½ `.core-bk-guestgrid` row, a full-width `.core-bk-notes`
+**textarea** beneath, evenly gapped, + CRM match); **Where**
+= the ranked table cards **grouped by zone** (`.core-bk-zones` → per-zone
+`.core-bk-zone` = a `.core-bk-zonehd` header + its own `.core-bk-tgrid` of
+`.core-bk-tcard`) + joins + signals + min-spend + override + Book button.
+The deck degrades in two flexible steps: at **≤1200px** When + Who share the top
+row and Where (`.core-book-pane:last-child`) spans full width beneath them; at
+**≤1000px** all three collapse to one column (`.core-book-deck:
 grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**; the chip counts **open/total** tables at that time — occupancy
@@ -216,11 +226,15 @@ a seating time, every table is hard-filtered (fit · free-for-the-turn ·
 availability) then scored (right-size · runway · guest · pacing · yield), so the
 ✨ Recommend card is the engine's top pick and each card's tag + tooltip is its
 reason (e.g. `held 32m`, `large table — protected for big parties`, `VIP hold`,
-`patio full this window`, `89 pts · exact fit`). The Where pane lays every table
-out as a **card grid** (`.core-bk-tgrid`, `repeat(auto-fill, minmax(116px, 1fr))`
+`patio full this window`, `89 pts · exact fit`). The Where pane lays the floor
+out **grouped by zone** — a `.core-bk-zones` column of `.core-bk-zone` sections,
+each a `.core-bk-zonehd` header (zone name + `free/total`) over its own
+**card grid** (`.core-bk-tgrid`, `repeat(auto-fill, minmax(116px, 1fr))`
 of `.core-bk-tcard` — big `Tn`, seats·zone, a fit `.tfit` badge + a `.pick`
-radio; rec glows, the picked card rings + fills its radio) so the whole floor is
-visible at a glance and Book is always in reach — no scrolling a vertical list.
+radio; rec glows, the picked card rings + fills its radio). Named zones sort
+alphabetically; unzoned tables fall to a trailing **Unzoned** group. Grouping
+keeps the tight pane scannable section-by-section (patio · bar · window…) while
+every card stays in reach — no scrolling one long flat list.
 Excluded tables dim. (The walk-in seating dialog keeps the compact vertical
 `.core-bk-tpicks` list.) Entering a returning guest's **phone** pulls their CRM seating profile
 (`.core-bk-guestmatch`, GET `/api/admin/floor/guest-prefs` → `getGuestSeatingProfile`
@@ -318,7 +332,14 @@ number** (shared with the Tables `tLabel`). The **surface toolbar**
 over the stat strip, via the shared `CoreSurfToolbar`) carries, in its `left`,
 the **timeline / floor / arrivals** view switch, then the shared
 **`CoreDateField`** picker (same as Slots); on the right the occasional
-**Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, keeping
+**Forecast · Policy** actions collapse behind a `⋯` `CoreActionMenu`, then a
+**fullscreen** `.core-iconbtn` (the shared `ExpandIcon`) that requests native
+fullscreen on the **document root** (matching the KDS/POS kiosk) for a
+distraction-free full-viewport pass — rooting it at the document, not
+`.core-book`, keeps every `.core`-portaled overlay (the Walk-in / Forecast /
+Policy dialogs, the POS check, toasts) inside the fullscreen tree and usable;
+`.core` already fills `100dvh` with `--bg`, so nothing bleeds through. State is
+kept in sync via a `fullscreenchange` listener so Esc / browser-exit resets it. Then
 the frequent **Walk-in** button + the brand **New reservation** pill
 (`.core-bk-newpill`, focuses the guest field) inline. A
 **◔ Forecast** button opens a **pre-service simulation** `CoreDialog`

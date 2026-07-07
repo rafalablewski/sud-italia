@@ -36,6 +36,7 @@ import { TABLE_FEATURES, type FloorTable, type Reservation, type TimeSlot, type 
 import type { UpsellConfig } from "@/lib/upsell";
 import { serviceTabs } from "./serviceTabs";
 import { tLabel } from "./tableLabel";
+import { ExpandIcon } from "@/core/shell/toolIcons";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
@@ -152,6 +153,25 @@ export function CoreBook({
   useEffect(() => { setCoreRoot(document.querySelector(".core")); }, []);
   const openCheck = (tableId?: string) => { if (tableId) setCheckTableId(tableId); };
 
+  // Fullscreen — drop the browser chrome for a distraction-free full-viewport
+  // pass (space is tight; a host running the service wants the whole screen).
+  // Requests native fullscreen on the DOCUMENT ROOT, matching the KDS/POS kiosk:
+  // every overlay here (Walk-in / Forecast / Policy dialogs, the POS check, and
+  // toasts) portals to `.core`, so fullscreening only `.core-book` would strand
+  // them behind its top-layer element. Rooting fullscreen at the document keeps
+  // `.core` — and thus those overlays — inside the fullscreen tree, usable.
+  // Tracked via `fullscreenchange` so Esc / the browser exiting keeps us in sync.
+  const [fullscreen, setFullscreen] = useState(false);
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
+    else void document.exitFullscreen?.().catch(() => {});
+  }, []);
+  useEffect(() => {
+    const onFs = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
   const load = useCallback(async () => {
     if (!date) return;
     setLoading(true);
@@ -202,6 +222,24 @@ export function CoreBook({
   );
 
   const sortedTables = useMemo(() => [...tables].sort(byTableNumber), [tables]);
+  // The WHERE pane groups the floor by ZONE (patio · bar · window…) so a host
+  // scans by section in the tight deck space rather than reading one long flat
+  // grid. Named zones sort alphabetically; unzoned tables fall to a trailing
+  // "Unzoned" group so they never hide a real section.
+  const tablesByZone = useMemo(() => {
+    const groups = new Map<string, FloorTable[]>();
+    for (const t of sortedTables) {
+      const z = t.zone?.trim() || "Unzoned";
+      const bucket = groups.get(z) ?? (groups.set(z, []), groups.get(z)!);
+      bucket.push(t);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === b) return 0; // equal keys → 0 (honours the comparator contract)
+      if (a === "Unzoned") return 1;
+      if (b === "Unzoned") return -1;
+      return a.localeCompare(b);
+    });
+  }, [sortedTables]);
   const tableLabel = (id?: string) => {
     const n = tables.find((t) => t.id === id)?.number;
     return n ? tLabel(n) : "—";
@@ -631,6 +669,47 @@ export function CoreBook({
     } finally { setActing(null); }
   };
 
+  // One WHERE-pane table card — engine-driven when a slot gives a seating time,
+  // else a plain capacity/availability check. Shared by every zone group so the
+  // card, tag + tooltip logic lives in exactly one place.
+  const renderTableCard = (t: FloorTable) => {
+    const sug = suggByTable.get(t.id);
+    const isRec = t.id === recTableId;
+    const on = tableId === t.id;
+    let tag: string;
+    let dim = false;
+    let title: string;
+    if (sug) {
+      // engine-driven — a slot gives us a seating time to rank against
+      dim = !sug.ok;
+      tag = sug.isRecommended ? "✨ Recommend" : sug.ok ? "fits" : sug.excludedReason ?? "unavailable";
+      title = sug.ok ? `${sug.score} pts · ${sug.reasons.join(" · ")}` : sug.excludedReason ?? "unavailable";
+    } else {
+      // pre-slot fallback — plain capacity/availability check
+      const st = tableState(t);
+      if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
+      else if (t.seats < partyN) { tag = "too small"; dim = true; }
+      else if (!st.ok) { tag = "booked"; dim = true; }
+      else tag = isRec ? "✨ Recommend" : "fits";
+      title = st.label;
+    }
+    const focus = selected?.kind === "table" && selected.id === t.id;
+    return (
+      <button
+        key={t.id}
+        className={`core-bk-tcard${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
+        disabled={dim && !override}
+        onClick={() => pickTable(t.id)}
+        title={title}
+      >
+        <span className="pick" aria-hidden />
+        <span className="tn">{tLabel(t.number)}</span>
+        <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
+        <span className="tfit">{tag}</span>
+      </button>
+    );
+  };
+
   return (
     <CoreShell
       eyebrow="Service · Book"
@@ -667,6 +746,9 @@ export function CoreBook({
                   { label: "Policy", icon: <span aria-hidden>⚙</span>, onClick: () => setPolicyOpen(true) },
                 ]}
               />
+              <button type="button" className={`core-iconbtn${fullscreen ? " on" : ""}`} onClick={toggleFullscreen} title={fullscreen ? "Exit fullscreen" : "Fullscreen"} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"} aria-pressed={fullscreen}>
+                <ExpandIcon />
+              </button>
               <button type="button" className="core-bk-toolbtn walk" onClick={() => setWalkOpen(true)} title="Seat a walk-in">
                 <span aria-hidden>+</span> Walk-in
               </button>
@@ -926,21 +1008,26 @@ export function CoreBook({
 
             <div className="core-bk-field">
               <div className="core-bk-flab"><span>Guest</span></div>
-              <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest surname — e.g. Kowalski" />
-              <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — e.g. +48 512 340 118" />
-              {guestProfile && (
-                <div className="core-bk-guestmatch">
-                  {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
-                  <span className="gm-txt">
-                    {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
-                    {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
-                  </span>
-                  {name.trim() === "" && guestProfile.name && (
-                    <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
-                  )}
+              <div className="core-bk-guest">
+                {/* name + phone share a row (½ + ½); notes runs full-width below */}
+                <div className="core-bk-guestgrid">
+                  <input ref={nameRef} className="core-inp core-bk-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Surname — e.g. Kowalski" />
+                  <input className="core-inp core-bk-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone — +48 512 340 118" />
                 </div>
-              )}
-              <input className="core-inp core-bk-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
+                {guestProfile && (
+                  <div className="core-bk-guestmatch">
+                    {guestProfile.vip && <span className="gm-vip">★ VIP</span>}
+                    <span className="gm-txt">
+                      {guestProfile.name ? `${guestProfile.name} · ` : ""}{guestProfile.visits} prior visit{guestProfile.visits === 1 ? "" : "s"}
+                      {guestProfile.usualTableLabel ? ` · usual ${tLabel(guestProfile.usualTableLabel)}` : ""}
+                    </span>
+                    {name.trim() === "" && guestProfile.name && (
+                      <button type="button" className="gm-use" onClick={() => setName(guestProfile.name!)}>use name</button>
+                    )}
+                  </div>
+                )}
+                <textarea className="core-inp core-bk-input core-bk-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes — high chair, window seat…" rows={2} />
+              </div>
             </div>
           </section>
 
@@ -952,42 +1039,21 @@ export function CoreBook({
               {tables.length === 0 ? (
                 <div className="core-ctx-empty">No tables configured.</div>
               ) : (
-                <div className="core-bk-tgrid">
-                  {sortedTables.map((t) => {
-                    const sug = suggByTable.get(t.id);
-                    const isRec = t.id === recTableId;
-                    const on = tableId === t.id;
-                    let tag: string;
-                    let dim = false;
-                    let title: string;
-                    if (sug) {
-                      // engine-driven — a slot gives us a seating time to rank against
-                      dim = !sug.ok;
-                      tag = sug.isRecommended ? "✨ Recommend" : sug.ok ? "fits" : sug.excludedReason ?? "unavailable";
-                      title = sug.ok ? `${sug.score} pts · ${sug.reasons.join(" · ")}` : sug.excludedReason ?? "unavailable";
-                    } else {
-                      // pre-slot fallback — plain capacity/availability check
-                      const st = tableState(t);
-                      if (t.status === "out-of-service") { tag = "out of service"; dim = true; }
-                      else if (t.seats < partyN) { tag = "too small"; dim = true; }
-                      else if (!st.ok) { tag = "booked"; dim = true; }
-                      else tag = isRec ? "✨ Recommend" : "fits";
-                      title = st.label;
-                    }
-                    const focus = selected?.kind === "table" && selected.id === t.id;
+                // Grouped by zone — each section is a small labelled header + its
+                // own card grid, so the tight WHERE pane reads section-by-section.
+                <div className="core-bk-zones">
+                  {tablesByZone.map(([zone, zts]) => {
+                    const free = zts.filter((t) => (suggByTable.get(t.id)?.ok ?? tableState(t).ok)).length;
                     return (
-                      <button
-                        key={t.id}
-                        className={`core-bk-tcard${on ? " on" : ""}${dim ? " dim" : ""}${isRec && !dim ? " rec" : ""}${focus ? " is-focus" : ""}`}
-                        disabled={dim && !override}
-                        onClick={() => pickTable(t.id)}
-                        title={title}
-                      >
-                        <span className="pick" aria-hidden />
-                        <span className="tn">{tLabel(t.number)}</span>
-                        <span className="tc">{t.seats}-top{t.zone ? ` · ${t.zone}` : ""}</span>
-                        <span className="tfit">{tag}</span>
-                      </button>
+                      <div className="core-bk-zone" key={zone}>
+                        <div className="core-bk-zonehd">
+                          <span className="zn">{zone}</span>
+                          <span className="zc">{free}/{zts.length} free</span>
+                        </div>
+                        <div className="core-bk-tgrid">
+                          {zts.map(renderTableCard)}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

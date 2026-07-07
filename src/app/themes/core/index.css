@@ -1638,13 +1638,24 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-tlpanel { grid-column: 1 / -1; min-width: 0; }
 .core .core-book-form { grid-column: 1 / -1; } /* legacy right-rail hook — the deck replaces it */
 .core .core-book-side { grid-column: 1 / -1; }
-.core .core-book-deck { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
+/* When · Who · Where are NOT equal thirds — Where (the zone-grouped table
+   grid) carries HALF, while When (slot chips) and Who (a compact party + guest
+   form) each take a quarter. The 1:1:2 fr split = 25% / 25% / 50% across the
+   full 100% width. */
+.core .core-book-deck { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); gap: 10px; align-items: start; }
 .core .core-book-deckhead { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; padding: 2px 2px 0; }
 .core .core-book-deckhead .t { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
 .core .core-book-deckhead .s { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
 .core .core-book-pane { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px; display: flex; flex-direction: column; gap: 12px; }
 .core .core-book-panelab { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .core .core-book-panelab .mut { color: var(--ink-3); letter-spacing: .04em; font-size: 9px; }
+/* Flexible mid-width (laptop / tablet landscape): When + Who share the top row
+   and Where — the zone-grouped grid that needs the most room — spans full width
+   beneath them, so the deck degrades gracefully instead of jumping 3-col → 1. */
+@media (max-width: 1200px) {
+  .core .core-book-deck { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .core .core-book-deck > .core-book-pane:last-child { grid-column: 1 / -1; }
+}
 /* tablet portrait / phone — the three panes stack to one column */
 @media (max-width: 1000px) { .core .core-book-deck { grid-template-columns: 1fr; } }
 /* dense-console header rows span the full width above the form/side row */
