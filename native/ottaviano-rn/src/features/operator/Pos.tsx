@@ -80,6 +80,23 @@ interface SteerPlan {
   promiseSecondsByCategory: Record<string, number>;
   deliveryCapNextWindow: number;
 }
+/** `/api/v1/admin/pos/suggestions` — a cross-sell chip. */
+interface Suggestion {
+  id: string;
+  name: string;
+  price: number;
+  reason: string;
+}
+/** `/api/v1/admin/pos/combos` — the "complete the deal" prompt. */
+interface ComboInfo {
+  activeDeal: { id: string; name: string; description: string; discountPercent: number } | null;
+  savings: number;
+  missingItems: string[];
+  missingCategories: string[];
+  missingQuantity: number;
+  isComplete: boolean;
+  completeIds: string[];
+}
 
 const CATEGORY_ORDER = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"] as const;
 const CATEGORY_LABEL: Record<string, string> = {
@@ -134,6 +151,9 @@ export function Pos() {
   const [search, setSearch] = useState("");
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [firing, setFiring] = useState(false);
+  const [charging, setCharging] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [combo, setCombo] = useState<ComboInfo | null>(null);
 
   useEffect(() => {
     ensureLoaded();
@@ -366,11 +386,90 @@ export function Pos() {
     }
   }, [activeTab, firing, slug, authed, loadTabs]);
 
+  // Add several ids to the active check in one write (combo completion).
+  const addMany = useCallback(
+    (ids: string[]) => {
+      if (!activeTab || ids.length === 0) return;
+      const items = [...activeTab.items];
+      for (const id of ids) {
+        const i = items.findIndex((l) => l.menuItemId === id);
+        if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + 1) };
+        else items.push({ menuItemId: id, quantity: 1 });
+      }
+      const next = { ...activeTab, items };
+      setTabs((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+      void persistTab(next);
+    },
+    [activeTab, persistTab],
+  );
+
+  // Settle the check — takes payment (server re-derives + clamps the bill, closes
+  // the tab). A single method choice; the full tip/comp/split sheet is staged.
+  const charge = useCallback(
+    async (method: "cash" | "card") => {
+      const t = activeTab;
+      if (!t || t.items.length === 0 || charging || !slug) return;
+      setCharging(true);
+      try {
+        const { data } = await authed<{ totalAmount?: number }>(
+          `/admin/pos/tabs/${encodeURIComponent(t.id)}/charge?location=${encodeURIComponent(slug)}`,
+          { method: "POST", body: { defaultMethod: method } },
+        );
+        Alert.alert("Paid ✓", `${t.name} · ${formatMoney(data.totalAmount ?? 0)} · ${method}`);
+        setActiveTabId(null);
+        await loadTabs();
+      } catch (e) {
+        Alert.alert("Payment failed", e instanceof Error ? e.message : "Try again.");
+      } finally {
+        setCharging(false);
+      }
+    },
+    [activeTab, charging, slug, authed, loadTabs],
+  );
+  const promptCharge = useCallback(() => {
+    if (!activeTab || activeTab.items.length === 0) return;
+    Alert.alert(`Charge ${formatMoney(Math.max(0, checkTotal))}`, "Take payment as", [
+      { text: "Cash", onPress: () => void charge("cash") },
+      { text: "Card", onPress: () => void charge("card") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [activeTab, checkTotal, charge]);
+
+  // Live cross-sell + combo panel for the open check (real engines off v1).
+  const checkItemIds = useMemo(
+    () => (activeTab?.items ?? []).flatMap((l) => Array<string>(l.quantity).fill(l.menuItemId)),
+    [activeTab],
+  );
+  const activeChannel = activeTab?.channel ?? null;
+  useEffect(() => {
+    if (!slug || checkItemIds.length === 0) {
+      setSuggestions([]);
+      setCombo(null);
+      return;
+    }
+    let cancelled = false;
+    authed<Suggestion[]>(`/admin/pos/suggestions`, { method: "POST", body: { locationSlug: slug, itemIds: checkItemIds } })
+      .then(({ data }) => !cancelled && setSuggestions(data))
+      .catch(() => !cancelled && setSuggestions([]));
+    authed<ComboInfo>(`/admin/pos/combos`, { method: "POST", body: { locationSlug: slug, itemIds: checkItemIds, channel: activeChannel ?? undefined } })
+      .then(({ data }) => !cancelled && setCombo(data.activeDeal ? data : null))
+      .catch(() => !cancelled && setCombo(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [authed, slug, checkItemIds, activeChannel]);
+
   if (error && !items) return <StateBlock kind="error" message={error} />;
   if (!items) return <StateBlock kind="loading" />;
 
   const riskN = pressure?.atRisk ?? 0;
   const cartOpen = !!activeTab && checkLines.length > 0;
+  // Pricing preview — server re-prices at fire/charge; this only informs the till.
+  const discount = combo?.isComplete ? combo.savings ?? 0 : 0;
+  const grandTotal = Math.max(0, checkTotal - discount);
+  const onCheck = new Set(activeTab?.items.map((l) => l.menuItemId) ?? []);
+  const crossSell = suggestions.filter((s) => !onCheck.has(s.id)).slice(0, 3);
+  const showCombo = !!combo && !combo.isComplete && combo.completeIds.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#140f0d" }}>
@@ -379,7 +478,7 @@ export function Pos() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (cartOpen ? 340 : 40) + insets.bottom }}
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (cartOpen ? 440 : 40) + insets.bottom }}
       >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
         <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
@@ -674,7 +773,7 @@ export function Pos() {
                   {promiseMin(checkPromiseSec) ? ` · ready ${promiseMin(checkPromiseSec)}` : ""}
                 </Text>
               </View>
-              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 22, flexShrink: 0 }}>{formatMoney(checkTotal)}</Text>
+              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 22, flexShrink: 0 }}>{formatMoney(grandTotal)}</Text>
             </View>
 
             {/* channel chips */}
@@ -701,7 +800,7 @@ export function Pos() {
               })}
             </View>
 
-            {/* line items */}
+            {/* line items — name · variant · stepper · line total */}
             <View style={{ maxHeight: 168 }}>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {checkLines.map(({ item, qty }) => (
@@ -711,7 +810,9 @@ export function Pos() {
                   >
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={{ color: c.textPrimary, fontWeight: "700", fontSize: 14 }} numberOfLines={1}>{item.name}</Text>
-                      <Text style={{ color: c.textSecondary, fontSize: 11 }}>{formatMoney(item.price)} each</Text>
+                      <Text style={{ color: c.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                        {CATEGORY_LABEL[item.category] ?? item.category} · {formatMoney(item.price)}
+                      </Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                       <Stepper label="−" onPress={() => setLineQty(item.id, -1)} c={c} />
@@ -723,25 +824,110 @@ export function Pos() {
                     </Text>
                   </View>
                 ))}
+
+                {/* combo-completion prompt (real getActiveComboDeals) */}
+                {showCombo && combo?.activeDeal && (
+                  <TouchableOpacity
+                    onPress={() => addMany(combo.completeIds)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: spacing.sm,
+                      marginTop: 8,
+                      padding: spacing.sm,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: c.accent,
+                      borderStyle: "dashed",
+                      backgroundColor: c.accent + "1c",
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>🎁</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 13 }} numberOfLines={2}>
+                        Make it the {combo.activeDeal.name}
+                      </Text>
+                      {combo.missingItems.length > 0 && (
+                        <Text style={{ color: c.textSecondary, fontSize: 11 }} numberOfLines={1}>add {combo.missingItems.join(", ")}</Text>
+                      )}
+                    </View>
+                    <Chip label={`DEAL −${combo.activeDeal.discountPercent}%`} fg={c.accent} bg={c.accent + "26"} />
+                  </TouchableOpacity>
+                )}
+
+                {/* cross-sell suggestions (real getCartSuggestions) */}
+                {crossSell.map((s) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    onPress={() => void addItem(s.id)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: spacing.sm,
+                      marginTop: 6,
+                      padding: spacing.sm,
+                      borderRadius: radius.md,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: c.line,
+                      borderStyle: "dashed",
+                    }}
+                  >
+                    <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: c.accent + "26", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ color: c.accent, fontWeight: "900", fontSize: 16, lineHeight: 18 }}>+</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{s.name}</Text>
+                      <Text style={{ color: c.textSecondary, fontSize: 11 }} numberOfLines={1}>{s.reason}</Text>
+                    </View>
+                    <Text style={{ color: c.textSecondary, fontWeight: "800", fontSize: 13 }}>{formatMoney(s.price)}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
 
-            {/* actions */}
+            {/* totals */}
+            <View style={{ gap: 3, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: spacing.sm }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: c.textSecondary, fontSize: 13 }}>Subtotal</Text>
+                <Text style={{ color: c.textSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatMoney(checkTotal)}</Text>
+              </View>
+              {discount > 0 && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: c.success, fontSize: 13 }}>{combo?.activeDeal?.name ?? "Deal"}</Text>
+                  <Text style={{ color: c.success, fontSize: 13, fontVariant: ["tabular-nums"] }}>−{formatMoney(discount)}</Text>
+                </View>
+              )}
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+                <Text style={{ color: c.textPrimary, fontSize: 14, fontWeight: "800" }}>Total</Text>
+                <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900", fontVariant: ["tabular-nums"] }}>{formatMoney(grandTotal)}</Text>
+              </View>
+            </View>
+
+            {/* actions — Send to KDS · Charge */}
             <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: 2 }}>
-              <TouchableOpacity
-                onPress={() => void voidCheck()}
-                style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "88" }}
-              >
-                <Text style={{ color: c.danger, fontWeight: "800", fontSize: 14 }}>Void</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => void fire()}
                 disabled={firing}
-                style={{ flex: 2, alignItems: "center", justifyContent: "center", paddingVertical: 13, borderRadius: radius.md, backgroundColor: c.accent, opacity: firing ? 0.6 : 1 }}
+                style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 13, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, opacity: firing ? 0.6 : 1 }}
               >
-                <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>
-                  {firing ? "Firing…" : `Fire to KDS · ${formatMoney(checkTotal)}`}
-                </Text>
+                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14 }}>{firing ? "Firing…" : "➤ Send to KDS"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => promptCharge()}
+                disabled={charging}
+                style={{ flex: 1.4, alignItems: "center", justifyContent: "center", paddingVertical: 13, borderRadius: radius.md, backgroundColor: c.accent, opacity: charging ? 0.6 : 1 }}
+              >
+                <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>{charging ? "Charging…" : `Charge ${formatMoney(grandTotal)}`}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* footer toolbar — void (discount / member / split are staged) */}
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 2 }}>
+              <TouchableOpacity
+                onPress={() => void voidCheck()}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "77" }}
+              >
+                <Text style={{ color: c.danger, fontWeight: "800", fontSize: 12 }}>🗑 Void</Text>
               </TouchableOpacity>
             </View>
           </GlassCard>
