@@ -11,7 +11,15 @@ ruby '>= 2.6.10'
 # xcodeproj >= 1.27 can parse (older pins fail pod install with "Unable to find
 # compatibility version string for object version `77`"). CocoaPods 1.16.2 is the
 # release that pairs with that xcodeproj and the Xcode 16/26 toolchain.
-gem 'cocoapods', '>= 1.16.2'
+#
+# STAY ON THE 1.16.x LINE (`~>`, not `>=`). CocoaPods 1.17.0 rewrote
+# external_sources/podspec_source.rb to fetch LOCAL podspecs through `open-uri`,
+# and Ruby 3.3.11 (the Homebrew ruby on macos-15 runners) rejects the bare file
+# path in `find_proxy` — `URI::BadURIError - relative URI: …/SocketRocket.podspec`.
+# `>= 1.16.2` silently floated to the broken 1.17.0 and killed pod install for
+# BOTH ios/ and macos/ (react-native ships RCT-Folly/SocketRocket as file-path
+# `:podspec` external sources). `~> 1.16.2` = `>= 1.16.2, < 1.17.0`.
+gem 'cocoapods', '~> 1.16.2'
 gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
 gem 'xcodeproj', '>= 1.27.0'
 
