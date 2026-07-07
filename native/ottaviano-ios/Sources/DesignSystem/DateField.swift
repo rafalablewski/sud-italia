@@ -59,14 +59,14 @@ public enum CoreDay {
         return String(format: "%02d:%02d", m / 60, m % 60)
     }
 
-    static func face(_ iso: String) -> String {
+    public static func face(_ iso: String) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_GB")
         f.timeZone = .current
         f.dateFormat = "EEE d MMM" // "Sun 5 Jul"
         return f.string(from: parse(iso))
     }
-    static func relative(_ iso: String) -> String {
+    public static func relative(_ iso: String) -> String {
         let n = offsetFromToday(iso)
         switch n {
         case 0: return "today"
