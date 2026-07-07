@@ -4,6 +4,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import type { OrderDTO } from "@/api/types";
 import { formatMoney } from "@/lib/format";
 import { Card, Pill, StatTile, StateBlock } from "@/components/ui";
+import { useBreakpoint } from "@/lib/useBreakpoint";
 import { useOrdersStream } from "@/features/kds/useOrdersStream";
 import { channelTag } from "@/features/kds/kdsLogic";
 
@@ -22,6 +23,8 @@ const STATUS_TONE: Record<string, "ok" | "warn" | "bad" | undefined> = {
  */
 export function OrdersBoard() {
   const { c } = useTheme();
+  const { isDesktop, isTablet } = useBreakpoint();
+  const colWidth = isDesktop ? "32.5%" : isTablet ? "48.5%" : "100%";
   const { orders, connected, error } = useOrdersStream();
 
   const sorted = useMemo(() => [...orders].sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1)), [orders]);
@@ -42,21 +45,25 @@ export function OrdersBoard() {
       {sorted.length === 0 ? (
         <StateBlock kind="empty" message="No orders in scope." />
       ) : (
-        sorted.map((o: OrderDTO) => (
-          <Card key={o.id}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 16 }}>#{o.shortId}</Text>
-              <Pill label={o.status.replace("_", " ")} tone={STATUS_TONE[o.status] === "ok" ? "success" : STATUS_TONE[o.status] === "warn" ? "warning" : STATUS_TONE[o.status] === "bad" ? "danger" : "default"} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          {sorted.map((o: OrderDTO) => (
+            <View key={o.id} style={{ width: colWidth }}>
+              <Card>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 16 }}>#{o.shortId}</Text>
+                  <Pill label={o.status.replace("_", " ")} tone={STATUS_TONE[o.status] === "ok" ? "success" : STATUS_TONE[o.status] === "warn" ? "warning" : STATUS_TONE[o.status] === "bad" ? "danger" : "default"} />
+                </View>
+                <Text style={{ color: c.textSecondary, fontSize: 12, marginTop: 4 }}>
+                  {channelTag(o)} · {o.customerName || "Guest"} · {o.locationSlug}
+                </Text>
+                <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: 6 }}>
+                  {o.items.map((it) => `${it.quantity}× ${it.name}`).join(" · ")}
+                </Text>
+                <Text style={{ color: c.textPrimary, fontWeight: "700", marginTop: 8 }}>{formatMoney(o.totalAmount)}</Text>
+              </Card>
             </View>
-            <Text style={{ color: c.textSecondary, fontSize: 12, marginTop: 4 }}>
-              {channelTag(o)} · {o.customerName || "Guest"} · {o.locationSlug}
-            </Text>
-            <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: 6 }}>
-              {o.items.map((it) => `${it.quantity}× ${it.name}`).join(" · ")}
-            </Text>
-            <Text style={{ color: c.textPrimary, fontWeight: "700", marginTop: 8 }}>{formatMoney(o.totalAmount)}</Text>
-          </Card>
-        ))
+          ))}
+        </View>
       )}
     </ScrollView>
   );

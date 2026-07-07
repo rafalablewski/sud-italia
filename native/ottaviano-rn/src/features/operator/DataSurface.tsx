@@ -5,6 +5,7 @@ import { useOperator } from "@/auth/OperatorSession";
 import { useOperatorLocation } from "@/store/operatorLocation";
 import { formatMoney } from "@/lib/format";
 import { Card, Muted, Pill, StateBlock } from "@/components/ui";
+import { useBreakpoint } from "@/lib/useBreakpoint";
 import type { OperatorNavItem } from "@/nav/operatorNav";
 import type { SurfaceConfig } from "./surfaceConfig";
 
@@ -46,6 +47,10 @@ function titleOf(row: Row, cfg: SurfaceConfig): string {
  */
 export function DataSurface({ surface, config }: { surface: OperatorNavItem; config: SurfaceConfig }) {
   const { c } = useTheme();
+  // Responsive (ADR-002): the record list becomes a multi-column grid on wide
+  // screens (Mac / iPad landscape), single column on phone.
+  const { isDesktop, isTablet } = useBreakpoint();
+  const colWidth = isDesktop ? "32%" : isTablet ? "48.5%" : "100%";
   const { authed } = useOperator();
   const needsLocation = !!config.needsLocation;
   const { slug, locations, error: locError, setSlug, ensureLoaded } = useOperatorLocation();
@@ -120,21 +125,25 @@ export function DataSurface({ surface, config }: { surface: OperatorNavItem; con
       {rows.length === 0 ? (
         <StateBlock kind="empty" message="No records yet." />
       ) : (
-        rows.map((row, i) => {
-          const subtitle = (config.subtitleKeys ?? [])
-            .map((k) => {
-              const t = fieldText(row, k);
-              return t ? `${k}: ${t}` : null;
-            })
-            .filter(Boolean)
-            .join("  ·  ");
-          return (
-            <Card key={i}>
-              <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }}>{titleOf(row, config)}</Text>
-              {subtitle ? <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: 4 }}>{subtitle}</Text> : null}
-            </Card>
-          );
-        })
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {rows.map((row, i) => {
+            const subtitle = (config.subtitleKeys ?? [])
+              .map((k) => {
+                const t = fieldText(row, k);
+                return t ? `${k}: ${t}` : null;
+              })
+              .filter(Boolean)
+              .join("  ·  ");
+            return (
+              <View key={i} style={{ width: colWidth }}>
+                <Card>
+                  <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }}>{titleOf(row, config)}</Text>
+                  {subtitle ? <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: 4 }}>{subtitle}</Text> : null}
+                </Card>
+              </View>
+            );
+          })}
+        </View>
       )}
     </ScrollView>
   );
