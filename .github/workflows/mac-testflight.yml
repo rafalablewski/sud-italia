@@ -51,20 +51,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Set up Ruby 3.2 (pod install)
-        # The macos-15 runner's default is Homebrew Ruby 3.3.11 (2026-03-26), whose
-        # open-uri/find_proxy raises `URI::BadURIError - relative URI` on the bare
-        # file-path podspecs CocoaPods fetches (react-native-macos references core
-        # RN's third-party-podspecs/SocketRocket.podspec by absolute path). Neither
-        # a CocoaPods pin (tried 1.16.2 and 1.17.0) nor bundler fixes it — the fix
-        # is Ruby: 3.2 doesn't have the stricter open-uri path. The iOS job dodges
-        # this only because core RN 0.79 doesn't pull SocketRocket. Isolated to this
-        # job — it does not touch the iOS pipeline.
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: false
-
       - name: Install JS dependencies (iOS baseline)
         run: npm install
 

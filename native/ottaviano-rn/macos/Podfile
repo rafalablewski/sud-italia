@@ -5,6 +5,37 @@
 # Resolves react_native_pods.rb from react-native-macos in node_modules (the Mac
 # fork; installed in-job by CI, kept out of the shared package.json).
 
+# ── Local-podspec fetch fix (CocoaPods + Ruby open-uri) ─────────────────────
+# react-native-macos declares SocketRocket / RCT-Folly as file-path `:podspec`
+# external sources (it points at core RN's third-party-podspecs). CocoaPods
+# fetches every external podspec through `OpenURI.open_uri`, and a scheme-less
+# absolute path parses as a RELATIVE URI — Ruby's `find_proxy` then raises
+# `URI::BadURIError - relative URI: …/SocketRocket.podspec` and pod install dies
+# before it can resolve anything. This is deterministic across Ruby 3.2 and 3.3
+# and across CocoaPods 1.16.2 and 1.17.0 (all tried). The iOS build is immune
+# only because core RN 0.79 never declares SocketRocket as a file-path podspec.
+#
+# Fix: intercept `OpenURI.open_uri` and, for a local file path, read it directly
+# (that's the intended result anyway — no network, no proxy). Real http(s)/ftp
+# URIs fall through to the original. Scoped to this Podfile → iOS is untouched.
+require 'open-uri'
+module OpenURI
+  class << self
+    unless method_defined?(:_open_uri_before_local_fix) || private_method_defined?(:_open_uri_before_local_fix)
+      alias_method :_open_uri_before_local_fix, :open_uri
+      def open_uri(name, *rest, &block)
+        str = name.to_s
+        if str !~ %r{\A[a-z][a-z0-9+.\-]*://}i && File.file?(str)
+          File.open(str, 'rb', &block)
+        else
+          _open_uri_before_local_fix(name, *rest, &block)
+        end
+      end
+    end
+  end
+end
+# ────────────────────────────────────────────────────────────────────────────
+
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
     "react-native-macos/scripts/react_native_pods.rb",
