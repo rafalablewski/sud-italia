@@ -167,7 +167,7 @@ export function Pos() {
   // Responsive layout (ADR-002): wide screens (Mac / iPad landscape) pack the
   // menu grid tighter, on the way to the full desktop console.
   const { isDesktop, isTablet } = useBreakpoint();
-  const menuCardWidth = isDesktop ? "23.5%" : isTablet ? "31.5%" : "48%";
+  const menuCardWidth = isDesktop ? "15.6%" : isTablet ? "31.5%" : "48%";
   const DESKTOP_TICKET_W = 420;
   const cardW = isDesktop ? winW - DESKTOP_TICKET_W - spacing.md * 3 : winW - spacing.md * 2;
 
@@ -850,11 +850,17 @@ export function Pos() {
       {/* ── Active-check cart — anchored flush to the bottom over a scrim so no
           menu peeks under it. Real server check: channel, line steppers, void +
           fire-to-KDS. ──────────────────────────────────────────────────────── */}
-      {cartOpen && activeTab && (() => {
-        // The check panel's inner container is shared: on desktop it docks as a
-        // persistent right-hand column (like the web ticket), on phone it's the
-        // draggable bottom sheet. `inner` is byte-identical to both (ADR-002).
-        const inner = (
+      {(isDesktop || (cartOpen && activeTab)) && (() => {
+        // Desktop always shows the ticket column (empty placeholder when no check
+        // is open, like the web); phone shows the draggable bottom sheet only when
+        // a check is active. `inner` is the check panel or the empty state.
+        const inner = !(cartOpen && activeTab) ? (
+          <View style={{ flex: 1, borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.10)", backgroundColor: c.surface2, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.sm }}>
+            <Text style={{ fontSize: 30 }}>🧾</Text>
+            <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 16 }}>No open check</Text>
+            <Text style={{ color: c.textSecondary, fontSize: 13, textAlign: "center" }}>Start a check with ＋ New, then tap menu items to build the ticket.</Text>
+          </View>
+        ) : (
           <View
             style={{
               flex: 1,

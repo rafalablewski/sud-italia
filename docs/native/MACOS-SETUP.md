@@ -4,7 +4,15 @@ Goal: ship OttavianoKDS as a **native macOS app** via `react-native-macos`,
 reusing the same JS/TS app + the responsive desktop layouts (ADR-002). The web
 page is the layout spec; the runtime is native RN.
 
-## Why this is CI-driven
+## Finding: auto-scaffold in CI is a dead end for 0.79
+
+`react-native-macos@0.79` **removed** the old `local-cli` scaffold templates, so
+`react-native-macos-init` fails with `ENOENT …/templates/macos/Podfile`. Do NOT
+rely on scaffolding `macos/` in CI. Instead: scaffold once on a Mac (below),
+**commit `native/ottaviano-rn/macos/`**, and CI builds the committed project (the
+workflow already skips scaffold when `macos/` exists — same model as `ios/`).
+
+## Why this was CI-driven
 
 `react-native-macos` needs a `macos/` Xcode project, scaffolded once by
 `npx react-native-macos-init`. That requires macOS. We don't scaffold + commit it
