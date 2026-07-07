@@ -162,6 +162,26 @@ public final class OperatorPOSStore {
     public func loadTables() async {
         tables = (try? await api.send(.adminFloorTables(location: location))) ?? []
     }
+
+    // ── Live till KPIs — the dense-console stat strip (web `CorePos` parity). The
+    //    server figures (avg check / sales-hr / table turns, with 7-day deltas)
+    //    come off /api/v1/admin/pos/kpis; the live counts below are derived from
+    //    the till's own tab state (Rule #1 — no fetch, no invented numbers).
+    public private(set) var kpis: PosKpis?
+    public func loadKpis() async { kpis = try? await api.send(.adminPosKpis(location: location)) }
+    /// Open checks = live (non-parked) tabs.
+    public var openCheckCount: Int { tabs.filter { $0.status != "parked" }.count }
+    /// Covers seated = heads on live dine-in checks.
+    public var coversSeated: Int {
+        tabs.filter { $0.status != "parked" && $0.channel == "dine-in" }.reduce(0) { $0 + ($1.covers ?? 0) }
+    }
+    /// Prep queue = item units on checks already fired to the kitchen.
+    public var prepQueue: Int { tabs.filter { $0.sentKds }.reduce(0) { $0 + $1.lineCount } }
+    /// Floor fill for the covers caption ("N% floor").
+    public var floorPct: Int {
+        let seats = tables.reduce(0) { $0 + $1.seats }
+        return seats > 0 ? Int(Double(coversSeated) / Double(seats) * 100) : 0
+    }
     /// Resolve a table id (e.g. "krk-t-12") to its human number for display.
     public func tableNumber(forId id: String?) -> String? {
         guard let id, !id.isEmpty else { return nil }
@@ -333,7 +353,12 @@ public struct OperatorPOSView: View {
                 loaded(items)
             }
         }
-        .background(theme.color.surface)
+        .background {
+            // Liquid Glass skin paints the ambient aurora behind the till (the
+            // native mirror of the web `liquid-glass` Core skin); the flat skin
+            // keeps the plain canvas.
+            if theme.glassy { AuroraBackground() } else { theme.color.surface }
+        }
         .navigationTitle("POS — \(store.location.capitalized)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -350,7 +375,7 @@ public struct OperatorPOSView: View {
             }
         }
         .task { if case .loading = store.state { await store.load() } }
-        .task { await store.refreshTabs(); await store.loadTables(); await store.loadQrOrders() }
+        .task { await store.refreshTabs(); await store.loadTables(); await store.loadQrOrders(); await store.loadKpis() }
         .task(id: store.ticketSignature) { await store.refreshSuggestions() }
         .sheet(isPresented: $showCharge) { ChargeSheet(store: store) }
         .sheet(isPresented: $showTabs) { TabsSheet(store: store) }
@@ -448,6 +473,7 @@ public struct OperatorPOSView: View {
     @ViewBuilder
     private func menuPane(_ items: [AdminMenuItem]) -> some View {
         VStack(spacing: theme.space.sm) {
+            statStrip
             HStack(spacing: theme.space.sm) {
                 Image(systemName: "magnifyingglass").foregroundStyle(theme.color.textSecondary)
                 TextField("Search the menu", text: $search)
@@ -460,9 +486,10 @@ public struct OperatorPOSView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: theme.space.xs) {
-                    catChip("All", active: category == nil) { category = nil }
+                    catChip("All", count: items.count, active: category == nil) { category = nil }
                     ForEach(categories(items), id: \.self) { c in
-                        catChip(c.capitalized, active: category == c) { category = c }
+                        catChip(c.capitalized, count: items.filter { $0.category == c }.count,
+                                active: category == c) { category = c }
                     }
                 }
             }
@@ -477,14 +504,51 @@ public struct OperatorPOSView: View {
         .padding(.horizontal, theme.space.lg).padding(.top, theme.space.sm)
     }
 
-    private func catChip(_ label: String, active: Bool, _ tap: @escaping () -> Void) -> some View {
+    private func catChip(_ label: String, count: Int, active: Bool, _ tap: @escaping () -> Void) -> some View {
         Button(action: tap) {
-            Text(label).textRole(.caption).fontWeight(.semibold)
-                .padding(.horizontal, theme.space.md).frame(height: 30)
-                .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
-                .background(active ? theme.color.accent : theme.color.surface2, in: Capsule())
+            HStack(spacing: 5) {
+                Text(label).textRole(.caption).fontWeight(.semibold)
+                Text("\(count)").font(.caption2.weight(.bold)).monospacedDigit()
+                    .foregroundStyle(active ? theme.color.onAccent.opacity(0.85) : theme.color.textSecondary.opacity(0.7))
+            }
+            .padding(.horizontal, theme.space.md).frame(height: 30)
+            .foregroundStyle(active ? theme.color.onAccent : theme.color.textSecondary)
+            .background(active ? theme.color.accent : theme.color.surface2, in: Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    // Dense-console stat strip — the web `CorePos` KPI row. Client counts (open
+    // checks · covers · prep) from live tab state; avg check / table turns /
+    // sales-hr (with 7-day deltas) from the server `pos/kpis` (Rule #1 — all real).
+    private var statStrip: some View {
+        let k = store.kpis
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: theme.space.sm)], spacing: theme.space.sm) {
+            posStat("Open checks", "\(store.openCheckCount)", sub: store.openCheckCount == 0 ? "none open" : "all active", tint: theme.color.textPrimary, delta: nil)
+            posStat("Covers", "\(store.coversSeated)", sub: store.floorPct > 0 ? "\(store.floorPct)% floor" : "seated", tint: theme.color.success, delta: nil)
+            posStat("Avg check", k.map { MoneyText.format($0.avgCheck) } ?? "…", sub: "per order", tint: theme.color.accent, delta: k?.avgCheckDeltaPct)
+            posStat("Prep queue", "\(store.prepQueue)", sub: store.prepQueue == 0 ? "on time" : "in kitchen", tint: theme.color.warning, delta: nil)
+            posStat("Table turns", k.map { String(format: "%.1f×", $0.tableTurns) } ?? "…", sub: "covers ÷ tables", tint: theme.color.success, delta: k?.tableTurnsDeltaPct)
+            posStat("Sales /hr", k.map { MoneyText.format($0.salesPerHour) } ?? "…", sub: "since open", tint: theme.info, delta: k?.salesDeltaPct)
+        }
+    }
+
+    private func posStat(_ label: String, _ value: String, sub: String, tint: Color, delta: Int?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased()).font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(theme.color.textSecondary)
+            Text(value).font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(tint).lineLimit(1).minimumScaleFactor(0.6)
+            HStack(spacing: 4) {
+                Text(sub).font(.system(size: 9)).foregroundStyle(theme.color.textSecondary).lineLimit(1)
+                if let delta {
+                    Text("\(delta >= 0 ? "+" : "")\(delta)%").font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(delta >= 0 ? theme.color.success : theme.color.danger)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(theme.space.sm)
+        .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous).strokeBorder(theme.color.line, lineWidth: 1))
     }
 
     private func itemCard(_ item: AdminMenuItem) -> some View {
@@ -502,10 +566,15 @@ public struct OperatorPOSView: View {
                             .background(theme.color.accent, in: Circle())
                     }
                 }
+                if !item.description.isEmpty {
+                    Text(item.description).font(.caption2).foregroundStyle(theme.color.textSecondary)
+                        .lineLimit(2).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer(minLength: 6)
-                HStack {
+                HStack(spacing: 6) {
                     MoneyText(item.price).font(.subheadline.weight(.semibold)).foregroundStyle(theme.color.textPrimary)
                     Spacer()
+                    dietaryBadges(item.tags)
                     if !item.available {
                         Text("86").font(.caption2.weight(.bold)).foregroundStyle(theme.color.danger)
                             .padding(.horizontal, 5).padding(.vertical, 1)
@@ -516,7 +585,7 @@ public struct OperatorPOSView: View {
                 }
             }
             .padding(theme.space.md)
-            .frame(height: 96, alignment: .topLeading)
+            .frame(height: 124, alignment: .topLeading)
             .frame(maxWidth: .infinity)
             .background(theme.color.surface2, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
@@ -530,6 +599,26 @@ public struct OperatorPOSView: View {
         .accessibilityLabel("\(item.name), \(MoneyText.format(item.price))\(item.available ? "" : ", sold out")\(qty > 0 ? ", \(qty) in check" : "")")
         .accessibilityHint(item.available ? "Adds one to the check" : "")
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// Dietary glyphs from the item's tags — the web card's V / VG / S badges.
+    /// Derived from real tag data (Rule #1); nothing shown when a tag is absent.
+    @ViewBuilder
+    private func dietaryBadges(_ tags: [String]) -> some View {
+        let lower = tags.map { $0.lowercased() }
+        let vegan = lower.contains { $0.contains("vegan") || $0.contains("vegana") }
+        let vegetarian = !vegan && lower.contains { $0.contains("vegetarian") || $0.contains("vegetaria") }
+        let spicy = lower.contains { $0.contains("spicy") || $0.contains("piccante") || $0.contains("hot") }
+        HStack(spacing: 3) {
+            if vegan { dietBadge("VG", theme.color.success) }
+            if vegetarian { dietBadge("V", theme.color.success) }
+            if spicy { dietBadge("S", theme.color.warning) }
+        }
+    }
+    private func dietBadge(_ t: String, _ c: Color) -> some View {
+        Text(t).font(.system(size: 8.5, weight: .bold))
+            .padding(.horizontal, 4).padding(.vertical, 1)
+            .foregroundStyle(c).background(c.opacity(0.16), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     // MARK: compact cart bar (iPhone)

@@ -138,6 +138,12 @@ public extension Endpoint {
         let body = try? JSONEncoder().encode(PosSuggestionsBody(locationSlug: locationSlug, itemIds: itemIds))
         return Endpoint<[PosSuggestion]>(.post, "admin/pos/suggestions", body: body, requiresAuth: true)
     }
+    /// Live till KPI strip — server-computed avg check / sales-hr / table turns
+    /// (with trailing-7-day deltas). The client counts (open checks · covers ·
+    /// prep queue) stay on-device from the tab list.
+    static func adminPosKpis(location: String) -> Endpoint<PosKpis> {
+        Endpoint<PosKpis>(.get, "admin/pos/kpis", query: ["location": location], requiresAuth: true)
+    }
 
     // POS open checks (Tabs) — several concurrent checks per till, persisted server-
     // side. Lines are id+qty(+course); prices resolve at send/charge.
@@ -750,6 +756,20 @@ public struct PosSuggestion: Codable, Sendable, Identifiable {
     public let reason: String
 }
 private struct PosSuggestionsBody: Encodable { let locationSlug: String; let itemIds: [String] }
+
+/// Live till KPIs (`GET /api/v1/admin/pos/kpis`) — today's figures from real
+/// orders, each with an honest trailing-7-day (same-time-of-day) delta (nil when
+/// there's no baseline). Money is grosze; `tableTurns` is covers ÷ tables.
+public struct PosKpis: Codable, Sendable {
+    public let avgCheck: Grosze
+    public let avgCheckDeltaPct: Int?
+    public let salesPerHour: Grosze
+    public let salesDeltaPct: Int?
+    public let tableTurns: Double
+    public let tableTurnsDeltaPct: Int?
+    public let tableCount: Int
+    public let generatedAt: String
+}
 
 /// Body for `PUT /api/v1/admin/pos/tabs` — edit an open check. Lines are id+qty
 /// (+course); the server resolves prices/discounts at send/charge.

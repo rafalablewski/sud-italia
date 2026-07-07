@@ -109,6 +109,23 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   shared `chargeTab` (one comp-cap gate, web + native); a new
   `GET /api/v1/admin/pos/comp-status` backs the meter (real audit total, Rule #1).
   This closes the earlier tender-method gap **and** adds bill-splitting.
+- **Shipped — dense-console visual parity (this pass):** the native till was a
+  generation behind the web `CorePos` "dense-console" redesign (bare 2-col grid,
+  name + price only). Carried onto native:
+  - **Live KPI stat strip** over the menu — **Open checks · Covers (+floor %) ·
+    Avg check · Prep queue · Table turns · Sales /hr**. The three live counts are
+    derived on-device from the till's own tab state (open/non-parked tabs, dine-in
+    covers, fired-to-KDS item units); avg check / table turns / sales-hr (each with
+    an honest trailing-7-day delta) come from **`GET /api/v1/admin/pos/kpis`** (new
+    facade route this pass, a thin proxy over the shared `getPosKpis` — every figure
+    from real orders, Rule #1; verified live against `npm run dev`).
+  - **Rich item cards** — the card now renders the item **description** and
+    **dietary badges** (V / VG / S) derived from the real `AdminMenuItem.description`
+    + `tags` (already on the DTO — no enrichment), matching the web card.
+  - **Category chips with counts** — each filter chip shows its item count.
+  - **Liquid-glass surface** — the till body now paints the `AuroraBackground` on
+    the glassy (operator) skin, mirroring the web `liquid-glass` Core skin (was a
+    flat canvas).
 
 ### Orders board (`/admin`,`/core/orders` · `OperatorBoardView.swift`) ✅🟡
 - **Web (resolved):** scope tabs (current/paid/all) + channel filter + **search**
