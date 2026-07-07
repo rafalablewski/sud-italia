@@ -30,6 +30,7 @@ import {
   createOrder,
   saveTable,
   createSlot,
+  ensureDineInSlots,
   getSlots,
   getOrders,
   getTables,
@@ -207,6 +208,11 @@ async function seedDrivers(locationSlug: string): Promise<string[]> {
 }
 
 async function seedSlots(locationSlug: string): Promise<void> {
+  // Online-order demand windows for the Demand Exchange — max/cur are the
+  // ONLINE order-throughput cap + tally, so these are takeout+delivery, NOT
+  // dine-in. Dine-in seating is owned by the auto grid (ensureDineInSlots), whose
+  // capacity is the floor's table count; keeping these off dine-in stops one
+  // window advertising an order cap as if it were seats.
   const windows = [
     { time: "12:00", max: 60, cur: 40 },
     { time: "13:00", max: 78, cur: 52 },
@@ -222,7 +228,7 @@ async function seedSlots(locationSlug: string): Promise<void> {
       time: w.time,
       maxOrders: w.max,
       currentOrders: w.cur,
-      fulfillmentTypes: ["dine-in", "takeout"],
+      fulfillmentTypes: ["takeout", "delivery"],
       status: "active",
     };
     await createSlot(slot);
@@ -539,9 +545,12 @@ async function main() {
     const openTabs = await seedOpenTabs(slug, menu, tableIds);
     console.log(`[${slug}] open POS checks seeded: ${openTabs}`);
 
-    // Bookings tonight against the 20:00 slot + window tables.
-    const slots = await getSlots(slug, TODAY);
-    const dinner = slots.find((s) => s.time === "20:00");
+    // Bookings tonight against the auto dine-in 20:00 window + window tables.
+    // Materialise the floor's dine-in grid first (the demand windows above are
+    // takeout/delivery only), then book onto the real dine-in slot so its
+    // occupancy shows up in Manage + Book.
+    const dineInGrid = await ensureDineInSlots(slug, TODAY);
+    const dinner = dineInGrid.find((s) => s.time === "20:00");
     if (dinner) {
       const picks = [
         { name: "Lucia Bianchi", phone: "+48600100412", party: 2, table: tableIds[4], notes: "Anniversary 🥂" },

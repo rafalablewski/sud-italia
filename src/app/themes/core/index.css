@@ -1827,14 +1827,59 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
    are gone. Keep the base badge style below. */
 .core .core-chan { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-2); border: 1px solid var(--line); padding: 5px 11px; border-radius: var(--pill); }
 .core .core-datefield { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: auto; }
-/* Interactive picker variant (CoreDateField) — a full-bleed transparent native
-   <input type=date> drives the styled pill (icon · date · chevron); the native
-   picker glyph is hidden so the styled chevron stands in. Shared by Book + Slots. */
-.core .core-datefield-pick { position: relative; margin-left: 0; flex: none; padding: 6px 11px; cursor: pointer; }
-.core .core-datefield-pick .dv { color: var(--ink); }
-.core .core-datefield-pick svg { color: var(--ink-3); flex: none; }
-.core .core-datefield-pick input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
-.core .core-datefield-pick input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+/* Interactive picker variant (CoreDateField) — a day STEPPER: ‹ prev-day · a
+   date face · next-day ›, welded into one control. The face opens a portaled
+   sheet (stepper head + Today/Tomorrow/+1-week chips + a month grid). Shared by
+   Book + Slots. The sheet lives in `.core-df-pop` (portaled to the theme root).
+   --core-df-w keeps the JS place() width in sync with the CSS. */
+.core { --core-df-w: 300px; }
+.core .core-datefield-pick { margin-left: 0; flex: none; align-items: stretch; gap: 0; padding: 0 4px; }
+.core .core-df-step { display: inline-flex; align-items: center; justify-content: center; width: 26px; padding: 0; background: transparent; border: 0; color: var(--ink-3); cursor: pointer; border-radius: var(--r-sm); transition: background var(--fast), color var(--fast); }
+.core .core-df-step:hover { background: var(--hover); color: var(--ink); }
+.core .core-df-step svg { width: 14px; height: 14px; }
+.core .core-df-face { display: inline-flex; align-items: center; gap: 9px; padding: 0 9px; margin: 3px 1px; background: transparent; border: 0; border-radius: var(--r-sm); cursor: pointer; color: var(--ink-2); font-family: var(--mono); font-size: 11px; transition: background var(--fast); }
+.core .core-df-face:hover { background: var(--hover); }
+.core .core-df-face .cal { color: var(--brand); flex: none; }
+.core .core-df-face .dv { color: var(--ink); font-weight: 600; letter-spacing: .01em; }
+.core .core-df-face .rel { color: var(--ink-3); border-left: 1px solid var(--line); padding-left: 9px; }
+.core .core-df-face .chev { color: var(--ink-3); flex: none; transition: transform var(--fast); }
+.core .core-datefield-pick[data-open] .core-df-face .chev { transform: rotate(180deg); }
+
+/* The portaled sheet (under `.core-ovf-scrim`). */
+.core .core-df-pop { position: fixed; width: var(--core-df-w); padding: 16px; border-radius: var(--r-lg); background: linear-gradient(var(--panel), var(--panel)), var(--bg); border: 1px solid var(--line-2); box-shadow: var(--sh-pop); font-family: var(--ui); animation: core-ovf-in 140ms cubic-bezier(.16,1,.3,1); }
+@media (prefers-reduced-motion: reduce) { .core .core-df-pop { animation: none; } }
+/* stepper header */
+.core .core-df-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.core .core-df-nav { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; flex: none; transition: var(--fast); }
+.core .core-df-nav:hover { background: var(--brand); border-color: var(--brand); color: var(--on-accent); }
+.core .core-df-nav:active { transform: translateY(1px); }
+.core .core-df-nav svg { width: 18px; height: 18px; }
+.core .core-df-disp { text-align: center; flex: 1; min-width: 0; }
+.core .core-df-disp .dow { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); }
+.core .core-df-disp .num { font-family: var(--display); font-weight: 800; font-size: 46px; line-height: .95; letter-spacing: -.03em; margin: 1px 0 2px; color: var(--ink); }
+.core .core-df-disp .mon { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+/* quick chips */
+.core .core-df-chips { display: flex; gap: 6px; margin-top: 14px; }
+.core .core-df-chip { flex: 1; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 8px 6px; cursor: pointer; white-space: nowrap; transition: var(--fast); }
+.core .core-df-chip:hover { background: var(--hover); color: var(--ink); }
+.core .core-df-chip.on { background: var(--brand-wash); color: var(--brand-bright); box-shadow: inset 0 0 0 1px rgba(232,107,62,.4); border-color: transparent; }
+.core .core-df-rule { height: 1px; background: var(--line); margin: 14px -16px; }
+/* month grid */
+.core .core-df-calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.core .core-df-calhead .mlabel { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.core .core-df-mnav { display: flex; gap: 4px; }
+.core .core-df-mbtn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: transparent; border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; transition: var(--fast); }
+.core .core-df-mbtn:hover { background: var(--panel-2); color: var(--ink); border-color: var(--line-2); }
+.core .core-df-mbtn svg { width: 13px; height: 13px; }
+.core .core-df-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.core .core-df-grid .wd { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); text-align: center; padding: 3px 0 6px; }
+.core .core-df-grid .cell { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); background: transparent; border: 1px solid transparent; border-radius: var(--r-sm); cursor: pointer; transition: var(--fast); }
+.core .core-df-grid .cell:hover { background: var(--panel-2); color: var(--ink); }
+.core .core-df-grid .cell.out { color: var(--ink-3); opacity: .34; }
+.core .core-df-grid .cell.today { border-color: var(--brand); color: var(--brand-bright); font-weight: 600; }
+.core .core-df-grid .cell.sel { background: var(--brand); color: var(--on-accent); border-color: var(--brand); font-weight: 600; }
+.core .core-df-grid .cell .bk { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--basil); }
+.core .core-df-grid .cell.sel .bk { background: var(--on-accent); opacity: .7; }
 .core .core-otable { margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: var(--panel); }
 .core .core-otable table { width: 100%; border-collapse: collapse; }
 .core .core-otable thead th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: left; font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
