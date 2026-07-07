@@ -19,17 +19,18 @@
 # (that's the intended result anyway — no network, no proxy). Real http(s)/ftp
 # URIs fall through to the original. Scoped to this Podfile → iOS is untouched.
 require 'open-uri'
-module OpenURI
-  class << self
-    unless method_defined?(:_open_uri_before_local_fix) || private_method_defined?(:_open_uri_before_local_fix)
-      alias_method :_open_uri_before_local_fix, :open_uri
-      def open_uri(name, *rest, &block)
-        str = name.to_s
-        if str !~ %r{\A[a-z][a-z0-9+.\-]*://}i && File.file?(str)
-          File.open(str, 'rb', &block)
-        else
-          _open_uri_before_local_fix(name, *rest, &block)
-        end
+# NOTE: a Podfile is eval'd inside a Pod::Podfile instance, so a bare
+# `module OpenURI` would reopen `Pod::Podfile::OpenURI` (a new empty class), not
+# the real one — patch `::OpenURI`'s singleton class explicitly.
+::OpenURI.singleton_class.class_eval do
+  unless method_defined?(:_open_uri_before_local_fix)
+    alias_method :_open_uri_before_local_fix, :open_uri
+    def open_uri(name, *rest, &block)
+      str = name.to_s
+      if str !~ %r{\A[a-z][a-z0-9+.\-]*://}i && File.file?(str)
+        File.open(str, 'rb', &block)
+      else
+        _open_uri_before_local_fix(name, *rest, &block)
       end
     end
   end
