@@ -4,23 +4,40 @@ Goal: ship OttavianoKDS as a **native macOS app** via `react-native-macos`,
 reusing the same JS/TS app + the responsive desktop layouts (ADR-002). The web
 page is the layout spec; the runtime is native RN.
 
-## Finding: auto-scaffold in CI is a dead end for 0.79
+## Finding: auto-scaffold is dead for 0.79 — hand-author the target instead
 
 `react-native-macos@0.79` **removed** the old `local-cli` scaffold templates, so
-`react-native-macos-init` fails with `ENOENT …/templates/macos/Podfile`. Do NOT
-rely on scaffolding `macos/` in CI. Instead: scaffold once on a Mac (below),
-**commit `native/ottaviano-rn/macos/`**, and CI builds the committed project (the
-workflow already skips scaffold when `macos/` exists — same model as `ios/`).
+`react-native-macos-init` fails with `ENOENT …/templates/macos/Podfile`. There is
+no working init tool for this line. So we **hand-author** the macOS target the
+exact same way `ios/` is authored — a reviewable `macos/project.yml` that XcodeGen
+turns into `OttavianoMac.xcodeproj`, plus a `macos/Podfile` and a bare
+`Ottaviano-macOS/AppDelegate.swift`. These are committed; the `.xcodeproj`,
+`.xcworkspace`, `Pods/`, and `build/` are generated in CI and gitignored.
 
-## Why this was CI-driven
+## Build flow (mirrors `ios/`)
 
-`react-native-macos` needs a `macos/` Xcode project, scaffolded once by
-`npx react-native-macos-init`. That requires macOS. We don't scaffold + commit it
-by hand from Linux — instead the **macOS CI runner scaffolds it at build time**
-(`.github/workflows/mac-testflight.yml`) so we can iterate on real macOS errors
-the same way we bootstrapped the iOS pipeline. Once it builds green, we commit the
-generated `macos/` project and switch CI to build the committed project (faster,
-reproducible) — same trajectory as `ios/`.
+`.github/workflows/mac-testflight.yml` on a `macos-15` runner:
+
+1. `npm install` (RN 0.79 baseline) then `npm install --no-save --legacy-peer-deps
+   react-native-macos@^0.79.0` (in-job only — never in the shared `package.json`).
+2. `brew install xcodegen` → `cd macos && xcodegen generate` →
+   `OttavianoMac.xcodeproj`.
+3. `pod install` → `OttavianoMac.xcworkspace`.
+4. `xcodebuild -workspace OttavianoMac.xcworkspace -scheme Ottaviano-macOS …`
+   (`CODE_SIGNING_ALLOWED=NO` while we chase a clean compile).
+
+Committed source of truth:
+
+- `macos/project.yml` — XcodeGen spec (target `Ottaviano-macOS`, bundle id
+  `pl.ottaviano.kds.mac`, `RCT_NEW_ARCH_ENABLED=0`, RN path →
+  `node_modules/react-native-macos`).
+- `macos/Podfile` — resolves `react_native_pods.rb` from the Mac fork.
+- `macos/Ottaviano-macOS/AppDelegate.swift` — classic `RCTBridge` + `RCTRootView`
+  (moduleName `Ottaviano`) in a 1360×900 `NSWindow`.
+- `macos/Ottaviano-macOS/Info.plist`.
+
+Manual-dispatch only for now (workflow is red until the first clean compile).
+Iterate on real macOS errors the same way the iOS pipeline was bootstrapped.
 
 ## Version pinning
 
@@ -41,28 +58,30 @@ goes routine.
 
 ## Local path (if a Mac is available)
 
+The committed source already has everything — no init tool needed:
+
 ```sh
 cd native/ottaviano-rn
 npm install
-npx react-native-macos-init            # scaffolds ./macos
-cd macos && pod install
-open Ottaviano.xcworkspace              # build the macOS scheme in Xcode
+npm install --no-save --legacy-peer-deps react-native-macos@^0.79.0
+cd macos
+xcodegen generate                       # -> OttavianoMac.xcodeproj
+pod install                             # -> OttavianoMac.xcworkspace
+open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
 ```
-
-Then commit `native/ottaviano-rn/macos/` (minus Pods/build) and point CI at it.
 
 ## Phases (from ADR-002)
 
 1. ✅ responsive layouts + POS desktop two-pane (works on iPad landscape today).
-2. ⏳ **this** — macOS target scaffolds + builds in CI; iterate to green.
-3. commit the `macos/` project; add manual signing + notarized TestFlight upload.
+2. ⏳ **this** — hand-authored macOS target generates + builds in CI; iterate to green.
+3. add manual signing + notarized TestFlight upload.
 4. roll the desktop two-pane across the other operator surfaces.
 
 ## Open risks
 
-- `react-native-macos-init` assumes a fresh RN project layout; our **bare** RN +
-  XcodeGen `ios/` setup may need the init run with `--overwrite` and manual
-  reconciliation of the shared `AppDelegate`/module name (`Ottaviano`).
 - New-Architecture interop for the legacy `RCTViewManager` glass bridge may not
   compile on macOS → the JS `LiquidGlass`/`Aurora` fallback (plain views) ships
-  first; AppKit glass twins are later polish.
+  first; AppKit glass twins are later polish. (`RCT_NEW_ARCH_ENABLED=0` on the Mac
+  target keeps us on the classic bridge until this is validated.)
+- The Mac fork pins RN 0.79.6 vs our 0.79.5 — installed with `--legacy-peer-deps`;
+  the core diff is negligible for bring-up but watch for API drift.

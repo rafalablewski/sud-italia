@@ -1,11 +1,12 @@
 name: Mac app — TestFlight (bootstrap)
 
 # ADR-002 phase 2 — bring up the react-native-macos target IN CI (our "Mac in the
-# loop"), since the macos/ Xcode project must be scaffolded on macOS. This is a
-# BOOTSTRAP harness: it scaffolds macos/ at build time, installs pods, and tries
-# to build the macOS app. Expect it to fail on the first runs and iterate on the
-# real errors — exactly how the iOS pipeline was brought up. Once green, we commit
-# native/ottaviano-rn/macos/ and switch to building the committed project.
+# loop"), since the macOS project must be generated + pod-installed on macOS. The
+# macos/ target is now HAND-AUTHORED (react-native-macos-init is dead on the 0.79
+# line — it dropped the local-cli scaffold templates it relied on). So this mirrors
+# the iOS pipeline exactly: macos/project.yml → XcodeGen → OttavianoMac.xcodeproj →
+# pod install → OttavianoMac.xcworkspace → xcodebuild. Expect the first runs to
+# fail and iterate on the real compile errors — same way iOS was brought up.
 #
 # Kept OUT of the iOS pipeline: react-native-macos is installed in-job (never in
 # the shared package.json), so it can't break ios-testflight.yml.
@@ -60,17 +61,18 @@ jobs:
         # our 0.79.5) — the core diff is negligible for the macOS bring-up.
         run: npm install --no-save --legacy-peer-deps react-native-macos@^0.79.0
 
-      - name: Scaffold the macOS project (if absent)
-        env:
-          npm_config_legacy_peer_deps: "true"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate macOS Xcode project
+        # react-native-macos-init is dead for 0.79 (the 0.79 line dropped the
+        # local-cli scaffold templates it depends on — templates/macos/Podfile
+        # ENOENT). So we hand-author the target the same way iOS does: a
+        # reviewable macos/project.yml → XcodeGen → OttavianoMac.xcodeproj.
+        working-directory: native/ottaviano-rn/macos
         run: |
-          if [ ! -d macos ]; then
-            npx --yes react-native-macos-init --overwrite --version "^0.79.0" || {
-              echo "::warning::react-native-macos-init failed — see log; the bare RN + XcodeGen layout may need manual reconciliation (see docs/native/MACOS-SETUP.md)."
-              exit 1
-            }
-          fi
-          ls -la macos
+          xcodegen generate
+          ls -la
 
       - name: pod install (macOS)
         working-directory: native/ottaviano-rn/macos

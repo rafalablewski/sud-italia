@@ -1,0 +1,76 @@
+# ============================================================================
+# project.yml — XcodeGen spec for the react-native-macos app (ADR-002).
+#
+# Mirrors ios/project.yml: a readable, reviewable source of truth; the binary
+# .xcodeproj is GENERATED (gitignored). BUILD FLOW:
+#   1. (repo root) npm install                     # RN 0.79 baseline
+#   2. npm install --legacy-peer-deps react-native-macos@^0.79   # in-job (CI)
+#   3. cd macos && xcodegen generate               # project.yml -> OttavianoMac.xcodeproj
+#   4. bundle exec pod install                     # -> OttavianoMac.xcworkspace
+#   5. xcodebuild -workspace OttavianoMac.xcworkspace -scheme Ottaviano-macOS ...
+#
+# Same JS bundle + moduleName "Ottaviano" as iOS. New Architecture is OFF for the
+# Mac target initially (RCT_NEW_ARCH_ENABLED=0) until Fabric-macOS is validated.
+# ============================================================================
+
+name: OttavianoMac
+
+options:
+  bundleIdPrefix: pl.ottaviano
+  deploymentTarget:
+    macOS: "11.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.5.12"
+    CURRENT_PROJECT_VERSION: "60"
+    DEVELOPMENT_TEAM: T4WC9M8Y3S
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "11.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CLANG_ENABLE_MODULES: YES
+    LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+    # Classic bridge path first; enable once Fabric-macOS is confirmed.
+    RCT_NEW_ARCH_ENABLED: 0
+
+targets:
+  Ottaviano-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Ottaviano-macOS/AppDelegate.swift
+      - path: Ottaviano-macOS/Info.plist
+        buildPhase: none
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.ottaviano.kds.mac
+        PRODUCT_NAME: OttavianoKDS
+        INFOPLIST_FILE: Ottaviano-macOS/Info.plist
+        REACT_NATIVE_PATH: $(SRCROOT)/../node_modules/react-native-macos
+    postCompileScripts:
+      - name: Bundle React Native code and images
+        basedOnDependencyAnalysis: false
+        shell: /bin/sh
+        script: |
+          set -e
+          export NODE_BINARY=node
+          export REACT_NATIVE_PATH="$SRCROOT/../node_modules/react-native-macos"
+          WITH_ENVIRONMENT="$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh"
+          REACT_NATIVE_XCODE="$REACT_NATIVE_PATH/scripts/react-native-xcode.sh"
+          if [ -f "$WITH_ENVIRONMENT" ]; then
+            /bin/sh -c "$WITH_ENVIRONMENT \"$REACT_NATIVE_XCODE\""
+          else
+            /bin/sh "$REACT_NATIVE_XCODE"
+          fi
+
+schemes:
+  Ottaviano-macOS:
+    build:
+      targets:
+        Ottaviano-macOS: all
+    run:
+      config: Debug
+    archive:
+      config: Release
