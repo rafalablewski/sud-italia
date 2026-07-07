@@ -1,5 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, TextInput, TouchableOpacity, View, Text, StyleSheet, useWindowDimensions } from "react-native";
+import React, { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Text,
+  StyleSheet,
+  useWindowDimensions,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
@@ -213,8 +223,6 @@ export function Pos() {
     return { covers, dineIn, prepItems };
   }, [tabs]);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
-
   // Ticket (local quick-sale scratch — genuine operator input, not mock data).
   const ticketCount = Object.values(ticket).reduce((a, b) => a + b, 0);
   const ticketTotal = (items ?? []).reduce((s, i) => s + (ticket[i.id] ?? 0) * i.price, 0);
@@ -229,6 +237,23 @@ export function Pos() {
     }
     return worst;
   }, [ticket, steer, byId]);
+
+  // Add/remove a unit on the local sale; drop the line at zero.
+  const setQty = (id: string, delta: number) =>
+    setTicket((t) => {
+      const n = (t[id] ?? 0) + delta;
+      const next = { ...t };
+      if (n <= 0) delete next[id];
+      else next[id] = n;
+      return next;
+    });
+  const ticketLines = useMemo(
+    () =>
+      Object.entries(ticket)
+        .map(([id, qty]) => ({ item: byId.get(id), qty }))
+        .filter((l): l is { item: PosMenuItem; qty: number } => !!l.item),
+    [ticket, byId],
+  );
 
   if (error && !items) return <StateBlock kind="error" message={error} />;
   if (!items) return <StateBlock kind="loading" />;
@@ -245,10 +270,10 @@ export function Pos() {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (ticketCount > 0 ? 128 : 40) + insets.bottom }}
       >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
-        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md, width: cardW }}>
+        <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
             <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: -0.3 }}>POS</Text>
-            <Text style={{ color: c.textSecondary, fontSize: 13, fontWeight: "600" }}>· Order</Text>
+            <Text style={{ color: c.textSecondary, fontSize: 13, fontWeight: "600", flexShrink: 1 }} numberOfLines={1}>· Order</Text>
             <View style={{ flex: 1 }} />
             {/* Live kitchen-pressure badge (web command-bar "risk N"). */}
             {riskN > 0 ? (
@@ -263,11 +288,12 @@ export function Pos() {
               </View>
             )}
           </View>
-          {/* Location switcher (multi-truck operators). */}
+          {/* Location switcher (multi-truck operators) — compact city pills. */}
           {locations.length > 1 && (
-            <View style={{ flexDirection: "row", gap: spacing.xs, flexWrap: "wrap", marginTop: spacing.sm }}>
+            <View style={{ flexDirection: "row", gap: spacing.xs, flexWrap: "wrap" }}>
               {locations.map((loc) => {
                 const on = loc.slug === slug;
+                const city = loc.name.includes("-") ? loc.name.split("-").pop()!.trim() : loc.name;
                 return (
                   <TouchableOpacity
                     key={loc.slug}
@@ -278,62 +304,35 @@ export function Pos() {
                       borderWidth: StyleSheet.hairlineWidth,
                       borderRadius: radius.pill,
                       paddingVertical: 5,
-                      paddingHorizontal: 12,
+                      paddingHorizontal: 14,
                     }}
                   >
-                    <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "700", fontSize: 12 }}>{loc.name}</Text>
+                    <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "700", fontSize: 12 }}>{city}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           )}
-        </LiquidGlass>
+        </GlassCard>
 
-        {/* ── KPI stat strip — the dense-console metric row (web core-statstrip) ── */}
-        <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.sm, width: cardW }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 4 }}>
-            <KpiCell
-              label="Open checks"
-              value={String(railCount)}
-              delta={parked > 0 ? `${parked} parked` : "all active"}
-              deltaUp={parked > 0 ? false : true}
-            />
-            <KpiCell
-              label="Covers seated"
-              value={String(posStats.covers)}
-              valueColor={c.success}
-              delta={`${posStats.dineIn} dine-in`}
-              deltaUp
-            />
-            <KpiCell
-              label="Avg check"
-              value={kpis ? formatMoney(kpis.avgCheck) : "…"}
-              valueColor={c.accent}
-              delta={pctChip(kpis?.avgCheckDeltaPct).txt}
-              deltaUp={pctChip(kpis?.avgCheckDeltaPct).up}
-            />
-            <KpiCell
-              label="Prep queue"
-              value={String(posStats.prepItems)}
-              valueColor={posStats.prepItems > 0 ? c.warning : c.textPrimary}
-              delta={steer?.active && steer.bottleneck ? `${steer.bottleneck.label} at risk` : "on time"}
-              deltaUp={steer?.active && steer.bottleneck ? false : true}
-            />
-            <KpiCell
-              label="Table turns"
-              value={kpis ? `${kpis.tableTurns.toFixed(1)}×` : "…"}
-              valueColor={c.success}
-              delta={pctChip(kpis?.tableTurnsDeltaPct).txt}
-              deltaUp={pctChip(kpis?.tableTurnsDeltaPct).up}
-            />
-            <KpiCell
-              label="Sales /hr"
-              value={kpis ? formatMoney(kpis.salesPerHour) : "…"}
-              delta={pctChip(kpis?.salesDeltaPct).txt}
-              deltaUp={pctChip(kpis?.salesDeltaPct).up}
-            />
-          </ScrollView>
-        </LiquidGlass>
+        {/* ── KPI stat strip — a 3-across grid so all six read at a glance ──── */}
+        <GlassCard
+          style={{ width: cardW }}
+          contentStyle={{ padding: spacing.sm, flexDirection: "row", flexWrap: "wrap", rowGap: spacing.sm }}
+        >
+          {[
+            { label: "Open checks", value: String(railCount), delta: parked > 0 ? `${parked} parked` : "all active", up: parked > 0 ? false : true },
+            { label: "Covers", value: String(posStats.covers), color: c.success, delta: `${posStats.dineIn} dine-in`, up: true as boolean | null },
+            { label: "Avg check", value: kpis ? formatMoney(kpis.avgCheck) : "…", color: c.accent, delta: pctChip(kpis?.avgCheckDeltaPct).txt, up: pctChip(kpis?.avgCheckDeltaPct).up },
+            { label: "Prep queue", value: String(posStats.prepItems), color: posStats.prepItems > 0 ? c.warning : c.textPrimary, delta: steer?.active && steer.bottleneck ? `${steer.bottleneck.label} risk` : "on time", up: steer?.active && steer.bottleneck ? false : true },
+            { label: "Table turns", value: kpis ? `${kpis.tableTurns.toFixed(1)}×` : "…", color: c.success, delta: pctChip(kpis?.tableTurnsDeltaPct).txt, up: pctChip(kpis?.tableTurnsDeltaPct).up },
+            { label: "Sales /hr", value: kpis ? formatMoney(kpis.salesPerHour) : "…", delta: pctChip(kpis?.salesDeltaPct).txt, up: pctChip(kpis?.salesDeltaPct).up },
+          ].map((k) => (
+            <View key={k.label} style={{ width: "33.33%", paddingHorizontal: 6 }}>
+              <KpiCell label={k.label} value={k.value} valueColor={k.color} delta={k.delta} deltaUp={k.up} />
+            </View>
+          ))}
+        </GlassCard>
 
         {/* ── Open-check tabs (web core-tabrail) ─────────────────────────── */}
         {tabs.length > 0 && (
@@ -557,39 +556,108 @@ export function Pos() {
         </View>
       </ScrollView>
 
-      {/* ── Docked check — a second Liquid Glass surface (web core-ticket) ── */}
+      {/* ── Dedicated sale cart — a floating glass sheet with line items,
+          per-line steppers, live promise, and the running total (web core-ticket,
+          reworked for touch). Glass rides behind a real RN view so it lays out and
+          clips correctly on-device. ────────────────────────────────────────── */}
       {ticketCount > 0 && (
         <View style={{ position: "absolute", left: spacing.md, right: spacing.md, bottom: insets.bottom + spacing.sm }}>
-          <LiquidGlass glassCornerRadius={radius.lg} style={{ padding: spacing.md, width: cardW }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: c.accent, flexShrink: 0 }} />
+          <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
+            {/* grabber */}
+            <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: c.textSecondary + "66" }} />
+            {/* header */}
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }} numberOfLines={1}>Quick sale</Text>
+                <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>Current sale</Text>
                 <Text style={{ color: c.textSecondary, fontSize: 12 }} numberOfLines={1}>
                   {ticketCount} {ticketCount === 1 ? "item" : "items"}
                   {promiseMin(ticketPromiseSec) ? ` · ready ${promiseMin(ticketPromiseSec)}` : ""}
                 </Text>
               </View>
-              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 17, flexShrink: 0 }}>{formatMoney(ticketTotal)}</Text>
-              <TouchableOpacity onPress={() => setTicket({})} style={{ flexShrink: 0 }}>
-                <Text
-                  style={{
-                    color: c.onAccent,
-                    backgroundColor: c.accent,
-                    borderRadius: radius.pill,
-                    paddingHorizontal: 16,
-                    paddingVertical: 9,
-                    fontWeight: "800",
-                    overflow: "hidden",
-                  }}
-                >
-                  Clear
-                </Text>
-              </TouchableOpacity>
+              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 22, flexShrink: 0 }}>{formatMoney(ticketTotal)}</Text>
             </View>
-          </LiquidGlass>
+            {/* line items — scrolls when the sale gets long */}
+            <View style={{ maxHeight: 190 }}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {ticketLines.map(({ item, qty }) => (
+                  <View
+                    key={item.id}
+                    style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line }}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: c.textPrimary, fontWeight: "700", fontSize: 14 }} numberOfLines={1}>{item.name}</Text>
+                      <Text style={{ color: c.textSecondary, fontSize: 11 }}>{formatMoney(item.price)} each</Text>
+                    </View>
+                    {/* qty stepper */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Stepper label="−" onPress={() => setQty(item.id, -1)} c={c} />
+                      <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15, minWidth: 18, textAlign: "center", fontVariant: ["tabular-nums"] }}>{qty}</Text>
+                      <Stepper label="+" onPress={() => setQty(item.id, 1)} accent c={c} />
+                    </View>
+                    <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14, minWidth: 68, textAlign: "right", fontVariant: ["tabular-nums"] }}>
+                      {formatMoney(item.price * qty)}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+            {/* actions */}
+            <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: 2 }}>
+              <TouchableOpacity
+                onPress={() => setTicket({})}
+                style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line }}
+              >
+                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14 }}>Clear</Text>
+              </TouchableOpacity>
+              <View
+                style={{ flex: 2, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: radius.md, backgroundColor: c.accent }}
+              >
+                <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>Total {formatMoney(ticketTotal)}</Text>
+              </View>
+            </View>
+          </GlassCard>
         </View>
       )}
+    </View>
+  );
+}
+
+/** A round +/− stepper button for the cart lines. */
+function Stepper({ label, onPress, accent, c }: { label: string; onPress: () => void; accent?: boolean; c: ReturnType<typeof useTheme>["c"] }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      hitSlop={6}
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: accent ? c.accent : "transparent",
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: accent ? c.accent : c.line,
+      }}
+    >
+      <Text style={{ color: accent ? c.onAccent : c.textPrimary, fontWeight: "900", fontSize: 18, lineHeight: 20 }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * A glass card whose native SwiftUI Liquid Glass rides as an absolute-fill
+ * BACKDROP behind an ordinary RN view. The bridged glass view mis-sizes to its
+ * content under the Fabric interop layer, so it must never own layout — this
+ * normal `<View>` measures + clips the children (overflow hidden), and the glass
+ * only fills the space behind them. Fixes the off-screen overflow the earlier
+ * "content inside the glass" approach suffered.
+ */
+function GlassCard({ style, contentStyle, children }: { style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const { radius } = useTheme();
+  return (
+    <View style={[{ borderRadius: radius.lg, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.07)" }, style]}>
+      <LiquidGlass glassCornerRadius={radius.lg} pointerEvents="none" style={StyleSheet.absoluteFill} />
+      <View style={contentStyle}>{children}</View>
     </View>
   );
 }
@@ -611,14 +679,14 @@ function KpiCell({
   const { c } = useTheme();
   const deltaColor = deltaUp == null ? c.textSecondary : deltaUp ? c.success : c.danger;
   return (
-    <View style={{ minWidth: 96, paddingVertical: 4, paddingHorizontal: 6 }}>
-      <Text style={{ color: c.textSecondary, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 }}>
+    <View style={{ paddingVertical: 2 }}>
+      <Text numberOfLines={1} style={{ color: c.textSecondary, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }}>
         {label}
       </Text>
-      <Text style={{ color: valueColor ?? c.textPrimary, fontSize: 20, fontWeight: "900", fontVariant: ["tabular-nums"] }}>
+      <Text numberOfLines={1} style={{ color: valueColor ?? c.textPrimary, fontSize: 19, fontWeight: "900", fontVariant: ["tabular-nums"] }}>
         {value}
       </Text>
-      <Text style={{ color: deltaColor, fontSize: 11, fontWeight: "700" }}>{delta}</Text>
+      <Text numberOfLines={1} style={{ color: deltaColor, fontSize: 11, fontWeight: "700" }}>{delta}</Text>
     </View>
   );
 }
