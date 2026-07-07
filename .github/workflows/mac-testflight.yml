@@ -74,11 +74,19 @@ jobs:
           xcodegen generate
           ls -la
 
+      - name: Install CocoaPods (bundler)
+        # Mirror the iOS job exactly: install the PINNED CocoaPods from the shared
+        # Gemfile under the runner's default Ruby. Do NOT fall back to the system
+        # `pod` — Homebrew's Ruby 3.3.11 has the `find_proxy` regression that throws
+        # `URI::BadURIError - relative URI: …/SocketRocket.podspec` when CocoaPods
+        # fetches a local file-path podspec (that first Mac run's failure).
+        run: bundle install
+
       - name: pod install (macOS)
         working-directory: native/ottaviano-rn/macos
-        run: |
-          bundle install || gem install cocoapods
-          (bundle exec pod install || pod install)
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/native/ottaviano-rn/Gemfile
+        run: bundle exec pod install
 
       - name: Build macOS app
         working-directory: native/ottaviano-rn/macos
