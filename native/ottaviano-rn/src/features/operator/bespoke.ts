@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { Inventory } from "./Inventory";
+import { Pos } from "./Pos";
 
 /**
  * Bespoke operator surfaces — screens hand-built to mirror their web counterpart
@@ -11,4 +12,6 @@ import { Inventory } from "./Inventory";
  */
 export const BESPOKE_SURFACES: Record<string, ComponentType> = {
   "/admin/inventory": Inventory,
+  // ADR-001 spike — the POS on a bridged SwiftUI Liquid Glass surface.
+  "/core/pos": Pos,
 };

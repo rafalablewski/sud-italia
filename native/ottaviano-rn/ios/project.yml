@@ -85,6 +85,10 @@ targets:
       - path: Ottaviano/AppDelegate.swift
       - path: Ottaviano/LaunchScreen.storyboard
       - path: Ottaviano/Images.xcassets
+      # Bridged native SwiftUI Liquid Glass element (ADR-001) — shared by both apps.
+      - path: Ottaviano/LiquidGlassView.swift
+      - path: Ottaviano/LiquidGlassViewManager.swift
+      - path: Ottaviano/LiquidGlassViewManager.m
       - path: Ottaviano/PrivacyInfo.xcprivacy
         buildPhase: resources
       # NOTE: the MaterialCommunityIcons font is shipped by the RNVectorIcons
@@ -112,6 +116,10 @@ targets:
       - path: Ottaviano/AppDelegate.swift
       - path: Ottaviano/LaunchScreen.storyboard
       - path: Ottaviano/Images.xcassets
+      # Bridged native SwiftUI Liquid Glass element (ADR-001) — shared by both apps.
+      - path: Ottaviano/LiquidGlassView.swift
+      - path: Ottaviano/LiquidGlassViewManager.swift
+      - path: Ottaviano/LiquidGlassViewManager.m
       - path: Ottaviano/PrivacyInfo.xcprivacy
         buildPhase: resources
       # Font shipped by the RNVectorIcons pod (see customer target note).
