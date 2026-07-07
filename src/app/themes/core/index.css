@@ -1648,6 +1648,13 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-book-pane { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px; display: flex; flex-direction: column; gap: 12px; }
 .core .core-book-panelab { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .core .core-book-panelab .mut { color: var(--ink-3); letter-spacing: .04em; font-size: 9px; }
+/* Flexible mid-width (laptop / tablet landscape): When + Who share the top row
+   and Where — the zone-grouped grid that needs the most room — spans full width
+   beneath them, so the deck degrades gracefully instead of jumping 3-col → 1. */
+@media (max-width: 1200px) {
+  .core .core-book-deck { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .core .core-book-deck > .core-book-pane:last-child { grid-column: 1 / -1; }
+}
 /* tablet portrait / phone — the three panes stack to one column */
 @media (max-width: 1000px) { .core .core-book-deck { grid-template-columns: 1fr; } }
 /* Fullscreen — the surface wrapper requests native fullscreen, so it becomes

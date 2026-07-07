@@ -207,7 +207,9 @@ party stepper + guest-needs chips + guest name/phone/notes (+ CRM match); **Wher
 = the ranked table cards **grouped by zone** (`.core-bk-zones` → per-zone
 `.core-bk-zone` = a `.core-bk-zonehd` header + its own `.core-bk-tgrid` of
 `.core-bk-tcard`) + joins + signals + min-spend + override + Book button.
-Below 1000px the deck collapses to one column (`.core-book-deck:
+The deck degrades in two flexible steps: at **≤1200px** When + Who share the top
+row and Where (`.core-book-pane:last-child`) spans full width beneath them; at
+**≤1000px** all three collapse to one column (`.core-book-deck:
 grid-template-columns: 1fr`). To fill it: pick a capacity-tinted
 dine-in slot chip (`.core-bk-slotchip`; the selected chip is a translucent
 **brand-wash**; the chip counts **open/total** tables at that time — occupancy
