@@ -81,8 +81,12 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
 ## Phases (from ADR-002)
 
 1. ✅ responsive layouts + POS desktop two-pane (works on iPad landscape today).
-2. ⏳ **this** — hand-authored macOS target generates + builds in CI; iterate to green.
-3. add manual signing + notarized TestFlight upload.
+2. ✅ **DONE** — hand-authored macOS target generates + builds green in CI
+   (`mac-testflight.yml`, run #11: `BUILD SUCCEEDED`, ~15 min uncached, all of
+   Hermes / RCT-Folly / Fabric / the pods + the JS bundle compile for macOS).
+   `CODE_SIGNING_ALLOWED=NO` — a clean compile, not yet an upload.
+3. ⏳ **next** — add manual signing + archive + notarized TestFlight upload
+   (Mac App Distribution cert; see Signing / distribution above).
 4. roll the desktop two-pane across the other operator surfaces.
 
 ## Open risks

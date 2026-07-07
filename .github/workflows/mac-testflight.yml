@@ -1,12 +1,15 @@
 name: Mac app — TestFlight (bootstrap)
 
-# ADR-002 phase 2 — bring up the react-native-macos target IN CI (our "Mac in the
-# loop"), since the macOS project must be generated + pod-installed on macOS. The
-# macos/ target is now HAND-AUTHORED (react-native-macos-init is dead on the 0.79
-# line — it dropped the local-cli scaffold templates it relied on). So this mirrors
-# the iOS pipeline exactly: macos/project.yml → XcodeGen → OttavianoMac.xcodeproj →
-# pod install → OttavianoMac.xcworkspace → xcodebuild. Expect the first runs to
-# fail and iterate on the real compile errors — same way iOS was brought up.
+# ADR-002 phase 2 (DONE — builds green) — react-native-macos target built IN CI
+# (our "Mac in the loop"), since the macOS project must be generated +
+# pod-installed on macOS. The macos/ target is HAND-AUTHORED (react-native-macos-init
+# is dead on the 0.79 line — it dropped the local-cli scaffold templates it relied
+# on). Mirrors the iOS pipeline exactly: macos/project.yml → XcodeGen →
+# OttavianoMac.xcodeproj → pod install → OttavianoMac.xcworkspace → xcodebuild.
+#
+# Currently compiles with CODE_SIGNING_ALLOWED=NO (a clean build, not an upload).
+# PHASE 3 (next): add manual signing + archive + notarized TestFlight upload —
+# see docs/native/MACOS-SETUP.md.
 #
 # Kept OUT of the iOS pipeline: react-native-macos is installed in-job (never in
 # the shared package.json), so it can't break ios-testflight.yml.
