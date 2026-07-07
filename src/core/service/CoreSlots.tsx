@@ -10,8 +10,19 @@ import { PlusIcon, RefreshIcon } from "@/core/shell/toolIcons";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
-import type { FulfillmentType, SlotStatus, TimeSlot } from "@/data/types";
+import { TABLE_TURNAROUND_MIN } from "@/lib/floor";
+import type { FulfillmentType, Reservation, ReservationStatus, SlotStatus, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
+
+// A booking holds its table(s) for the whole reservation PLUS a cleanup
+// turnaround, so it counts against every window it overlaps (matches Book's
+// slot fill). Default dine-in reservation length when a booking omits one.
+const RES_HOLD_STATUSES = new Set<ReservationStatus>(["booked", "seated"]);
+const RESERVATION_MIN = 90;
+const hhmmToMin = (t: string): number => {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
 
 const FULFIL: { key: FulfillmentType; label: string }[] = [
   { key: "dine-in", label: "Dine-in" },
@@ -100,6 +111,10 @@ export function CoreSlots() {
   // governs live *availability* is applied per-reservation in Book's slot fill;
   // this is the static ceiling.)
   const [tableCount, setTableCount] = useCoreCache<number>(`core:slots-tables:${loc}`, 0);
+  // Reservations for the visible day/week — the dine-in windows' booked count is
+  // real tables held (occupancy), NOT slot.currentOrders (an online-order tally
+  // that reservations never touch). Same source + turnaround model as Book.
+  const [reservations, setReservations] = useCoreCache<Reservation[]>(`core:slots-res:${loc}`, []);
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [cMode, setCMode] = useState<"bulk" | "single">("bulk");
@@ -138,6 +153,21 @@ export function CoreSlots() {
     const d = r.ok ? await r.json() : null;
     setBoard(d?.board ?? null);
   }, [loc, date]);
+  // Reservations for every visible date (one day, or the week's seven) — merged
+  // so each window can read its real occupancy client-side.
+  const loadReservations = useCallback(async () => {
+    if (!date) return;
+    const dates = range === "week" ? weekDates(date) : [date];
+    const chunks = await Promise.all(
+      dates.map((d) =>
+        fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${d}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ),
+    );
+    const flat = chunks.flat().filter((x): x is Reservation => !!x && typeof x === "object" && typeof (x as Reservation).id === "string");
+    setReservations(flat);
+  }, [loc, date, range, setReservations]);
 
   useEffect(() => {
     void loadSlots();
@@ -153,6 +183,9 @@ export function CoreSlots() {
     })();
     return () => { cancelled = true; };
   }, [loc, setTableCount]);
+  useEffect(() => {
+    void loadReservations();
+  }, [loadReservations]);
   // Demand exchange sits alongside Manage (dense-console: both columns live),
   // so the board loads on every date/location change, not on a tab toggle.
   useEffect(() => {
@@ -348,16 +381,40 @@ export function CoreSlots() {
   // Dense-console service-window row (mockup `.mslot`): time · fill bar with a
   // booked/status meta line · tier chip · N/max. Tap the tier chip to toggle
   // active/draft; hover reveals a delete affordance (both features preserved).
+  // Tables held at a window = every active booking whose 90-min stay + 15-min
+  // cleanup turnaround still covers this time (joined tables counted, deduped).
+  // Same occupancy model Book's slot fill uses.
+  const occupiedTablesAt = useCallback(
+    (slotDate: string, time: string): number => {
+      const at = hhmmToMin(time);
+      const held = new Set<string>();
+      for (const r of reservations) {
+        if (r.date !== slotDate || !RES_HOLD_STATUSES.has(r.status)) continue;
+        const start = hhmmToMin(r.time);
+        if (at >= start && at < start + (r.durationMin ?? RESERVATION_MIN) + TABLE_TURNAROUND_MIN) {
+          if (r.tableId) held.add(r.tableId);
+          for (const id of r.joinedTableIds ?? []) held.add(id);
+        }
+      }
+      return held.size;
+    },
+    [reservations],
+  );
+
   const slotRow = (s: TimeSlot) => {
-    const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
-    const tier = pct >= 100 ? "full" : pct >= 70 ? "tight" : "healthy";
     // A dine-in window's capacity is the floor (one party per table), so show
-    // "seats to <tables>" — NOT maxOrders, which is the online-order cap. Only
-    // online-only windows advertise "orders to <maxOrders>". Before the floor
-    // count loads, fall back to maxOrders so the row never reads "seats to 0".
+    // "seats to <tables>" with its REAL booked count = tables held now (Book's
+    // occupancy), NOT maxOrders / currentOrders — those are the online-order cap
+    // + tally, which reservations never touch. Online-only windows keep the
+    // order lens ("orders to <maxOrders>"). Before the floor count loads, fall
+    // back to the order fields so the row never reads "seats to 0".
     const servesDineIn = s.fulfillmentTypes.includes("dine-in");
+    const seatLens = servesDineIn && tableCount > 0;
     const capNoun = servesDineIn ? "seats" : "orders";
-    const capTo = servesDineIn && tableCount > 0 ? tableCount : s.maxOrders;
+    const capTo = seatLens ? tableCount : s.maxOrders;
+    const booked = seatLens ? Math.min(occupiedTablesAt(s.date, s.time), capTo) : s.currentOrders;
+    const pct = capTo ? Math.round((booked / capTo) * 100) : 0;
+    const tier = pct >= 100 ? "full" : pct >= 70 ? "tight" : "healthy";
     const statusText = pct >= 100 ? "full" : pct >= 85 ? "filling fast" : `${capNoun} to ${capTo}`;
     const available = s.status === "active";
     const selected = sel.has(s.id);
@@ -378,12 +435,12 @@ export function CoreSlots() {
         <div className="barwrap">
           <div className="mbar"><i className={tier} style={{ width: `${Math.min(100, pct)}%` }} /></div>
           <div className="meta">
-            <span>{s.currentOrders} booked{s.minSpendGrosze ? ` · min ${zl0(s.minSpendGrosze)}` : ""}</span>
+            <span>{booked} booked{s.minSpendGrosze ? ` · min ${zl0(s.minSpendGrosze)}` : ""}</span>
             <span>{statusText}</span>
           </div>
         </div>
         <span className={`core-tchip ${tier}`}>{tier}</span>
-        <span className="mcap">{s.currentOrders} / {s.maxOrders}</span>
+        <span className="mcap">{booked} / {capTo}</span>
         {!selMode && (
           <button
             className={`core-avail ${available ? "on" : "off"}`}
