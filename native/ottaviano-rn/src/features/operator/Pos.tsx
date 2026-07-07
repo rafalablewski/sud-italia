@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  Alert,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -18,15 +19,15 @@ import { StateBlock } from "@/components/ui";
 import { Aurora, LiquidGlass } from "@/components/LiquidGlass";
 import { formatMoney } from "@/lib/format";
 
-// Service · POS — the ADR-001 target screen. A bespoke operator POS that mirrors
-// the web `CorePos` dense console 1:1, in React Native, floating on the bridged
-// SwiftUI Aurora backdrop + Liquid Glass surfaces. Registered in `bespoke.ts`
-// under `/core/pos`, replacing the generic DataSurface for that route.
+// Service · POS — the ADR-001 target screen. A bespoke operator POS mirroring the
+// web `CorePos` dense console, in React Native, on the bridged SwiftUI Aurora +
+// Liquid Glass surface. Registered in `bespoke.ts` under `/core/pos`.
 //
-// Every figure is REAL off `/api/v1` (Rule #1): the live menu, the server till
-// KPIs, the open checks, kitchen pressure, the demand-steering plan, the daypart
-// Popular set, and the 86 list. No invented numbers — the same seven feeds the
-// web till reads, wired to the same shared store/lib through the v1 facade.
+// Every figure AND every write is REAL off `/api/v1` (Rule #1): the live menu,
+// server till KPIs, the open checks, kitchen pressure, the steering plan, the
+// daypart Popular set, and the 86 list — plus the full active-check lifecycle
+// (create / add / restyle / void a check, and fire it to the KDS) through the
+// same shared store/lib the web till drives.
 
 /** `/api/v1/admin/menu?location=` — money in grosze. */
 interface PosMenuItem {
@@ -49,16 +50,18 @@ interface PosKpis {
   tableTurnsDeltaPct: number | null;
   tableCount: number;
 }
-/** `/api/v1/admin/pos/tabs` — open checks (client-derived till state). */
+type Channel = "dine-in" | "takeout" | "delivery";
+/** `/api/v1/admin/pos/tabs` — a server-backed open check. */
 interface PosTab {
   id: string;
+  locationSlug?: string;
   name: string;
   status: string;
-  channel?: string | null;
+  channel?: Channel | null;
   covers?: number | null;
   tableId?: string | null;
   sentKds?: boolean;
-  items: { quantity: number }[];
+  items: { menuItemId: string; quantity: number }[];
 }
 /** `/api/v1/admin/pos/pressure` — live kitchen pressure for the risk badge. */
 interface Pressure {
@@ -78,8 +81,6 @@ interface SteerPlan {
   deliveryCapNextWindow: number;
 }
 
-// Category order + labels — the web `CATEGORY_ORDER` / `MENU_CATEGORY_LABELS`
-// (config, not data): the till lays every truck's menu out identically.
 const CATEGORY_ORDER = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"] as const;
 const CATEGORY_LABEL: Record<string, string> = {
   pizza: "Pizza",
@@ -89,7 +90,6 @@ const CATEGORY_LABEL: Record<string, string> = {
   desserts: "Dolci",
   drinks: "Drinks",
 };
-// Rail glyph — a single emblem per (pseudo-)category, mirroring the web icon rail.
 const CAT_GLYPH: Record<string, string> = {
   popular: "★",
   all: "▦",
@@ -101,8 +101,12 @@ const CAT_GLYPH: Record<string, string> = {
   drinks: "◍",
 };
 const ROLE_BADGE: Record<string, string> = { hero: "HERO", "profit-driver": "PROFIT", anchor: "ANCHOR", lto: "LTO" };
-// Dietary tag → chip label (web TAG_META): vegetarian V · vegan VG · spicy S · gluten-free GF.
 const TAG_LABEL: Record<string, string> = { vegetarian: "V", vegan: "VG", spicy: "S", "gluten-free": "GF" };
+const CHANNELS: { key: Channel; label: string }[] = [
+  { key: "dine-in", label: "Dine-in" },
+  { key: "takeout", label: "Takeaway" },
+  { key: "delivery", label: "Delivery" },
+];
 
 const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
 const pctChip = (p: number | null | undefined): { txt: string; up: boolean | null } =>
@@ -112,11 +116,6 @@ export function Pos() {
   const { c, radius, spacing } = useTheme();
   const { authed } = useOperator();
   const { slug, locations, setSlug, ensureLoaded } = useOperatorLocation();
-  // Bridged glass views hug their content width under the Fabric interop layer,
-  // so an unconstrained KPI strip / command bar sizes to its content and spills
-  // past the screen (the rounded right corner ends up off-screen). Bind every
-  // glass surface to an explicit card width, and honour the bottom safe area so
-  // the docked check floats above the home indicator instead of under it.
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const cardW = winW - spacing.md * 2;
@@ -134,11 +133,25 @@ export function Pos() {
   const [cat, setCat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [ticket, setTicket] = useState<Record<string, number>>({});
+  const [firing, setFiring] = useState(false);
 
   useEffect(() => {
     ensureLoaded();
   }, [ensureLoaded]);
+
+  // Open checks — its own loader so mutations can re-sync from the server.
+  const loadTabs = useCallback(async () => {
+    if (!slug) return;
+    try {
+      const { data } = await authed<PosTab[]>(`/admin/pos/tabs?location=${encodeURIComponent(slug)}`);
+      setTabs(data);
+      // Keep the current selection only if it still exists (a fired/voided check
+      // drops out); never auto-select — the till starts on the menu, not a check.
+      setActiveTabId((cur) => (cur && data.some((t) => t.id === cur) ? cur : null));
+    } catch {
+      /* non-fatal */
+    }
+  }, [authed, slug]);
 
   useEffect(() => {
     if (!slug) return;
@@ -149,12 +162,6 @@ export function Pos() {
       .then(({ data }) => setItems(data))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Couldn't load the menu"));
     authed<PosKpis>(`/admin/pos/kpis?location=${loc}`).then(({ data }) => setKpis(data)).catch(() => setKpis(null));
-    authed<PosTab[]>(`/admin/pos/tabs?location=${loc}`)
-      .then(({ data }) => {
-        setTabs(data);
-        setActiveTabId((cur) => cur ?? data[0]?.id ?? null);
-      })
-      .catch(() => setTabs([]));
     authed<Pressure>(`/admin/pos/pressure?location=${loc}`).then(({ data }) => setPressure(data)).catch(() => setPressure(null));
     authed<{ paceWindowMin?: number; plan?: SteerPlan }>(`/admin/pace/steering?location=${loc}`)
       .then(({ data }) => {
@@ -168,7 +175,8 @@ export function Pos() {
     authed<{ eightySixed?: { id: string }[] }>(`/admin/kds/eighty-six?location=${loc}`)
       .then(({ data }) => setEightySix(new Set((data.eightySixed ?? []).map((m) => m.id))))
       .catch(() => setEightySix(new Set()));
-  }, [authed, slug]);
+    void loadTabs();
+  }, [authed, slug, loadTabs]);
 
   const byId = useMemo(() => {
     const m = new Map<string, PosMenuItem>();
@@ -178,13 +186,11 @@ export function Pos() {
 
   const isAvail = (m: PosMenuItem) => m.available && !eightySix.has(m.id);
 
-  // Categories present on this menu, in the canonical order (web `categories`).
   const categories = useMemo(() => {
     const present = new Set((items ?? []).filter((m) => m.available).map((m) => m.category));
     return CATEGORY_ORDER.filter((cc) => present.has(cc));
   }, [items]);
 
-  // ★ Popular — daypart top items that are on THIS menu, most-ordered first.
   const popularItems = useMemo(
     () => popularIds.map((id) => byId.get(id)).filter((m): m is PosMenuItem => !!m),
     [popularIds, byId],
@@ -192,11 +198,9 @@ export function Pos() {
   const hasPopular = popularItems.length > 0;
   const activeCat = cat ?? (hasPopular ? "popular" : categories[0] ?? "all");
 
-  // Live-plan item cues + per-category promise (web makeNowSet / throttleSet).
   const makeNowSet = useMemo(() => new Set(steer?.makeNow ?? []), [steer]);
   const throttleSet = useMemo(() => new Set(steer?.throttle ?? []), [steer]);
 
-  // Grid source: channel-appropriate incl. sold-out; available first, 86'd sunk.
   const gridItems = useMemo(() => {
     const source =
       activeCat === "popular"
@@ -212,7 +216,6 @@ export function Pos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, popularItems, activeCat, search, eightySix]);
 
-  // Rail rollup + live till stats — every figure from real till state (Rule #1).
   const railCount = tabs.length;
   const parked = tabs.filter((t) => t.status === "parked").length;
   const posStats = useMemo(() => {
@@ -223,42 +226,151 @@ export function Pos() {
     return { covers, dineIn, prepItems };
   }, [tabs]);
 
-  // Ticket (local quick-sale scratch — genuine operator input, not mock data).
-  const ticketCount = Object.values(ticket).reduce((a, b) => a + b, 0);
-  const ticketTotal = (items ?? []).reduce((s, i) => s + (ticket[i.id] ?? 0) * i.price, 0);
-  // Capacity-true promise for the ticket = worst promise across its categories.
-  const ticketPromiseSec = useMemo(() => {
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+  const checkLines = useMemo(
+    () =>
+      (activeTab?.items ?? [])
+        .map((l) => ({ item: byId.get(l.menuItemId), qty: l.quantity }))
+        .filter((l): l is { item: PosMenuItem; qty: number } => !!l.item),
+    [activeTab, byId],
+  );
+  const checkCount = checkLines.reduce((s, l) => s + l.qty, 0);
+  const checkTotal = checkLines.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const checkPromiseSec = useMemo(() => {
     if (!steer) return 0;
     let worst = 0;
-    for (const id of Object.keys(ticket)) {
-      if ((ticket[id] ?? 0) <= 0) continue;
-      const cc = byId.get(id)?.category ?? "";
-      worst = Math.max(worst, steer.promiseSecondsByCategory[cc] ?? 0);
-    }
+    for (const l of checkLines) worst = Math.max(worst, steer.promiseSecondsByCategory[l.item.category] ?? 0);
     return worst;
-  }, [ticket, steer, byId]);
+  }, [checkLines, steer]);
+  const qtyOnCheck = (id: string) => activeTab?.items.find((l) => l.menuItemId === id)?.quantity ?? 0;
 
-  // Add/remove a unit on the local sale; drop the line at zero.
-  const setQty = (id: string, delta: number) =>
-    setTicket((t) => {
-      const n = (t[id] ?? 0) + delta;
-      const next = { ...t };
-      if (n <= 0) delete next[id];
-      else next[id] = n;
-      return next;
-    });
-  const ticketLines = useMemo(
-    () =>
-      Object.entries(ticket)
-        .map(([id, qty]) => ({ item: byId.get(id), qty }))
-        .filter((l): l is { item: PosMenuItem; qty: number } => !!l.item),
-    [ticket, byId],
+  // ── Active-check writes (real, persisted through the v1 facade) ───────────
+  const persistTab = useCallback(
+    async (tab: PosTab) => {
+      if (!slug) return;
+      try {
+        const { data } = await authed<PosTab>(`/admin/pos/tabs`, {
+          method: "PUT",
+          body: {
+            id: tab.id,
+            locationSlug: slug,
+            name: tab.name,
+            channel: tab.channel ?? null,
+            status: tab.status,
+            items: tab.items.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity })),
+          },
+        });
+        setTabs((prev) => prev.map((t) => (t.id === data.id ? data : t)));
+      } catch {
+        void loadTabs();
+      }
+    },
+    [authed, slug, loadTabs],
   );
+
+  const newCheck = useCallback(async (): Promise<PosTab | null> => {
+    if (!slug) return null;
+    const maxNum = tabs.reduce((m, t) => {
+      const mm = /^Tab (\d+)$/.exec(t.name);
+      return mm ? Math.max(m, parseInt(mm[1], 10)) : m;
+    }, 0);
+    try {
+      const { data } = await authed<PosTab>(`/admin/pos/tabs?location=${encodeURIComponent(slug)}`, {
+        method: "POST",
+        body: { name: `Tab ${maxNum + 1}` },
+      });
+      // Zero-friction: default new checks to takeaway so a sale fires with one tap
+      // (the channel chips still let the operator switch to dine-in / delivery).
+      const tab: PosTab = { ...data, channel: data.channel ?? "takeout" };
+      setTabs((prev) => [...prev, tab]);
+      setActiveTabId(tab.id);
+      return tab;
+    } catch {
+      Alert.alert("Couldn't open a check", "Try again.");
+      return null;
+    }
+  }, [authed, slug, tabs]);
+
+  const addItem = useCallback(
+    async (menuItemId: string) => {
+      let tab = activeTab;
+      if (!tab) tab = await newCheck();
+      if (!tab) return;
+      const items = [...tab.items];
+      const i = items.findIndex((l) => l.menuItemId === menuItemId);
+      if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + 1) };
+      else items.push({ menuItemId, quantity: 1 });
+      const next = { ...tab, items };
+      setTabs((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+      void persistTab(next);
+    },
+    [activeTab, newCheck, persistTab],
+  );
+
+  const setLineQty = useCallback(
+    (menuItemId: string, delta: number) => {
+      if (!activeTab) return;
+      const items = activeTab.items
+        .map((l) => (l.menuItemId === menuItemId ? { ...l, quantity: l.quantity + delta } : l))
+        .filter((l) => l.quantity > 0);
+      const next = { ...activeTab, items };
+      setTabs((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+      void persistTab(next);
+    },
+    [activeTab, persistTab],
+  );
+
+  const setChannel = useCallback(
+    (channel: Channel) => {
+      if (!activeTab) return;
+      const next = { ...activeTab, channel };
+      setTabs((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+      void persistTab(next);
+    },
+    [activeTab, persistTab],
+  );
+
+  const voidCheck = useCallback(async () => {
+    const t = activeTab;
+    if (!t || !slug) return;
+    const rest = tabs.filter((x) => x.id !== t.id);
+    setTabs(rest);
+    setActiveTabId(rest[0]?.id ?? null);
+    try {
+      await authed(`/admin/pos/tabs?location=${encodeURIComponent(slug)}&id=${encodeURIComponent(t.id)}`, { method: "DELETE" });
+    } catch {
+      void loadTabs();
+    }
+  }, [activeTab, slug, tabs, authed, loadTabs]);
+
+  const fire = useCallback(async () => {
+    const t = activeTab;
+    if (!t || t.items.length === 0 || firing || !slug) return;
+    if (!t.channel) {
+      Alert.alert("Pick a channel", "Choose dine-in, takeaway or delivery before firing to the kitchen.");
+      return;
+    }
+    setFiring(true);
+    try {
+      await authed<{ firedCourses?: string[] }>(
+        `/admin/pos/tabs/${encodeURIComponent(t.id)}/fire?location=${encodeURIComponent(slug)}`,
+        { method: "POST", body: { fireAll: true } },
+      );
+      Alert.alert("Fired to kitchen ✓", `${t.name} sent to the KDS.`);
+      setActiveTabId(null);
+      await loadTabs();
+    } catch (e) {
+      Alert.alert("Couldn't fire", e instanceof Error ? e.message : "Try again.");
+    } finally {
+      setFiring(false);
+    }
+  }, [activeTab, firing, slug, authed, loadTabs]);
 
   if (error && !items) return <StateBlock kind="error" message={error} />;
   if (!items) return <StateBlock kind="loading" />;
 
   const riskN = pressure?.atRisk ?? 0;
+  const cartOpen = !!activeTab && checkLines.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#140f0d" }}>
@@ -267,7 +379,7 @@ export function Pos() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (ticketCount > 0 ? 128 : 40) + insets.bottom }}
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: (cartOpen ? 340 : 40) + insets.bottom }}
       >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
         <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
@@ -275,7 +387,6 @@ export function Pos() {
             <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: -0.3 }}>POS</Text>
             <Text style={{ color: c.textSecondary, fontSize: 13, fontWeight: "600", flexShrink: 1 }} numberOfLines={1}>· Order</Text>
             <View style={{ flex: 1 }} />
-            {/* Live kitchen-pressure badge (web command-bar "risk N"). */}
             {riskN > 0 ? (
               <View style={[styles.riskBadge, { backgroundColor: c.danger + "22", borderColor: c.danger }]}>
                 <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.danger }} />
@@ -288,7 +399,6 @@ export function Pos() {
               </View>
             )}
           </View>
-          {/* Location switcher (multi-truck operators) — compact city pills. */}
           {locations.length > 1 && (
             <View style={{ flexDirection: "row", gap: spacing.xs, flexWrap: "wrap" }}>
               {locations.map((loc) => {
@@ -315,10 +425,10 @@ export function Pos() {
           )}
         </GlassCard>
 
-        {/* ── KPI stat strip — a 3-across grid so all six read at a glance ──── */}
+        {/* ── KPI stat strip — a tight 3-across grid ───────────────────────── */}
         <GlassCard
           style={{ width: cardW }}
-          contentStyle={{ padding: spacing.sm, flexDirection: "row", flexWrap: "wrap", rowGap: spacing.sm }}
+          contentStyle={{ paddingVertical: spacing.sm, paddingHorizontal: 4, flexDirection: "row", flexWrap: "wrap", rowGap: 10 }}
         >
           {[
             { label: "Open checks", value: String(railCount), delta: parked > 0 ? `${parked} parked` : "all active", up: parked > 0 ? false : true },
@@ -328,71 +438,68 @@ export function Pos() {
             { label: "Table turns", value: kpis ? `${kpis.tableTurns.toFixed(1)}×` : "…", color: c.success, delta: pctChip(kpis?.tableTurnsDeltaPct).txt, up: pctChip(kpis?.tableTurnsDeltaPct).up },
             { label: "Sales /hr", value: kpis ? formatMoney(kpis.salesPerHour) : "…", delta: pctChip(kpis?.salesDeltaPct).txt, up: pctChip(kpis?.salesDeltaPct).up },
           ].map((k) => (
-            <View key={k.label} style={{ width: "33.33%", paddingHorizontal: 6 }}>
+            <View key={k.label} style={{ width: "33.33%", paddingHorizontal: 8 }}>
               <KpiCell label={k.label} value={k.value} valueColor={k.color} delta={k.delta} deltaUp={k.up} />
             </View>
           ))}
         </GlassCard>
 
-        {/* ── Open-check tabs (web core-tabrail) ─────────────────────────── */}
-        {tabs.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs }}>
-            {tabs.map((t) => {
-              const on = t.id === activeTabId;
-              const n = t.items.reduce((s, l) => s + l.quantity, 0);
-              const offPremise = t.channel === "takeout" || t.channel === "delivery";
-              const ctx =
-                t.channel === "takeout"
+        {/* ── Open-check rail — select a check or start a new one ──────────── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs }}>
+          {tabs.map((t) => {
+            const on = t.id === activeTabId;
+            const n = t.items.reduce((s, l) => s + l.quantity, 0);
+            const ctx =
+              t.status === "pay" || t.sentKds
+                ? "sent"
+                : t.channel === "takeout"
                   ? "takeaway"
                   : t.channel === "delivery"
                     ? "delivery"
                     : n > 0
                       ? `${n} ${n === 1 ? "item" : "items"}`
                       : "empty";
-              const tint = offPremise ? c.accent : c.textSecondary;
-              return (
-                <TouchableOpacity
-                  key={t.id}
-                  onPress={() => setActiveTabId(t.id)}
-                  style={{
-                    backgroundColor: on ? c.accent : c.surface2 + "cc",
-                    borderColor: on ? c.accent : c.line,
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderRadius: radius.md,
-                    paddingVertical: 6,
-                    paddingHorizontal: 12,
-                    minWidth: 92,
-                  }}
-                >
-                  <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "800", fontSize: 13 }}>{t.name}</Text>
-                  <Text style={{ color: on ? c.onAccent : tint, fontSize: 11, fontWeight: "600" }}>
-                    {t.status === "pay" ? "to pay · " : t.status === "parked" ? "parked · " : ""}
-                    {ctx}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
+            return (
+              <TouchableOpacity
+                key={t.id}
+                onPress={() => setActiveTabId(t.id)}
+                style={{
+                  backgroundColor: on ? c.accent : c.surface2 + "cc",
+                  borderColor: on ? c.accent : c.line,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderRadius: radius.md,
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  minWidth: 92,
+                }}
+              >
+                <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "800", fontSize: 13 }}>{t.name}</Text>
+                <Text style={{ color: on ? c.onAccent : c.textSecondary, fontSize: 11, fontWeight: "600" }}>{ctx}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            onPress={() => void newCheck()}
+            style={{
+              backgroundColor: "transparent",
+              borderColor: c.accent,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderRadius: radius.md,
+              paddingVertical: 6,
+              paddingHorizontal: 14,
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: c.accent, fontWeight: "800", fontSize: 13 }}>＋ New</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
-        {/* ── Category rail with counts + per-category promise (web core-rail) ── */}
+        {/* ── Category rail with counts + per-category promise ─────────────── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs }}>
           {hasPopular && (
-            <CatChip
-              glyph={CAT_GLYPH.popular}
-              label="Popular"
-              count={popularItems.length}
-              active={activeCat === "popular"}
-              onPress={() => setCat("popular")}
-            />
+            <CatChip glyph={CAT_GLYPH.popular} label="Popular" count={popularItems.length} active={activeCat === "popular"} onPress={() => setCat("popular")} />
           )}
-          <CatChip
-            glyph={CAT_GLYPH.all}
-            label="All"
-            count={(items ?? []).filter(isAvail).length}
-            active={activeCat === "all"}
-            onPress={() => setCat("all")}
-          />
+          <CatChip glyph={CAT_GLYPH.all} label="All" count={(items ?? []).filter(isAvail).length} active={activeCat === "all"} onPress={() => setCat("all")} />
           {categories.map((cc) => (
             <CatChip
               key={cc}
@@ -429,7 +536,7 @@ export function Pos() {
           />
         </View>
 
-        {/* ── Steering banner — only when a real bottleneck exists (web core-steer) ── */}
+        {/* ── Steering banner — only when a real bottleneck exists ─────────── */}
         {steer?.active && steer.bottleneck && (
           <View
             style={{
@@ -455,10 +562,10 @@ export function Pos() {
           </View>
         )}
 
-        {/* ── Menu grid (web core-menu-grid) ─────────────────────────────── */}
+        {/* ── Menu grid — tap to add to the active check ──────────────────── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
           {gridItems.map((item) => {
-            const qty = ticket[item.id] ?? 0;
+            const qty = qtyOnCheck(item.id);
             const avail = isAvail(item);
             const badge = item.menuRole ? ROLE_BADGE[item.menuRole] : undefined;
             const dietary = item.tags.map((t) => TAG_LABEL[t]).filter(Boolean);
@@ -469,7 +576,7 @@ export function Pos() {
                 key={item.id}
                 activeOpacity={0.85}
                 disabled={!avail}
-                onPress={() => setTicket((t) => ({ ...t, [item.id]: (t[item.id] ?? 0) + 1 }))}
+                onPress={() => void addItem(item.id)}
                 style={{ width: "48%", flexGrow: 1 }}
               >
                 <View
@@ -483,16 +590,9 @@ export function Pos() {
                     opacity: avail ? 1 : 0.55,
                   }}
                 >
-                  {/* Header: name + role badge + qty */}
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 4 }}>
                     <Text
-                      style={{
-                        color: c.textPrimary,
-                        fontWeight: "700",
-                        fontSize: 14,
-                        flex: 1,
-                        textDecorationLine: avail ? "none" : "line-through",
-                      }}
+                      style={{ color: c.textPrimary, fontWeight: "700", fontSize: 14, flex: 1, textDecorationLine: avail ? "none" : "line-through" }}
                       numberOfLines={2}
                     >
                       {item.name}
@@ -523,7 +623,6 @@ export function Pos() {
                     </Text>
                   ) : null}
 
-                  {/* Pace cues — ★ make now (basil) / ▼ ease (amber), from the live plan. */}
                   {(makeNow || ease) && (
                     <View style={{ flexDirection: "row", gap: 4, marginTop: 5 }}>
                       {makeNow && <Chip label="★ make now" fg={c.success} bg={c.success + "22"} />}
@@ -533,53 +632,79 @@ export function Pos() {
 
                   <View style={{ flex: 1 }} />
 
-                  {/* Footer: price · dietary · add / 86 */}
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 5 }}>
                     <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14 }}>{formatMoney(item.price)}</Text>
                     <View style={{ flex: 1 }} />
                     {dietary.map((d) => (
                       <Chip key={d} label={d} fg={c.success} bg={c.success + "1f"} />
                     ))}
-                    {!avail ? (
-                      <Chip label="86" fg={c.danger} bg={c.danger + "26"} />
-                    ) : (
-                      <Text style={{ color: c.accent, fontSize: 18, fontWeight: "800", marginLeft: 2 }}>+</Text>
-                    )}
+                    {!avail ? <Chip label="86" fg={c.danger} bg={c.danger + "26"} /> : <Text style={{ color: c.accent, fontSize: 18, fontWeight: "800", marginLeft: 2 }}>+</Text>}
                   </View>
                 </View>
               </TouchableOpacity>
             );
           })}
-          {gridItems.length === 0 && (
-            <Text style={{ color: c.textSecondary, fontSize: 13, padding: spacing.md }}>No items match.</Text>
-          )}
+          {gridItems.length === 0 && <Text style={{ color: c.textSecondary, fontSize: 13, padding: spacing.md }}>No items match.</Text>}
         </View>
       </ScrollView>
 
-      {/* ── Dedicated sale cart — a floating glass sheet with line items,
-          per-line steppers, live promise, and the running total (web core-ticket,
-          reworked for touch). Glass rides behind a real RN view so it lays out and
-          clips correctly on-device. ────────────────────────────────────────── */}
-      {ticketCount > 0 && (
-        <View style={{ position: "absolute", left: spacing.md, right: spacing.md, bottom: insets.bottom + spacing.sm }}>
+      {/* ── Active-check cart — anchored flush to the bottom over a scrim so no
+          menu peeks under it. Real server check: channel, line steppers, void +
+          fire-to-KDS. ──────────────────────────────────────────────────────── */}
+      {cartOpen && activeTab && (
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingHorizontal: spacing.md,
+            paddingTop: spacing.sm,
+            paddingBottom: insets.bottom + spacing.sm,
+            backgroundColor: "rgba(15,11,9,0.90)",
+          }}
+        >
           <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
-            {/* grabber */}
-            <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: c.textSecondary + "66" }} />
             {/* header */}
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>Current sale</Text>
+                <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>{activeTab.name}</Text>
                 <Text style={{ color: c.textSecondary, fontSize: 12 }} numberOfLines={1}>
-                  {ticketCount} {ticketCount === 1 ? "item" : "items"}
-                  {promiseMin(ticketPromiseSec) ? ` · ready ${promiseMin(ticketPromiseSec)}` : ""}
+                  {checkCount} {checkCount === 1 ? "item" : "items"}
+                  {promiseMin(checkPromiseSec) ? ` · ready ${promiseMin(checkPromiseSec)}` : ""}
                 </Text>
               </View>
-              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 22, flexShrink: 0 }}>{formatMoney(ticketTotal)}</Text>
+              <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 22, flexShrink: 0 }}>{formatMoney(checkTotal)}</Text>
             </View>
-            {/* line items — scrolls when the sale gets long */}
-            <View style={{ maxHeight: 190 }}>
+
+            {/* channel chips */}
+            <View style={{ flexDirection: "row", gap: spacing.xs }}>
+              {CHANNELS.map((ch) => {
+                const on = activeTab.channel === ch.key;
+                return (
+                  <TouchableOpacity
+                    key={ch.key}
+                    onPress={() => setChannel(ch.key)}
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      paddingVertical: 8,
+                      borderRadius: radius.md,
+                      backgroundColor: on ? c.accent + "26" : "transparent",
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: on ? c.accent : c.line,
+                    }}
+                  >
+                    <Text style={{ color: on ? c.accent : c.textSecondary, fontWeight: "800", fontSize: 12 }}>{ch.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* line items */}
+            <View style={{ maxHeight: 168 }}>
               <ScrollView showsVerticalScrollIndicator={false}>
-                {ticketLines.map(({ item, qty }) => (
+                {checkLines.map(({ item, qty }) => (
                   <View
                     key={item.id}
                     style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line }}
@@ -588,11 +713,10 @@ export function Pos() {
                       <Text style={{ color: c.textPrimary, fontWeight: "700", fontSize: 14 }} numberOfLines={1}>{item.name}</Text>
                       <Text style={{ color: c.textSecondary, fontSize: 11 }}>{formatMoney(item.price)} each</Text>
                     </View>
-                    {/* qty stepper */}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Stepper label="−" onPress={() => setQty(item.id, -1)} c={c} />
+                      <Stepper label="−" onPress={() => setLineQty(item.id, -1)} c={c} />
                       <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15, minWidth: 18, textAlign: "center", fontVariant: ["tabular-nums"] }}>{qty}</Text>
-                      <Stepper label="+" onPress={() => setQty(item.id, 1)} accent c={c} />
+                      <Stepper label="+" onPress={() => setLineQty(item.id, 1)} accent c={c} />
                     </View>
                     <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14, minWidth: 68, textAlign: "right", fontVariant: ["tabular-nums"] }}>
                       {formatMoney(item.price * qty)}
@@ -601,19 +725,24 @@ export function Pos() {
                 ))}
               </ScrollView>
             </View>
+
             {/* actions */}
             <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: 2 }}>
               <TouchableOpacity
-                onPress={() => setTicket({})}
-                style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line }}
+                onPress={() => void voidCheck()}
+                style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "88" }}
               >
-                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14 }}>Clear</Text>
+                <Text style={{ color: c.danger, fontWeight: "800", fontSize: 14 }}>Void</Text>
               </TouchableOpacity>
-              <View
-                style={{ flex: 2, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: radius.md, backgroundColor: c.accent }}
+              <TouchableOpacity
+                onPress={() => void fire()}
+                disabled={firing}
+                style={{ flex: 2, alignItems: "center", justifyContent: "center", paddingVertical: 13, borderRadius: radius.md, backgroundColor: c.accent, opacity: firing ? 0.6 : 1 }}
               >
-                <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>Total {formatMoney(ticketTotal)}</Text>
-              </View>
+                <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>
+                  {firing ? "Firing…" : `Fire to KDS · ${formatMoney(checkTotal)}`}
+                </Text>
+              </TouchableOpacity>
             </View>
           </GlassCard>
         </View>
@@ -644,42 +773,12 @@ function Stepper({ label, onPress, accent, c }: { label: string; onPress: () => 
   );
 }
 
-/**
- * A glass card whose native SwiftUI Liquid Glass rides as an absolute-fill
- * BACKDROP behind an ordinary RN view. The bridged glass view mis-sizes to its
- * content under the Fabric interop layer, so it must never own layout — this
- * normal `<View>` measures + clips the children (overflow hidden), and the glass
- * only fills the space behind them. Fixes the off-screen overflow the earlier
- * "content inside the glass" approach suffered.
- */
-function GlassCard({ style, contentStyle, children }: { style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; children: ReactNode }) {
-  const { radius } = useTheme();
-  return (
-    <View style={[{ borderRadius: radius.lg, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.07)" }, style]}>
-      <LiquidGlass glassCornerRadius={radius.lg} pointerEvents="none" style={StyleSheet.absoluteFill} />
-      <View style={contentStyle}>{children}</View>
-    </View>
-  );
-}
-
-/** A KPI cell — label · coloured value · signed delta (web `.core-statstrip .cell`). */
-function KpiCell({
-  label,
-  value,
-  valueColor,
-  delta,
-  deltaUp,
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-  delta: string;
-  deltaUp: boolean | null;
-}) {
+/** A KPI cell — label · coloured value · signed delta. */
+function KpiCell({ label, value, valueColor, delta, deltaUp }: { label: string; value: string; valueColor?: string; delta: string; deltaUp: boolean | null }) {
   const { c } = useTheme();
   const deltaColor = deltaUp == null ? c.textSecondary : deltaUp ? c.success : c.danger;
   return (
-    <View style={{ paddingVertical: 2 }}>
+    <View>
       <Text numberOfLines={1} style={{ color: c.textSecondary, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }}>
         {label}
       </Text>
@@ -692,21 +791,7 @@ function KpiCell({
 }
 
 /** A category-rail chip — glyph · label · count · optional ~Nm promise. */
-function CatChip({
-  glyph,
-  label,
-  count,
-  promise,
-  active,
-  onPress,
-}: {
-  glyph: string;
-  label: string;
-  count: number;
-  promise?: string | null;
-  active: boolean;
-  onPress: () => void;
-}) {
+function CatChip({ glyph, label, count, promise, active, onPress }: { glyph: string; label: string; count: number; promise?: string | null; active: boolean; onPress: () => void }) {
   const { c, radius } = useTheme();
   return (
     <TouchableOpacity
@@ -735,20 +820,35 @@ function CatChip({
 /** A tiny inline pill (role badge, dietary flag, pace cue). */
 function Chip({ label, fg, bg }: { label: string; fg: string; bg: string }) {
   return (
-    <Text
-      style={{
-        color: fg,
-        backgroundColor: bg,
-        fontSize: 9,
-        fontWeight: "800",
-        paddingHorizontal: 5,
-        paddingVertical: 1,
-        borderRadius: 4,
-        overflow: "hidden",
-      }}
-    >
+    <Text style={{ color: fg, backgroundColor: bg, fontSize: 9, fontWeight: "800", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, overflow: "hidden" }}>
       {label}
     </Text>
+  );
+}
+
+/**
+ * A glass card whose native SwiftUI Liquid Glass rides as an absolute-fill
+ * BACKDROP behind an ordinary RN view. The bridged glass view mis-sizes to its
+ * content under the Fabric interop layer, so it must never own layout — the inner
+ * `<View>` measures + clips the children, and the glass only fills behind them.
+ * A depth shadow (outer, un-clipped) + a faint tint overlay give the panel more
+ * presence against the aurora.
+ */
+function GlassCard({ style, contentStyle, children }: { style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const { radius } = useTheme();
+  return (
+    <View
+      style={[
+        { borderRadius: radius.lg, shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
+        style,
+      ]}
+    >
+      <View style={{ borderRadius: radius.lg, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.09)" }}>
+        <LiquidGlass glassCornerRadius={radius.lg} pointerEvents="none" style={StyleSheet.absoluteFill} />
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(28,22,17,0.34)" }]} />
+        <View style={contentStyle}>{children}</View>
+      </View>
+    </View>
   );
 }
 
