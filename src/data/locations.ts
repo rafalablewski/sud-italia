@@ -30,7 +30,7 @@ export const locations: Location[] = [
     shortDescription:
       "Authentic Neapolitan pizza & pasta at Kraków's Main Square",
     hours: [
-      { day: "Mon-Sun", open: "12:00", close: "21:00" },
+      { day: "Mon-Sun", open: "12:00", close: "23:00" },
     ],
     isActive: true,
     currency: "PLN",
@@ -50,7 +50,7 @@ export const locations: Location[] = [
     shortDescription:
       "A taste of Naples on Warsaw's iconic Nowy Świat street",
     hours: [
-      { day: "Mon-Sun", open: "12:00", close: "21:00" },
+      { day: "Mon-Sun", open: "12:00", close: "23:00" },
     ],
     isActive: true,
     currency: "PLN",

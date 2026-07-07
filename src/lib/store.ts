@@ -5,7 +5,7 @@ import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, EventRunSheet, BookingEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationPremises, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType, SelectedModifier, WaitlistEntry, WaitlistStatus } from "@/data/types";
 import { getActiveLocationsAsync, getLocationAsync } from "@/lib/locations-store";
 import { posLineKey } from "@/lib/pos-line";
-import { timeToMinutes } from "@/lib/floor";
+import { timeToMinutes, serviceWindowForDate, type ServiceWindow } from "@/lib/floor";
 import { resolvePolicy, buildTurnModel, summariseDecisions, summariseTurnAccuracy, dowOf, type SeatingPolicy, type StoredSeatingPolicy, type TurnModel, type TurnSample, type TurnAccuracy, type SeatingDecision, type SeatingDecisionSummary, type OverrideReason, type SeatingWeights } from "@/lib/seating";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -688,7 +688,6 @@ const DINE_IN_SLOT_STEP_MIN = 15;
 // total). Beyond that, no dine-in windows are generated (and any left over are
 // pruned), so reservations can't be taken further out than a week.
 const DINE_IN_BOOKING_HORIZON_DAYS = 7;
-const WEEKDAYS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Whole days from `fromIso` to `toIso` (both YYYY-MM-DD), UTC-anchored so DST
 // never shifts the count. Negative = toIso is in the past.
@@ -706,37 +705,8 @@ export function isWithinDineInHorizon(todayIso: string, dateIso: string): boolea
   return Number.isFinite(d) && d >= 0 && d < DINE_IN_BOOKING_HORIZON_DAYS;
 }
 
-function hhmmToMin(s: string): number {
-  const [h, m] = s.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
 function minToHhmm(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-}
-// Mon=0 … Sun=6 for a YYYY-MM-DD date (local midnight).
-function dayIndexMonFirst(date: string): number {
-  return (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
-}
-// Resolve a location's open window for a given date from its hours table.
-// hours entries are day tokens or ranges ("Mon-Thu", "Fri-Sat", "Sun",
-// "Mon-Sun"); falls back to 12:00–23:00 when nothing matches.
-function serviceWindowForDate(
-  hours: { day: string; open: string; close: string }[] | undefined,
-  date: string,
-): { openMin: number; closeMin: number } {
-  const wd = dayIndexMonFirst(date);
-  for (const h of hours ?? []) {
-    const parts = h.day.split("-").map((p) => p.trim());
-    const start = WEEKDAYS_MON_FIRST.indexOf(parts[0]);
-    const end = WEEKDAYS_MON_FIRST.indexOf(parts[parts.length - 1]);
-    if (start === -1 || end === -1) continue;
-    if (wd >= start && wd <= end) {
-      const openMin = hhmmToMin(h.open);
-      const closeMin = hhmmToMin(h.close);
-      if (closeMin > openMin) return { openMin, closeMin };
-    }
-  }
-  return { openMin: 12 * 60, closeMin: 23 * 60 };
 }
 
 /** Deterministic id for an auto-generated dine-in grid slot, so ensure is
@@ -745,17 +715,34 @@ export function dineInSlotId(locationSlug: string, date: string, time: string): 
   return `dine-${locationSlug}-${date}-${time.replace(":", "")}`;
 }
 
-/** Pure: the "HH:MM" seating windows for one day — every 15 min across the
- *  full open window, open through close inclusive (12:00–23:00 → 12:00…23:00).
- *  Falls back to 12:00–23:00 when hours are missing. */
+/** Pure: the "HH:MM" seating windows for one day — every 15 min from open
+ *  through the LAST SEATING (close − 30 min, `serviceWindowForDate`), so the
+ *  grid only ever offers times a party can actually be booked/seated (nothing
+ *  after last order). Falls back to 12:00–23:00 hours → 12:00…22:30 windows. */
 export function dineInGridTimes(
   hours: { day: string; open: string; close: string }[] | undefined,
   date: string,
 ): string[] {
-  const { openMin, closeMin } = serviceWindowForDate(hours, date);
+  const { openMin, lastSeatingMin } = serviceWindowForDate(hours, date);
   const times: string[] = [];
-  for (let m = openMin; m <= closeMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
+  for (let m = openMin; m <= lastSeatingMin; m += DINE_IN_SLOT_STEP_MIN) times.push(minToHhmm(m));
   return times;
+}
+
+/**
+ * The dine-in service window for one location/day, resolved from the CODE-defined
+ * opening hours (the authoritative seed in src/data/locations.ts) with a DB
+ * fallback for admin-added locations — the same source `ensureDineInSlots` uses,
+ * so the seating grid, the booking gates and the Book timeline all agree on when
+ * the floor is open. `lastSeatingMin` is the last minute a booking / walk-in may
+ * start; `closeMin` is when every table must be cleared.
+ */
+export async function getServiceWindow(locationSlug: string, date: string): Promise<ServiceWindow> {
+  const { locations: codeLocations } = await import("@/data/locations");
+  const hours =
+    codeLocations.find((l) => l.slug === locationSlug)?.hours ??
+    (await getLocationAsync(locationSlug))?.hours;
+  return serviceWindowForDate(hours, date);
 }
 
 /**

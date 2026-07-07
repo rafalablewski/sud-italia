@@ -7,15 +7,19 @@ const MON = "2026-07-06";
 const SAT = "2026-07-11";
 const SUN = "2026-07-12";
 
-// The active locations open 12:00–21:00 every day (src/data/locations.ts).
-const OPEN_HOURS = [{ day: "Mon-Sun", open: "12:00", close: "21:00" }];
+// The active locations open 12:00–23:00 every day (src/data/locations.ts). The
+// grid stops at the LAST SEATING = close − 30 min (22:30), never at close, so it
+// only offers times a party can actually be booked (no seating after last order).
+const OPEN_HOURS = [{ day: "Mon-Sun", open: "12:00", close: "23:00" }];
 
-test("dineInGridTimes: 15-min windows across the full open window (12:00–21:00)", () => {
+test("dineInGridTimes: 15-min windows from open to last seating (12:00–22:30)", () => {
   const t = dineInGridTimes(OPEN_HOURS, MON);
-  // 12:00 → 21:00 inclusive, every 15 min ((540/15)+1 = 37 windows).
+  // 12:00 → 22:30 inclusive (last seating = 23:00 − 30), every 15 min
+  // ((630/15)+1 = 43 windows). Nothing after 22:30 — no seating past last order.
   assert.equal(t[0], "12:00");
-  assert.equal(t[t.length - 1], "21:00");
-  assert.equal(t.length, 37);
+  assert.equal(t[t.length - 1], "22:30");
+  assert.equal(t.length, 43);
+  assert.ok(!t.includes("22:45") && !t.includes("23:00"), "no windows after last seating");
   assert.ok(t.includes("13:45"), "offers the :45 window a 90-min turn frees");
   // Strictly 15-minute separation, no gaps or dupes.
   for (let i = 1; i < t.length; i++) {
@@ -29,7 +33,7 @@ test("dineInGridTimes: same window every weekday (uniform Mon-Sun hours)", () =>
   for (const d of [MON, SAT, SUN]) {
     const t = dineInGridTimes(OPEN_HOURS, d);
     assert.equal(t[0], "12:00");
-    assert.equal(t.at(-1), "21:00");
+    assert.equal(t.at(-1), "22:30");
   }
 });
 
@@ -39,15 +43,17 @@ test("dineInGridTimes: resolves the matching entry from a multi-range table", ()
     { day: "Fri-Sat", open: "12:00", close: "23:00" },
     { day: "Sun", open: "13:00", close: "21:00" },
   ];
-  assert.equal(dineInGridTimes(varied, MON).at(-1), "22:00"); // Mon → 22:00 close
-  assert.equal(dineInGridTimes(varied, SAT).at(-1), "23:00"); // Sat → 23:00 close
+  // Last window = close − 30 min for the matched day.
+  assert.equal(dineInGridTimes(varied, MON).at(-1), "21:30"); // Mon → 22:00 close → 21:30
+  assert.equal(dineInGridTimes(varied, SAT).at(-1), "22:30"); // Sat → 23:00 close → 22:30
   assert.equal(dineInGridTimes(varied, SUN)[0], "13:00"); // Sun → 13:00 open
+  assert.equal(dineInGridTimes(varied, SUN).at(-1), "20:30"); // Sun → 21:00 close → 20:30
 });
 
-test("dineInGridTimes: falls back to 12:00–23:00 when hours are missing", () => {
+test("dineInGridTimes: falls back to 12:00–22:30 (23:00 close) when hours are missing", () => {
   const t = dineInGridTimes(undefined, MON);
   assert.equal(t[0], "12:00");
-  assert.equal(t.at(-1), "23:00");
+  assert.equal(t.at(-1), "22:30");
 });
 
 test("isWithinDineInHorizon: today through +6 days is open, the rest is closed", () => {

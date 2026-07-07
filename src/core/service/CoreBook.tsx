@@ -12,7 +12,7 @@ import { useSelection } from "@/core/shell/SelectionContext";
 import { useCoreToast } from "@/core/ui/Toast";
 import { CoreDialog } from "@/core/ui/Dialog";
 import { useLocation } from "@/shared/LocationContext";
-import { findReservationConflicts, TABLE_TURNAROUND_MIN } from "@/lib/floor";
+import { findReservationConflicts, serviceWindowForDate, TABLE_TURNAROUND_MIN } from "@/lib/floor";
 import { buildTableSessions } from "@/lib/table-session";
 import {
   suggestTables,
@@ -235,8 +235,8 @@ export function CoreBook({
         setOverride(false);
         await load();
       } else {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        toast(j.error || "Could not book", "danger");
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        toast(j.message || j.error || "Could not book", "danger");
       }
     } finally {
       setBooking(false);
@@ -259,15 +259,18 @@ export function CoreBook({
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
   const fmtHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
-  // Service window derived from the day's REAL dine-in slots + reservations, so a
-  // lunch service (12:00) or a late night actually shows — instead of the old
-  // hardcoded 17:00→23:00 dinner band that hid every earlier/later booking. Open
-  // is floored to the hour, close ceiled to the next 30-min tick; a lunch→dinner
-  // default (12:00→23:00) covers a day with no slots/bookings yet.
-  const svcStarts = [...dineInSlots.map((s) => toMin(s.time)), ...dayRes.map((r) => toMin(r.time))];
-  const svcEnds = [...dineInSlots.map((s) => toMin(s.time) + DURATION_MIN), ...dayRes.map((r) => toMin(r.time) + (r.durationMin ?? DURATION_MIN))];
-  const OPEN = Math.floor((svcStarts.length ? Math.min(...svcStarts) : 12 * 60) / 60) * 60;
-  const CLOSE = Math.max(OPEN + TICK_MIN, Math.ceil((svcEnds.length ? Math.max(...svcEnds) : 23 * 60) / TICK_MIN) * TICK_MIN);
+  // Service window = the location's real OPENING HOURS for the day (12:00–23:00
+  // for the active locations), so the timeline is the actual trading day — it no
+  // longer stretches back to a stray pre-open booking (a walk-in mis-seated at
+  // 08:30 used to drag the axis to 08:00). Bookings can't be created outside this
+  // window (server gate), so every block fits inside it. Open on the hour, close
+  // ceiled to the next 30-min tick; falls back to 12:00–23:00 for unknown hours.
+  const svcWindow = useMemo(
+    () => serviceWindowForDate(activeLocations.find((l) => l.slug === loc)?.hours, date || todayLocal()),
+    [activeLocations, loc, date],
+  );
+  const OPEN = Math.floor(svcWindow.openMin / 60) * 60;
+  const CLOSE = Math.max(OPEN + TICK_MIN, Math.ceil(svcWindow.closeMin / TICK_MIN) * TICK_MIN);
   const ticks = Array.from({ length: (CLOSE - OPEN) / TICK_MIN + 1 }, (_, i) => OPEN + i * TICK_MIN);
   const COLS = ticks.length;
   // Dense-console stat strip — every figure from the day's reservations (Rule #1).
@@ -460,7 +463,7 @@ export function CoreBook({
         }),
       });
       if (res.ok) { toast(`Walk-in seated · ${walkParty} · ${tLabel(t.number)}`, "success"); setWalkOpen(false); await load(); }
-      else toast("Could not seat walk-in", "danger");
+      else { const j = (await res.json().catch(() => ({}))) as { message?: string }; toast(j.message || "Could not seat walk-in", "danger"); }
     } finally { setActing(null); }
   };
 

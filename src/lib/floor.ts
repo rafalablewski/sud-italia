@@ -37,6 +37,76 @@ const HOLDS_TABLE: Reservation["status"][] = ["booked", "seated"];
  *  booking effectively occupies its table for `durationMin + turnaround`. */
 export const TABLE_TURNAROUND_MIN = 15;
 
+/** How long before close the kitchen stops seating new parties. A booking or
+ *  walk-in may still START up to this long before close, but no later — so a
+ *  23:00 close with a 30-min buffer means the last seating is 22:30 (a "last
+ *  order" that gets whatever time is left before close). */
+export const LAST_ORDER_BUFFER_MIN = 30;
+
+/** Mon-first weekday tokens — the hours-table `day` strings ("Mon-Thu", "Sun"). */
+const WEEKDAYS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** One opening-hours row from a location: a day token/range + open/close HH:MM. */
+export interface ServiceHours {
+  day: string;
+  open: string;
+  close: string;
+}
+
+export interface ServiceWindow {
+  /** First minute the floor is open — a booking may start no earlier. */
+  openMin: number;
+  /** Closing minute — every booking must have ended (been cleared) by here. */
+  closeMin: number;
+  /** Latest minute a booking / walk-in may START (`closeMin − LAST_ORDER_BUFFER_MIN`). */
+  lastSeatingMin: number;
+}
+
+/**
+ * Resolve a location's dine-in service window for a YYYY-MM-DD date from its
+ * opening hours. `hours` entries are day tokens or inclusive ranges ("Mon-Thu",
+ * "Fri-Sat", "Sun", "Mon-Sun"); the first whose range covers the date's weekday
+ * wins. Falls back to 12:00–23:00 when nothing matches (missing/malformed hours
+ * or a non-date). `lastSeatingMin` is the last legal START and is floored at
+ * `openMin` so a tiny window can't go negative. Pure + client-safe, so the
+ * seating grid, the booking gates and the Book timeline all read one window.
+ */
+export function serviceWindowForDate(
+  hours: ServiceHours[] | undefined,
+  date: string,
+): ServiceWindow {
+  const wd = (new Date(`${date}T00:00:00`).getDay() + 6) % 7; // Mon=0 … Sun=6
+  let openMin = 12 * 60;
+  let closeMin = 23 * 60;
+  for (const h of hours ?? []) {
+    const parts = h.day.split("-").map((p) => p.trim());
+    const start = WEEKDAYS_MON_FIRST.indexOf(parts[0]);
+    const end = WEEKDAYS_MON_FIRST.indexOf(parts[parts.length - 1]);
+    if (start === -1 || end === -1) continue;
+    if (Number.isFinite(wd) && wd >= start && wd <= end) {
+      const o = timeToMinutes(h.open);
+      const c = timeToMinutes(h.close);
+      if (Number.isFinite(o) && Number.isFinite(c) && c > o) {
+        openMin = o;
+        closeMin = c;
+        break;
+      }
+    }
+  }
+  return { openMin, closeMin, lastSeatingMin: Math.max(openMin, closeMin - LAST_ORDER_BUFFER_MIN) };
+}
+
+/** Clamp a requested duration so a booking ends by close: a late party gets
+ *  only the time left in service. A 22:30 start at a 23:00 close yields 30 min.
+ *  Never negative. */
+export function durationBeforeClose(
+  startMin: number,
+  requestedMin: number,
+  closeMin: number,
+): number {
+  return Math.max(0, Math.min(requestedMin, closeMin - startMin));
+}
+
 /**
  * Other active reservations on the same table + date whose time window overlaps
  * `candidate` — i.e. a double-booking OR a turnaround too tight for staff to

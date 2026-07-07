@@ -1,11 +1,12 @@
 import type { Reservation, TableFeature } from "@/data/types";
 import {
   getReservations,
+  getServiceWindow,
   getSlotById,
   getTables,
   saveReservation,
 } from "@/lib/store";
-import { findReservationConflicts } from "@/lib/floor";
+import { durationBeforeClose, findReservationConflicts, timeToMinutes } from "@/lib/floor";
 
 /**
  * Unified booking — the merged Floor + Slots flow: book a dine-in time slot and
@@ -30,6 +31,8 @@ const RESERVATION_HOLDS: Reservation["status"][] = ["booked", "seated"];
 export type BookingReason =
   | "slot_inactive"
   | "slot_not_dinein"
+  | "before_open"
+  | "after_last_seating"
   | "invalid_party"
   | "table_too_small"
   | "table_conflict"
@@ -48,6 +51,13 @@ export interface BookingValidationInput {
   partySize: number;
   /** Overlapping active reservations on the chosen table (0 = none / overridden). */
   tableConflictCount: number;
+  /** Seating start (minutes since midnight), derived from the slot time. */
+  startMin: number;
+  /** The day's service window (from the location's opening hours): a booking may
+   *  start no earlier than `openMin` and no later than `lastSeatingMin`
+   *  (close − last-order buffer). Outside it the floor is closed. */
+  openMin: number;
+  lastSeatingMin: number;
 }
 
 /** Pure gate — order matters (most specific first). */
@@ -56,6 +66,10 @@ export function validateBooking(
 ): { ok: true } | { ok: false; reason: BookingReason } {
   if (!i.slotActive) return { ok: false, reason: "slot_inactive" };
   if (!i.slotSupportsDineIn) return { ok: false, reason: "slot_not_dinein" };
+  // Opening-hours gate: you can't seat a party while the floor is closed. This
+  // is never waived by `override` (that only bypasses conflict/capacity).
+  if (i.startMin < i.openMin) return { ok: false, reason: "before_open" };
+  if (i.startMin > i.lastSeatingMin) return { ok: false, reason: "after_last_seating" };
   if (!Number.isFinite(i.partySize) || i.partySize < 1) return { ok: false, reason: "invalid_party" };
   if (i.tableSeats < i.partySize) return { ok: false, reason: "table_too_small" };
   if (i.tableConflictCount > 0) return { ok: false, reason: "table_conflict" };
@@ -98,7 +112,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const table = allTables.find((t) => t.id === input.tableId);
   if (!table) return { ok: false, reason: "table_not_found" };
 
-  const durationMin = input.durationMin ?? 90;
+  // Service window for the day — the slot time must fall inside opening hours,
+  // and a late booking is capped so it ends by close (a 22:30 start at a 23:00
+  // close gets a 30-min table).
+  const window = await getServiceWindow(input.locationSlug, slot.date);
+  const startMin = timeToMinutes(slot.time);
+  const durationMin = durationBeforeClose(startMin, input.durationMin ?? 90, window.closeMin);
   const sameDay = await getReservations(input.locationSlug, slot.date);
   const reservationsOnSlot = sameDay.filter(
     (r) => r.slotId === input.slotId && RESERVATION_HOLDS.includes(r.status),
@@ -121,6 +140,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     tableSeats: table.seats,
     partySize: input.partySize,
     tableConflictCount: input.override ? 0 : conflicts.length,
+    startMin,
+    openMin: window.openMin,
+    lastSeatingMin: window.lastSeatingMin,
   });
   if (!verdict.ok) {
     return { ok: false, reason: verdict.reason, conflicts: conflicts.length ? conflicts : undefined };
