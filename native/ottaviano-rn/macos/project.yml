@@ -43,11 +43,15 @@ targets:
       - path: Ottaviano-macOS/AppDelegate.swift
       - path: Ottaviano-macOS/Info.plist
         buildPhase: none
+      - path: Ottaviano-macOS/Ottaviano-macOS.entitlements
+        buildPhase: none
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.ottaviano.kds.mac
         PRODUCT_NAME: OttavianoKDS
         INFOPLIST_FILE: Ottaviano-macOS/Info.plist
+        # App Store macOS builds must be sandboxed (see the entitlements file).
+        CODE_SIGN_ENTITLEMENTS: Ottaviano-macOS/Ottaviano-macOS.entitlements
         REACT_NATIVE_PATH: $(SRCROOT)/../node_modules/react-native-macos
     postCompileScripts:
       - name: Bundle React Native code and images

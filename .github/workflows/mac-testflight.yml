@@ -1,4 +1,4 @@
-name: Mac app — TestFlight (bootstrap)
+name: Mac app — TestFlight
 
 # ADR-002 phase 2 (DONE — builds green) — react-native-macos target built IN CI
 # (our "Mac in the loop"), since the macOS project must be generated +
@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   mac:
-    name: Scaffold + build react-native-macos
+    name: Archive + upload macOS to TestFlight
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
@@ -91,17 +91,29 @@ jobs:
           BUNDLE_GEMFILE: ${{ github.workspace }}/native/ottaviano-rn/Gemfile
         run: bundle exec pod install
 
-      - name: Build macOS app
-        working-directory: native/ottaviano-rn/macos
+      - name: Write App Store Connect API key
+        # altool / xcodebuild read AuthKey_<id>.p8 from ~/.appstoreconnect/private_keys.
         run: |
-          WS="$(ls -d *.xcworkspace | head -n1)"
-          echo "Workspace: $WS"
-          # First goal is a clean compile; signing / archive / notarize / upload
-          # are layered on once this builds (see MACOS-SETUP.md).
-          xcodebuild build \
-            -workspace "$WS" \
-            -scheme "Ottaviano-macOS" \
-            -configuration Release \
-            -destination 'generic/platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Archive + export + upload to TestFlight (macOS)
+        # Phase 3 — sign, archive the macOS workspace, export a .pkg (App Store
+        # installer) and upload via altool. Version = the marketing_version input
+        # if given, else macos/project.yml's committed MARKETING_VERSION. Build
+        # number = base 60 + run_number, monotonic so every upload climbs.
+        #
+        # Automatic signing + the ASC API key provisions the Mac App/Installer
+        # Distribution certs on the fly. A clean runner mints a new cert each run
+        # (same cap as iOS) — if this fails on "maximum number of certificates",
+        # revoke one in the Apple Developer portal and re-dispatch.
+        run: |
+          chmod +x Scripts/testflight-macos.sh
+          BUILD_NUMBER=$(( 60 + ${{ github.run_number }} ))
+          MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
+          if [ -z "$MARKETING_VERSION" ]; then
+            MARKETING_VERSION="$(sed -n 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*"\(.*\)".*/\1/p' macos/project.yml | head -n 1)"
+          fi
+          echo "==> Shipping OttavianoKDS (macOS) — version ${MARKETING_VERSION:-<project.yml>} build ${BUILD_NUMBER}"
+          ./Scripts/testflight-macos.sh "$BUILD_NUMBER" "$MARKETING_VERSION"

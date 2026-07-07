@@ -85,8 +85,13 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
    (`mac-testflight.yml`, run #11: `BUILD SUCCEEDED`, ~15 min uncached, all of
    Hermes / RCT-Folly / Fabric / the pods + the JS bundle compile for macOS).
    `CODE_SIGNING_ALLOWED=NO` — a clean compile, not yet an upload.
-3. ⏳ **next** — add manual signing + archive + notarized TestFlight upload
-   (Mac App Distribution cert; see Signing / distribution above).
+3. ⏳ **wired** — `mac-testflight.yml` now signs, archives, exports a `.pkg`
+   (App Store installer) and uploads via `altool` (`Scripts/testflight-macos.sh`).
+   The app is App-Sandboxed (`Ottaviano-macOS.entitlements`, required for App
+   Store). Automatic signing + the ASC API key provisions the Mac App/Installer
+   Distribution certs on the fly — a clean runner mints a new cert each run (same
+   cap as iOS), so a failed run on "maximum number of certificates" just needs a
+   revoke + re-dispatch. First upload pending a green signing run.
 4. roll the desktop two-pane across the other operator surfaces.
 
 ## Open risks
