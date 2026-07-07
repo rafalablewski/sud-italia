@@ -175,9 +175,13 @@ stay readable — 2-up on a phone, filling out on wider screens — instead of t
 single-row flex squishing them. `fill` = booked covers ÷ total seats. A `.core-book-tlbar` gives the
 timeline a title + a status **legend** (confirmed · seated · pending · conflict).
 The **timeline-over-tables grid** (`.core-book-tlpanel`, 30-min ticks over a
-service window **derived from the day's real dine-in slots + reservations** —
-open floored to the hour, close ceiled to the next tick, a 12:00→23:00
-lunch→dinner default when the day is empty; this replaced a hardcoded 17:00→23:00
+service window **derived from the location's real OPENING HOURS for the day**
+(`serviceWindowForDate`, `@/lib/floor` — 12:00→23:00 for the active locations) —
+open floored to the hour, close ceiled to the next tick, a 12:00→23:00 fallback
+for unknown hours. This is the actual trading day: bookings can't be created
+outside it (the server window gate rejects pre-open / post-last-order times), so
+the axis no longer stretches back to a stray pre-open walk-in (an 08:30
+mis-seating used to drag it to 08:00), and it replaced a hardcoded 17:00→23:00
 band that hid every lunch/afternoon booking): reservation **blocks** are
 positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking — which also

@@ -80,6 +80,8 @@ function bookingMessage(reason: string): string {
     case "table_not_found": return "That table no longer exists";
     case "slot_inactive": return "That slot isn't accepting bookings";
     case "slot_not_dinein": return "That slot doesn't serve dine-in";
+    case "before_open": return "The restaurant isn't open yet at that time";
+    case "after_last_seating": return "That's past the last seating (30 min before close)";
     case "slot_full": return "That slot is fully booked";
     case "table_too_small": return "That table is too small for the party";
     case "table_conflict": return "That table is already booked for this time";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders, getPosTabs, savePosTab, deletePosTab } from "@/lib/store";
-import { findReservationConflicts, timeToMinutes } from "@/lib/floor";
+import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders, getPosTabs, savePosTab, deletePosTab, getServiceWindow } from "@/lib/store";
+import { durationBeforeClose, findReservationConflicts, minutesToTime, serviceWindowViolation, timeToMinutes } from "@/lib/floor";
 import { TABLE_FEATURES, type ReservationStatus, type TableFeature } from "@/data/types";
 
 /**
@@ -106,7 +106,7 @@ export const POST = withAdmin(
     const partySize = Number(body.partySize);
     const date = String(body.date ?? "").trim();
     const time = String(body.time ?? "").trim();
-    const durationMin = Number.isFinite(Number(body.durationMin)) ? Math.round(Number(body.durationMin)) : 90;
+    let durationMin = Number.isFinite(Number(body.durationMin)) ? Math.round(Number(body.durationMin)) : 90;
 
     if (!customerName) return NextResponse.json({ error: "Customer name is required" }, { status: 400 });
     if (!Number.isFinite(partySize) || partySize < 1 || partySize > 50) {
@@ -136,6 +136,38 @@ export const POST = withAdmin(
       : [];
     const joinedTableIds = joinedList.length ? joinedList : undefined;
 
+    const sameDay = await getReservations(locationSlug, date);
+    // The prior state of this booking (if it's an update) — its table (for a
+    // reassignment that must free the old one) and status (to detect the seat/
+    // clear transition that opens/closes the check).
+    const priorRes = typeof body.id === "string" ? sameDay.find((r) => r.id === body.id) : undefined;
+    const priorTableId = priorRes?.tableId;
+    const priorStatus = priorRes?.status;
+
+    // Service-window gate — a booking / walk-in must be seated inside opening
+    // hours: not before open, not after last seating (close − 30 min). Applied
+    // whenever the seating TIME is new or changed (a fresh record, or an edit
+    // that reschedules), so an out-of-hours reschedule can't slip past by
+    // carrying an existing id. Seating / completing / cancelling / re-tabling an
+    // existing booking keeps its original time (`timeChanged` false), so a legacy
+    // out-of-window record stays actionable. Independent of `override` (you can't
+    // seat while closed). A late seating is capped so its table frees by close (a
+    // 22:30 walk-in gets a 30-min table).
+    const startMin = timeToMinutes(time);
+    const timeChanged = !priorRes || priorRes.time !== time;
+    if (timeChanged) {
+      const win = await getServiceWindow(locationSlug, date);
+      const violation = serviceWindowViolation(startMin, win.openMin, win.lastSeatingMin);
+      if (violation) {
+        const message =
+          violation === "before_open"
+            ? `The floor doesn't open until ${minutesToTime(win.openMin)}.`
+            : `Too late — the last seating is ${minutesToTime(win.lastSeatingMin)} (30 min before ${minutesToTime(win.closeMin)} close).`;
+        return NextResponse.json({ error: violation, message }, { status: 422 });
+      }
+      durationMin = durationBeforeClose(startMin, durationMin, win.closeMin);
+    }
+
     // Conflict check against the day's active bookings on the same table.
     const candidate = {
       id: typeof body.id === "string" ? body.id : "",
@@ -145,13 +177,6 @@ export const POST = withAdmin(
       time,
       durationMin,
     };
-    const sameDay = await getReservations(locationSlug, date);
-    // The prior state of this booking (if it's an update) — its table (for a
-    // reassignment that must free the old one) and status (to detect the seat/
-    // clear transition that opens/closes the check).
-    const priorRes = typeof body.id === "string" ? sameDay.find((r) => r.id === body.id) : undefined;
-    const priorTableId = priorRes?.tableId;
-    const priorStatus = priorRes?.status;
     const conflicts = findReservationConflicts(sameDay, candidate);
     if (conflicts.length > 0 && body.override !== true) {
       return NextResponse.json(
