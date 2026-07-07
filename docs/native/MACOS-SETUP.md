@@ -31,10 +31,18 @@ Committed source of truth:
 - `macos/project.yml` — XcodeGen spec (target `Ottaviano-macOS`, bundle id
   `pl.ottaviano.kds.mac`, `RCT_NEW_ARCH_ENABLED=0`, RN path →
   `node_modules/react-native-macos`).
-- `macos/Podfile` — resolves `react_native_pods.rb` from the Mac fork.
+- `macos/Podfile` — resolves `react_native_pods.rb` from the Mac fork and points
+  `use_react_native!` at the fork via the **relative** path
+  `../node_modules/react-native-macos` (an absolute path makes the CLI look for
+  `./Users/…/package.json`; core RN's path is missing SocketRocket's podspec).
 - `macos/Ottaviano-macOS/AppDelegate.swift` — classic `RCTBridge` + `RCTRootView`
   (moduleName `Ottaviano`) in a 1360×900 `NSWindow`.
 - `macos/Ottaviano-macOS/Info.plist`.
+- `react-native.config.js` (app root) — registers the out-of-tree **macos**
+  platform for the RN CLI (else Metro rejects `--platform macos` at the "Bundle
+  React Native code and images" phase). It re-exports the fork's macos platform
+  and is a **no-op on iOS** (the fork isn't installed there), so it never touches
+  the iOS/Android pipeline. Needed because we `--no-save` the fork.
 
 Manual-dispatch only for now (workflow is red until the first clean compile).
 Iterate on real macOS errors the same way the iOS pipeline was bootstrapped.
