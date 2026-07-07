@@ -390,31 +390,59 @@ private struct MoveTargetSheet: View {
     }
 }
 
-/// Service — the native twin of web `/core/service`: a Floor plan + Slots hub.
+/// Service — the native twin of web `/core/service`. The section console mirrors
+/// the web `serviceTabs`: **Book · Tables · Slots · Dispatch**. Book is the
+/// reservation timeline + Arrivals host queue; Tables is the live floor plan;
+/// Slots hosts the Manage | Demand panels (web folds Demand into Slots); Dispatch
+/// is the delivery driver board.
 public struct OperatorServiceView: View {
     @Environment(\.theme) private var theme
-    @State private var tab: ServiceTab = .floor
+    @State private var tab: ServiceTab
     private let api: APIClient
-    public init(api: APIClient) { self.api = api }
-    enum ServiceTab: Hashable { case floor, slots, demand }
+    public init(api: APIClient, initial: ServiceTab = .book) { self.api = api; _tab = State(initialValue: initial) }
+    public enum ServiceTab: Hashable { case book, tables, slots, dispatch }
 
     public var body: some View {
         VStack(spacing: 0) {
-            DSSegmented($tab, options: [(value: .floor, label: "Floor plan"),
+            DSSegmented($tab, options: [(value: .book, label: "Book"),
+                                        (value: .tables, label: "Tables"),
                                         (value: .slots, label: "Slots"),
-                                        (value: .demand, label: "Demand")])
+                                        (value: .dispatch, label: "Dispatch")])
                 .padding(.horizontal, theme.space.lg).padding(.vertical, theme.space.sm)
                 .background(theme.color.surface)
             Divider().overlay(theme.color.line)
             switch tab {
-            case .floor: OperatorFloorView(api: api)
-            case .slots: OperatorSlotsView(api: api)
-            case .demand: OperatorDemandView(api: api)
+            case .book: OperatorBookView(api: api)
+            case .tables: OperatorFloorView(api: api)
+            case .slots: ServiceSlotsTab(api: api)
+            case .dispatch: OperatorDispatchView(api: api)
             }
         }
         .background(theme.color.surface)
         .navigationTitle("Service")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Slots tab — the web Slots surface hosts a Manage | Demand switch, so the native
+/// tab wraps the existing bespoke Slots (service windows) and Demand (pace levers)
+/// screens under one segmented control.
+private struct ServiceSlotsTab: View {
+    @Environment(\.theme) private var theme
+    @State private var mode: Mode = .manage
+    let api: APIClient
+    enum Mode: Hashable { case manage, demand }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            DSSegmented($mode, options: [(value: .manage, label: "Manage"), (value: .demand, label: "Demand")])
+                .frame(maxWidth: 260)
+                .padding(.horizontal, theme.space.lg).padding(.top, theme.space.sm)
+            switch mode {
+            case .manage: OperatorSlotsView(api: api)
+            case .demand: OperatorDemandView(api: api)
+            }
+        }
     }
 }
 

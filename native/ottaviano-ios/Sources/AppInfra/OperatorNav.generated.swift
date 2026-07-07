@@ -21,9 +21,9 @@ public let OPERATOR_NAV: [OperatorNavSection] = [
         OperatorNavItem("/core/guest", "Guest Engagement", "person.2.fill", .staff, .live,
                         "Loyalty, guest profiles (CRM) and table bookings."),
         OperatorNavItem("/core/service", "Service", "fork.knife.circle.fill", .staff, .live,
-                        "Floor plan, table turns and reservation slots."),
+                        "Book, Tables, Slots and Dispatch — the whole service console."),
         OperatorNavItem("/core/service/book", "Book", "calendar.badge.clock", .staff, .live,
-                        "Reservations & slots — book a table against the floor timeline."),
+                        "Reservation timeline, Arrivals host queue and one-tap booking."),
     ]),
     OperatorNavSection("overview", "Overview", [
         OperatorNavItem("/admin/welcome", "Welcome", "sparkles", .kitchen, .live,

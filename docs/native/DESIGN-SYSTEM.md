@@ -225,6 +225,15 @@ are the contracts + representative sketches; full set lives in the package.
 - **`DSTag` / `DSBadge`** — status pills (uses status tokens); count badges.
 - **`DSTextField`** — themed, with label/error/affordance slots, keyboard config.
 - **`DSEmptyState`**, **`DSToast`**, **`DSSheetHeader`**, **`DSSectionHeader`**.
+- **`OperatorDateField`** (`DesignSystem/DateField.swift`) — the shared Core date
+  picker, the native twin of web `CoreDateField`: a `‹ day · face · ›` stepper
+  whose face opens a sheet with quick chips (Today / Tomorrow / +1 week) and a
+  **Monday-first** month grid; `marked` days carry a basil dot. Binds a single ISO
+  `yyyy-MM-dd` string (drops straight into the facade's `date=` query). Backed by
+  `CoreDay` — the one place date-only + minute-of-day math lives (`today`, `add`,
+  `minutes`/`hm`, `nowMinutes`), so Book (timeline axis, now-line, Arrivals late/
+  early split) and Slots share one contract. Consumers: **Service · Book**,
+  **Service · Slots**.
 
 ```swift
 public struct DSButton: View {

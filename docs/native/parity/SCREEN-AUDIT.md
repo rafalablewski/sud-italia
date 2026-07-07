@@ -300,6 +300,46 @@ into N checks — no server function exists). These remain honest gaps rather th
 mocked surfaces (Rule #1). (Slots **Demand-Exchange** is now live — Service hub
 **Floor | Slots | Demand**, off `/api/v1/admin/demand-exchange`.)
 
+### Service overhaul — Book · Tables · Slots · Dispatch (this pass) ✅🟡
+The web Service section was rebuilt (web PRs: Book fullscreen + calendar redesign,
+Floor → Tables, Slots stat-strip, Arrivals seat-early / running-late) — carried
+onto native so `OperatorServiceView` now mirrors the web `serviceTabs` exactly:
+**Book · Tables · Slots · Dispatch** (was Floor | Slots | Demand). Also fixed a
+latent routing bug: the **Book** rail item (`/core/service/book`) matched a dead
+`/core/book` case and fell to the generic scaffold — it now lands on the console's
+Book tab.
+- **Book** (`OperatorBookView` + `OperatorBookStore`) — the native twin of web
+  `CoreBook`. **Timeline lens:** a table-rows × 30-min-tick board (12:00–23:00
+  window) of status-toned reservation blocks (pending / seated / **dimmed "done"
+  history**), a live **now-line**, tap a block for seat / no-show / complete /
+  cancel. **Arrivals lens:** the host queue — **◷ Running late** triage (booked &
+  past their time today → Seat / No-show), **Upcoming** (a party ahead of its time
+  today gets **Seat early**, which reschedules to *now* + seats in one write),
+  **Seated** (→ Complete). **New-reservation deck** (sheet): capacity-tinted dine-in
+  slot chips, party stepper, guest name/phone/notes, best-fit table grid, override.
+  Real data off `admin/floor/{reservations,tables,booking}` + `admin/slots`; the
+  seat/seat-early/no-show/complete/cancel transitions post to
+  **`admin/floor/reservations`** (new facade route this pass, verified live). Two
+  `CoreDay`-driven time computations (now-line, late/early split) — never faked.
+- **Tables** (`OperatorFloorView`) — the live floor plan off `admin/floor/twin`
+  (occupancy, seat/clear/move), relabelled from "Floor plan". *Gap (honest):* zone
+  / table **CRUD** (web `CoreTables` create/edit table + zone) needs
+  `admin/floor/{tables,zones}` write coverage on v1 — deferred, not faked (Rule #1).
+- **Slots** (`ServiceSlotsTab`) — the existing bespoke Slots (service windows) +
+  Demand (pace levers) under a **Manage | Demand** switch, matching the web Slots
+  surface. *Gap:* the dine-in-book stat strip (reservation covers/seated/no-show
+  leading the window list) is a follow-up refinement.
+- **Dispatch** (`OperatorDispatchView` + `OperatorDispatchStore`) — the delivery
+  driver board, **new** to native. In-kitchen / ready / on-road / drivers KPIs;
+  per-order cards (address, lines, total) with **assign driver** → advance
+  (`assigned → picked_up → delivered`) → unassign; a driver roster with derived
+  idle/en-route state. Off **`admin/dispatch`** (new GET/PUT facade route this pass,
+  verified live) reusing `getOrders` / `getStaff` / `assignOrderDriver` /
+  `updateOrderStatus` — no new persistence, real orders only.
+- **Shared primitive:** **`OperatorDateField`** (+ `CoreDay`) — the native twin of
+  web `CoreDateField` (day stepper + Today/Tomorrow/+1wk chips + Monday-first month
+  grid), now shared by Book and Slots. See DESIGN-SYSTEM §4.1.
+
 ---
 
 ## Wave D — first write surface beyond the existing ones (done this pass)

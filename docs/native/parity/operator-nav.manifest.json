@@ -62,7 +62,7 @@
           "requiredRole": "staff",
           "kind": "live",
           "icon": "fork.knife.circle.fill",
-          "blurb": "Floor plan, table turns and reservation slots.",
+          "blurb": "Book, Tables, Slots and Dispatch — the whole service console.",
           "v1Endpoint": "slots"
         },
         {
@@ -71,7 +71,7 @@
           "requiredRole": "staff",
           "kind": "live",
           "icon": "calendar.badge.clock",
-          "blurb": "Reservations & slots — book a table against the floor timeline.",
+          "blurb": "Reservation timeline, Arrivals host queue and one-tap booking.",
           "v1Endpoint": null
         }
       ]
@@ -586,6 +586,7 @@
     "corporate",
     "customers",
     "demand-exchange",
+    "dispatch",
     "events",
     "expansion",
     "feedback",
@@ -622,6 +623,7 @@
   "unmappedV1AdminEndpoints": [
     "concierge",
     "demand-exchange",
+    "dispatch",
     "whatsapp"
   ],
   "counts": {

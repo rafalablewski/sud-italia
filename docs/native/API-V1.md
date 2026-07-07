@@ -153,6 +153,35 @@ Money is always **minor units (grosze)** on the wire; the app formats via
 `MoneyText` (DESIGN-SYSTEM §4.2). Operator-internal fields (cost, packaging, sku)
 are never exposed on customer endpoints.
 
+### Service — Book · Tables · Slots · Dispatch
+The native Service console (`OperatorServiceView`) mirrors the web `serviceTabs`
+and is backed entirely by the floor/dispatch facade — no fabricated rows (Rule #1):
+
+| Native surface | Method + path | Reuses (store) |
+|---|---|---|
+| Book — timeline + deck | `GET admin/floor/reservations?location=&date=` · `GET admin/floor/tables` · `GET admin/slots` | `getReservations` / `getTables` / `getSlots` |
+| Book — create booking | `POST admin/floor/booking` | `createBooking` (slot + table + conflict gate) |
+| Book — Arrivals transitions | `POST admin/floor/reservations` | `saveReservation` (+ service-window + conflict) |
+| Book — cancel | `DELETE admin/floor/reservations?id=` | `deleteReservation` |
+| Tables — live floor | `GET admin/floor/twin` · `POST admin/floor/twin` (seat/clear/move) | `buildFloorTwin` |
+| Slots — Manage \| Demand | `GET/POST/PUT admin/slots` · `GET/POST admin/demand-exchange` | `getSlots` / demand engine |
+| Dispatch — driver board | `GET admin/dispatch` · `PUT admin/dispatch` | `getOrders` / `getStaff` / `assignOrderDriver` / `updateOrderStatus` |
+
+Two facade routes were **added** in this wave to complete Book · Arrivals and
+Dispatch (both re-use existing store primitives, so no new persistence surface):
+
+- **`POST /api/v1/admin/floor/reservations`** — the seat / seat-early / no-show /
+  complete / reassign transitions. The caller resends the whole record with the
+  changed fields; the route re-runs the **service-window gate** (never waived) and
+  a **table-conflict** check whenever the seating *time* changes, auto-stamps
+  `seatedAt`/`completedAt`, and returns the saved reservation (or a typed `409`
+  conflict / `422`-style out-of-hours the app surfaces). Manager+, location-scoped.
+- **`GET/PUT /api/v1/admin/dispatch`** — the delivery board. `GET` returns the
+  in-flight delivery orders + the location's active drivers (staff in the
+  `delivery` role group); `PUT { orderId, driverId?, status? }` assigns/clears a
+  driver (null ⇒ unassign) and/or advances the lifecycle
+  (`assigned → picked_up → delivered`). Staff+; mirrors web `/api/admin/dispatch`.
+
 ## Contract & codegen — generated from Zod (DECISION B ✅)
 The contract is **one definition, three consumers**: the Zod schemas in
 `src/lib/api/v1/schemas.ts` drive (1) **runtime request validation**, (2) the
