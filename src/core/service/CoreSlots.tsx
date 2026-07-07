@@ -11,7 +11,7 @@ import { CoreDialog } from "@/core/ui/Dialog";
 import { useCoreToast } from "@/core/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { TABLE_TURNAROUND_MIN } from "@/lib/floor";
-import type { FulfillmentType, Reservation, ReservationStatus, SlotStatus, TimeSlot } from "@/data/types";
+import type { FloorTable, FulfillmentType, Reservation, ReservationStatus, SlotStatus, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
 // A booking holds its table(s) for the whole reservation PLUS a cleanup
@@ -104,13 +104,14 @@ export function CoreSlots() {
   // instantly (no empty flash); the mount/poll fetch revalidates.
   const [slots, setSlots] = useCoreCache<TimeSlot[]>(`core:slots:${loc}`, []);
   const [board, setBoard] = useCoreCache<DemandBoard | null>(`core:slots-board:${loc}`, null);
-  // Floor size — the real dine-in capacity of any window. A slot's `maxOrders`
-  // is an ONLINE/POS order-throughput cap, NOT seats (see src/lib/booking.ts):
-  // a dine-in window seats at most one party per table, so its seat ceiling is
-  // the table count, not maxOrders. (The 90-min turn + 15-min cleanup hold that
-  // governs live *availability* is applied per-reservation in Book's slot fill;
-  // this is the static ceiling.)
-  const [tableCount, setTableCount] = useCoreCache<number>(`core:slots-tables:${loc}`, 0);
+  // The floor — the real dine-in capacity. A slot's `maxOrders` is an ONLINE/POS
+  // order-throughput cap, NOT seats (see src/lib/booking.ts): a dine-in window
+  // seats at most one party per table, so its seat ceiling is the table count.
+  // (The 90-min turn + 15-min cleanup hold that governs live *availability* is
+  // applied per-reservation in Book's slot fill; this is the static ceiling.)
+  const [tables, setTables] = useCoreCache<FloorTable[]>(`core:slots-tables:${loc}`, []);
+  const tableCount = tables.length;
+  const totalSeats = useMemo(() => tables.reduce((s, t) => s + (t.seats || 0), 0), [tables]);
   // Reservations for the visible day/week — the dine-in windows' booked count is
   // real tables held (occupancy), NOT slot.currentOrders (an online-order tally
   // that reservations never touch). Same source + turnaround model as Book.
@@ -177,17 +178,18 @@ export function CoreSlots() {
   useEffect(() => {
     void loadSlots();
   }, [loadSlots]);
-  // The floor's table count drives the dine-in seat ceiling shown per window.
+  // The floor drives the dine-in seat ceiling (per window) + the seats/covers
+  // figures in the stat strip.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const r = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`);
       const d = r.ok ? await r.json() : [];
       const arr = Array.isArray(d) ? d : (d.tables ?? []);
-      if (!cancelled) setTableCount(arr.length);
+      if (!cancelled) setTables(Array.isArray(arr) ? arr : []);
     })();
     return () => { cancelled = true; };
-  }, [loc, setTableCount]);
+  }, [loc, setTables]);
   useEffect(() => {
     void loadReservations();
   }, [loadReservations]);
@@ -204,28 +206,40 @@ export function CoreSlots() {
   }, [slots, range, week, date, chan]);
   const ordered = useMemo(() => [...scoped].sort((a, b) => a.time.localeCompare(b.time)), [scoped]);
   const byDay = useMemo(() => week.map((d) => [d, ordered.filter((s) => s.date === d)] as const), [week, ordered]);
-  // Dense-console stat strip + surge state — every figure from live slot data
-  // (Rule #1). A "surge window" is one filled ≥85%; peak drives demand price.
+  // Dense-console stat strip + surge state — every figure from live data
+  // (Rule #1). Two lenses: the SEATING reality (real reservations → covers,
+  // seated, seats fill — the day's dine-in book) leads; the ORDER-pace surge
+  // signal (windows filled ≥85% of their online-order cap) drives the banner +
+  // the Demand Exchange. Dine-in windows carry currentOrders 0, so they never
+  // read as a surge — surge is the online-order lens by construction.
   const stat = useMemo(() => {
-    const cap = scoped.reduce((s, x) => s + x.maxOrders, 0);
-    const booked = scoped.reduce((s, x) => s + x.currentOrders, 0);
-    const active = scoped.filter((x) => x.status === "active").length;
+    // Order-pace / surge lens.
     const withPct = scoped.map((x) => ({ x, pct: x.maxOrders ? x.currentOrders / x.maxOrders : 0 }));
     const surge = withPct.filter((r) => r.pct >= 0.85);
     const peak = withPct.reduce((m, r) => (r.pct > m.pct ? r : m), { x: undefined as TimeSlot | undefined, pct: 0 });
-    const fillPct = cap ? Math.round((booked / cap) * 100) : 0;
-    const mult = peak.pct >= 0.85 ? "1.2×" : peak.pct >= 0.7 ? "1.1×" : "1.0×";
-    // Surge windows sorted by time, for the banner range.
     const surgeTimes = surge.map((r) => r.x.time).sort();
+
+    // Seating lens — real reservations for the visible day(s). Covers count no-
+    // shows too (a held cover until it's re-seated), matching Book's bookStat.
+    const inScope = new Set(range === "week" ? week : [date]);
+    const dayRes = reservations.filter((r) => inScope.has(r.date));
+    const activeRes = dayRes.filter((r) => r.status !== "cancelled");
+    const covers = activeRes.reduce((s, r) => s + (r.partySize || 0), 0);
+    const bookings = activeRes.length;
+    const seated = dayRes.filter((r) => r.status === "seated").length;
+    const upcoming = dayRes.filter((r) => r.status === "booked").length;
+    const noShows = dayRes.filter((r) => r.status === "no-show").length;
+    const seatsFill = totalSeats ? Math.round((covers / totalSeats) * 100) : 0;
+    const avgParty = bookings ? covers / bookings : 0;
+
     return {
-      booked, cap, active, fillPct,
       surgeCount: surge.length,
       peakPct: Math.round(peak.pct * 100),
       peakTime: peak.x?.time ?? "—",
-      mult,
       surgeRange: surgeTimes.length ? `${surgeTimes[0]}–${surgeTimes[surgeTimes.length - 1]}` : "",
+      bookings, covers, seated, upcoming, noShows, seatsFill, avgParty,
     };
-  }, [scoped]);
+  }, [scoped, reservations, range, week, date, totalSeats]);
   const showSurge = stat.surgeCount > 0 && !surgeDismissed;
 
   const toggleSlot = async (slot: TimeSlot) => {
@@ -522,37 +536,38 @@ export function CoreSlots() {
           }
         />
 
-        {/* dense-console 6-up stat strip — every figure from live slot data (Rule #1). */}
+        {/* dense-console 6-up stat strip — the day's dine-in book (real
+            reservations) leads; the order-pace surge signal closes it (Rule #1). */}
         <div className="core-statstrip" role="group" aria-label="Slot metrics">
           <div className="cell">
-            <span className="lab">Booked</span>
-            <span className="val">{stat.booked}</span>
+            <span className="lab">Reservations</span>
+            <span className="val">{stat.bookings}</span>
             <span className="delta">{scoped.length} window{scoped.length === 1 ? "" : "s"}</span>
           </div>
           <div className="cell">
-            <span className="lab">Capacity</span>
-            <span className="val">{stat.cap}</span>
-            <span className="delta">{stat.active} active</span>
+            <span className="lab">Covers</span>
+            <span className="val brand">{stat.covers}</span>
+            <span className="delta">avg {stat.avgParty.toFixed(1)}/party</span>
           </div>
           <div className="cell">
-            <span className="lab">Fill</span>
-            <span className="val basil">{stat.fillPct}<small>%</small></span>
-            <span className="delta">peak {stat.peakPct}%</span>
+            <span className="lab">Seats fill</span>
+            <span className="val basil">{stat.seatsFill}<small>%</small></span>
+            <span className="delta">{tableCount} table{tableCount === 1 ? "" : "s"} · {totalSeats} seats</span>
+          </div>
+          <div className="cell">
+            <span className="lab">Seated</span>
+            <span className="val info">{stat.seated}</span>
+            <span className="delta">{stat.upcoming} upcoming</span>
+          </div>
+          <div className="cell">
+            <span className="lab">No-shows</span>
+            <span className={stat.noShows > 0 ? "val danger" : "val"}>{stat.noShows}</span>
+            <span className={stat.noShows > 0 ? "delta dn" : "delta"}>{stat.noShows > 0 ? "today" : "clean"}</span>
           </div>
           <div className="cell">
             <span className="lab">Surge windows</span>
             <span className={stat.surgeCount > 0 ? "val amber" : "val"}>{stat.surgeCount}</span>
             <span className={stat.surgeCount > 0 ? "delta dn" : "delta"}>{stat.surgeCount > 0 ? stat.surgeRange : "on pace"}</span>
-          </div>
-          <div className="cell">
-            <span className="lab">Covers booked</span>
-            <span className="val info">{stat.booked}</span>
-            <span className="delta">{board ? `${board.summary.predictedCovers} forecast` : `${scoped.length} windows`}</span>
-          </div>
-          <div className="cell">
-            <span className="lab">No-show risk</span>
-            <span className="val">—</span>
-            <span className="delta dn">unconfirmed</span>
           </div>
         </div>
 

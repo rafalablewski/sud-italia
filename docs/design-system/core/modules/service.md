@@ -106,10 +106,13 @@ Four nested views via `serviceTabs` (`src/core/service/serviceTabs.ts`): **Book 
   then Day / Week and the shared **`CoreDateField`** picker; on the right the
   **Fulfillment** filter collapses into a `CoreFilterMenu` funnel, then a standard
   `.core-iconbtn` Refresh and the New-slot pill. Then a **6-up
-  `.core-statstrip`** — **booked · capacity · fill ·
-  surge windows · peak fill · demand price** (all live from the slot set —
-  Rule #1; a "surge window" is one filled ≥85%, peak drives the price
-  multiplier). When any window is ≥85% a **`.core-surge-banner`** offers a
+  `.core-statstrip`** — the day's **dine-in book leads** (from real
+  reservations, Rule #1): **Reservations · Covers (brand, +avg party) · Seats
+  fill (covers ÷ floor seats) · Seated (+upcoming) · No-shows**, then the
+  order-pace **Surge windows** cell closes it. A "surge window" is one filled
+  ≥85% of its **online-order** cap (dine-in windows carry `currentOrders` 0, so
+  they never surge — surge is the online lens); peak time + range drive the
+  banner. When any window is ≥85% a **`.core-surge-banner`** offers a
   one-tap *Apply surge levers* — its `.sb-h` title and `.sb-s` detail are
   block-level so they stack (title over detail) like the mockup, not jammed
   onto one line.
