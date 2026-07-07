@@ -168,7 +168,8 @@ export function Pos() {
   // menu grid tighter, on the way to the full desktop console.
   const { isDesktop, isTablet } = useBreakpoint();
   const menuCardWidth = isDesktop ? "23.5%" : isTablet ? "31.5%" : "48%";
-  const cardW = winW - spacing.md * 2;
+  const DESKTOP_TICKET_W = 420;
+  const cardW = isDesktop ? winW - DESKTOP_TICKET_W - spacing.md * 3 : winW - spacing.md * 2;
 
   // Draggable cart sheet: snaps between a peek (controls only) and a tall state
   // (full line list). The grabber drives it; height is pinned to bottom:0 so the
@@ -570,13 +571,14 @@ export function Pos() {
   const showCombo = !!combo && !combo.isComplete && combo.completeIds.length > 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#140f0d" }}>
+    <View style={{ flex: 1, backgroundColor: "#140f0d", flexDirection: isDesktop ? "row" : "column" }}>
       {/* Native SwiftUI ambient backdrop — the glass panels refract it (ADR-001). */}
       <Aurora style={StyleSheet.absoluteFill} />
 
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: cartOpen ? SHEET_MIN + 24 : 40 + insets.bottom }}
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: !isDesktop && cartOpen ? SHEET_MIN + 24 : 40 + insets.bottom }}
       >
         {/* ── Command bar — identity · location · live risk badge ─────────── */}
         <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
@@ -848,12 +850,11 @@ export function Pos() {
       {/* ── Active-check cart — anchored flush to the bottom over a scrim so no
           menu peeks under it. Real server check: channel, line steppers, void +
           fire-to-KDS. ──────────────────────────────────────────────────────── */}
-      {cartOpen && activeTab && (
-        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-          {/* transparent spacer — flex-ends the sheet to the very bottom; lets
-              menu taps pass through where the sheet isn't covering. */}
-          <View style={{ flex: 1 }} pointerEvents="none" />
-          <Animated.View style={{ height: sheetH }}>
+      {cartOpen && activeTab && (() => {
+        // The check panel's inner container is shared: on desktop it docks as a
+        // persistent right-hand column (like the web ticket), on phone it's the
+        // draggable bottom sheet. `inner` is byte-identical to both (ADR-002).
+        const inner = (
           <View
             style={{
               flex: 1,
@@ -873,10 +874,12 @@ export function Pos() {
             <LiquidGlass glassCornerRadius={26} pointerEvents="none" style={StyleSheet.absoluteFill} />
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(15,11,8,0.90)" }]} />
             <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: insets.bottom + spacing.sm, gap: spacing.sm }}>
-              {/* grabber — drag up / down to resize the sheet */}
-              <View {...sheetPan.panHandlers} style={{ paddingTop: spacing.sm, paddingBottom: 4, alignItems: "center" }}>
-                <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.34)" }} />
-              </View>
+              {/* grabber — drag up / down to resize the sheet (phone only) */}
+              {!isDesktop && (
+                <View {...sheetPan.panHandlers} style={{ paddingTop: spacing.sm, paddingBottom: 4, alignItems: "center" }}>
+                  <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.34)" }} />
+                </View>
+              )}
               {/* header */}
               <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -1092,9 +1095,16 @@ export function Pos() {
             </View>
             </View>
           </View>
-          </Animated.View>
-        </View>
-      )}
+        );
+        return isDesktop ? (
+          <View style={{ width: DESKTOP_TICKET_W, paddingTop: spacing.md, paddingBottom: spacing.md, paddingRight: spacing.md }}>{inner}</View>
+        ) : (
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            <View style={{ flex: 1 }} pointerEvents="none" />
+            <Animated.View style={{ height: sheetH }}>{inner}</Animated.View>
+          </View>
+        );
+      })()}
 
       {/* Check-action sheets — tender · discount · member · table. */}
       {activeTab && (
