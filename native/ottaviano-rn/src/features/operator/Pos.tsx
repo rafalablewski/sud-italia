@@ -53,6 +53,11 @@ interface PosKpis {
   tableCount: number;
 }
 type Channel = "dine-in" | "takeout" | "delivery";
+interface TabDiscount {
+  type: "amount" | "percent";
+  value: number;
+  reason?: string;
+}
 /** `/api/v1/admin/pos/tabs` — a server-backed open check. */
 interface PosTab {
   id: string;
@@ -62,8 +67,27 @@ interface PosTab {
   channel?: Channel | null;
   covers?: number | null;
   tableId?: string | null;
+  customerPhone?: string | null;
+  customerName?: string | null;
+  coursed?: boolean | null;
+  discount?: TabDiscount | null;
   sentKds?: boolean;
   items: { menuItemId: string; quantity: number }[];
+}
+/** `/api/v1/admin/floor/tables` — a floor table. */
+interface FloorTable {
+  id: string;
+  number: number;
+  seats: number;
+  zone: string | null;
+  status: string;
+}
+/** `/api/v1/admin/customers/:phone` — the member-lookup subset we use. */
+interface MemberInfo {
+  phone: string;
+  name: string | null;
+  member: unknown | null;
+  totals: { earnedPoints: number; manualPoints: number; redeemedPoints: number; orderCount: number; totalSpent: number };
 }
 /** `/api/v1/admin/pos/pressure` — live kitchen pressure for the risk badge. */
 interface Pressure {
@@ -155,6 +179,10 @@ export function Pos() {
   const [firing, setFiring] = useState(false);
   const [charging, setCharging] = useState(false);
   const [tenderOpen, setTenderOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
+  const [tables, setTables] = useState<FloorTable[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [combo, setCombo] = useState<ComboInfo | null>(null);
 
@@ -198,6 +226,7 @@ export function Pos() {
     authed<{ eightySixed?: { id: string }[] }>(`/admin/kds/eighty-six?location=${loc}`)
       .then(({ data }) => setEightySix(new Set((data.eightySixed ?? []).map((m) => m.id))))
       .catch(() => setEightySix(new Set()));
+    authed<FloorTable[]>(`/admin/floor/tables?location=${loc}`).then(({ data }) => setTables(data)).catch(() => setTables([]));
     void loadTabs();
   }, [authed, slug, loadTabs]);
 
@@ -281,6 +310,13 @@ export function Pos() {
             channel: tab.channel ?? null,
             status: tab.status,
             items: tab.items.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity })),
+            // Carry the whole check so an item edit never wipes these.
+            tableId: tab.tableId ?? undefined,
+            covers: tab.covers ?? undefined,
+            customerPhone: tab.customerPhone ?? undefined,
+            customerName: tab.customerName ?? undefined,
+            coursed: tab.coursed ?? undefined,
+            discount: tab.discount ?? null,
           },
         });
         setTabs((prev) => prev.map((t) => (t.id === data.id ? data : t)));
@@ -343,15 +379,17 @@ export function Pos() {
     [activeTab, persistTab],
   );
 
-  const setChannel = useCallback(
-    (channel: Channel) => {
+  // Patch fields on the active check + persist (discount / table / member / …).
+  const patchActive = useCallback(
+    (changes: Partial<PosTab>) => {
       if (!activeTab) return;
-      const next = { ...activeTab, channel };
+      const next = { ...activeTab, ...changes };
       setTabs((prev) => prev.map((t) => (t.id === next.id ? next : t)));
       void persistTab(next);
     },
     [activeTab, persistTab],
   );
+  const setChannel = useCallback((channel: Channel) => patchActive({ channel }), [patchActive]);
 
   const voidCheck = useCallback(async () => {
     const t = activeTab;
@@ -409,7 +447,7 @@ export function Pos() {
   // Settle the check via the tender sheet — the server re-derives + clamps the
   // bill (tip / cash / change), stamps it paid, closes the tab.
   const doCharge = useCallback(
-    async (tender: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number }) => {
+    async (tender: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number; compGrosze?: number; compNote?: string; compOverridePin?: string }) => {
       const t = activeTab;
       if (!t || t.items.length === 0 || charging || !slug) return;
       setTenderOpen(false);
@@ -430,6 +468,13 @@ export function Pos() {
       }
     },
     [activeTab, charging, slug, authed, loadTabs],
+  );
+  const lookupMember = useCallback(
+    async (phone: string): Promise<MemberInfo> => {
+      const { data } = await authed<MemberInfo>(`/admin/customers/${encodeURIComponent(phone)}`);
+      return data;
+    },
+    [authed],
   );
 
   // Live cross-sell + combo panel for the open check (real engines off v1).
@@ -462,8 +507,16 @@ export function Pos() {
   const riskN = pressure?.atRisk ?? 0;
   const cartOpen = !!activeTab && checkLines.length > 0;
   // Pricing preview — server re-prices at fire/charge; this only informs the till.
-  const discount = combo?.isComplete ? combo.savings ?? 0 : 0;
+  const comboDiscount = combo?.isComplete ? combo.savings ?? 0 : 0;
+  const afterCombo = Math.max(0, checkTotal - comboDiscount);
+  const manualDiscount = activeTab?.discount
+    ? activeTab.discount.type === "amount"
+      ? Math.min(afterCombo, Math.max(0, activeTab.discount.value))
+      : Math.round((afterCombo * Math.min(100, Math.max(0, activeTab.discount.value))) / 100)
+    : 0;
+  const discount = comboDiscount + manualDiscount;
   const grandTotal = Math.max(0, checkTotal - discount);
+  const tableNo = tables.find((t) => t.id === activeTab?.tableId)?.number ?? null;
   const onCheck = new Set(activeTab?.items.map((l) => l.menuItemId) ?? []);
   const crossSell = suggestions.filter((s) => !onCheck.has(s.id)).slice(0, 3);
   const showCombo = !!combo && !combo.isComplete && combo.completeIds.length > 0;
@@ -804,6 +857,25 @@ export function Pos() {
               })}
             </View>
 
+            {/* dine-in: covers + course-by-course firing */}
+            {activeTab.channel === "dine-in" && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                <Text style={{ color: c.textSecondary, fontSize: 12, fontWeight: "700" }}>Covers</Text>
+                <Stepper label="−" onPress={() => patchActive({ covers: Math.max(1, (activeTab.covers ?? 2) - 1) })} c={c} />
+                <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15, minWidth: 18, textAlign: "center" }}>{activeTab.covers ?? 2}</Text>
+                <Stepper label="+" onPress={() => patchActive({ covers: Math.min(50, (activeTab.covers ?? 2) + 1) })} accent c={c} />
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity
+                  onPress={() => patchActive({ coursed: !(activeTab.coursed ?? true) })}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: (activeTab.coursed ?? true) ? c.accent : c.line }}
+                >
+                  <Text style={{ color: (activeTab.coursed ?? true) ? c.accent : c.textSecondary, fontWeight: "800", fontSize: 12 }}>
+                    {(activeTab.coursed ?? true) ? "⧗ Coursed" : "⚡ All at once"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* line items — name · variant · stepper · line total */}
             <View style={{ maxHeight: 168 }}>
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -895,10 +967,16 @@ export function Pos() {
                 <Text style={{ color: c.textSecondary, fontSize: 13 }}>Subtotal</Text>
                 <Text style={{ color: c.textSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatMoney(checkTotal)}</Text>
               </View>
-              {discount > 0 && (
+              {comboDiscount > 0 && (
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: c.success, fontSize: 13 }}>{combo?.activeDeal?.name ?? "Deal"}</Text>
-                  <Text style={{ color: c.success, fontSize: 13, fontVariant: ["tabular-nums"] }}>−{formatMoney(discount)}</Text>
+                  <Text style={{ color: c.success, fontSize: 13, fontVariant: ["tabular-nums"] }}>−{formatMoney(comboDiscount)}</Text>
+                </View>
+              )}
+              {manualDiscount > 0 && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: c.success, fontSize: 13 }}>{activeTab.discount?.reason || "Discount"}</Text>
+                  <Text style={{ color: c.success, fontSize: 13, fontVariant: ["tabular-nums"] }}>−{formatMoney(manualDiscount)}</Text>
                 </View>
               )}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -925,28 +1003,88 @@ export function Pos() {
               </TouchableOpacity>
             </View>
 
-            {/* footer toolbar — void (discount / member / split are staged) */}
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 2 }}>
-              <TouchableOpacity
-                onPress={() => void voidCheck()}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "77" }}
-              >
-                <Text style={{ color: c.danger, fontWeight: "800", fontSize: 12 }}>🗑 Void</Text>
-              </TouchableOpacity>
+            {/* footer toolbar — discount · member · table · void */}
+            <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: 2 }}>
+              <ToolBtn
+                icon="🏷"
+                label={
+                  activeTab.discount
+                    ? activeTab.discount.type === "percent"
+                      ? `−${activeTab.discount.value}%`
+                      : `−${formatMoney(activeTab.discount.value)}`
+                    : "Discount"
+                }
+                active={!!activeTab.discount}
+                onPress={() => setDiscountOpen(true)}
+              />
+              <ToolBtn
+                icon="👤"
+                label={activeTab.customerName || (activeTab.customerPhone ? "Member" : "Member")}
+                active={!!activeTab.customerPhone}
+                onPress={() => setMemberOpen(true)}
+              />
+              <ToolBtn
+                icon="🍽"
+                label={tableNo ? `T${tableNo}` : "Table"}
+                active={!!activeTab.tableId}
+                onPress={() => {
+                  if (activeTab.channel !== "dine-in") setChannel("dine-in");
+                  setTableOpen(true);
+                }}
+              />
+              <ToolBtn icon="🗑" label="Void" danger onPress={() => void voidCheck()} />
             </View>
             </View>
           </View>
         </View>
       )}
 
-      {/* Tender sheet — tip presets · cash / card · change (server clamps). */}
+      {/* Check-action sheets — tender · discount · member · table. */}
       {activeTab && (
-        <TenderSheet
-          visible={tenderOpen}
-          total={grandTotal}
-          onClose={() => setTenderOpen(false)}
-          onConfirm={(t) => void doCharge(t)}
-        />
+        <>
+          <TenderSheet visible={tenderOpen} total={grandTotal} onClose={() => setTenderOpen(false)} onConfirm={(t) => void doCharge(t)} />
+          <DiscountSheet
+            visible={discountOpen}
+            current={activeTab.discount ?? null}
+            onClose={() => setDiscountOpen(false)}
+            onApply={(d) => {
+              setDiscountOpen(false);
+              patchActive({ discount: d });
+            }}
+            onClear={() => {
+              setDiscountOpen(false);
+              patchActive({ discount: null });
+            }}
+          />
+          <MemberSheet
+            visible={memberOpen}
+            current={{ phone: activeTab.customerPhone ?? null, name: activeTab.customerName ?? null }}
+            onLookup={lookupMember}
+            onClose={() => setMemberOpen(false)}
+            onAttach={(phone, name) => {
+              setMemberOpen(false);
+              patchActive({ customerPhone: phone, customerName: name });
+            }}
+            onRemove={() => {
+              setMemberOpen(false);
+              patchActive({ customerPhone: null, customerName: null });
+            }}
+          />
+          <TableSheet
+            visible={tableOpen}
+            tables={tables}
+            currentId={activeTab.tableId ?? null}
+            onClose={() => setTableOpen(false)}
+            onPick={(t) => {
+              setTableOpen(false);
+              patchActive({ tableId: t.id, channel: "dine-in", covers: activeTab.covers ?? t.seats ?? 2 });
+            }}
+            onClear={() => {
+              setTableOpen(false);
+              patchActive({ tableId: null });
+            }}
+          />
+        </>
       )}
     </View>
   );
@@ -963,16 +1101,19 @@ function TenderSheet({
   visible: boolean;
   total: number;
   onClose: () => void;
-  onConfirm: (t: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number }) => void;
+  onConfirm: (t: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number; compGrosze?: number; compOverridePin?: string }) => void;
 }) {
   const { c, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<"cash" | "card">("card");
   const [tipPct, setTipPct] = useState(0);
   const [cash, setCash] = useState<number | null>(null);
+  const [compZl, setCompZl] = useState("");
+  const [pin, setPin] = useState("");
 
   const tip = Math.round((total * tipPct) / 100);
-  const due = total + tip;
+  const compG = Math.max(0, Math.round((parseFloat(compZl.replace(",", ".")) || 0) * 100));
+  const due = Math.max(0, total + tip - Math.min(total, compG));
   const change = method === "cash" && cash != null ? Math.max(0, cash - due) : 0;
   // Quick cash buttons — exact, then the next round notes above the amount due.
   const roundUp = (g: number, step: number) => Math.ceil(g / step) * step;
@@ -1061,8 +1202,43 @@ function TenderSheet({
             </View>
           )}
 
+          {/* comp — a manager courtesy off the bill (server verifies the PIN) */}
+          <View style={{ flexDirection: "row", gap: spacing.sm, alignItems: "flex-end" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Comp (zł)</Text>
+              <TextInput
+                value={compZl}
+                onChangeText={setCompZl}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={c.textSecondary}
+                style={{ color: c.textPrimary, fontSize: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Manager PIN</Text>
+              <TextInput
+                value={pin}
+                onChangeText={setPin}
+                keyboardType="number-pad"
+                secureTextEntry
+                placeholder="••••"
+                placeholderTextColor={c.textSecondary}
+                style={{ color: c.textPrimary, fontSize: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 }}
+              />
+            </View>
+          </View>
+
           <TouchableOpacity
-            onPress={() => onConfirm({ tipGrosze: tip || undefined, defaultMethod: method, cashTenderedGrosze: method === "cash" && cash != null ? cash : undefined })}
+            onPress={() =>
+              onConfirm({
+                tipGrosze: tip || undefined,
+                defaultMethod: method,
+                cashTenderedGrosze: method === "cash" && cash != null ? cash : undefined,
+                compGrosze: compG || undefined,
+                compOverridePin: compG > 0 && pin.trim() ? pin.trim() : undefined,
+              })
+            }
             style={{ alignItems: "center", paddingVertical: 15, borderRadius: radius.md, backgroundColor: c.accent, marginTop: 2 }}
           >
             <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 16 }}>
@@ -1072,6 +1248,284 @@ function TenderSheet({
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+/** A check-action toolbar button (discount / member / table / void). */
+function ToolBtn({ icon, label, active, danger, onPress }: { icon: string; label: string; active?: boolean; danger?: boolean; onPress: () => void }) {
+  const { c, radius } = useTheme();
+  const col = danger ? c.danger : active ? c.accent : c.textSecondary;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        flex: 1,
+        alignItems: "center",
+        paddingVertical: 8,
+        borderRadius: radius.md,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: danger ? c.danger + "77" : active ? c.accent : c.line,
+        backgroundColor: active && !danger ? c.accent + "1c" : "transparent",
+      }}
+    >
+      <Text style={{ fontSize: 15 }}>{icon}</Text>
+      <Text numberOfLines={1} style={{ color: col, fontWeight: "800", fontSize: 10, marginTop: 2 }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/** Shared slide-up bottom-sheet chrome (backdrop · grabber · surface). */
+function BottomSheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: ReactNode }) {
+  const { c, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }} onPress={onClose}>
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: c.surface2,
+            borderTopLeftRadius: 26,
+            borderTopRightRadius: 26,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderColor: c.line,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: insets.bottom + spacing.lg,
+            gap: spacing.md,
+          }}
+        >
+          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.textSecondary + "55" }} />
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Manual discount — percent or złoty off, with a reason (server re-prices). */
+function DiscountSheet({
+  visible,
+  current,
+  onClose,
+  onApply,
+  onClear,
+}: {
+  visible: boolean;
+  current: TabDiscount | null;
+  onClose: () => void;
+  onApply: (d: TabDiscount) => void;
+  onClear: () => void;
+}) {
+  const { c, radius, spacing } = useTheme();
+  const [mode, setMode] = useState<"percent" | "amount">(current?.type ?? "percent");
+  const [val, setVal] = useState(current ? String(current.type === "amount" ? current.value / 100 : current.value) : "");
+  const [reason, setReason] = useState(current?.reason ?? "");
+  const apply = () => {
+    const n = parseFloat(val.replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) return;
+    onApply({ type: mode, value: mode === "amount" ? Math.round(n * 100) : Math.round(n), reason: reason.trim() || undefined });
+  };
+  const presets = mode === "percent" ? [5, 10, 15, 20] : [5, 10, 20, 50];
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900" }}>Discount</Text>
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        {(["percent", "amount"] as const).map((m) => {
+          const on = mode === m;
+          return (
+            <TouchableOpacity
+              key={m}
+              onPress={() => { setMode(m); setVal(""); }}
+              style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: radius.md, backgroundColor: on ? c.accent + "26" : "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.line }}
+            >
+              <Text style={{ color: on ? c.accent : c.textSecondary, fontWeight: "800", fontSize: 13 }}>{m === "percent" ? "Percent %" : "Amount zł"}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", gap: spacing.xs }}>
+        {presets.map((p) => (
+          <TouchableOpacity
+            key={p}
+            onPress={() => setVal(String(p))}
+            style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line }}
+          >
+            <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 13 }}>{mode === "percent" ? `${p}%` : `${p} zł`}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TextInput
+        value={val}
+        onChangeText={setVal}
+        keyboardType="decimal-pad"
+        placeholder={mode === "percent" ? "Custom %" : "Custom zł"}
+        placeholderTextColor={c.textSecondary}
+        style={{ color: c.textPrimary, fontSize: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 }}
+      />
+      <TextInput
+        value={reason}
+        onChangeText={setReason}
+        placeholder="Reason (optional)"
+        placeholderTextColor={c.textSecondary}
+        style={{ color: c.textPrimary, fontSize: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 }}
+      />
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        {current && (
+          <TouchableOpacity onPress={onClear} style={{ flex: 1, alignItems: "center", paddingVertical: 14, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "88" }}>
+            <Text style={{ color: c.danger, fontWeight: "800", fontSize: 14 }}>Remove</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={apply} style={{ flex: 2, alignItems: "center", paddingVertical: 14, borderRadius: radius.md, backgroundColor: c.accent }}>
+          <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>Apply discount</Text>
+        </TouchableOpacity>
+      </View>
+    </BottomSheet>
+  );
+}
+
+/** Loyalty member lookup — attach a customer + show their points balance. */
+function MemberSheet({
+  visible,
+  current,
+  onLookup,
+  onClose,
+  onAttach,
+  onRemove,
+}: {
+  visible: boolean;
+  current: { phone: string | null; name: string | null };
+  onLookup: (phone: string) => Promise<MemberInfo>;
+  onClose: () => void;
+  onAttach: (phone: string, name: string) => void;
+  onRemove: () => void;
+}) {
+  const { c, radius, spacing } = useTheme();
+  const [phone, setPhone] = useState(current.phone ?? "");
+  const [info, setInfo] = useState<MemberInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const points = info ? info.totals.earnedPoints + info.totals.manualPoints - info.totals.redeemedPoints : 0;
+  const lookup = async () => {
+    const p = phone.trim();
+    if (!p) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const data = await onLookup(p);
+      setInfo(data);
+    } catch {
+      setErr("No customer found for that number.");
+      setInfo(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900" }}>Member</Text>
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        <TextInput
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          placeholder="Phone number"
+          placeholderTextColor={c.textSecondary}
+          style={{ flex: 1, color: c.textPrimary, fontSize: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 }}
+        />
+        <TouchableOpacity onPress={() => void lookup()} style={{ alignItems: "center", justifyContent: "center", paddingHorizontal: 18, borderRadius: radius.md, backgroundColor: c.accent }}>
+          <Text style={{ color: c.onAccent, fontWeight: "800", fontSize: 14 }}>{loading ? "…" : "Look up"}</Text>
+        </TouchableOpacity>
+      </View>
+      {err && <Text style={{ color: c.danger, fontSize: 12 }}>{err}</Text>}
+      {info && (
+        <View style={{ borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, padding: spacing.md, gap: 4 }}>
+          <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 15 }}>{info.name || info.phone}</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ color: c.textSecondary, fontSize: 12 }}>{info.totals.orderCount} orders · {formatMoney(info.totals.totalSpent)}</Text>
+            <Text style={{ color: c.accent, fontWeight: "800", fontSize: 13 }}>{points} pts</Text>
+          </View>
+        </View>
+      )}
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        {current.phone && (
+          <TouchableOpacity onPress={onRemove} style={{ flex: 1, alignItems: "center", paddingVertical: 14, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "88" }}>
+            <Text style={{ color: c.danger, fontWeight: "800", fontSize: 14 }}>Remove</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          onPress={() => info && onAttach(info.phone, info.name || info.phone)}
+          disabled={!info}
+          style={{ flex: 2, alignItems: "center", paddingVertical: 14, borderRadius: radius.md, backgroundColor: c.accent, opacity: info ? 1 : 0.5 }}
+        >
+          <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 15 }}>Attach to check</Text>
+        </TouchableOpacity>
+      </View>
+    </BottomSheet>
+  );
+}
+
+/** Table picker — assign a dine-in check to a floor table, grouped by zone. */
+function TableSheet({
+  visible,
+  tables,
+  currentId,
+  onClose,
+  onPick,
+  onClear,
+}: {
+  visible: boolean;
+  tables: FloorTable[];
+  currentId: string | null;
+  onClose: () => void;
+  onPick: (t: FloorTable) => void;
+  onClear: () => void;
+}) {
+  const { c, radius, spacing } = useTheme();
+  const zones = useMemo(() => {
+    const m = new Map<string, FloorTable[]>();
+    for (const t of tables) {
+      const z = t.zone || "Floor";
+      (m.get(z) ?? m.set(z, []).get(z)!).push(t);
+    }
+    return [...m.entries()];
+  }, [tables]);
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900" }}>Assign table</Text>
+      {tables.length === 0 ? (
+        <Text style={{ color: c.textSecondary, fontSize: 13 }}>No tables configured for this location.</Text>
+      ) : (
+        <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+          {zones.map(([zone, ts]) => (
+            <View key={zone} style={{ marginBottom: spacing.md }}>
+              <Text style={{ color: c.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{zone}</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+                {ts.map((t) => {
+                  const on = t.id === currentId;
+                  const free = t.status === "available" || t.status === "free";
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      onPress={() => onPick(t)}
+                      style={{ width: 68, height: 60, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: on ? c.accent : "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: on ? c.accent : free ? c.line : c.warning + "88" }}
+                    >
+                      <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "900", fontSize: 16 }}>{t.number}</Text>
+                      <Text style={{ color: on ? c.onAccent : c.textSecondary, fontSize: 10 }}>{t.seats} seats</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+      {currentId && (
+        <TouchableOpacity onPress={onClear} style={{ alignItems: "center", paddingVertical: 14, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: c.danger + "88" }}>
+          <Text style={{ color: c.danger, fontWeight: "800", fontSize: 14 }}>Clear table</Text>
+        </TouchableOpacity>
+      )}
+    </BottomSheet>
   );
 }
 
