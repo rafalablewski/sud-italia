@@ -128,10 +128,27 @@ fi
 echo "==> Built PKG: $PKG_PATH"
 
 echo "==> Uploading to App Store Connect / TestFlight via altool (macOS)"
+# altool exits 0 even on some fatal errors (e.g. "Cannot determine the Apple ID
+# from Bundle ID …" when no App Store Connect app record exists yet), so capture
+# the output and fail on any ERROR line rather than trusting the exit code.
+UPLOAD_LOG="$BUILD_DIR/altool-upload.log"
+set +e
 xcrun altool --upload-app \
   -f "$PKG_PATH" \
   -t macos \
   --apiKey "$ASC_KEY_ID" \
-  --apiIssuer "$ASC_ISSUER_ID"
+  --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$UPLOAD_LOG"
+RC=${PIPESTATUS[0]}
+set -e
+
+if [ "$RC" -ne 0 ] || grep -qi "ERROR:" "$UPLOAD_LOG"; then
+  echo "ERROR: altool upload FAILED (exit $RC)." >&2
+  if grep -q "Cannot determine the Apple ID from Bundle ID" "$UPLOAD_LOG"; then
+    echo "HINT: No App Store Connect app record exists for bundle id '$( \
+      /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$ARCHIVE_PATH/Products/Applications/OttavianoKDS.app/Contents/Info.plist" 2>/dev/null || echo pl.ottaviano.kds.mac )' (macOS)." >&2
+    echo "      Create the macOS app in App Store Connect (My Apps -> + -> New App -> macOS), then re-run." >&2
+  fi
+  exit 1
+fi
 
 echo "==> Done. OttavianoKDS (macOS) uploaded to TestFlight."
