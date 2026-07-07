@@ -48,6 +48,10 @@ settings:
     # team cuts a train past this, bump here — or pass `marketing_version` to the
     # TestFlight workflow for a one-off. CI echoes the resolved version in the log
     # so a stale value is caught before upload.
+    #
+    # BUMP CONVENTION: increment the PATCH (the last number) — 0.5.0 → 0.5.1 →
+    # 0.5.2 — NOT the minor. Only move the minor (→ 0.6.0) on a deliberate new
+    # train, not for routine TestFlight pushes.
     MARKETING_VERSION: "0.5.0"
     # CFBundleVersion (build number). Old app shipped build 51; the bare-RN line
     # starts at 60 (strictly > 51). CI auto-increments it monotonically per run
