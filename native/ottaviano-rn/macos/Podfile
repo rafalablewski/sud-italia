@@ -23,7 +23,11 @@ prepare_react_native_project!
 # `URI::BadURIError - relative URI: …/SocketRocket.podspec`, killing pod install.
 # The Mac fork vendors its OWN third-party-podspecs, so pointing at it makes the
 # podspec resolve as a local file (CocoaPods reads it directly — no open-uri).
-rn_macos_path = File.expand_path(File.join(__dir__, '..', 'node_modules', 'react-native-macos'))
+#
+# NOTE: pass a RELATIVE path (like the iOS Podfile's `../node_modules/react-native`).
+# `use_react_native!` joins :path onto "." — an absolute path becomes `./Users/…`
+# and the package.json lookup fails ("Couldn't find the React Native package.json").
+rn_macos_path = '../node_modules/react-native-macos'
 
 target 'Ottaviano-macOS' do
   platform :macos, '11.0'
