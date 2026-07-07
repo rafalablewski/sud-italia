@@ -84,6 +84,9 @@
 .core .core-bk-blk.done {
   background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 6px, rgba(255, 255, 255, .015) 6px 12px), var(--panel-2);
   box-shadow: inset 0 0 0 1px var(--line-2); cursor: default; opacity: .72;
+  /* history sits UNDER live blocks (z 3): if a completed booking's planned span
+     overlaps a later live one on the same table, the live block stays legible. */
+  z-index: 2;
 }
 .core .core-bk-blk.done .bn { color: var(--ink-2); font-weight: 500; }
 .core .core-bk-blk.done .bm { color: var(--ink-3); }
