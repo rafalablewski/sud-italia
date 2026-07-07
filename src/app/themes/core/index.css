@@ -1675,6 +1675,7 @@ button.core .core-grip, .core button.core-grip { min-width: 22px; }
 .core .core-tl-legend i.cf { background: var(--basil-wash); box-shadow: inset 0 0 0 1px rgba(125,196,100,.6); }
 .core .core-tl-legend i.se { background: var(--info-wash); box-shadow: inset 0 0 0 1px rgba(84,188,224,.6); }
 .core .core-tl-legend i.pe { background: var(--amber-wash); box-shadow: inset 0 0 0 1px rgba(240,173,70,.6); }
+.core .core-tl-legend i.dn { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-2); opacity: .8; }
 .core .core-tl-legend i.cx { background: rgba(255,90,92,.25); box-shadow: inset 0 0 0 1px rgba(255,90,92,.7); }
 /* reservation timeline — tables (rows) × hours (cols), drag-to-reassign. */
 .core .core-book-timeline { grid-column: 1 / -1; border-bottom: 1px solid var(--line-2); background: var(--panel); }

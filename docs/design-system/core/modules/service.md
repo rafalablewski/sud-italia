@@ -187,7 +187,7 @@ variant lays the cells out as a wrapping CSS grid (`repeat(auto-fit, minmax(132p
 1fr))`, 1px gap over a line-tinted container for hairline gridlines) so all twelve
 stay readable — 2-up on a phone, filling out on wider screens — instead of the
 single-row flex squishing them. `fill` = booked covers ÷ total seats. A `.core-book-tlbar` gives the
-timeline a title + a status **legend** (confirmed · seated · pending · conflict).
+timeline a title + a status **legend** (confirmed · seated · pending · done · conflict).
 The **timeline-over-tables grid** (`.core-book-tlpanel`, 30-min ticks over a
 service window **derived from the location's real OPENING HOURS for the day**
 (`serviceWindowForDate`, `@/lib/floor` — 12:00→23:00 for the active locations) —
@@ -197,7 +197,7 @@ outside it (the server window gate rejects pre-open / post-last-order times), so
 the axis no longer stretches back to a stray pre-open walk-in (an 08:30
 mis-seating used to drag it to 08:00), and it replaced a hardcoded 17:00→23:00
 band that hid every lunch/afternoon booking): reservation **blocks** are
-positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber), **overlaps hatch red**
+positioned by time/duration and **toned by status** (`.core-bk-blk.seated` info / `.pending` amber / `.done` muted-stripe — the grid renders `RES_TIMELINE` = booked+seated+**completed**, so a completed booking is **kept on the timeline as a dimmed, non-draggable "done" block** carrying its realised `seatedAt→completedAt` stay rather than vanishing when the party leaves; `.done` bookings don't hold their table so they never clash and free the slot for occupancy/availability), **overlaps hatch red**
 live (`.conflict`, one `findReservationConflicts` pass per booking — which also
 flags a **too-tight turnaround**: same-table bookings must sit ≥`TABLE_TURNAROUND_MIN`
 (15 min) apart so staff can clear + reset, so back-to-back bookings clash even

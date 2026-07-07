@@ -40,6 +40,12 @@ import { ExpandIcon } from "@/core/shell/toolIcons";
 
 const DURATION_MIN = 90;
 const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
+/** Statuses the timeline grid RENDERS. Wider than RES_HOLDS: a `completed`
+ *  booking no longer holds its table (so it never clashes and frees the slot
+ *  for occupancy/availability), but it stays drawn as a dimmed "done" block so
+ *  the day's history is kept on the timeline instead of vanishing when a party
+ *  is marked complete. */
+const RES_TIMELINE = new Set<Reservation["status"]>(["booked", "seated", "completed"]);
 
 /** Timeline rows + table-pick list read T1…T12 in order (mockup), so sort by
  *  numeric table number where possible, falling back to lexical. */
@@ -297,6 +303,9 @@ export function CoreBook({
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
   const fmtHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   const dayRes = useMemo(() => reservations.filter((r) => RES_HOLDS.has(r.status)), [reservations]);
+  // What the timeline grid draws — the holding bookings PLUS completed ones,
+  // which linger as dimmed "done" blocks (kept, not deleted) once a party leaves.
+  const timelineRes = useMemo(() => reservations.filter((r) => RES_TIMELINE.has(r.status)), [reservations]);
   // Service window = the location's real OPENING HOURS for the day (12:00–23:00
   // for the active locations), so the timeline is the actual trading day — it no
   // longer stretches back to a stray pre-open booking (a walk-in mis-seated at
@@ -844,6 +853,7 @@ export function CoreBook({
             <span><i className="cf" /> confirmed</span>
             <span><i className="se" /> seated</span>
             <span><i className="pe" /> pending</span>
+            <span><i className="dn" /> done</span>
             <span><i className="cx" /> conflict</span>
           </div>
         </div>
@@ -863,7 +873,7 @@ export function CoreBook({
               <div className="core-ctx-empty pad">No tables configured.</div>
             ) : (
               sortedTables.map((t) => {
-                const rows = dayRes.filter((r) => r.tableId === t.id);
+                const rows = timelineRes.filter((r) => r.tableId === t.id);
                 const clashing = rows.filter((r) => conflictIds.has(r.id));
                 return (
                   <div
@@ -883,24 +893,33 @@ export function CoreBook({
                       const left = LBL_W + cs * TICK_W;
                       const width = cspan * TICK_W - 4;
                       const conflict = conflictIds.has(r.id);
-                      const tone = r.status === "seated" ? "seated" : "pending";
+                      // A completed booking is history: it can't clash and can't be
+                      // dragged — it just stays as a dimmed "done" block.
+                      const done = r.status === "completed";
+                      const tone = done ? "done" : r.status === "seated" ? "seated" : "pending";
                       const elapsed = isToday && r.status === "seated" ? Math.max(0, nowMin - toMin(r.time)) : null;
+                      // Realised dining minutes (seatedAt→completedAt) for a done block.
+                      const stayMin = done && r.seatedAt && r.completedAt
+                        ? Math.max(0, Math.round((Date.parse(r.completedAt) - Date.parse(r.seatedAt)) / 60000))
+                        : null;
                       // Seat fit — party vs the table's seats (combined for a join).
                       // Spare seats flag a table that could take a bigger party.
                       const seats = t.seats + (r.joinedTableIds ?? []).reduce((sum, id) => sum + (tables.find((x) => x.id === id)?.seats ?? 0), 0);
                       const spare = Math.max(0, seats - r.partySize);
-                      const context = r.status === "seated"
+                      const context = done
+                        ? `done${stayMin != null ? ` · ${stayMin}m` : ""}`
+                        : r.status === "seated"
                         ? `${elapsed != null ? `seated · ${elapsed}m` : "seated"}${spare > 0 ? ` · ${spare} spare` : ""}`
                         : `pending${spare > 0 ? ` · ${spare} spare` : ""}`;
                       const stackCls = conflict ? (clashing.indexOf(r) % 2 === 0 ? " conflict top" : " conflict bot") : ` ${tone}`;
                       return (
                         <div
                           key={r.id}
-                          draggable
+                          draggable={!done}
                           className={`core-bk-blk${stackCls}`}
                           style={{ left: `${left}px`, width: `${width}px` }}
-                          onDragStart={() => setDragId(r.id)}
-                          title={`${r.customerName} · ${r.partySize}/${seats} seats${spare > 0 ? ` · ${spare} spare` : ""} · ${r.time}${conflict ? " · CONFLICT" : ""}`}
+                          onDragStart={done ? undefined : () => setDragId(r.id)}
+                          title={`${r.customerName} · ${r.partySize}/${seats} seats${spare > 0 ? ` · ${spare} spare` : ""} · ${r.time}${done ? " · DONE" : conflict ? " · CONFLICT" : ""}`}
                         >
                           {conflict ? (
                             <span className="bn">{r.customerName} · {r.partySize}/{seats} · ⚠ clash</span>
