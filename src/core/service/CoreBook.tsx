@@ -265,8 +265,13 @@ export function CoreBook({
   // 08:30 used to drag the axis to 08:00). Bookings can't be created outside this
   // window (server gate), so every block fits inside it. Open on the hour, close
   // ceiled to the next 30-min tick; falls back to 12:00–23:00 for unknown hours.
+  // Pass `date` straight through (not `date || todayLocal()`): during SSR + the
+  // first client render `date` is "" and serviceWindowForDate returns the
+  // 12:00–23:00 fallback on BOTH server and client, so the axis can't hydrate to
+  // two different widths. Calling todayLocal() here would re-run the clock in
+  // render and could resolve a different weekday server vs client near midnight.
   const svcWindow = useMemo(
-    () => serviceWindowForDate(activeLocations.find((l) => l.slug === loc)?.hours, date || todayLocal()),
+    () => serviceWindowForDate(activeLocations.find((l) => l.slug === loc)?.hours, date),
     [activeLocations, loc, date],
   );
   const OPEN = Math.floor(svcWindow.openMin / 60) * 60;
@@ -622,7 +627,7 @@ export function CoreBook({
         await fetch(`/api/admin/floor/waitlist?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(w.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "seated" }) });
         toast(`${w.customerName} seated · ${tLabel(pick.number)}`, "success");
         await load();
-      } else toast("Could not seat", "danger");
+      } else { const j = (await res.json().catch(() => ({}))) as { message?: string }; toast(j.message || "Could not seat", "danger"); }
     } finally { setActing(null); }
   };
 

@@ -1,9 +1,48 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { timeToMinutes, windowsOverlap, findReservationConflicts } from "./floor";
+import { timeToMinutes, windowsOverlap, findReservationConflicts, serviceWindowForDate, serviceWindowViolation, durationBeforeClose, minutesToTime } from "./floor";
 import type { Reservation } from "@/data/types";
 
 // Run with:  npx tsx --test src/lib/floor.test.ts
+
+const HOURS = [{ day: "Mon-Sun", open: "12:00", close: "23:00" }];
+const MON = "2026-07-06"; // a Monday
+
+test("serviceWindowForDate: resolves open/close/last-seating from hours", () => {
+  const w = serviceWindowForDate(HOURS, MON);
+  assert.equal(w.openMin, 12 * 60);
+  assert.equal(w.closeMin, 23 * 60);
+  assert.equal(w.lastSeatingMin, 22 * 60 + 30); // close − 30
+});
+
+test("serviceWindowForDate: falls back to 12:00–23:00 for missing/invalid hours or a non-date", () => {
+  for (const w of [serviceWindowForDate(undefined, MON), serviceWindowForDate(HOURS, ""), serviceWindowForDate([{ day: "Sun", open: "18:00", close: "02:00" }], MON)]) {
+    assert.equal(w.openMin, 12 * 60);
+    assert.equal(w.closeMin, 23 * 60);
+    assert.equal(w.lastSeatingMin, 22 * 60 + 30);
+  }
+});
+
+test("serviceWindowViolation: open + last-seating are inclusive edges", () => {
+  const { openMin, lastSeatingMin } = serviceWindowForDate(HOURS, MON);
+  assert.equal(serviceWindowViolation(8 * 60 + 30, openMin, lastSeatingMin), "before_open"); // 08:30
+  assert.equal(serviceWindowViolation(12 * 60, openMin, lastSeatingMin), null); // 12:00 open — legal
+  assert.equal(serviceWindowViolation(22 * 60 + 30, openMin, lastSeatingMin), null); // 22:30 last seating — legal
+  assert.equal(serviceWindowViolation(22 * 60 + 45, openMin, lastSeatingMin), "after_last_seating"); // 22:45
+});
+
+test("durationBeforeClose: caps a late seating to the time left, floored at 0", () => {
+  assert.equal(durationBeforeClose(22 * 60 + 30, 90, 23 * 60), 30); // 22:30 + 90 → 30 (last-order table)
+  assert.equal(durationBeforeClose(20 * 60, 90, 23 * 60), 90); // ample runway, untouched
+  assert.equal(durationBeforeClose(23 * 60 + 30, 90, 23 * 60), 0); // past close → 0, never negative
+});
+
+test("minutesToTime: inverse of timeToMinutes, zero-padded", () => {
+  assert.equal(minutesToTime(0), "00:00");
+  assert.equal(minutesToTime(12 * 60), "12:00");
+  assert.equal(minutesToTime(22 * 60 + 30), "22:30");
+  assert.equal(timeToMinutes(minutesToTime(1350)), 1350);
+});
 
 test("timeToMinutes parses HH:MM and rejects junk", () => {
   assert.equal(timeToMinutes("00:00"), 0);

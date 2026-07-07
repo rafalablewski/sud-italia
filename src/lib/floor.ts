@@ -107,6 +107,30 @@ export function durationBeforeClose(
   return Math.max(0, Math.min(requestedMin, closeMin - startMin));
 }
 
+/** Minutes since midnight → "HH:MM" (24h, zero-padded). Inverse of
+ *  `timeToMinutes`, so callers stop re-rolling the padding by hand. */
+export function minutesToTime(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+/**
+ * The single opening-hours gate: is a seating `startMin` inside the day's
+ * window? Returns which edge it violates (`before_open` if the floor isn't open
+ * yet, `after_last_seating` if it's past the last order), or null when it's
+ * legal. Both the pure booking validator and the walk-in route call this, so the
+ * two paths can never disagree on the boundary (open is inclusive, last seating
+ * is inclusive). Naming mirrors the `BookingReason` codes.
+ */
+export function serviceWindowViolation(
+  startMin: number,
+  openMin: number,
+  lastSeatingMin: number,
+): "before_open" | "after_last_seating" | null {
+  if (startMin < openMin) return "before_open";
+  if (startMin > lastSeatingMin) return "after_last_seating";
+  return null;
+}
+
 /**
  * Other active reservations on the same table + date whose time window overlaps
  * `candidate` — i.e. a double-booking OR a turnaround too tight for staff to

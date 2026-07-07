@@ -6,7 +6,7 @@ import {
   getTables,
   saveReservation,
 } from "@/lib/store";
-import { durationBeforeClose, findReservationConflicts, timeToMinutes } from "@/lib/floor";
+import { durationBeforeClose, findReservationConflicts, serviceWindowViolation, timeToMinutes } from "@/lib/floor";
 
 /**
  * Unified booking — the merged Floor + Slots flow: book a dine-in time slot and
@@ -66,10 +66,11 @@ export function validateBooking(
 ): { ok: true } | { ok: false; reason: BookingReason } {
   if (!i.slotActive) return { ok: false, reason: "slot_inactive" };
   if (!i.slotSupportsDineIn) return { ok: false, reason: "slot_not_dinein" };
-  // Opening-hours gate: you can't seat a party while the floor is closed. This
-  // is never waived by `override` (that only bypasses conflict/capacity).
-  if (i.startMin < i.openMin) return { ok: false, reason: "before_open" };
-  if (i.startMin > i.lastSeatingMin) return { ok: false, reason: "after_last_seating" };
+  // Opening-hours gate (shared with the walk-in route): you can't seat a party
+  // while the floor is closed. Never waived by `override` (that only bypasses
+  // conflict/capacity).
+  const windowViolation = serviceWindowViolation(i.startMin, i.openMin, i.lastSeatingMin);
+  if (windowViolation) return { ok: false, reason: windowViolation };
   if (!Number.isFinite(i.partySize) || i.partySize < 1) return { ok: false, reason: "invalid_party" };
   if (i.tableSeats < i.partySize) return { ok: false, reason: "table_too_small" };
   if (i.tableConflictCount > 0) return { ok: false, reason: "table_conflict" };

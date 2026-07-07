@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getReservations, saveReservation, deleteReservation, getTables, saveTable, getOrders, getPosTabs, savePosTab, deletePosTab, getServiceWindow } from "@/lib/store";
-import { durationBeforeClose, findReservationConflicts, timeToMinutes } from "@/lib/floor";
+import { durationBeforeClose, findReservationConflicts, minutesToTime, serviceWindowViolation, timeToMinutes } from "@/lib/floor";
 import { TABLE_FEATURES, type ReservationStatus, type TableFeature } from "@/data/types";
 
 /**
@@ -144,21 +144,26 @@ export const POST = withAdmin(
     const priorTableId = priorRes?.tableId;
     const priorStatus = priorRes?.status;
 
-    // Service-window gate — a brand-new booking / walk-in must fall inside opening
-    // hours: not before open, not after last seating (close − 30 min). This is
-    // independent of `override` (you can't seat a party while the floor is
-    // closed). Existing records being seated / completed / moved (priorRes set)
-    // keep their original, already-valid time. A late walk-in is capped so its
-    // table is freed by close (a 22:30 seating gets 30 min).
-    if (!priorRes) {
+    // Service-window gate — a booking / walk-in must be seated inside opening
+    // hours: not before open, not after last seating (close − 30 min). Applied
+    // whenever the seating TIME is new or changed (a fresh record, or an edit
+    // that reschedules), so an out-of-hours reschedule can't slip past by
+    // carrying an existing id. Seating / completing / cancelling / re-tabling an
+    // existing booking keeps its original time (`timeChanged` false), so a legacy
+    // out-of-window record stays actionable. Independent of `override` (you can't
+    // seat while closed). A late seating is capped so its table frees by close (a
+    // 22:30 walk-in gets a 30-min table).
+    const startMin = timeToMinutes(time);
+    const timeChanged = !priorRes || priorRes.time !== time;
+    if (timeChanged) {
       const win = await getServiceWindow(locationSlug, date);
-      const startMin = timeToMinutes(time);
-      if (startMin < win.openMin || startMin > win.lastSeatingMin) {
-        const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-        return NextResponse.json(
-          { error: "closed", message: `Closed at ${time} — seating runs ${hhmm(win.openMin)}–${hhmm(win.lastSeatingMin)} (last seating).` },
-          { status: 422 },
-        );
+      const violation = serviceWindowViolation(startMin, win.openMin, win.lastSeatingMin);
+      if (violation) {
+        const message =
+          violation === "before_open"
+            ? `The floor doesn't open until ${minutesToTime(win.openMin)}.`
+            : `Too late — the last seating is ${minutesToTime(win.lastSeatingMin)} (30 min before ${minutesToTime(win.closeMin)} close).`;
+        return NextResponse.json({ error: violation, message }, { status: 422 });
       }
       durationMin = durationBeforeClose(startMin, durationMin, win.closeMin);
     }

@@ -747,8 +747,9 @@ export async function getServiceWindow(locationSlug: string, date: string): Prom
 
 /**
  * Idempotently materialise the default dine-in grid for one location/day:
- * a slot every 15 minutes across the full open window (open through close
- * inclusive), capacity = the number of tables on the floor. Only for dates
+ * a slot every 15 minutes from open through the last seating (close − 30 min,
+ * so nothing is offered past last order), capacity = the number of tables on
+ * the floor. Only for dates
  * inside the rolling 7-day booking window (today … +6) — beyond it no windows
  * are opened. Only *missing* windows are created — existing slots (including
  * ones an operator flipped to "draft" = unavailable) are left as-is, so
