@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
+  Modal,
+  Pressable,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -152,6 +154,7 @@ export function Pos() {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [firing, setFiring] = useState(false);
   const [charging, setCharging] = useState(false);
+  const [tenderOpen, setTenderOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [combo, setCombo] = useState<ComboInfo | null>(null);
 
@@ -403,19 +406,21 @@ export function Pos() {
     [activeTab, persistTab],
   );
 
-  // Settle the check — takes payment (server re-derives + clamps the bill, closes
-  // the tab). A single method choice; the full tip/comp/split sheet is staged.
-  const charge = useCallback(
-    async (method: "cash" | "card") => {
+  // Settle the check via the tender sheet — the server re-derives + clamps the
+  // bill (tip / cash / change), stamps it paid, closes the tab.
+  const doCharge = useCallback(
+    async (tender: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number }) => {
       const t = activeTab;
       if (!t || t.items.length === 0 || charging || !slug) return;
+      setTenderOpen(false);
       setCharging(true);
       try {
-        const { data } = await authed<{ totalAmount?: number }>(
+        const { data } = await authed<{ totalAmount?: number; change?: number }>(
           `/admin/pos/tabs/${encodeURIComponent(t.id)}/charge?location=${encodeURIComponent(slug)}`,
-          { method: "POST", body: { defaultMethod: method } },
+          { method: "POST", body: tender },
         );
-        Alert.alert("Paid ✓", `${t.name} · ${formatMoney(data.totalAmount ?? 0)} · ${method}`);
+        const change = data.change && data.change > 0 ? ` · change ${formatMoney(data.change)}` : "";
+        Alert.alert("Paid ✓", `${t.name} · ${formatMoney(data.totalAmount ?? 0)} · ${tender.defaultMethod}${change}`);
         setActiveTabId(null);
         await loadTabs();
       } catch (e) {
@@ -426,14 +431,6 @@ export function Pos() {
     },
     [activeTab, charging, slug, authed, loadTabs],
   );
-  const promptCharge = useCallback(() => {
-    if (!activeTab || activeTab.items.length === 0) return;
-    Alert.alert(`Charge ${formatMoney(Math.max(0, checkTotal))}`, "Take payment as", [
-      { text: "Cash", onPress: () => void charge("cash") },
-      { text: "Card", onPress: () => void charge("card") },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  }, [activeTab, checkTotal, charge]);
 
   // Live cross-sell + combo panel for the open check (real engines off v1).
   const checkItemIds = useMemo(
@@ -751,21 +748,28 @@ export function Pos() {
           menu peeks under it. Real server check: channel, line steppers, void +
           fire-to-KDS. ──────────────────────────────────────────────────────── */}
       {cartOpen && activeTab && (
-        <View
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            paddingHorizontal: spacing.md,
-            paddingTop: spacing.sm,
-            paddingBottom: insets.bottom + spacing.sm,
-            backgroundColor: "rgba(15,11,9,0.90)",
-          }}
-        >
-          <GlassCard style={{ width: cardW }} contentStyle={{ padding: spacing.md, gap: spacing.sm }}>
-            {/* header */}
-            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+          <View
+            style={{
+              borderTopLeftRadius: 26,
+              borderTopRightRadius: 26,
+              overflow: "hidden",
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderColor: "rgba(255,255,255,0.12)",
+              shadowColor: "#000",
+              shadowOpacity: 0.45,
+              shadowRadius: 22,
+              shadowOffset: { width: 0, height: -8 },
+            }}
+          >
+            {/* SwiftUI glass sheet material behind the check — anchored, edge-to-edge */}
+            <LiquidGlass glassCornerRadius={26} pointerEvents="none" style={StyleSheet.absoluteFill} />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(17,12,9,0.58)" }]} />
+            <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.sm, gap: spacing.sm }}>
+              {/* grabber */}
+              <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.30)", marginBottom: 2 }} />
+              {/* header */}
+              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ color: c.textPrimary, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>{activeTab.name}</Text>
                 <Text style={{ color: c.textSecondary, fontSize: 12 }} numberOfLines={1}>
@@ -913,7 +917,7 @@ export function Pos() {
                 <Text style={{ color: c.textPrimary, fontWeight: "800", fontSize: 14 }}>{firing ? "Firing…" : "➤ Send to KDS"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => promptCharge()}
+                onPress={() => setTenderOpen(true)}
                 disabled={charging}
                 style={{ flex: 1.4, alignItems: "center", justifyContent: "center", paddingVertical: 13, borderRadius: radius.md, backgroundColor: c.accent, opacity: charging ? 0.6 : 1 }}
               >
@@ -930,10 +934,144 @@ export function Pos() {
                 <Text style={{ color: c.danger, fontWeight: "800", fontSize: 12 }}>🗑 Void</Text>
               </TouchableOpacity>
             </View>
-          </GlassCard>
+            </View>
+          </View>
         </View>
       )}
+
+      {/* Tender sheet — tip presets · cash / card · change (server clamps). */}
+      {activeTab && (
+        <TenderSheet
+          visible={tenderOpen}
+          total={grandTotal}
+          onClose={() => setTenderOpen(false)}
+          onConfirm={(t) => void doCharge(t)}
+        />
+      )}
     </View>
+  );
+}
+
+/** Tender sheet — choose method, add a tip, take cash & show change. The server
+ *  re-derives and clamps every figure at /charge; this only proposes them. */
+function TenderSheet({
+  visible,
+  total,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  total: number;
+  onClose: () => void;
+  onConfirm: (t: { tipGrosze?: number; defaultMethod: "cash" | "card"; cashTenderedGrosze?: number }) => void;
+}) {
+  const { c, radius, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [method, setMethod] = useState<"cash" | "card">("card");
+  const [tipPct, setTipPct] = useState(0);
+  const [cash, setCash] = useState<number | null>(null);
+
+  const tip = Math.round((total * tipPct) / 100);
+  const due = total + tip;
+  const change = method === "cash" && cash != null ? Math.max(0, cash - due) : 0;
+  // Quick cash buttons — exact, then the next round notes above the amount due.
+  const roundUp = (g: number, step: number) => Math.ceil(g / step) * step;
+  const cashOptions = Array.from(new Set([due, roundUp(due, 1000), roundUp(due, 2000), roundUp(due, 5000)])).slice(0, 4);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }} onPress={onClose}>
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: c.surface2,
+            borderTopLeftRadius: 26,
+            borderTopRightRadius: 26,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderColor: c.line,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: insets.bottom + spacing.lg,
+            gap: spacing.md,
+          }}
+        >
+          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.textSecondary + "55" }} />
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+            <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900" }}>Tender</Text>
+            <Text style={{ color: c.textPrimary, fontSize: 24, fontWeight: "900", fontVariant: ["tabular-nums"] }}>{formatMoney(due)}</Text>
+          </View>
+
+          {/* method */}
+          <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            {(["card", "cash"] as const).map((m) => {
+              const on = method === m;
+              return (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => setMethod(m)}
+                  style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: radius.md, backgroundColor: on ? c.accent + "26" : "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.line }}
+                >
+                  <Text style={{ color: on ? c.accent : c.textSecondary, fontWeight: "800", fontSize: 14 }}>{m === "card" ? "💳 Card" : "💵 Cash"}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* tip */}
+          <View>
+            <Text style={{ color: c.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Tip</Text>
+            <View style={{ flexDirection: "row", gap: spacing.xs }}>
+              {[0, 5, 10, 15].map((p) => {
+                const on = tipPct === p;
+                return (
+                  <TouchableOpacity
+                    key={p}
+                    onPress={() => setTipPct(p)}
+                    style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: radius.md, backgroundColor: on ? c.accent : "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.line }}
+                  >
+                    <Text style={{ color: on ? c.onAccent : c.textPrimary, fontWeight: "800", fontSize: 13 }}>{p === 0 ? "None" : `${p}%`}</Text>
+                    {p > 0 && <Text style={{ color: on ? c.onAccent : c.textSecondary, fontSize: 10 }}>{formatMoney(Math.round((total * p) / 100))}</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* cash received + change */}
+          {method === "cash" && (
+            <View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text style={{ color: c.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 }}>Cash received</Text>
+                {cash != null && <Text style={{ color: change > 0 ? c.success : c.textSecondary, fontSize: 12, fontWeight: "800" }}>change {formatMoney(change)}</Text>}
+              </View>
+              <View style={{ flexDirection: "row", gap: spacing.xs, flexWrap: "wrap" }}>
+                {cashOptions.map((amt) => {
+                  const on = cash === amt;
+                  return (
+                    <TouchableOpacity
+                      key={amt}
+                      onPress={() => setCash(amt)}
+                      style={{ flexGrow: 1, alignItems: "center", paddingVertical: 10, borderRadius: radius.md, backgroundColor: on ? c.accent + "26" : "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.line }}
+                    >
+                      <Text style={{ color: on ? c.accent : c.textPrimary, fontWeight: "800", fontSize: 13 }}>{formatMoney(amt)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => onConfirm({ tipGrosze: tip || undefined, defaultMethod: method, cashTenderedGrosze: method === "cash" && cash != null ? cash : undefined })}
+            style={{ alignItems: "center", paddingVertical: 15, borderRadius: radius.md, backgroundColor: c.accent, marginTop: 2 }}
+          >
+            <Text style={{ color: c.onAccent, fontWeight: "900", fontSize: 16 }}>
+              {method === "cash" ? `Take ${formatMoney(due)} cash` : `Charge ${formatMoney(due)}`}
+            </Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
