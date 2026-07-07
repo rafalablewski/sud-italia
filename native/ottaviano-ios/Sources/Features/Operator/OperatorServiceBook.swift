@@ -36,7 +36,7 @@ final class OperatorBookStore {
             error = nil
         } catch let e as APIError {
             if reservations.isEmpty { error = OperatorListLoader<Reservation>.message(e) }
-        } catch { if reservations.isEmpty { error = "Something went wrong" } }
+        } catch { if reservations.isEmpty { self.error = "Something went wrong" } }
         loaded = true
     }
 
@@ -679,7 +679,7 @@ final class OperatorDispatchStore {
     func load() async {
         do { board = try await api.send(.adminDispatch(location: location)); error = nil }
         catch let e as APIError { if board == nil { error = OperatorListLoader<DispatchOrder>.message(e) } }
-        catch { if board == nil { error = "Something went wrong" } }
+        catch { if board == nil { self.error = "Something went wrong" } }
         loaded = true
     }
     func setLocation(_ slug: String) async { location = slug; board = nil; loaded = false; await load() }
