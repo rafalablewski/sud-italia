@@ -41,6 +41,7 @@ leaving Vercel — designed for from day one).
 | [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md) | decision | Web 1:1 mirroring — **DECIDED: 100% native, no WebView.** Options compared; how native parity is held (token/IA codegen + parity ledger); the accepted maintenance cost; hardware/offline/responsive |
 | [`ADR-001-rn-hybrid-liquid-glass.md`](./ADR-001-rn-hybrid-liquid-glass.md) | decision (proposed) | **OttavianoKDS → React Native + bridged SwiftUI (Liquid Glass).** Re-opens the operator app's SwiftUI-only choice to stop layout drift; keeps "no WebView". Gated on a POS + `LiquidGlassView` spike before Accepted. |
 | [`ADR-002-macos-rn-desktop.md`](./ADR-002-macos-rn-desktop.md) | decision (proposed) | **OttavianoKDS on macOS → react-native-macos + responsive desktop layouts.** Matches the web page's placement (multi-column, persistent panels) via a `useBreakpoint` split; also upgrades iPad landscape. Phased: layouts first, then the macOS target + notarized TestFlight. |
+| [`MACOS-SETUP.md`](./MACOS-SETUP.md) | infra | macOS target bring-up — the CI bootstrap harness (`mac-testflight.yml`) that scaffolds `react-native-macos` on the Mac runner + builds; version pinning, Mac signing/notarization, and the path to a committed `macos/` project. |
 
 ## Decisions (signed off 2026-06-26)
 - **Backend:** keep it + add `/api/v1` facade. **Do not** rewrite the server.
