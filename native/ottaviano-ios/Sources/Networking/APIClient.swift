@@ -269,6 +269,10 @@ public extension Endpoint {
     static func adminLoyalty() -> Endpoint<[AdminLoyaltyMember]> {
         Endpoint<[AdminLoyaltyMember]>(.get, "admin/loyalty", requiresAuth: true)
     }
+    /// Family wallets — pooled-points groups for the Loyalty · Wallets tab.
+    static func adminLoyaltyWallets() -> Endpoint<[LoyaltyWallet]> {
+        Endpoint<[LoyaltyWallet]>(.get, "admin/loyalty/wallets", requiresAuth: true)
+    }
     static func adminTasks() -> Endpoint<[AdminTask]> {
         Endpoint<[AdminTask]>(.get, "admin/tasks", requiresAuth: true)
     }
