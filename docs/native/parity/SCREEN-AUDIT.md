@@ -68,6 +68,17 @@ Legend: ✅ at parity · 🟡 functional, gaps noted (reason given) · 🏗 scaf
   (`UIApplication.isIdleTimerDisabled`, UIKit-gated), and shows a floating exit
   button. **Needs on-device confirmation** (audio + idle-timer can't be exercised
   from the Linux container) — the one verification step that wants a Mac/iPad.
+- **Shipped — cancel-notify (this pass):** the web KDS shows a dish **voided after
+  it fired** struck-through on the pass (web `.core-tk-voided`, role=alert) so a
+  pulled line never silently vanishes. Carried onto native: the v1 order DTO now
+  carries **`voidedItems`** (`schemas.ts` `VoidedItemSchema` + `order-dto.ts`
+  mapper; OpenAPI regenerated, `api-v1-openapi.test.ts` green), the native `Order`
+  gained `voidedItems: [VoidedItem]?`, and **`KDSTicket`** renders a danger-toned,
+  struck-through **cancel-notify** block (qty × name · reason). Display-side parity;
+  the void **write** (an operator pulling a fired line from the native POS) reuses
+  the same `voidKitchenItem` store fn and is a follow-up (needs a v1 write route +
+  POS check-editor action) — the display already reflects real voids from any
+  surface (Rule #1).
 
 ### POS — Till (`/core/pos` · `OperatorPOSView.swift`) ✅🟡
 - **Web (resolved):** open **tabs**, category **coursing** (fire course-by-course),

@@ -103,6 +103,31 @@ public struct KDSTicket: View, Equatable {
                     }
                 }
 
+                // Cancel-notify — dishes voided AFTER firing (web `.core-tk-voided`,
+                // role=alert): struck-through with a reason so a pulled line is never
+                // a silent disappearance for the line cook.
+                if let voided = order.voidedItems, !voided.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(voided.enumerated()), id: \.offset) { _, v in
+                            HStack(spacing: 6) {
+                                Image(systemName: "xmark.circle.fill").font(.caption2).foregroundStyle(theme.color.danger)
+                                Text("\(v.quantity)× \(v.name)")
+                                    .font(.caption).strikethrough(true, color: theme.color.danger)
+                                    .foregroundStyle(theme.color.textSecondary)
+                                if let r = v.reason, !r.isEmpty {
+                                    Text("· \(r)").font(.caption2).foregroundStyle(theme.color.danger)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, theme.space.sm).padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(theme.dangerSoft, in: RoundedRectangle(cornerRadius: theme.radius.sm, style: .continuous))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Pulled: " + voided.map { "\($0.quantity) \($0.name)" }.joined(separator: ", "))
+                }
+
                 if !allergens.isEmpty {
                     // Allergen callout — a filled danger banner the line can't miss
                     // (web `.core-tk-alrg` large-danger). Icon + colour, never colour

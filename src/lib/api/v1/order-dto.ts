@@ -76,6 +76,9 @@ export function toOrderDTO(order: Order, prediction?: TicketPrediction): OrderDT
           atRisk: prediction.atRisk,
         }
       : null,
+    voidedItems: order.voidedItems?.length
+      ? order.voidedItems.map((v) => ({ name: v.name, quantity: v.quantity, reason: v.reason ?? null, at: v.at }))
+      : null,
   };
 }
 

@@ -199,6 +199,15 @@ export const OrderPredictionSchema = z.object({
   atRisk: z.boolean(),
 });
 
+/** A dish cancelled AFTER it fired (KDS cancel-notify) — shown struck-through on
+ *  the pass so the line never silently vanishes. Mirrors `Order.voidedItems`. */
+export const VoidedItemSchema = z.object({
+  name: z.string(),
+  quantity: z.number().int(),
+  reason: z.string().nullable(),
+  at: z.string(),
+});
+
 export const OrderSchema = z.object({
   id: z.string(),
   /** Short, glanceable ticket id (last 6, uppercased) — the KDS card header. */
@@ -227,6 +236,8 @@ export const OrderSchema = z.object({
   coursing: OrderCoursingSchema.nullable(),
   simulated: z.boolean(),
   prediction: OrderPredictionSchema.nullable(),
+  /** Dishes voided after firing (KDS cancel-notify); null when none. */
+  voidedItems: z.array(VoidedItemSchema).nullable(),
 });
 
 // ── KDS fleet (owner atlas) + floor-ops (manager header) feeds ─────────────

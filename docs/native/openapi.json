@@ -760,6 +760,49 @@
                 "type": "null"
               }
             ]
+          },
+          "voidedItems": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "reason": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "quantity",
+                    "reason",
+                    "at"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -786,7 +829,8 @@
           "queuePosition",
           "coursing",
           "simulated",
-          "prediction"
+          "prediction",
+          "voidedItems"
         ],
         "additionalProperties": false
       },
