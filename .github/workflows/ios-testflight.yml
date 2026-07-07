@@ -19,6 +19,10 @@ on:
         type: choice
         options: [Ottaviano, OttavianoKDS]
         default: OttavianoKDS
+      marketing_version:
+        description: "Marketing version (blank = project.yml default; must be >= the live TestFlight train)"
+        type: string
+        default: ""
   push:
     branches: ["claude/**"]
 
@@ -102,9 +106,17 @@ jobs:
           chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
       - name: Archive + export + upload to TestFlight
-        # Build number = base 60 + run_number offset, kept strictly > 51 and
-        # monotonic across runs so TestFlight always accepts the upload.
+        # Version = the marketing_version input if given, else project.yml's
+        # committed MARKETING_VERSION (must stay >= the live train, or the upload
+        # files as older and never shows as an update). Build number = base 60 +
+        # run_number offset, kept strictly > 51 and monotonic across runs so
+        # every upload climbs and TestFlight always accepts it.
         run: |
           chmod +x Scripts/testflight.sh
           BUILD_NUMBER=$(( 60 + ${{ github.run_number }} ))
-          ./Scripts/testflight.sh "${{ steps.scheme.outputs.scheme }}" "$BUILD_NUMBER"
+          MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
+          if [ -z "$MARKETING_VERSION" ]; then
+            MARKETING_VERSION="$(sed -n 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*"\(.*\)".*/\1/p' ios/project.yml | head -n 1)"
+          fi
+          echo "==> Shipping ${{ steps.scheme.outputs.scheme }} — version ${MARKETING_VERSION:-<project.yml>} build ${BUILD_NUMBER}"
+          ./Scripts/testflight.sh "${{ steps.scheme.outputs.scheme }}" "$BUILD_NUMBER" "$MARKETING_VERSION"

@@ -40,9 +40,19 @@ options:
 # Settings applied to every target/config.
 settings:
   base:
-    MARKETING_VERSION: "0.3.0"
-    # Old app shipped build 51; new bare-RN line starts at 60 (strictly > 51 so
-    # TestFlight accepts the upload). CI may override per-run via agvtool.
+    # CFBundleShortVersionString (the marketing version testers SEE). This MUST
+    # stay >= the live TestFlight train, or App Store Connect files the upload as
+    # an OLDER version and it never surfaces as an update — the "no update" bug
+    # (we sat frozen at 0.3.0 while the app shipped 0.4.x, so every KDS upload was
+    # invisible to testers). Bumped to 0.5.0 to clear the 0.4.x train. When the
+    # team cuts a train past this, bump here — or pass `marketing_version` to the
+    # TestFlight workflow for a one-off. CI echoes the resolved version in the log
+    # so a stale value is caught before upload.
+    MARKETING_VERSION: "0.5.0"
+    # CFBundleVersion (build number). Old app shipped build 51; the bare-RN line
+    # starts at 60 (strictly > 51). CI auto-increments it monotonically per run
+    # (60 + github.run_number) so every upload climbs and TestFlight always
+    # accepts it — see .github/workflows/ios-testflight.yml.
     CURRENT_PROJECT_VERSION: "60"
     DEVELOPMENT_TEAM: T4WC9M8Y3S
     CODE_SIGN_STYLE: Automatic
