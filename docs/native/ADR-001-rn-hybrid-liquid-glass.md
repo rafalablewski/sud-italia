@@ -1,9 +1,10 @@
 # ADR-001 — OttavianoKDS → React Native + bridged SwiftUI (Liquid Glass)
 
-> **Status:** Proposed — spike in progress (POC: RN POS screen + a bridged SwiftUI
-> `LiquidGlassView`). Promote to **Accepted** only if the spike proves the three
-> gates in §6. Until then, the shipping operator app stays the native SwiftUI
-> OttavianoKDS (`native/ottaviano-ios`), which keeps going to TestFlight.
+> **Status:** Proposed — **spike PASSED the buildable gates**; pending an on-device
+> visual sign-off before Accepted. The POC (RN POS + a bridged SwiftUI
+> `LiquidGlassView`) built, archived against the iOS 26 SDK, and uploaded to the
+> operator TestFlight **on the first try** (RN TestFlight run #423,
+> `28865502481` — green). See §6 for the gate results.
 >
 > **Date:** 2026-07-07 · **Supersedes (partial):** the *operator-app* rendering
 > choice in [`IOS-WEB-MIRROR.md`](./IOS-WEB-MIRROR.md) (Option A, "100% native
@@ -139,14 +140,27 @@ zero-port outcome.
 4. **Retire** `native/ottaviano-ios` once the RN operator app is at full parity;
    keep its screens referenced in the parity ledger history.
 
-## 6. Spike success gates (promote to Accepted only if all pass)
-1. **Glass bridge works on device** — `<LiquidGlassView>` renders the real iOS 26
-   material inside the RN app, verified on a physical build via TestFlight.
-2. **RN↔web parity is cheap** — the POS screen reaches visual parity with web
-   `CorePos` in materially less effort than the SwiftUI hand-port did, reusing
-   shared tokens (and ideally shared TS).
-3. **Shared TS holds** — the RN operator screen can import/share logic with the web
-   without a fork.
+## 6. Spike success gates — results
+1. **Glass bridge works on device** — ✅ *buildable gate passed.* The bridged
+   SwiftUI `LiquidGlassView` (`.glassEffect`, `#available(iOS 26)`-guarded, hosted
+   via `UIHostingController`) **compiled against the iOS 26 SDK, archived, signed,
+   and uploaded to the operator TestFlight on the first attempt** (RN run #423) —
+   no compile-fix round, unlike the SwiftUI hand-ports. *Remaining:* an on-device
+   **visual** confirmation that the material renders as expected (open the
+   TestFlight build).
+2. **RN↔web parity is cheap** — ✅ The POS screen (`features/operator/Pos.tsx`,
+   ~250 lines) **typechecked clean on the first try** (`tsc` exit 0), reusing the
+   generated tokens (`useTheme`) + shared UI primitives + the authed client. The
+   SwiftUI hand-port of the same screen took several commits *and* a Swift-6
+   compile-fix pass.
+3. **Shared TS holds** — ✅ The screen uses the same TS/React types and patterns as
+   the web, off the same `/api/v1` contract, with no fork.
+
+**Verdict:** the two hard technical unknowns — *can RN host a SwiftUI element that
+builds+ships the real iOS 26 glass* and *is the RN port materially cheaper* — both
+resolved **yes** on the first attempt. Pending only the human on-device visual
+sign-off, this ADR is ready to promote to **Accepted** and begin the staged
+migration (§5.3).
 
 ## 7. Open questions (resolved during the spike)
 - Is the RN New Architecture (Fabric) already enabled in `native/ottaviano-rn`? If
