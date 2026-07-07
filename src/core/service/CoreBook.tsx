@@ -233,9 +233,12 @@ export function CoreBook({
       const bucket = groups.get(z) ?? (groups.set(z, []), groups.get(z)!);
       bucket.push(t);
     }
-    return [...groups.entries()].sort(([a], [b]) =>
-      a === "Unzoned" ? 1 : b === "Unzoned" ? -1 : a.localeCompare(b),
-    );
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === b) return 0; // equal keys → 0 (honours the comparator contract)
+      if (a === "Unzoned") return 1;
+      if (b === "Unzoned") return -1;
+      return a.localeCompare(b);
+    });
   }, [sortedTables]);
   const tableLabel = (id?: string) => {
     const n = tables.find((t) => t.id === id)?.number;
