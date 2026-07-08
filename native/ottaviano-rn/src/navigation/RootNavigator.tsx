@@ -1,10 +1,10 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "./types";
+import { createAppStackNavigator } from "./createAppStack";
 import { LaunchScreen } from "@/screens/LaunchScreen";
 import { CustomerNavigator } from "./CustomerNavigator";
 import { OperatorNavigator } from "./OperatorNavigator";
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createAppStackNavigator<RootStackParamList>();
 
 /** Top-level stack: the launcher, then either app. Each sub-navigator owns its
  *  own skin + header chrome, so the root keeps headers off. */

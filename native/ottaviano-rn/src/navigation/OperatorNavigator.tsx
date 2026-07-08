@@ -1,11 +1,11 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { OperatorStackParamList } from "./types";
+import { createAppStackNavigator } from "./createAppStack";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { useOperator } from "@/auth/OperatorSession";
 import { OperatorLoginScreen } from "@/screens/operator/OperatorLoginScreen";
 import { OperatorSurfaceScreen } from "@/screens/operator/OperatorSurfaceScreen";
 
-const Stack = createNativeStackNavigator<OperatorStackParamList>();
+const Stack = createAppStackNavigator<OperatorStackParamList>();
 
 /** Operator console stack (OttavianoKDS) — always-dark KDS skin. The gate is the
  *  session status: signed-out shows Login, signed-in lands on the Dashboard
