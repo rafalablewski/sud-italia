@@ -27,12 +27,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   var reactNativeFactory: RCTReactNativeFactory?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    // Breadcrumbs — NSLog prints even in Release (RN's own logs don't), so the
+    // unified log (`log show --predicate 'process == "OttavianoKDS"'`) shows
+    // exactly how far launch got if the window still doesn't appear.
+    NSLog("[Ottaviano] applicationDidFinishLaunching: start")
+
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    NSLog("[Ottaviano] factory created")
 
     let rect = NSRect(x: 0, y: 0, width: 1360, height: 900)
     let win = NSWindow(
@@ -44,6 +50,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     win.title = "OttavianoKDS"
     win.center()
     self.window = win
+    NSLog("[Ottaviano] window created, calling startReactNative")
 
     // The factory builds the RN root view for moduleName "Ottaviano" and installs
     // it as the window's content (same call the iOS target makes, AppKit variant).
@@ -52,11 +59,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       in: win,
       launchOptions: nil
     )
+    NSLog("[Ottaviano] startReactNative returned, ordering window front")
 
     // Make sure we come to the foreground as a regular app and the window shows.
     NSApp.setActivationPolicy(.regular)
     win.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
+    NSLog("[Ottaviano] window ordered front (isVisible=\(win.isVisible))")
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

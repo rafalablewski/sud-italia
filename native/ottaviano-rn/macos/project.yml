@@ -32,8 +32,9 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     CLANG_ENABLE_MODULES: YES
     LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
-    # Classic bridge path first; enable once Fabric-macOS is confirmed.
-    RCT_NEW_ARCH_ENABLED: 0
+    # New Architecture ON — match the iOS app (which runs New Arch). The classic
+    # bridge path never boots the app on rnmacos 0.79 (installs but no window).
+    RCT_NEW_ARCH_ENABLED: 1
 
 targets:
   Ottaviano-macOS:
