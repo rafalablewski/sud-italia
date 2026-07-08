@@ -1,9 +1,10 @@
-import { Dimensions, StatusBar } from "react-native";
+import { Dimensions, Platform, StatusBar } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { CustomerSessionProvider } from "@/auth/CustomerSession";
 import { OperatorSessionProvider } from "@/auth/OperatorSession";
 import { RootNavigator } from "@/navigation/RootNavigator";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Seed metrics for the SafeAreaProvider.
@@ -29,18 +30,25 @@ const INITIAL_METRICS = initialWindowMetrics ?? {
  * either. Session providers wrap the whole tree so a cold start resumes a
  * Keychain-stored session. Each navigator applies its own skin (ThemeProvider) —
  * there is intentionally no global theme here.
+ *
+ * The ErrorBoundary wraps everything below the SafeAreaProvider: a render error
+ * in any provider/screen would otherwise silently terminate the macOS app
+ * ("won't open"); the boundary paints it on screen instead. StatusBar is
+ * iOS/Android only — it doesn't exist on macOS (no status bar), so guard it.
  */
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={INITIAL_METRICS}>
-      <CustomerSessionProvider>
-        <OperatorSessionProvider>
-          <StatusBar barStyle="dark-content" />
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
-        </OperatorSessionProvider>
-      </CustomerSessionProvider>
+      <ErrorBoundary>
+        <CustomerSessionProvider>
+          <OperatorSessionProvider>
+            {Platform.OS !== "macos" && <StatusBar barStyle="dark-content" />}
+            <NavigationContainer>
+              <RootNavigator />
+            </NavigationContainer>
+          </OperatorSessionProvider>
+        </CustomerSessionProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

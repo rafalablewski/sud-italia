@@ -133,6 +133,21 @@ insets — correct for desktop — and the current window bounds as the frame.
 Zero-cost on iOS/Android (they already have real metrics); the guard is what
 un-blanks the Mac window.
 
+Un-blanking then exposed a **launch crash** ("the app won't open"): with the
+tree finally mounting, two things that had never rendered before now did. Fixes
+in `App.tsx`:
+
+- **`StatusBar` is iOS/Android only** — macOS has no status bar, and rendering
+  the (possibly undefined) `StatusBar` component is a fatal "Element type is
+  invalid". Guarded with `Platform.OS !== "macos"`.
+- **Root `ErrorBoundary`** (`src/components/ErrorBoundary.tsx`) wraps everything
+  below `SafeAreaProvider`. A render error in a Release/TestFlight build has no
+  redbox — on macOS it just terminates the process silently — so the boundary
+  paints the error + component stack on screen instead, making a crash visible
+  and screenshot-able. It's built from bare `View`/`Text`/`ScrollView` so the
+  fallback can't itself fail. (Note: it catches **JS** render errors; a native
+  crash bypasses JS and needs the macOS crash report / Console.app.)
+
 ## Open risks
 
 - New-Architecture interop for the legacy `RCTViewManager` glass bridge may not
