@@ -1,11 +1,15 @@
-name: Mac app — TestFlight (bootstrap)
+name: Mac app — TestFlight
 
-# ADR-002 phase 2 — bring up the react-native-macos target IN CI (our "Mac in the
-# loop"), since the macos/ Xcode project must be scaffolded on macOS. This is a
-# BOOTSTRAP harness: it scaffolds macos/ at build time, installs pods, and tries
-# to build the macOS app. Expect it to fail on the first runs and iterate on the
-# real errors — exactly how the iOS pipeline was brought up. Once green, we commit
-# native/ottaviano-rn/macos/ and switch to building the committed project.
+# ADR-002 phase 2 (DONE — builds green) — react-native-macos target built IN CI
+# (our "Mac in the loop"), since the macOS project must be generated +
+# pod-installed on macOS. The macos/ target is HAND-AUTHORED (react-native-macos-init
+# is dead on the 0.79 line — it dropped the local-cli scaffold templates it relied
+# on). Mirrors the iOS pipeline exactly: macos/project.yml → XcodeGen →
+# OttavianoMac.xcodeproj → pod install → OttavianoMac.xcworkspace → xcodebuild.
+#
+# Currently compiles with CODE_SIGNING_ALLOWED=NO (a clean build, not an upload).
+# PHASE 3 (next): add manual signing + archive + notarized TestFlight upload —
+# see docs/native/MACOS-SETUP.md.
 #
 # Kept OUT of the iOS pipeline: react-native-macos is installed in-job (never in
 # the shared package.json), so it can't break ios-testflight.yml.
@@ -25,7 +29,7 @@ concurrency:
 
 jobs:
   mac:
-    name: Scaffold + build react-native-macos
+    name: Archive + upload macOS to TestFlight
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
@@ -55,36 +59,61 @@ jobs:
 
       - name: Add react-native-macos (in-job, not committed)
         # Pinned to the RN 0.79 line. Kept out of the shared package.json so the
-        # iOS pipeline's npm install is never affected.
-        run: npm install --no-save react-native-macos@^0.79.0
+        # iOS pipeline's npm install is never affected. --legacy-peer-deps because
+        # react-native-macos 0.79.x pins a slightly different RN patch (0.79.6 vs
+        # our 0.79.5) — the core diff is negligible for the macOS bring-up.
+        run: npm install --no-save --legacy-peer-deps react-native-macos@^0.79.0
 
-      - name: Scaffold the macOS project (if absent)
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate macOS Xcode project
+        # react-native-macos-init is dead for 0.79 (the 0.79 line dropped the
+        # local-cli scaffold templates it depends on — templates/macos/Podfile
+        # ENOENT). So we hand-author the target the same way iOS does: a
+        # reviewable macos/project.yml → XcodeGen → OttavianoMac.xcodeproj.
+        working-directory: native/ottaviano-rn/macos
         run: |
-          if [ ! -d macos ]; then
-            npx --yes react-native-macos-init --overwrite --version "^0.79.0" || {
-              echo "::warning::react-native-macos-init failed — see log; the bare RN + XcodeGen layout may need manual reconciliation (see docs/native/MACOS-SETUP.md)."
-              exit 1
-            }
-          fi
-          ls -la macos
+          xcodegen generate
+          ls -la
+
+      - name: Install CocoaPods (bundler)
+        # Mirror the iOS job exactly: install the PINNED CocoaPods from the shared
+        # Gemfile under the runner's default Ruby. Do NOT fall back to the system
+        # `pod` — Homebrew's Ruby 3.3.11 has the `find_proxy` regression that throws
+        # `URI::BadURIError - relative URI: …/SocketRocket.podspec` when CocoaPods
+        # fetches a local file-path podspec (that first Mac run's failure).
+        run: bundle install
 
       - name: pod install (macOS)
         working-directory: native/ottaviano-rn/macos
-        run: |
-          bundle install || gem install cocoapods
-          (bundle exec pod install || pod install)
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/native/ottaviano-rn/Gemfile
+        run: bundle exec pod install
 
-      - name: Build macOS app
-        working-directory: native/ottaviano-rn/macos
+      - name: Write App Store Connect API key
+        # altool / xcodebuild read AuthKey_<id>.p8 from ~/.appstoreconnect/private_keys.
         run: |
-          WS="$(ls -d *.xcworkspace | head -n1)"
-          echo "Workspace: $WS"
-          # First goal is a clean compile; signing / archive / notarize / upload
-          # are layered on once this builds (see MACOS-SETUP.md).
-          xcodebuild build \
-            -workspace "$WS" \
-            -scheme "Ottaviano-macOS" \
-            -configuration Release \
-            -destination 'generic/platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Archive + export + upload to TestFlight (macOS)
+        # Phase 3 — sign, archive the macOS workspace, export a .pkg (App Store
+        # installer) and upload via altool. Version = the marketing_version input
+        # if given, else macos/project.yml's committed MARKETING_VERSION. Build
+        # number = base 60 + run_number, monotonic so every upload climbs.
+        #
+        # Automatic signing + the ASC API key provisions the Mac App/Installer
+        # Distribution certs on the fly. A clean runner mints a new cert each run
+        # (same cap as iOS) — if this fails on "maximum number of certificates",
+        # revoke one in the Apple Developer portal and re-dispatch.
+        run: |
+          chmod +x Scripts/testflight-macos.sh
+          BUILD_NUMBER=$(( 60 + ${{ github.run_number }} ))
+          MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
+          if [ -z "$MARKETING_VERSION" ]; then
+            MARKETING_VERSION="$(sed -n 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*"\(.*\)".*/\1/p' macos/project.yml | head -n 1)"
+          fi
+          echo "==> Shipping OttavianoKDS (macOS) — version ${MARKETING_VERSION:-<project.yml>} build ${BUILD_NUMBER}"
+          ./Scripts/testflight-macos.sh "$BUILD_NUMBER" "$MARKETING_VERSION"

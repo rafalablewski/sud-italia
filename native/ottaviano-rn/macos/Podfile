@@ -1,0 +1,50 @@
+# Podfile — react-native-macos 0.79 (ADR-002). Run AFTER `xcodegen generate`
+# (project.yml -> OttavianoMac.xcodeproj); pod install then produces
+# OttavianoMac.xcworkspace, which is what xcodebuild must build.
+#
+# Resolves react_native_pods.rb from react-native-macos in node_modules (the Mac
+# fork; installed in-job by CI, kept out of the shared package.json).
+
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native-macos/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+prepare_react_native_project!
+
+# Point React Native at the react-native-macos FORK, not core react-native.
+# `use_native_modules!` returns `config[:reactNativePath]` = node_modules/
+# react-native (core), because that's the "react-native" dependency the CLI sees.
+# Feeding that to the Mac fork's `use_react_native!` made it look for
+# `<core-rn>/third-party-podspecs/SocketRocket.podspec` — which core RN 0.79
+# doesn't ship. CocoaPods then treats the missing file as a remote URI, and
+# `OpenURI.open_uri` on the scheme-less path throws
+# `URI::BadURIError - relative URI: …/SocketRocket.podspec`, killing pod install.
+# The Mac fork vendors its OWN third-party-podspecs, so pointing at it makes the
+# podspec resolve as a local file (CocoaPods reads it directly — no open-uri).
+#
+# NOTE: pass a RELATIVE path (like the iOS Podfile's `../node_modules/react-native`).
+# `use_react_native!` joins :path onto "." — an absolute path becomes `./Users/…`
+# and the package.json lookup fails ("Couldn't find the React Native package.json").
+rn_macos_path = '../node_modules/react-native-macos'
+
+target 'Ottaviano-macOS' do
+  platform :macos, '11.0'
+  use_native_modules!
+
+  use_react_native!(
+    :path => rn_macos_path,
+    :hermes_enabled => true,
+    :fabric_enabled => false,
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      rn_macos_path,
+      :mac_catalyst_enabled => false,
+    )
+  end
+end
