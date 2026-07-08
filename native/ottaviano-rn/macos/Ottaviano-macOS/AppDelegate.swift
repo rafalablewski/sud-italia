@@ -20,7 +20,10 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 
-@NSApplicationMain
+// NOTE: no @NSApplicationMain here — see main.swift. On macOS @NSApplicationMain
+// wires the app delegate through MainMenu.xib, and this app has no nib, so the
+// delegate was never set and applicationDidFinishLaunching never fired (the app
+// launched with no window). main.swift sets the delegate explicitly instead.
 class AppDelegate: NSObject, NSApplicationDelegate {
   var window: NSWindow?
   var reactNativeDelegate: ReactNativeDelegate?
