@@ -47,7 +47,11 @@ targets:
         buildPhase: none
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: pl.ottaviano.kds.mac
+        # SAME bundle id as the iOS KDS app — OttavianoKDS is ONE App Store
+        # Connect record with both an iOS and a macOS platform (unified app), so
+        # the Mac .pkg must carry pl.ottaviano.kds to attach to that record's
+        # macOS platform. (Not a separate pl.ottaviano.kds.mac app.)
+        PRODUCT_BUNDLE_IDENTIFIER: pl.ottaviano.kds
         PRODUCT_NAME: OttavianoKDS
         INFOPLIST_FILE: Ottaviano-macOS/Info.plist
         # App Store macOS builds must be sandboxed (see the entitlements file).

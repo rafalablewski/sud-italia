@@ -29,8 +29,9 @@ turns into `OttavianoMac.xcodeproj`, plus a `macos/Podfile` and a bare
 Committed source of truth:
 
 - `macos/project.yml` — XcodeGen spec (target `Ottaviano-macOS`, bundle id
-  `pl.ottaviano.kds.mac`, `RCT_NEW_ARCH_ENABLED=0`, RN path →
-  `node_modules/react-native-macos`).
+  `pl.ottaviano.kds` — the SAME id as the iOS KDS app, because OttavianoKDS is
+  one App Store Connect record with both iOS + macOS platforms (unified app);
+  `RCT_NEW_ARCH_ENABLED=0`, RN path → `node_modules/react-native-macos`).
 - `macos/Podfile` — resolves `react_native_pods.rb` from the Mac fork and points
   `use_react_native!` at the fork via the **relative** path
   `../node_modules/react-native-macos` (an absolute path makes the CLI look for
