@@ -45,8 +45,12 @@ targets:
         buildPhase: none
       - path: Ottaviano-macOS/Ottaviano-macOS.entitlements
         buildPhase: none
+      # App icon asset catalog — App Store validation requires an ICNS with a
+      # 512pt@2x (1024×1024) image. Generated from the iOS 1024 icon.
+      - path: Ottaviano-macOS/Assets.xcassets
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # SAME bundle id as the iOS KDS app — OttavianoKDS is ONE App Store
         # Connect record with both an iOS and a macOS platform (unified app), so
         # the Mac .pkg must carry pl.ottaviano.kds to attach to that record's
