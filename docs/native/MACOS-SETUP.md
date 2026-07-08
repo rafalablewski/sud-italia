@@ -106,6 +106,25 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
    failures), so a green run means the build genuinely uploaded.
 4. roll the desktop two-pane across the other operator surfaces.
 
+## Runtime: blank window fix (first launch)
+
+The signed build launched to a **blank window** — the title bar read
+`OttavianoKDS` but the content was the empty dark `RCTRootView` background, not
+the Launcher's warm `#f8efde` surface. Nothing in the React tree rendered.
+
+Cause: `SafeAreaProvider` (in `App.tsx`) renders `null` for its children until
+the **native** side reports insets via `onInsetsChange`. On react-native-macos
+that callback never fires — desktop has no notch/safe-area, and the module
+autolinks against core RN rather than the Mac fork — so the provider held the
+entire tree at `null` and the window stayed blank indefinitely.
+
+Fix: seed `SafeAreaProvider` with `initialMetrics` so it renders on the first
+frame instead of waiting for a native callback that never comes. We pass
+`initialWindowMetrics` (populated on iOS/Android) with a macOS fallback of zero
+insets — correct for desktop — and the current window bounds as the frame.
+Zero-cost on iOS/Android (they already have real metrics); the guard is what
+un-blanks the Mac window.
+
 ## Open risks
 
 - New-Architecture interop for the legacy `RCTViewManager` glass bridge may not
@@ -114,3 +133,7 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
   target keeps us on the classic bridge until this is validated.)
 - The Mac fork pins RN 0.79.6 vs our 0.79.5 — installed with `--legacy-peer-deps`;
   the core diff is negligible for bring-up but watch for API drift.
+- `RootNavigator` uses `@react-navigation/native-stack` (react-native-screens
+  native views). The pod compiles for macOS, but if a surface still renders blank
+  *after* the SafeAreaProvider fix above, suspect screens next — swap the offending
+  navigator to the JS `@react-navigation/stack`, or set `enableScreens(false)`.
