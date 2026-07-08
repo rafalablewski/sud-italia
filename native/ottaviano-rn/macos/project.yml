@@ -40,6 +40,10 @@ targets:
     type: application
     platform: macOS
     sources:
+      # main.swift owns the entry point (explicit NSApp.delegate wiring); it must
+      # be compiled alongside AppDelegate.swift. See main.swift for why we don't
+      # use @NSApplicationMain.
+      - path: Ottaviano-macOS/main.swift
       - path: Ottaviano-macOS/AppDelegate.swift
       - path: Ottaviano-macOS/Info.plist
         buildPhase: none
