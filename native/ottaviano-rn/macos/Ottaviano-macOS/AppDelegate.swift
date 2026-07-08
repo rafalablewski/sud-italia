@@ -19,7 +19,11 @@
 import Cocoa
 import React
 
-@NSApplicationMain
+// NOTE: no @NSApplicationMain here. A device-log trace proved that in this
+// hand-authored, nib-less XcodeGen project the annotated delegate was never
+// wired as NSApp.delegate (applicationDidFinishLaunching never fired → no
+// window → macOS auto-terminated the app). The entry point + delegate wiring
+// now live in main.swift, which sets NSApp.delegate explicitly.
 class AppDelegate: NSObject, NSApplicationDelegate, RCTBridgeDelegate {
   var window: NSWindow?
   var bridge: RCTBridge?

@@ -157,20 +157,30 @@ at all**, and macOS auto-terminated it after a few seconds
 never booted and `applicationDidFinishLaunching` never got a window on screen —
 and there was **no crash report**, so this is the native launch path, not JS.
 
-`AppDelegate.swift` is now **traced**: every step logs `NSLog("[OttavianoKDS]
-…")` — bundle URL + whether `main.jsbundle` is embedded, `RCTBridge` creation,
-`RCTRootView`, and final `window.isVisible` — and any JS fatal is routed to the
-device log via `RCTSetFatalHandler`. To read a launch:
+`AppDelegate.swift` was **traced** (every step logs `NSLog("[OttavianoKDS] …")`)
+to find where launch stopped. Read a launch with:
 
 ```sh
 open -a OttavianoKDS
-log show --last 2m --predicate 'process == "OttavianoKDS"' --info --debug --style compact | grep OttavianoKDS
+log show --last 2m --predicate 'process == "OttavianoKDS"' --info --debug --style compact | grep "\[OttavianoKDS\]"
 ```
 
-The trace names the exact line launch stops on. It also adds the fixes a bare,
-nib-less macOS app needs so a programmatically-created window actually shows:
-`NSApp.setActivationPolicy(.regular)` + `NSApp.activate(...)`, plus
-`applicationSupportsSecureRestorableState` to satisfy modern AppKit.
+**Root cause the trace found:** none of the `[OttavianoKDS]` lines ever printed,
+and the `applicationSupportsSecureRestorableState:` warning still fired even
+though the delegate implements it — i.e. **the AppDelegate was never wired as
+`NSApp.delegate`.** `@NSApplicationMain` does not reliably connect the delegate
+in this hand-authored, nib-less XcodeGen project (no MainMenu.xib / storyboard),
+so NSApplication started with no delegate, `applicationDidFinishLaunching` never
+ran, no window was created, and macOS auto-terminated the app.
+
+**Fix:** drop `@NSApplicationMain` and own the entry point explicitly in
+`macos/Ottaviano-macOS/main.swift` — `NSApplication.shared`, set `.delegate`
+by hand, `setActivationPolicy(.regular)`, `run()`. `main.swift` is added to the
+target `sources` in `project.yml`. The delegate is now guaranteed to be
+connected before the app runs, so `applicationDidFinishLaunching` (which builds
+the `RCTRootView` window) fires. The delegate also keeps
+`applicationSupportsSecureRestorableState` (silences the AppKit warning) and the
+NSLog trace (kept for the next bring-up issue).
 
 ## Open risks
 
