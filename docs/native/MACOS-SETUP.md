@@ -86,13 +86,24 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
    (`mac-testflight.yml`, run #11: `BUILD SUCCEEDED`, ~15 min uncached, all of
    Hermes / RCT-Folly / Fabric / the pods + the JS bundle compile for macOS).
    `CODE_SIGNING_ALLOWED=NO` — a clean compile, not yet an upload.
-3. ⏳ **wired** — `mac-testflight.yml` now signs, archives, exports a `.pkg`
-   (App Store installer) and uploads via `altool` (`Scripts/testflight-macos.sh`).
-   The app is App-Sandboxed (`Ottaviano-macOS.entitlements`, required for App
-   Store). Automatic signing + the ASC API key provisions the Mac App/Installer
-   Distribution certs on the fly — a clean runner mints a new cert each run (same
-   cap as iOS), so a failed run on "maximum number of certificates" just needs a
-   revoke + re-dispatch. First upload pending a green signing run.
+3. ✅ **DONE — shipping to TestFlight.** `mac-testflight.yml` signs, archives,
+   exports a `.pkg` (App Store installer) and uploads via `altool`
+   (`Scripts/testflight-macos.sh`). Run #14: `UPLOAD SUCCEEDED with no errors`.
+   What it took:
+   - App Sandbox entitlements (`Ottaviano-macOS.entitlements`) — App Store
+     rejects un-sandboxed macOS uploads; `network.client` so the POS reaches the API.
+   - `LSApplicationCategoryType` (`public.app-category.business`) in Info.plist —
+     required by App Store validation.
+   - A full macOS `AppIcon` set (16→1024, RGB / no alpha) generated from the iOS
+     1024 icon, wired via `ASSETCATALOG_COMPILER_APPICON_NAME`.
+   - **Unified app record:** the Mac target ships under the SAME bundle id as iOS
+     (`pl.ottaviano.kds`) so it attaches to the existing OttavianoKDS App Store
+     Connect record's macOS platform (one app, iOS + macOS).
+   Automatic signing + the ASC API key provisions the Mac App/Installer
+   Distribution certs on the fly (a clean runner mints a new cert each run — same
+   cap as iOS; on "maximum number of certificates", revoke one and re-dispatch).
+   The `altool` step fails the job on any error (altool exits 0 even on validation
+   failures), so a green run means the build genuinely uploaded.
 4. roll the desktop two-pane across the other operator surfaces.
 
 ## Open risks
