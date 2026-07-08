@@ -10,6 +10,11 @@
 //  DEBUG serves from Metro (`index`); Release embeds main.jsbundle via the
 //  "Bundle React Native code and images" build phase (react-native-xcode.sh).
 //
+//  Every step here is traced with NSLog("[OttavianoKDS] …") so a Release/
+//  TestFlight launch is diagnosable from Console.app / `log show` — a device
+//  log dump showed the window was never created and the RN bridge never booted,
+//  with no crash. The trace pins down exactly where launch stops.
+//
 
 import Cocoa
 import React
@@ -20,9 +25,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, RCTBridgeDelegate {
   var bridge: RCTBridge?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let bridge = RCTBridge(delegate: self, launchOptions: nil)
+    NSLog("[OttavianoKDS] applicationDidFinishLaunching START")
+
+    // A bare, nib-less macOS app must declare itself a regular foreground app
+    // and activate, or AppKit may never show a programmatically-created window
+    // (and then auto-terminates the app for having none).
+    NSApp.setActivationPolicy(.regular)
+
+    // Report the JS bundle situation up front: a Release build that can't find
+    // main.jsbundle would boot a dead bridge.
+    let bundleURL = Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    NSLog("[OttavianoKDS] main.jsbundle = %@", bundleURL?.path ?? "NOT FOUND IN BUNDLE")
+
+    // Route any JS fatal to the device log instead of dying silently.
+    RCTSetFatalHandler { (error: Error?) in
+      NSLog("[OttavianoKDS] RCT FATAL: %@", (error as NSError?)?.description ?? "unknown")
+    }
+
+    NSLog("[OttavianoKDS] creating RCTBridge…")
+    guard let bridge = RCTBridge(delegate: self, launchOptions: nil) else {
+      NSLog("[OttavianoKDS] RCTBridge is NIL — bundle failed to load; aborting UI")
+      return
+    }
     self.bridge = bridge
-    let rootView = RCTRootView(bridge: bridge!, moduleName: "Ottaviano", initialProperties: nil)
+    NSLog("[OttavianoKDS] RCTBridge created OK")
+
+    NSLog("[OttavianoKDS] creating RCTRootView…")
+    let rootView = RCTRootView(bridge: bridge, moduleName: "Ottaviano", initialProperties: nil)
+    NSLog("[OttavianoKDS] RCTRootView created")
 
     let rect = NSRect(x: 0, y: 0, width: 1360, height: 900)
     let win = NSWindow(
@@ -37,9 +67,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, RCTBridgeDelegate {
     win.center()
     win.makeKeyAndOrderFront(nil)
     self.window = win
+
+    NSApp.activate(ignoringOtherApps: true)
+    NSLog("[OttavianoKDS] window shown, isVisible=%@ frame=%@",
+          win.isVisible ? "YES" : "NO", NSStringFromRect(win.frame))
+    NSLog("[OttavianoKDS] applicationDidFinishLaunching DONE")
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    true
+  }
+
+  // Opt in to secure coding for state restoration (silences the AppKit warning
+  // and is required on modern macOS).
+  func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     true
   }
 
