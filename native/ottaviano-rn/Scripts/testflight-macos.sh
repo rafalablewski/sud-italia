@@ -110,14 +110,42 @@ xcodebuild archive \
   COMPILER_INDEX_STORE_ENABLE=NO
 
 echo "==> Exporting .pkg (macOS App Store installer)"
-xcodebuild -exportArchive \
-  -archivePath "$ARCHIVE_PATH" \
-  -exportPath "$EXPORT_DIR" \
-  -exportOptionsPlist "$EXPORT_OPTIONS" \
-  -allowProvisioningUpdates \
-  -authenticationKeyPath "$KEY_PATH" \
-  -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+# exportArchive talks to the App Store Connect API to resolve the distribution
+# profile. That call is flaky: it intermittently fails with
+#   error: exportArchive The request expected results but none were found
+# (an empty ASC-API response), even when the archive is perfect and the very
+# same config uploaded fine on a prior run. It's transient — a retry clears it —
+# so don't let one bad API round-trip waste the whole ~15-min archive. Retry a
+# few times with backoff; exportArchive refuses a pre-existing exportPath, so
+# clear it before each attempt.
+export_archive() {
+  rm -rf "$EXPORT_DIR"
+  xcodebuild -exportArchive \
+    -archivePath "$ARCHIVE_PATH" \
+    -exportPath "$EXPORT_DIR" \
+    -exportOptionsPlist "$EXPORT_OPTIONS" \
+    -allowProvisioningUpdates \
+    -authenticationKeyPath "$KEY_PATH" \
+    -authenticationKeyID "$ASC_KEY_ID" \
+    -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+}
+
+EXPORT_OK=0
+for attempt in 1 2 3; do
+  echo "==> exportArchive attempt ${attempt}/3"
+  if export_archive; then
+    EXPORT_OK=1
+    break
+  fi
+  if [ "$attempt" -lt 3 ]; then
+    echo "WARN: exportArchive attempt ${attempt} failed (transient ASC-API error). Retrying in $(( attempt * 15 ))s..." >&2
+    sleep $(( attempt * 15 ))
+  fi
+done
+if [ "$EXPORT_OK" -ne 1 ]; then
+  echo "ERROR: exportArchive failed after 3 attempts." >&2
+  exit 1
+fi
 
 PKG_PATH="$(/usr/bin/find "$EXPORT_DIR" -name '*.pkg' -maxdepth 1 | head -n 1)"
 if [ -z "$PKG_PATH" ]; then

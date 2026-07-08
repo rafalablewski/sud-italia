@@ -104,6 +104,14 @@ open OttavianoMac.xcworkspace           # build the Ottaviano-macOS scheme
    cap as iOS; on "maximum number of certificates", revoke one and re-dispatch).
    The `altool` step fails the job on any error (altool exits 0 even on validation
    failures), so a green run means the build genuinely uploaded.
+   - **Export retry:** `xcodebuild -exportArchive` calls the App Store Connect
+     API to resolve the distribution profile, and that call intermittently fails
+     with `error: exportArchive The request expected results but none were found`
+     (an empty ASC-API response) even when the archive is perfect — a prior run
+     uploaded the identical config fine. It's transient, so
+     `Scripts/testflight-macos.sh` retries the export up to 3× with backoff
+     (clearing `exportPath` each attempt) rather than throwing away the ~15-min
+     archive over one bad API round-trip.
 4. roll the desktop two-pane across the other operator surfaces.
 
 ## Runtime: blank window fix (first launch)
