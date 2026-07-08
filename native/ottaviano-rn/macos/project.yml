@@ -32,9 +32,14 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     CLANG_ENABLE_MODULES: YES
     LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
-    # New Architecture ON — match the iOS app (which runs New Arch). The classic
-    # bridge path never boots the app on rnmacos 0.79 (installs but no window).
-    RCT_NEW_ARCH_ENABLED: 1
+    # New Architecture OFF — use the classic (Paper) renderer on macOS. The app
+    # boots fine on Paper via RCTReactNativeFactory once the delegate is wired
+    # (main.swift). Fabric-macOS (New Arch) crashes on launch building a
+    # component-config NSDictionary with a nil value (ActivityIndicator /
+    # concreteComponentDescriptorConstructor → NSInvalidArgumentException), so
+    # stay on the mature Paper renderer until Fabric-macOS is validated. (New Arch
+    # was never the blocker — the delegate never firing was.)
+    RCT_NEW_ARCH_ENABLED: 0
 
 targets:
   Ottaviano-macOS:

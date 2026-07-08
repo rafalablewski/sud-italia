@@ -5,12 +5,12 @@
 # Resolves react_native_pods.rb from react-native-macos in node_modules (the Mac
 # fork; installed in-job by CI, kept out of the shared package.json).
 
-# New Architecture ON — match the iOS app (which runs New Arch / bridgeless).
-# The classic bridge path never boots the app on rnmacos 0.79, and the modern
-# RCTReactNativeFactory the AppDelegate uses needs the New-Arch runtime to
-# actually attach the root view to the window. react_native_pods.rb reads this
-# env at install time to build the Fabric/TurboModule pods.
-ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+# New Architecture OFF — classic (Paper) renderer on macOS. RCTReactNativeFactory
+# boots fine on Paper once the app delegate is wired (main.swift). Fabric-macOS
+# crashes at launch building a component-config NSDictionary with a nil value, so
+# keep Paper until Fabric-macOS is validated. react_native_pods.rb reads this env
+# at install time; '0' builds the classic pod set (also ~2× faster than Fabric).
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
 
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -43,7 +43,7 @@ target 'Ottaviano-macOS' do
   use_react_native!(
     :path => rn_macos_path,
     :hermes_enabled => true,
-    :fabric_enabled => true,
+    :fabric_enabled => false,
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
