@@ -36,8 +36,13 @@ Committed source of truth:
   `use_react_native!` at the fork via the **relative** path
   `../node_modules/react-native-macos` (an absolute path makes the CLI look for
   `./Users/…/package.json`; core RN's path is missing SocketRocket's podspec).
-- `macos/Ottaviano-macOS/AppDelegate.swift` — classic `RCTBridge` + `RCTRootView`
-  (moduleName `Ottaviano`) in a 1360×900 `NSWindow`.
+- `macos/Ottaviano-macOS/AppDelegate.swift` — boots RN through
+  `RCTReactNativeFactory` + `RCTDefaultReactNativeFactoryDelegate` +
+  `RCTAppDependencyProvider` (moduleName `Ottaviano`) in a 1360×900 `NSWindow`,
+  mirroring the iOS AppDelegate. **Must** use the factory, not a hand-rolled
+  `RCTBridge`/`RCTRootView` — on RN 0.79 the old classic path never starts the
+  runtime, so the app launches with no window and the OS reaps it (the "installs
+  but won't open" bug).
 - `macos/Ottaviano-macOS/Info.plist`.
 - `react-native.config.js` (app root) — registers the out-of-tree **macos**
   platform for the RN CLI (else Metro rejects `--platform macos` at the "Bundle
