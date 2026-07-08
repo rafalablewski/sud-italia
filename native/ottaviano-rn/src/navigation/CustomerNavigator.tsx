@@ -1,12 +1,12 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { CustomerStackParamList } from "./types";
+import { createAppStackNavigator } from "./createAppStack";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { PALETTES } from "@/theme/tokens";
 import { CustomerTabs } from "./CustomerTabs";
 import { CartScreen } from "@/screens/customer/CartScreen";
 import { OrderTrackerScreen } from "@/screens/customer/OrderTrackerScreen";
 
-const Stack = createNativeStackNavigator<CustomerStackParamList>();
+const Stack = createAppStackNavigator<CustomerStackParamList>();
 
 /** Customer app stack — the tabs plus the pushed Cart (checkout) and live
  *  OrderTracker screens. Warm parchment skin. */

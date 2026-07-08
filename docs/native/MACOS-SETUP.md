@@ -182,6 +182,34 @@ the `RCTRootView` window) fires. The delegate also keeps
 `applicationSupportsSecureRestorableState` (silences the AppKit warning) and the
 NSLog trace (kept for the next bring-up issue).
 
+## Runtime: blank content — react-native-screens has no classic-arch macOS views
+
+With the window finally showing (above), its content was blank. The launch log
+had the bridge + JS running but three native-view errors:
+
+```
+[com.facebook.react.log:native] Running application Ottaviano
+[com.facebook.react.log:native] No component found for view with name "RNSScreenStack"
+[com.facebook.react.log:native] No component found for view with name "RNSScreenContentWrapper"
+[com.facebook.react.log:native] No component found for view with name "RNSScreenStackHeaderConfig"
+```
+
+`@react-navigation/native-stack` is backed entirely by react-native-screens'
+native views (`RNSScreen*`). Those are **not registered on macOS with the
+classic architecture** (`RCT_NEW_ARCH_ENABLED=0`) — screens' macOS support is
+Fabric-oriented — so every native-stack rendered nothing → blank window.
+
+**Fix (no new native modules):** `src/navigation/createAppStack.tsx` provides a
+pure-JS stack built on React Navigation's core (`StackRouter` +
+`useNavigationBuilder`) that renders the focused screen in a plain `<View>` with
+a minimal header. `createAppStackNavigator` is a drop-in for
+`createNativeStackNavigator`: native-stack on iOS/Android, the JS stack on macOS.
+The three navigators (Root, Customer, Operator) use it. `index.js` also calls
+`enableScreens(false)` on macOS so `@react-navigation/bottom-tabs` (customer
+tabs) falls back to plain views. Adding gesture-handler / a JS `@react-navigation/
+stack` was rejected — each is another native module that may also lack
+classic-arch macOS views; the core-only navigator can't hit that wall.
+
 ## Open risks
 
 - New-Architecture interop for the legacy `RCTViewManager` glass bridge may not
