@@ -432,20 +432,6 @@ export default async function CapabilitiesPage() {
           summary:
             "The operator home-screen app for tablets/iPads: full Admin back-office + all of Core (POS, KDS, Orders, Guest, Service). Its home is /operator — an auth-gated launcher with big touch tiles into every surface and an Install button. The admin, core, kitchen, operator (+ admin login/welcome) layouts all advertise /ottaviano-kds.webmanifest + the apple-web-app title \"OttavianoKDS\" + a dark theme, landscape-first, with its own icon set (public/icons/kds/*). Manifest shortcuts jump to KDS, POS, Orders and Admin. Installing from any operator surface yields the KDS icon, not the customer one — both apps coexist on one home screen because each route subtree overrides the manifest + apple title (see src/lib/pwa.ts). One service worker (public/sw.js) serves both shells.",
         },
-        {
-          name: "OttavianoKDS — native SwiftUI operator app",
-          status: "live",
-          href: "/api/v1/openapi.json",
-          summary:
-            "The operator console as a native SwiftUI app, living at native/ottaviano-ios — \"we build only SwiftUI\" (owner directive), so OttavianoKDS was rebuilt in SwiftUI (the previously-retired seed restored, scoped to the operator app only; the customer experience stays on React Native, see the entry below). iPad-first NavigationSplitView in the dark operator skin, gated on a staff sign-in. The sidebar is the full 54-surface operator IA — the Core surfaces (POS/KDS/Orders/Guest/Service) plus every /admin section — role-filtered exactly like the web admin rail (filterNavForRoleV3): owner sees all, a franchise manager their scope, a chef the line. The Kitchen Display reproduces src/core/kds/CoreKds.tsx (live SSE lanes Floor/Chef/Fleet, tone tiers + SLA meter + due countdown, bump via PATCH /api/v1/orders/:id, recall, 86 via PATCH /api/v1/admin/menu, all-day, station filter), and 52 of 54 surfaces are live off their /api/v1/admin/* endpoint (real rows, no mock data — Rule #1); the only 2 not mirrored are SOC 2 + Capabilities (content pages with no data source — honest scaffolds). CRITICALLY, the design colours are NOT hand-picked — the skin palette is GENERATED from the current web Core (BRACE) theme: scripts/gen-native-tokens.ts reads src/app/themes/core/tokens.css → Sources/DesignSystem/Tokens.generated.swift (per-line provenance), and scripts/gen-native-nav.ts emits Sources/AppInfra/OperatorNav.generated.swift from the web nav, so neither the colours nor the IA can drift (the gate npm run check:native now covers both the Swift and the RN artifacts). Built on macOS CI (.github/workflows/ios-swift.yml — XcodeGen → xcodebuild, scheme OttavianoKDS) and shipped via ios-swift-testflight.yml. Set OTTAVIANO_API_BASE_URL to the /api/v1 origin — the only host reference, so the Vercel exit needs no client release.",
-        },
-        {
-          name: "Native customer app — React Native",
-          status: "live",
-          href: "/api/v1/openapi.json",
-          summary:
-            "The customer experience in bare React Native, living at native/ottaviano-rn (one TypeScript codebase shared with the web, buildable via GitHub Actions or Xcode). Ottaviano (customer, warm parchment skin): the full order path — browse the live menu (GET /menu) → cart → server-priced POST /api/v1/orders (guest or phone-OTP customer) → live SSE order tracker (/customer/orders/:id/stream) → Rewards loyalty card + order history + account delete/export. The customer skin is GENERATED from the web homepage theme (scripts/gen-native-tokens.ts → src/theme/tokens.generated.ts) so it can't drift. (The operator app was migrated off this RN codebase to native SwiftUI — see 'OttavianoKDS — native SwiftUI operator app' above; the RN OttavianoKDS target remains in-tree but is superseded by the SwiftUI build.) Set EXPO_PUBLIC_API_BASE_URL (or app.json extra.apiBaseUrl) to the /api/v1 origin. Pending before an App Store submission: Stripe PaymentSheet wiring (endpoint live) and a green CI iOS build.",
-        },
       ],
     },
     {
