@@ -32,17 +32,21 @@ export async function apiRequest<T>(path: string, opts: RequestOptions = {}): Pr
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
   if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
 
+  const method = opts.method ?? "GET";
+  console.warn(`[api] → ${method} ${path}${opts.token ? " (auth)" : ""}`);
   let res: Response;
   try {
     res = await fetch(apiUrl(path), {
-      method: opts.method ?? "GET",
+      method,
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal,
     });
   } catch (e) {
+    console.warn(`[api] ✗ ${method} ${path} — network: ${e instanceof Error ? e.message : String(e)}`);
     throw new ApiError("network", e instanceof Error ? e.message : "Network request failed", 0);
   }
+  console.warn(`[api] ← ${res.status} ${method} ${path}`);
 
   // 204 / empty body — return undefined data.
   const text = await res.text();
