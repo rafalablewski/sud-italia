@@ -55,16 +55,31 @@ export function OperatorSessionProvider({ children }: { children: ReactNode }) {
     setStatus("signed-out");
   }, []);
 
-  // Rotate the refresh token; returns the new access token (or throws).
-  const doRefresh = useCallback(async (): Promise<string> => {
-    const rt = refresh.current ?? (await SecureStore.getItemAsync(REFRESH_KEY));
-    if (!rt) throw new ApiError("unauthorized", "No refresh token", 401);
-    const { data } = await apiRequest<TokenPair>("/auth/refresh", {
-      method: "POST",
-      body: { refreshToken: rt },
-    });
-    await persist(data);
-    return data.accessToken;
+  // Single-flight refresh. The refresh token is single-use (rotating), so if
+  // several requests refresh at once — e.g. POS fires 8 authed() calls on mount
+  // and the access token needs renewing — only ONE may spend the token; the rest
+  // would 401 or hang on a consumed token. Dedupe: concurrent callers share the
+  // same in-flight refresh promise and all get the one new access token.
+  const refreshInFlight = useRef<Promise<string> | null>(null);
+  const doRefresh = useCallback((): Promise<string> => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const p = (async () => {
+      const rt = refresh.current ?? (await SecureStore.getItemAsync(REFRESH_KEY));
+      if (!rt) throw new ApiError("unauthorized", "No refresh token", 401);
+      const { data } = await apiRequest<TokenPair>("/auth/refresh", {
+        method: "POST",
+        body: { refreshToken: rt },
+      });
+      await persist(data);
+      return data.accessToken;
+    })();
+    refreshInFlight.current = p;
+    // Clear the slot once settled so the next genuine 401 can refresh again.
+    p.then(
+      () => { if (refreshInFlight.current === p) refreshInFlight.current = null; },
+      () => { if (refreshInFlight.current === p) refreshInFlight.current = null; },
+    );
+    return p;
   }, [persist]);
 
   const authed = useCallback(
