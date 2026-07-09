@@ -158,6 +158,19 @@ const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.r
 const pctChip = (p: number | null | undefined): { txt: string; up: boolean | null } =>
   p == null ? { txt: "—", up: null } : { txt: `${p >= 0 ? "+" : ""}${p}%`, up: p >= 0 };
 
+// Module-level menu cache — outlives any single Pos mount. The full-screen
+// spinner shows only while `items` is null, which is true on every FRESH mount
+// until the menu fetch returns. If the screen ever remounts (a navigator
+// re-render, a session-context update — the class of bug #274 chased), seeding
+// the next mount from this cache re-shows the last menu INSTANTLY instead of
+// dropping back to the loading gate. The live fetch still runs and refreshes it,
+// so the data stays real (Rule #1). Belt-and-suspenders on top of the #274
+// remount fix, and it makes the stuck spinner impossible regardless of build.
+const MENU_CACHE = new Map<string, PosMenuItem[]>();
+// The slug the cache was last written for, so a remount can seed its initial
+// state before `slug` has re-resolved from the location store.
+let LAST_MENU_SLUG: string | null = null;
+
 let POS_INSTANCES = 0;
 export function Pos() {
   const instRef = useRef(0);
@@ -219,7 +232,11 @@ export function Pos() {
     }),
   ).current;
 
-  const [items, setItems] = useState<PosMenuItem[] | null>(null);
+  // Seed from the cache so a remount paints the last menu on its very first
+  // frame — no spinner flash. Empty on a true cold start (cache miss → null).
+  const [items, setItems] = useState<PosMenuItem[] | null>(
+    () => (LAST_MENU_SLUG ? MENU_CACHE.get(LAST_MENU_SLUG) ?? null : null),
+  );
   const [kpis, setKpis] = useState<PosKpis | null>(null);
   const [tabs, setTabs] = useState<PosTab[]>([]);
   const [pressure, setPressure] = useState<Pressure | null>(null);
@@ -270,7 +287,9 @@ export function Pos() {
     // once the till has loaded.
     console.warn(`[pos] load effect (slug=${slug}, hadSlug=${loadedSlugRef.current}, items=${items ? items.length : "null"})`);
     if (loadedSlugRef.current !== slug) {
-      setItems(null);
+      // On a location change show that site's cached menu (if any) rather than a
+      // spinner; only a true cache miss falls back to the loading gate.
+      setItems(MENU_CACHE.get(slug) ?? null);
       loadedSlugRef.current = slug;
     }
     setError(null);
@@ -278,7 +297,10 @@ export function Pos() {
       // Never hang on a null/non-array payload — render (empty) like DataSurface.
       .then(({ data }) => {
         console.warn(`[pos] setItems (${Array.isArray(data) ? `${data.length} items` : typeof data})`);
-        setItems(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        MENU_CACHE.set(slug, list);
+        LAST_MENU_SLUG = slug;
+        setItems(list);
       })
       .catch((e: unknown) => {
         console.warn(`[pos] menu catch: ${e instanceof Error ? e.message : String(e)}`);
