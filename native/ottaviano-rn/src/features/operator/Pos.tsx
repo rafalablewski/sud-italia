@@ -258,9 +258,17 @@ export function Pos() {
     const loc = encodeURIComponent(slug);
     setItems(null);
     setError(null);
+    console.warn(`[pos] menu GET /admin/menu?location=${loc} …`);
     authed<PosMenuItem[]>(`/admin/menu?location=${loc}`)
-      .then(({ data }) => setItems(data))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Couldn't load the menu"));
+      .then(({ data }) => {
+        console.warn(`[pos] menu OK: ${Array.isArray(data) ? `${data.length} items` : `non-array (${JSON.stringify(data)?.slice(0, 120)})`}`);
+        // Never hang on a null/non-array payload — render (empty) like DataSurface.
+        setItems(Array.isArray(data) ? data : []);
+      })
+      .catch((e: unknown) => {
+        console.warn(`[pos] menu FAILED: ${e instanceof Error ? e.message : String(e)}`);
+        setError(e instanceof Error ? e.message : "Couldn't load the menu");
+      });
     authed<PosKpis>(`/admin/pos/kpis?location=${loc}`).then(({ data }) => setKpis(data)).catch(() => setKpis(null));
     authed<Pressure>(`/admin/pos/pressure?location=${loc}`).then(({ data }) => setPressure(data)).catch(() => setPressure(null));
     authed<{ paceWindowMin?: number; plan?: SteerPlan }>(`/admin/pace/steering?location=${loc}`)
