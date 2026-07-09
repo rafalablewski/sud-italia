@@ -157,8 +157,12 @@ echo "==> Built PKG: $PKG_PATH"
 
 echo "==> Uploading to App Store Connect / TestFlight via altool (macOS)"
 # altool exits 0 even on some fatal errors (e.g. "Cannot determine the Apple ID
-# from Bundle ID …" when no App Store Connect app record exists yet), so capture
-# the output and fail on any ERROR line rather than trusting the exit code.
+# from Bundle ID …" when no App Store Connect app record exists yet), so we can't
+# trust the exit code alone. But it ALSO logs transient, self-recovered errors
+# (e.g. "APP STORE CONNECT API list-apps: received status code 500") and then
+# prints "UPLOAD SUCCEEDED with no errors". So the authoritative signal is the
+# success marker — not the mere presence of an "ERROR:" line (that gave a false
+# failure on a build that actually shipped).
 UPLOAD_LOG="$BUILD_DIR/altool-upload.log"
 set +e
 xcrun altool --upload-app \
@@ -169,14 +173,17 @@ xcrun altool --upload-app \
 RC=${PIPESTATUS[0]}
 set -e
 
-if [ "$RC" -ne 0 ] || grep -qi "ERROR:" "$UPLOAD_LOG"; then
-  echo "ERROR: altool upload FAILED (exit $RC)." >&2
-  if grep -q "Cannot determine the Apple ID from Bundle ID" "$UPLOAD_LOG"; then
-    echo "HINT: No App Store Connect app record exists for bundle id '$( \
-      /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$ARCHIVE_PATH/Products/Applications/OttavianoKDS.app/Contents/Info.plist" 2>/dev/null || echo pl.ottaviano.kds )' (macOS)." >&2
-    echo "      Create the macOS app in App Store Connect (My Apps -> + -> New App -> macOS), then re-run." >&2
-  fi
-  exit 1
+if grep -q "UPLOAD SUCCEEDED" "$UPLOAD_LOG" || grep -q "No errors uploading archive" "$UPLOAD_LOG"; then
+  echo "==> Done. OttavianoKDS (macOS) uploaded to TestFlight."
+  exit 0
 fi
 
-echo "==> Done. OttavianoKDS (macOS) uploaded to TestFlight."
+# No success marker → a genuine failure (transient/recovered ERROR lines don't
+# count — only the absence of the success marker does).
+echo "ERROR: altool upload FAILED (exit $RC) — no 'UPLOAD SUCCEEDED' in output." >&2
+if grep -q "Cannot determine the Apple ID from Bundle ID" "$UPLOAD_LOG"; then
+  echo "HINT: No App Store Connect app record exists for bundle id '$( \
+    /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$ARCHIVE_PATH/Products/Applications/OttavianoKDS.app/Contents/Info.plist" 2>/dev/null || echo pl.ottaviano.kds )' (macOS)." >&2
+  echo "      Create the macOS app in App Store Connect (My Apps -> + -> New App -> macOS), then re-run." >&2
+fi
+exit 1
