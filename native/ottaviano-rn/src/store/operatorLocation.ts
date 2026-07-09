@@ -31,23 +31,16 @@ export const useOperatorLocation = create<OperatorLocationState>((set, get) => (
   setSlug: (slug) => set({ slug }),
   ensureLoaded: async () => {
     const s = get();
-    if (s.loading || s.locations.length > 0) {
-      console.warn(`[locations] ensureLoaded skipped (loading=${s.loading}, have=${s.locations.length})`);
-      return;
-    }
+    if (s.loading || s.locations.length > 0) return;
     set({ loading: true, error: null });
-    console.warn("[locations] ensureLoaded: GET /locations …");
     try {
       const locations = await getLocations();
-      const slug = get().slug ?? locations[0]?.slug ?? null;
-      console.warn(`[locations] ensureLoaded OK: ${locations.length} sites, slug=${slug ?? "NONE"}`);
       set((prev) => ({
         locations,
         loading: false,
         slug: prev.slug ?? locations[0]?.slug ?? null,
       }));
     } catch (e) {
-      console.warn(`[locations] ensureLoaded FAILED: ${e instanceof Error ? e.message : String(e)}`);
       set({ loading: false, error: e instanceof Error ? e.message : "Could not load locations" });
     }
   },
