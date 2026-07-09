@@ -566,6 +566,7 @@ export function Pos() {
     };
   }, [authed, slug, checkItemIds, activeChannel]);
 
+  console.warn(`[pos] render: items=${items ? items.length : "null"} error=${error ?? "none"} slug=${slug ?? "null"} bp=${isDesktop ? "desktop" : "narrow"}`);
   if (error && !items) return <StateBlock kind="error" message={error} />;
   if (!items) return <StateBlock kind="loading" />;
 
