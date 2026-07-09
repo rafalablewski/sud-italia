@@ -80,6 +80,24 @@ targets:
           else
             /bin/sh "$REACT_NATIVE_XCODE"
           fi
+      # Embed react-native-vector-icons fonts into Contents/Resources/Fonts.
+      # Info.plist's ATSApplicationFontsPath=Fonts makes macOS auto-register them,
+      # so "Material Design Icons" (MaterialCommunityIcons) resolves instead of
+      # rendering the missing-glyph box. Runs before the final codesign.
+      - name: Embed vector-icons fonts
+        basedOnDependencyAnalysis: false
+        shell: /bin/sh
+        script: |
+          set -e
+          FONTS_SRC="$SRCROOT/../node_modules/react-native-vector-icons/Fonts"
+          FONTS_DST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Fonts"
+          if [ -d "$FONTS_SRC" ]; then
+            mkdir -p "$FONTS_DST"
+            cp -f "$FONTS_SRC"/*.ttf "$FONTS_DST/"
+            echo "Embedded vector-icons fonts -> $FONTS_DST"
+          else
+            echo "warning: vector-icons Fonts not found at $FONTS_SRC" >&2
+          fi
 
 schemes:
   Ottaviano-macOS:
