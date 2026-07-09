@@ -253,10 +253,19 @@ export function Pos() {
     }
   }, [authed, slug]);
 
+  const loadedSlugRef = useRef<string | null>(null);
   useEffect(() => {
     if (!slug) return;
     const loc = encodeURIComponent(slug);
-    setItems(null);
+    // Only blank the menu (→ loading gate) when the LOCATION actually changes.
+    // If this effect re-runs for any other reason, keep the current menu on
+    // screen and refetch quietly — never drop back to a full-screen spinner
+    // once the till has loaded.
+    console.warn(`[pos] load effect (slug=${slug}, hadSlug=${loadedSlugRef.current}, items=${items ? items.length : "null"})`);
+    if (loadedSlugRef.current !== slug) {
+      setItems(null);
+      loadedSlugRef.current = slug;
+    }
     setError(null);
     authed<PosMenuItem[]>(`/admin/menu?location=${loc}`)
       // Never hang on a null/non-array payload — render (empty) like DataSurface.
