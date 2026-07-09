@@ -158,7 +158,14 @@ const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.r
 const pctChip = (p: number | null | undefined): { txt: string; up: boolean | null } =>
   p == null ? { txt: "—", up: null } : { txt: `${p >= 0 ? "+" : ""}${p}%`, up: p >= 0 };
 
+let POS_INSTANCES = 0;
 export function Pos() {
+  const instRef = useRef(0);
+  if (!instRef.current) instRef.current = ++POS_INSTANCES;
+  useEffect(() => {
+    console.warn(`[pos] MOUNT #${instRef.current}`);
+    return () => console.warn(`[pos] UNMOUNT #${instRef.current}`);
+  }, []);
   const { c, radius, spacing } = useTheme();
   const { authed } = useOperator();
   const { slug, locations, setSlug, ensureLoaded } = useOperatorLocation();
@@ -566,7 +573,7 @@ export function Pos() {
     };
   }, [authed, slug, checkItemIds, activeChannel]);
 
-  console.warn(`[pos] render: items=${items ? items.length : "null"} error=${error ?? "none"} slug=${slug ?? "null"} bp=${isDesktop ? "desktop" : "narrow"}`);
+  console.warn(`[pos] render #${instRef.current}: items=${items ? items.length : "null"} error=${error ?? "none"} slug=${slug ?? "null"} bp=${isDesktop ? "desktop" : "narrow"}`);
   if (error && !items) return <StateBlock kind="error" message={error} />;
   if (!items) return <StateBlock kind="loading" />;
 
