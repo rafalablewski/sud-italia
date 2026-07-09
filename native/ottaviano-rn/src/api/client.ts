@@ -50,6 +50,7 @@ export async function apiRequest<T>(path: string, opts: RequestOptions = {}): Pr
 
   // 204 / empty body — return undefined data.
   const text = await res.text();
+  console.warn(`[api] ⇓ body ${res.status} ${method} ${path} (${text.length}b)`);
   let json: unknown = null;
   if (text) {
     try {
