@@ -595,9 +595,20 @@ export function Pos() {
     };
   }, [authed, slug, checkItemIds, activeChannel]);
 
+  // COMMIT probe — an effect fires only after a render actually COMMITS to the
+  // screen; React 19 can start-and-discard renders (whose console.warn still
+  // prints), so the render log alone can't tell us what's really on screen. This
+  // reports the committed `items`, so "COMMIT items=null" while the render log
+  // says items=24 proves the spinner is POS's own gate committing with null.
+  useEffect(() => {
+    console.warn(`[pos] COMMIT: items=${items ? items.length : "null"} error=${error ?? "none"} bp=${isDesktop ? "desktop" : "narrow"} winW=${Math.round(winW)}`);
+  });
+
   console.warn(`[pos] render #${instRef.current}: items=${items ? items.length : "null"} error=${error ?? "none"} slug=${slug ?? "null"} bp=${isDesktop ? "desktop" : "narrow"}`);
   if (error && !items) return <StateBlock kind="error" message={error} />;
-  if (!items) return <StateBlock kind="loading" />;
+  // Unique label so the log/screen tells us POS's own gate (vs another surface's
+  // "Loading…") is what's showing.
+  if (!items) return <StateBlock kind="loading" message="Loading POS…" />;
 
   const riskN = pressure?.atRisk ?? 0;
   const cartOpen = !!activeTab && checkLines.length > 0;
